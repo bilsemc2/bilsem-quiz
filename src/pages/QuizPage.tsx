@@ -27,7 +27,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
     const [timeLeft, setTimeLeft] = useState(60);
     const [feedback, setFeedback] = useState({ message: '', type: 'info' as const, show: false });
     const [answers, setAnswers] = useState<Array<{
-        questionNumber: number;
+        questionId: string;
         isCorrect: boolean;
         selectedOption: string | null;
         correctOption: string;
@@ -41,6 +41,11 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
         }>;
     }>>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [currentStats, setCurrentStats] = useState({
+        correct: 0,
+        incorrect: 0,
+        timeout: 0
+    });
 
     const showFeedback = (message: string, type: 'success' | 'error' | 'info') => {
         setFeedback({ message, type, show: true });
@@ -59,56 +64,60 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
         loadQuiz();
     }, []);
 
-    const handleTimeout = () => {
-        playSound('timeout');
-        setIsTimeout(true);
-        setIsAnswered(true);
+    const QuizStats = () => (
+        <div className="flex justify-center gap-6 mb-6">
+            <div className="bg-emerald-50 px-4 py-2 rounded-lg">
+                <span className="text-emerald-600 font-semibold">Doğru: {currentStats.correct}</span>
+            </div>
+            <div className="bg-red-50 px-4 py-2 rounded-lg">
+                <span className="text-red-600 font-semibold">Yanlış: {currentStats.incorrect}</span>
+            </div>
+            <div className="bg-yellow-50 px-4 py-2 rounded-lg">
+                <span className="text-yellow-600 font-semibold">Süre Doldu: {currentStats.timeout}</span>
+            </div>
+        </div>
+    );
 
-        // Record timeout answer
-        setAnswers(prev => [...prev, {
-            questionNumber: currentQuestionIndex + 1,
-            isCorrect: false,
-            selectedOption: null,
-            correctOption: currentQuestion.correctOptionId,
-            questionImage: currentQuestion.questionImageUrl,
-            isTimeout: true,
-            options: currentQuestion.options.map(opt => ({
-                id: opt.id,
-                imageUrl: opt.imageUrl,
-                isSelected: false,
-                isCorrect: opt.id === currentQuestion.correctOptionId
-            }))
-        }]);
-
-        setTimeout(() => {
-            if (currentQuestionIndex < quiz.questions.length - 1) {
-                setCurrentQuestionIndex(prev => prev + 1);
-                setTimeLeft(60);
-                setIsAnswered(false);
-                setIsTimeout(false);
-                setSelectedOption(null);
-            } else {
-                handleQuizComplete();
-            }
-        }, 2000);
+    const updateStats = (type: 'correct' | 'incorrect' | 'timeout') => {
+        setCurrentStats(prev => ({
+            ...prev,
+            [type]: prev[type] + 1
+        }));
     };
 
-    useEffect(() => {
-        if (!isAnswered && timeLeft > 0) {
-            const timer = setInterval(() => {
-                setTimeLeft((prev) => {
-                    if (prev <= 6 && prev > 1) { 
-                        playTimeWarning();
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
+    const handleTimeout = () => {
+        if (!isAnswered) {
+            handleTimeUp();
+            updateStats('timeout');
 
-            return () => clearInterval(timer);
-        } else if (timeLeft === 0 && !isAnswered) {
-            handleTimeout();
+            // Record timeout answer
+            setAnswers(prev => [...prev, {
+                questionId: currentQuestion.id,
+                isCorrect: false,
+                selectedOption: null,
+                correctOption: currentQuestion.correctOptionId,
+                questionImage: currentQuestion.questionImageUrl,
+                isTimeout: true,
+                options: currentQuestion.options.map(opt => ({
+                    id: opt.id,
+                    imageUrl: opt.imageUrl,
+                    isSelected: false,
+                    isCorrect: opt.id === currentQuestion.correctOptionId
+                }))
+            }]);
+
+            // Son soru değilse otomatik olarak sonrakine geç
+            if (currentQuestionIndex < quiz.questions.length - 1) {
+                setTimeout(() => {
+                    handleNext();
+                }, 2000);
+            } else {
+                setTimeout(() => {
+                    handleQuizComplete();
+                }, 2000);
+            }
         }
-    }, [timeLeft, isAnswered]);
+    };
 
     const handleTimeUp = () => {
         playSound('timeout');
@@ -129,14 +138,16 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                 playSound('correct');
                 setScore(prev => prev + 1);
                 showFeedback('Doğru! 🎉', 'success');
+                updateStats('correct');
             } else {
                 playSound('incorrect');
                 showFeedback('Yanlış cevap! 😔', 'error');
+                updateStats('incorrect');
             }
 
             // Record answer with detailed option information
             setAnswers(prev => [...prev, {
-                questionNumber: currentQuestionIndex + 1,
+                questionId: currentQuestion.id,
                 isCorrect,
                 selectedOption: optionId,
                 correctOption: currentQuestion.correctOptionId,
@@ -150,97 +161,61 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                 }))
             }]);
 
-            setTimeout(() => {
-                if (currentQuestionIndex < quiz.questions.length - 1) {
-                    setCurrentQuestionIndex(prev => prev + 1);
-                    setTimeLeft(60);
-                    setIsAnswered(false);
-                    setIsTimeout(false);
-                    setSelectedOption(null);
-                } else {
+            // Son soru kontrolü ve tamamlama
+            if (currentQuestionIndex === quiz.questions.length - 1) {
+                // Son sorunun işlenmesi için kısa bir gecikme
+                setTimeout(() => {
                     handleQuizComplete();
-                }
-            }, 2000);
+                }, 1000);
+            } else {
+                // Sonraki soruya geçiş
+                setTimeout(() => {
+                    handleNext();
+                }, 2000);
+            }
         }
     };
 
-    const handleQuizComplete = async () => {
-        if (!user) return;
+    useEffect(() => {
+        if (!isAnswered && timeLeft > 0) {
+            const timer = setInterval(() => {
+                setTimeLeft((prev) => {
+                    if (prev <= 6 && prev > 1) { 
+                        playTimeWarning();
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
 
+            return () => clearInterval(timer);
+        } else if (timeLeft === 0 && !isAnswered) {
+            handleTimeout();
+        }
+    }, [timeLeft, isAnswered]);
+
+    const handleQuizComplete = async () => {
+        if (isSubmitting) return;
         setIsSubmitting(true);
 
         try {
-            const correctAnswers = answers.filter(a => a.isCorrect).length;
-            const finalScore = calculateScore(correctAnswers, quiz.questions.length);
-            const experiencePoints = Math.round(finalScore * 10);
-
-            // Get current user stats
-            const { data: currentStats, error: statsError } = await supabase
-                .from('profiles')
-                .select('points, experience')
-                .eq('id', user.id)
-                .single();
-
-            if (statsError) {
-                console.error('Error fetching stats:', statsError);
-                showFeedback('Sonuçlar kaydedilirken bir hata oluştu', 'error');
-                return;
-            }
-
-            // Convert values to integers
-            const currentPoints = parseInt(currentStats?.points?.toString() || '0');
-            const currentExperience = parseInt(currentStats?.experience?.toString() || '0');
-            const newPoints = currentPoints + parseInt(finalScore.toString());
-            const newExperience = currentExperience + parseInt(experiencePoints.toString());
-
-            // Update user stats with new values
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({
-                    points: newPoints,
-                    experience: newExperience
-                })
-                .eq('id', user.id);
-
-            if (updateError) {
-                console.error('Error updating stats:', updateError);
-                showFeedback('Sonuçlar kaydedilirken bir hata oluştu', 'error');
-                return;
-            }
-
-            // Prepare detailed answers for result page
-            const detailedAnswers = quiz.questions.map((question, index) => {
-                const answer = answers[index] || { isCorrect: false, selectedOption: null, isTimeout: true };
-                return {
+            // Quiz sonuçlarını hazırla
+            const quizResults = {
+                correctAnswers: score,
+                totalQuestions: quiz.questions.length,
+                points: calculateScore(score, quiz.questions.length),
+                xp: Math.round(calculateScore(score, quiz.questions.length) * 10),
+                answers: answers.map((answer, index) => ({
+                    ...answer,
                     questionNumber: index + 1,
-                    isCorrect: answer.isCorrect,
-                    selectedOption: answer.selectedOption,
-                    correctOption: question.correctOptionId,
-                    questionImage: question.questionImageUrl,
-                    isTimeout: answer.isTimeout,
-                    options: question.options.map(opt => ({
-                        id: opt.id,
-                        imageUrl: opt.imageUrl,
-                        isSelected: opt.id === answer.selectedOption,
-                        isCorrect: opt.id === question.correctOptionId
-                    }))
-                };
-            });
+                    originalQuestionNumber: quiz.questions[index].id
+                }))
+            };
 
-            // Navigate to results page with detailed information
-            navigate('/result', {
-                state: {
-                    correctAnswers,
-                    totalQuestions: quiz.questions.length,
-                    points: finalScore,
-                    xp: experiencePoints,
-                    answers: detailedAnswers
-                }
-            });
-
+            // Sonuç sayfasına yönlendir
+            navigate('/result', { state: quizResults });
         } catch (error) {
-            console.error('Error in quiz completion:', error);
-            showFeedback('Bir hata oluştu', 'error');
+            console.error('Quiz tamamlanırken hata oluştu:', error);
+            showFeedback('Quiz kaydedilirken bir hata oluştu', 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -257,15 +232,13 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
             setSelectedOption(null);
             setIsAnswered(false);
             setShowSolution(false);
+            setIsTimeout(false);
             setTimeLeft(60);
             showFeedback('Sonraki soru!', 'info');
         } else {
             playSound('complete');
             showFeedback('Tebrikler! Quiz tamamlandı! 🎊', 'success');
-            if (onComplete && quiz) {
-                onComplete(score, quiz.questions.length);
-            }
-            setTimeout(() => navigate('/profile'), 2000);
+            handleQuizComplete();
         }
     };
 
@@ -334,6 +307,9 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                             )}
                         </div>
                     </div>
+
+                    {/* İstatistikler */}
+                    <QuizStats />
 
                     {/* Seçenekler */}
                     <div className="grid grid-cols-5 gap-4">

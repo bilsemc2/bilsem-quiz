@@ -94,9 +94,9 @@ export function generateQuiz(): Quiz {
         .sort((a, b) => getQuestionNumber(a) - getQuestionNumber(b));
 
     // Generate questions
-    const questions = questionFiles
+    const questions = shuffleArray(questionFiles) // Soruları karıştır
         .map((questionFile, index) => {
-            const questionNumber = index + 1;
+            const questionNumber = getQuestionNumber(questionFile);
             const questionId = questionNumber.toString();
             
             // Find matching option files for this question
