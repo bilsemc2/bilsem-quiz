@@ -296,16 +296,16 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
     const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] py-8">
-            <div className="max-w-7xl mx-auto px-4">
+        <div className="min-h-screen bg-[#f8fafc] py-4 sm:py-8">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4">
                 {/* Progress Bar */}
-                <div className="mb-8">
+                <div className="mb-4 sm:mb-8">
                     <div className="flex justify-between items-center mb-2">
-                        <div className="text-lg font-semibold text-gray-700">
+                        <div className="text-base sm:text-lg font-semibold text-gray-700">
                             Soru {currentQuestionIndex + 1}/{quiz.questions.length}
                         </div>
                         <div className="flex items-center space-x-4">
-                            <div className="text-lg font-medium text-gray-700">
+                            <div className="text-base sm:text-lg font-medium text-gray-700">
                                 Süre: {formatTime(timeLeft)}
                             </div>
                         </div>
@@ -318,16 +318,16 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                     </div>
                 </div>
 
-                <div className="w-full bg-white rounded-2xl shadow-lg p-6 mb-8">
+                <div className="w-full bg-white rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-6 mb-4 sm:mb-8">
                     {/* Soru */}
-                    <div className="mb-8">
-                        <div className="bg-gray-50 rounded-lg p-6">
+                    <div className="mb-4 sm:mb-8">
+                        <div className="bg-gray-50 rounded-lg p-3 sm:p-6">
                             {currentQuestion.questionImageUrl && (
                                 <div className="flex justify-center">
                                     <img
                                         src={currentQuestion.questionImageUrl}
                                         alt="Soru"
-                                        className="max-h-[300px] object-contain rounded-lg transition-transform duration-300 hover:scale-105"
+                                        className="max-h-[200px] sm:max-h-[300px] w-full object-contain rounded-lg transition-transform duration-300 hover:scale-105"
                                     />
                                 </div>
                             )}
@@ -335,14 +335,14 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                     </div>
 
                     {/* Seçenekler */}
-                    <div className="grid grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
                         {currentQuestion.options.map((option, index) => (
                             <button
                                 key={index}
                                 onClick={() => handleOptionSelect(option.id)}
                                 disabled={isAnswered}
                                 className={`
-                                    w-full p-4 text-center rounded-lg transition-all duration-200 relative
+                                    w-full p-2 sm:p-4 text-center rounded-lg transition-all duration-200 relative
                                     ${isAnswered && !isTimeout
                                         ? option.id === currentQuestion.correctOptionId
                                             ? 'border-4 border-emerald-500 bg-emerald-50 shadow-emerald-100 scale-105'
@@ -367,17 +367,17 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                     </div>
 
                     {/* Butonlar */}
-                    <div className="mt-8 flex justify-end space-x-4">
+                    <div className="mt-4 sm:mt-8 flex justify-end space-x-4">
                         {isAnswered && (
                             isLastQuestion ? (
                                 <button
                                     onClick={handleFinishQuiz}
-                                    className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold
+                                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white rounded-lg font-semibold
                                              hover:bg-green-700 transition-all duration-200
                                              transform hover:scale-105 shadow-md hover:shadow-lg
-                                             flex items-center space-x-2"
+                                             flex items-center justify-center space-x-2"
                                 >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
                                     <span>Testi Bitir</span>
@@ -385,13 +385,13 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                             ) : (
                                 <button
                                     onClick={handleNext}
-                                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold
+                                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-indigo-600 text-white rounded-lg font-semibold
                                              hover:bg-indigo-700 transition-all duration-200
                                              transform hover:scale-105 shadow-md hover:shadow-lg
-                                             flex items-center space-x-2"
+                                             flex items-center justify-center space-x-2"
                                 >
                                     <span>Sonraki Soru</span>
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                     </svg>
                                 </button>
