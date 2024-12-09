@@ -9,6 +9,10 @@ interface QuestionResult {
     correctOption: string;
     questionImage: string;
     isTimeout: boolean;
+    solutionVideo?: {
+        url: string;
+        title: string;
+    };
     options: Array<{
         id: string;
         imageUrl: string;
@@ -42,6 +46,16 @@ export const ResultPage: React.FC = () => {
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-7xl mx-auto px-4">
                 <div className="bg-white rounded-2xl shadow-xl p-8">
+                    {/* Yeni Quiz Başlat Butonu */}
+                    <div className="mb-8 text-center">
+                        <button
+                            onClick={() => navigate('/quiz')}
+                            className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200"
+                        >
+                            Yeni Quiz Başlat
+                        </button>
+                    </div>
+
                     {/* Özet Bilgiler */}
                     <div className="mb-12">
                         <h1 className="text-3xl font-bold text-gray-800 mb-8">Quiz Sonuçları</h1>
@@ -80,9 +94,25 @@ export const ResultPage: React.FC = () => {
                             {result.answers?.map((answer, index) => (
                                 <div key={index} className="bg-gray-50 rounded-xl p-6">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-semibold text-gray-800">
-                                            Soru {index + 1}
-                                        </h3>
+                                        <div className="flex items-center gap-4">
+                                            <h3 className="text-lg font-semibold text-gray-800">
+                                                Soru {index + 1}
+                                            </h3>
+                                            {answer.solutionVideo && (
+                                                <a
+                                                    href={`https://www.youtube.com/watch?v=${answer.solutionVideo.url.split('/').pop()}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 text-red-600 hover:text-red-700"
+                                                    title={answer.solutionVideo.title}
+                                                >
+                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+                                                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                                                    </svg>
+                                                    <span className="text-sm font-medium">Video Çözüm</span>
+                                                </a>
+                                            )}
+                                        </div>
                                         <div className={`px-4 py-2 rounded-full ${
                                             answer.isTimeout ? 'bg-yellow-100 text-yellow-800' :
                                             answer.isCorrect ? 'bg-emerald-100 text-emerald-800' :
@@ -125,16 +155,6 @@ export const ResultPage: React.FC = () => {
                                 </div>
                             ))}
                         </div>
-                    </div>
-
-                    {/* Yeni Quiz Başlat Butonu */}
-                    <div className="mt-12 text-center">
-                        <button
-                            onClick={() => navigate('/quiz')}
-                            className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200"
-                        >
-                            Yeni Quiz Başlat
-                        </button>
                     </div>
                 </div>
             </div>

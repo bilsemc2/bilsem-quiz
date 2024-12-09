@@ -33,6 +33,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
         correctOption: string;
         questionImage: string;
         isTimeout: boolean;
+        solutionVideo: string | null; // Video çözüm bilgisini ekle
         options: Array<{
             id: string;
             imageUrl: string;
@@ -70,6 +71,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                 correctOption: currentQuestion.correctOptionId,
                 questionImage: currentQuestion.questionImageUrl,
                 isTimeout: true,
+                solutionVideo: currentQuestion.solutionVideo,  // Video çözüm bilgisini ekle
                 options: currentQuestion.options.map(opt => ({
                     id: opt.id,
                     imageUrl: opt.imageUrl,
@@ -147,6 +149,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                 correctOption: currentQuestion.correctOptionId,
                 questionImage: currentQuestion.questionImageUrl,
                 isTimeout: false,
+                solutionVideo: currentQuestion.solutionVideo,  // Video çözüm bilgisini ekle
                 options: currentQuestion.options.map(opt => ({
                     id: opt.id,
                     imageUrl: opt.imageUrl,
@@ -225,6 +228,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                             return {
                                 ...answer,
                                 questionImage: question?.questionImageUrl || '',
+                                solutionVideo: question?.solutionVideo || null, // Video çözüm bilgisini ekle
                                 options: question?.options.map(opt => ({
                                     ...opt,
                                     isSelected: opt.id === answer.selectedOption,
