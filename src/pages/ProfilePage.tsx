@@ -40,7 +40,7 @@ export const ProfilePage: React.FC = () => {
         email: user?.email || "",
         school: "",
         grade: "",
-        avatar: `https://api.dicebear.com/7.x/big-ears/svg?seed=${user?.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy,curious`,
+        avatar: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy`,
         points: 0,
         experience: 0
     });
@@ -139,11 +139,11 @@ export const ProfilePage: React.FC = () => {
                 const { level, progress } = calculateLevel(data.experience || 0);
                 
                 setUserData({
-                    name: data.full_name || user?.email?.split('@')[0] || "",
+                    name: data.name || "",
                     email: user?.email || "",
                     school: data.school || "",
                     grade: data.grade || "",
-                    avatar: `https://api.dicebear.com/7.x/big-ears/svg?seed=${user?.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy,curious`,
+                    avatar: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy`,
                     points: data.points || 0,
                     experience: data.experience || 0
                 });
@@ -197,7 +197,7 @@ export const ProfilePage: React.FC = () => {
                 .from('profiles')
                 .upsert({
                     id: user?.id,
-                    full_name: userData.name,
+                    name: userData.name,
                     school: userData.school,
                     grade: userData.grade,
                     updated_at: new Date().toISOString(),
