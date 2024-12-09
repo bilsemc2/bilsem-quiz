@@ -27,7 +27,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
     const [timeLeft, setTimeLeft] = useState(60);
     const [feedback, setFeedback] = useState({ message: '', type: 'info' as const, show: false });
     const [answers, setAnswers] = useState<Array<{
-        questionId: string;
+        questionNumber: number;
         isCorrect: boolean;
         selectedOption: string | null;
         correctOption: string;
@@ -41,11 +41,6 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
         }>;
     }>>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [currentStats, setCurrentStats] = useState({
-        correct: 0,
-        incorrect: 0,
-        timeout: 0
-    });
 
     const showFeedback = (message: string, type: 'success' | 'error' | 'info') => {
         setFeedback({ message, type, show: true });
@@ -64,35 +59,12 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
         loadQuiz();
     }, []);
 
-    const QuizStats = () => (
-        <div className="flex justify-center gap-6 mb-6">
-            <div className="bg-emerald-50 px-4 py-2 rounded-lg">
-                <span className="text-emerald-600 font-semibold">Doğru: {currentStats.correct}</span>
-            </div>
-            <div className="bg-red-50 px-4 py-2 rounded-lg">
-                <span className="text-red-600 font-semibold">Yanlış: {currentStats.incorrect}</span>
-            </div>
-            <div className="bg-yellow-50 px-4 py-2 rounded-lg">
-                <span className="text-yellow-600 font-semibold">Süre Doldu: {currentStats.timeout}</span>
-            </div>
-        </div>
-    );
-
-    const updateStats = (type: 'correct' | 'incorrect' | 'timeout') => {
-        setCurrentStats(prev => ({
-            ...prev,
-            [type]: prev[type] + 1
-        }));
-    };
-
     const handleTimeout = () => {
         if (!isAnswered) {
             handleTimeUp();
-            updateStats('timeout');
-
             // Record timeout answer
             setAnswers(prev => [...prev, {
-                questionId: currentQuestion.id,
+                questionNumber: currentQuestionIndex + 1,
                 isCorrect: false,
                 selectedOption: null,
                 correctOption: currentQuestion.correctOptionId,
@@ -105,74 +77,6 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                     isCorrect: opt.id === currentQuestion.correctOptionId
                 }))
             }]);
-
-            // Son soru değilse otomatik olarak sonrakine geç
-            if (currentQuestionIndex < quiz.questions.length - 1) {
-                setTimeout(() => {
-                    handleNext();
-                }, 2000);
-            } else {
-                setTimeout(() => {
-                    handleQuizComplete();
-                }, 2000);
-            }
-        }
-    };
-
-    const handleTimeUp = () => {
-        playSound('timeout');
-        setIsAnswered(true);
-        setShowSolution(true);
-        showFeedback('Süre doldu!', 'error');
-    };
-
-    const handleOptionSelect = (optionId: string) => {
-        if (!isAnswered) {
-            setSelectedOption(optionId);
-            setIsAnswered(true);
-            setIsTimeout(false);
-
-            const isCorrect = optionId === currentQuestion.correctOptionId;
-            
-            if (isCorrect) {
-                playSound('correct');
-                setScore(prev => prev + 1);
-                showFeedback('Doğru! 🎉', 'success');
-                updateStats('correct');
-            } else {
-                playSound('incorrect');
-                showFeedback('Yanlış cevap! 😔', 'error');
-                updateStats('incorrect');
-            }
-
-            // Record answer with detailed option information
-            setAnswers(prev => [...prev, {
-                questionId: currentQuestion.id,
-                isCorrect,
-                selectedOption: optionId,
-                correctOption: currentQuestion.correctOptionId,
-                questionImage: currentQuestion.questionImageUrl,
-                isTimeout: false,
-                options: currentQuestion.options.map(opt => ({
-                    id: opt.id,
-                    imageUrl: opt.imageUrl,
-                    isSelected: opt.id === optionId,
-                    isCorrect: opt.id === currentQuestion.correctOptionId
-                }))
-            }]);
-
-            // Son soru kontrolü ve tamamlama
-            if (currentQuestionIndex === quiz.questions.length - 1) {
-                // Son sorunun işlenmesi için kısa bir gecikme
-                setTimeout(() => {
-                    handleQuizComplete();
-                }, 1000);
-            } else {
-                // Sonraki soruya geçiş
-                setTimeout(() => {
-                    handleNext();
-                }, 2000);
-            }
         }
     };
 
@@ -193,31 +97,140 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
         }
     }, [timeLeft, isAnswered]);
 
-    const handleQuizComplete = async () => {
-        if (isSubmitting) return;
-        setIsSubmitting(true);
+    const handleTimeUp = () => {
+        playSound('timeout');
+        setIsAnswered(true);
+        setIsTimeout(true);
+        showFeedback('Süre doldu!', 'error');
+        
+        // Timeout durumunda otomatik olarak sonraki soruya geç
+        setTimeout(() => {
+            if (currentQuestionIndex < (quiz?.questions.length || 0) - 1) {
+                handleNext();
+            } else {
+                handleQuizComplete();
+            }
+        }, 2000);
+    };
 
-        try {
-            // Quiz sonuçlarını hazırla
-            const quizResults = {
-                correctAnswers: score,
-                totalQuestions: quiz.questions.length,
-                points: calculateScore(score, quiz.questions.length),
-                xp: Math.round(calculateScore(score, quiz.questions.length) * 10),
-                answers: answers.map((answer, index) => ({
-                    ...answer,
-                    questionNumber: index + 1,
-                    originalQuestionNumber: quiz.questions[index].id
+    const handleOptionSelect = (optionId: string) => {
+        if (!isAnswered) {
+            setSelectedOption(optionId);
+            setIsAnswered(true);
+            setIsTimeout(false);
+
+            const isCorrect = optionId === currentQuestion.correctOptionId;
+            
+            if (isCorrect) {
+                playSound('correct');
+                setScore(prev => prev + 1);
+                showFeedback('Doğru! 🎉', 'success');
+            } else {
+                playSound('incorrect');
+                showFeedback('Yanlış cevap! 😔', 'error');
+            }
+
+            // Record answer with detailed option information
+            setAnswers(prev => [...prev, {
+                questionNumber: currentQuestionIndex + 1,
+                isCorrect,
+                selectedOption: optionId,
+                correctOption: currentQuestion.correctOptionId,
+                questionImage: currentQuestion.questionImageUrl,
+                isTimeout: false,
+                options: currentQuestion.options.map(opt => ({
+                    id: opt.id,
+                    imageUrl: opt.imageUrl,
+                    isSelected: opt.id === optionId,
+                    isCorrect: opt.id === currentQuestion.correctOptionId
                 }))
-            };
+            }]);
 
-            // Sonuç sayfasına yönlendir
-            navigate('/result', { state: quizResults });
-        } catch (error) {
-            console.error('Quiz tamamlanırken hata oluştu:', error);
-            showFeedback('Quiz kaydedilirken bir hata oluştu', 'error');
-        } finally {
-            setIsSubmitting(false);
+            // Son soru değilse otomatik olarak sonraki soruya geç
+            if (currentQuestionIndex < quiz.questions.length - 1) {
+                setTimeout(() => {
+                    setCurrentQuestionIndex(prev => prev + 1);
+                    setTimeLeft(60);
+                    setIsAnswered(false);
+                    setIsTimeout(false);
+                    setSelectedOption(null);
+                }, 2000);
+            } else {
+                // Son soruda kullanıcının "Testi Bitir" butonuna tıklamasını bekle
+                showFeedback('Son soruyu cevapladınız! Testi bitirmek için "Testi Bitir" butonuna tıklayın.', 'success');
+            }
+        }
+    };
+
+    const handleQuizComplete = async () => {
+        if (quiz && !isSubmitting) {
+            setIsSubmitting(true);
+            const correctAnswers = answers.filter(a => a.isCorrect).length;
+            const { points, xp } = calculateScore(quiz.questions.length, correctAnswers);
+
+            try {
+                // Update user stats in database
+                if (user) {
+                    const { data: userData, error: fetchError } = await supabase
+                        .from('profiles')
+                        .select('points, experience')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (fetchError) throw fetchError;
+
+                    const { error: updateError } = await supabase
+                        .from('profiles')
+                        .update({
+                            points: (userData?.points || 0) + points,
+                            experience: (userData?.experience || 0) + xp
+                        })
+                        .eq('id', user.id);
+
+                    if (updateError) throw updateError;
+                }
+
+                // Save quiz results
+                const { error: resultError } = await supabase
+                    .from('quiz_results')
+                    .insert({
+                        user_id: user?.id,
+                        correct_answers: correctAnswers,
+                        total_questions: quiz.questions.length,
+                        points_earned: points,
+                        xp_earned: xp,
+                        completed_at: new Date().toISOString()
+                    });
+
+                if (resultError) throw resultError;
+
+                // Navigate to results page with score and answers data
+                navigate('/result', {
+                    state: {
+                        correctAnswers,
+                        totalQuestions: quiz.questions.length,
+                        points,
+                        xp,
+                        answers: answers.map(answer => {
+                            const question = quiz.questions[answer.questionNumber - 1];
+                            return {
+                                ...answer,
+                                questionImage: question?.questionImageUrl || '',
+                                options: question?.options.map(opt => ({
+                                    ...opt,
+                                    isSelected: opt.id === answer.selectedOption,
+                                    isCorrect: opt.id === answer.correctOption
+                                })) || []
+                            };
+                        })
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error submitting quiz results:', error);
+            } finally {
+                setIsSubmitting(false);
+            }
         }
     };
 
@@ -225,21 +238,25 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
         handleQuizComplete();
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (currentQuestionIndex < (quiz?.questions.length || 0) - 1) {
             playSound('next');
             setCurrentQuestionIndex((prev) => prev + 1);
             setSelectedOption(null);
             setIsAnswered(false);
             setShowSolution(false);
-            setIsTimeout(false);
             setTimeLeft(60);
             showFeedback('Sonraki soru!', 'info');
         } else {
             playSound('complete');
-            showFeedback('Tebrikler! Quiz tamamlandı! 🎊', 'success');
-            handleQuizComplete();
+            showFeedback('Son soruyu cevapladınız! Testi bitirmek için "Testi Bitir" butonuna tıklayın.', 'success');
         }
+    };
+
+    const handleFinishQuiz = async () => {
+        playSound('complete');
+        showFeedback('Tebrikler! Quiz tamamlandı! 🎊', 'success');
+        handleQuizComplete();
     };
 
     const formatTime = (time: number) => {
@@ -251,47 +268,37 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
     if (!quiz) {
         return (
             <div className="min-h-screen bg-[#f8fafc] flex justify-center items-center">
-                <div className="animate-pulse flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                    <div className="text-xl text-indigo-600 font-medium">
-                        Quiz Yükleniyor...
-                    </div>
-                </div>
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500"></div>
             </div>
         );
     }
 
     const currentQuestion = quiz.questions[currentQuestionIndex];
-    const totalQuestions = quiz.questions.length;
+    const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
 
     return (
-        <div className="min-h-screen bg-gray-100 py-6">
-            <div className="flex flex-col items-center w-full max-w-7xl mx-auto px-4 py-8">
-                {/* Progress and Timer Section */}
-                <div className="w-full flex items-center justify-between mb-8">
-                    <div className="flex-1 max-w-3xl">
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                            <div
-                                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                                style={{ width: `${(currentQuestionIndex / totalQuestions) * 100}%` }}
-                            />
+        <div className="min-h-screen bg-[#f8fafc] py-8">
+            <div className="max-w-7xl mx-auto px-4">
+                {/* Progress Bar */}
+                <div className="mb-8">
+                    <div className="flex justify-between items-center mb-2">
+                        <div className="text-lg font-semibold text-gray-700">
+                            Soru {currentQuestionIndex + 1}/{quiz.questions.length}
                         </div>
-                        <div className="flex justify-end mt-1 text-sm text-gray-600">
-                            <span>{currentQuestionIndex + 1}/{totalQuestions}</span>
+                        <div className="flex items-center space-x-4">
+                            <div className="text-lg font-medium text-gray-700">
+                                Süre: {formatTime(timeLeft)}
+                            </div>
                         </div>
                     </div>
-                    <div className="ml-8">
-                        <CircularProgress
-                            percentage={(timeLeft / 60) * 100}
-                            size={60}
-                            strokeWidth={4}
-                            circleColor={timeLeft <= 10 ? 'rgb(239 68 68)' : 'rgb(37 99 235)'}
-                            text={timeLeft.toString()}
-                        />
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-indigo-500 transition-all duration-300"
+                            style={{ width: `${((currentQuestionIndex + 1) / quiz.questions.length) * 100}%` }}
+                        ></div>
                     </div>
                 </div>
 
-                {/* Question Section */}
                 <div className="w-full bg-white rounded-2xl shadow-lg p-6 mb-8">
                     {/* Soru */}
                     <div className="mb-8">
@@ -307,9 +314,6 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                             )}
                         </div>
                     </div>
-
-                    {/* İstatistikler */}
-                    <QuizStats />
 
                     {/* Seçenekler */}
                     <div className="grid grid-cols-5 gap-4">
@@ -332,36 +336,52 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                                     }
                                     ${!isAnswered && 'hover:scale-[1.02] hover:-translate-y-1'}
                                     transform transition-all duration-300 shadow-md hover:shadow-xl
-                                    min-h-[140px] flex flex-col items-center justify-center group
                                 `}
                             >
-                                {option.imageUrl && (
-                                    <div className="w-32 h-32 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center p-3 transition-transform duration-300 group-hover:scale-105 mb-4">
-                                        <img
-                                            src={option.imageUrl}
-                                            alt={option.text}
-                                            className="w-full h-full object-contain"
-                                        />
-                                    </div>
-                                )}
-                                {isAnswered && !isTimeout && option.id === currentQuestion.correctOptionId && (
-                                    <div className="absolute -top-3 -right-3 w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
-                                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </div>
-                                )}
-                                {isTimeout && option.id === currentQuestion.correctOptionId && (
-                                    <div className="absolute -top-3 -right-3 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg">
-                                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6l4 2" />
-                                        </svg>
-                                    </div>
-                                )}
+                                <img
+                                    src={option.imageUrl}
+                                    alt={`Seçenek ${index + 1}`}
+                                    className="w-full h-auto rounded transition-transform duration-300"
+                                />
                             </button>
                         ))}
                     </div>
+
+                    {/* Butonlar */}
+                    <div className="mt-8 flex justify-end space-x-4">
+                        {isAnswered && (
+                            isLastQuestion ? (
+                                <button
+                                    onClick={handleFinishQuiz}
+                                    className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold
+                                             hover:bg-green-700 transition-all duration-200
+                                             transform hover:scale-105 shadow-md hover:shadow-lg
+                                             flex items-center space-x-2"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span>Testi Bitir</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleNext}
+                                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold
+                                             hover:bg-indigo-700 transition-all duration-200
+                                             transform hover:scale-105 shadow-md hover:shadow-lg
+                                             flex items-center space-x-2"
+                                >
+                                    <span>Sonraki Soru</span>
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            )
+                        )}
+                    </div>
                 </div>
+
+                <Feedback message={feedback.message} type={feedback.type} show={feedback.show} />
             </div>
         </div>
     );
