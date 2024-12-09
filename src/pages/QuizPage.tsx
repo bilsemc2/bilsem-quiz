@@ -106,6 +106,15 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
         // Timeout durumunda otomatik olarak sonraki soruya geç
         setTimeout(() => {
             if (currentQuestionIndex < (quiz?.questions.length || 0) - 1) {
+                // Seçeneklerin durumunu sıfırla
+                const nextQuestion = quiz?.questions[currentQuestionIndex + 1];
+                if (nextQuestion) {
+                    nextQuestion.options = nextQuestion.options.map(opt => ({
+                        ...opt,
+                        isSelected: false,
+                        isCorrect: false
+                    }));
+                }
                 handleNext();
             } else {
                 handleQuizComplete();
@@ -246,6 +255,16 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
             setIsAnswered(false);
             setShowSolution(false);
             setTimeLeft(60);
+            setIsTimeout(false); // Timeout durumunu sıfırla
+            // Seçeneklerin durumunu sıfırla
+            const nextQuestion = quiz?.questions[currentQuestionIndex + 1];
+            if (nextQuestion) {
+                nextQuestion.options = nextQuestion.options.map(opt => ({
+                    ...opt,
+                    isSelected: false,
+                    isCorrect: false
+                }));
+            }
             showFeedback('Sonraki soru!', 'info');
         } else {
             playSound('complete');
