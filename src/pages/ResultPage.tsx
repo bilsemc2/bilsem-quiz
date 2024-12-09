@@ -92,7 +92,7 @@ export const ResultPage: React.FC = () => {
                                     <img
                                         src={answer.questionImage}
                                         alt={`Soru ${answer.questionNumber}`}
-                                        className="max-h-[200px] mx-auto object-contain rounded-lg"
+                                        className="max-h-[250px] mx-auto object-contain rounded-lg"
                                     />
                                 </div>
 
@@ -102,7 +102,7 @@ export const ResultPage: React.FC = () => {
                                         <div
                                             key={optionIndex}
                                             className={`
-                                                relative rounded-lg overflow-hidden
+                                                relative rounded-lg overflow-hidden transform scale-50
                                                 ${option.isSelected && option.isCorrect ? 'ring-4 ring-emerald-500' :
                                                   option.isSelected && !option.isCorrect ? 'ring-4 ring-red-500' :
                                                   option.isCorrect ? 'ring-4 ring-emerald-500' : ''}

@@ -209,8 +209,8 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
             }
 
             // Prepare detailed answers for result page
-            const detailedAnswers = answers.map((answer, index) => {
-                const question = quiz.questions[index];
+            const detailedAnswers = quiz.questions.map((question, index) => {
+                const answer = answers[index] || { isCorrect: false, selectedOption: null, isTimeout: true };
                 return {
                     questionNumber: index + 1,
                     isCorrect: answer.isCorrect,
