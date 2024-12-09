@@ -6,6 +6,7 @@ import { QuizPage } from './pages/QuizPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ResultPage } from './pages/ResultPage';
 import { LoginPage } from './pages/LoginPage';
+import { SignUpPage } from './pages/SignUpPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
@@ -44,6 +45,7 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route path="/signup" element={<SignUpPage />} />
             </Routes>
           </div>
         </Router>

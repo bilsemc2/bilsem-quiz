@@ -15,14 +15,34 @@ export const LoginPage: React.FC = () => {
         setError(null);
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
+            console.log('Giriş denemesi:', email);
+            const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
-            if (error) throw error;
+            console.log('Giriş sonucu:', { data, error });
+
+            if (error) {
+                console.error('Giriş hatası:', error);
+                if (error.message.includes('Invalid login credentials')) {
+                    throw new Error('Email veya şifre hatalı');
+                }
+                throw new Error('Giriş yapılamadı: ' + error.message);
+            }
+
+            // Kullanıcı bilgilerini kontrol et
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            console.log('Kullanıcı bilgileri:', user);
+            
+            if (userError) {
+                console.error('Kullanıcı bilgileri hatası:', userError);
+                throw userError;
+            }
+
             navigate('/profile');
         } catch (error: any) {
+            console.error('Yakalanan hata:', error);
             setError(error.message);
         } finally {
             setLoading(false);

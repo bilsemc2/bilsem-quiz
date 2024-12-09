@@ -84,6 +84,13 @@ export const HomePage: React.FC = () => {
                                 Quiz'e Başla
                             </Link>
                             <Link
+                                to="/signup"
+                                className="inline-flex items-center justify-center px-8 py-4 text-lg font-medium rounded-xl text-indigo-600 bg-white border-2 border-indigo-100 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                            >
+                                <span className="mr-2">✍️</span>
+                                Kayıt Ol
+                            </Link>
+                            <Link
                                 to="/profile"
                                 className="inline-flex items-center justify-center px-8 py-4 text-lg font-medium rounded-xl text-indigo-600 bg-white border-2 border-indigo-100 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
