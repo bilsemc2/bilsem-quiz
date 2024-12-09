@@ -94,52 +94,56 @@ export function generateQuiz(): Quiz {
         .sort((a, b) => getQuestionNumber(a) - getQuestionNumber(b));
 
     // Generate questions
-    const questions = questionFiles.map((questionFile, index) => {
-        const questionNumber = index + 1;
-        const questionId = questionNumber.toString();
-        
-        // Find matching option files for this question
-        const matchingOptions = Object.keys(optionImports)
-            .filter(path => path.includes(`/options/${category}/${questionNumber}/`))
-            .map(extractFilename);
+    const questions = questionFiles
+        .map((questionFile, index) => {
+            const questionNumber = index + 1;
+            const questionId = questionNumber.toString();
+            
+            // Find matching option files for this question
+            const matchingOptions = Object.keys(optionImports)
+                .filter(path => path.includes(`/options/${category}/${questionNumber}/`))
+                .map(extractFilename);
 
-        // Find the correct answer from filenames
-        const correctLetter = findCorrectOptionLetter(matchingOptions);
+            // Find the correct answer from filenames
+            const correctLetter = findCorrectOptionLetter(matchingOptions);
 
-        // Create options and shuffle them
-        const options = shuffleArray(matchingOptions).map(optionFile => {
-            const optionLetter = getOptionLetter(optionFile);
+            // Create options and shuffle them
+            const options = shuffleArray(matchingOptions).map(optionFile => {
+                const optionLetter = getOptionLetter(optionFile);
+                return {
+                    id: `${questionId}${optionLetter}`,
+                    imageUrl: `${getQuestionOptionsPath(questionNumber, category)}/${optionFile}`,
+                    text: ''
+                };
+            });
+
+            // Get video solution if exists
+            const videoSolution = questionVideoMap[questionId];
+
             return {
-                id: `${questionId}${optionLetter}`,
-                imageUrl: `${getQuestionOptionsPath(questionNumber, category)}/${optionFile}`,
-                text: ''
+                id: questionId,
+                questionImageUrl: `/images/questions/${category}/Soru-${questionNumber}.webp`,
+                question: '',
+                options,
+                correctOptionId: `${questionId}${correctLetter}`,
+                grade: 0,
+                subject: category,
+                ...(videoSolution && {
+                    solutionVideo: {
+                        url: videoSolution.videoId,
+                        title: videoSolution.title
+                    }
+                })
             };
-        });
-
-        // Get video solution if exists
-        const videoSolution = questionVideoMap[questionId];
-
-        return {
-            id: questionId,
-            questionImageUrl: `/images/questions/${category}/${questionFile}`,
-            question: '',
-            options,
-            correctOptionId: `${questionId}${correctLetter}`,
-            grade: 1,
-            subject: category,
-            solutionVideo: videoSolution ? {
-                url: `https://www.youtube.com/embed/${videoSolution.videoId}`,
-                title: videoSolution.title
-            } : undefined
-        };
-    });
+        })
+        .slice(0, 10); // Sadece ilk 10 soruyu al
 
     return {
         id: '1',
-        title: 'Bilsemc2- Yetenek ve Zeka',
-        description: 'Yetenek ve Zeka Soruları',
-        grade: 1,
-        subject: 'Yetenek ve Zeka',
-        questions: shuffleArray(questions)
+        title: 'Matris Testi',
+        description: 'Matris Mantık Testi',
+        grade: 0,
+        subject: category,
+        questions
     };
 }

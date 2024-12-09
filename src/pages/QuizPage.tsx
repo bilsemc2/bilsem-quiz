@@ -165,63 +165,84 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
     };
 
     const handleQuizComplete = async () => {
-        playSound('complete');
-        if (quiz) {
-            const { points, xp } = calculateScore(score);
-            setIsSubmitting(true);
-            try {
-                // Update user's points and XP
-                const { data: profileData, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('points, experience')
-                    .eq('id', user.id)
-                    .single();
+        if (!user) return;
 
-                if (profileError) throw profileError;
+        setIsSubmitting(true);
 
-                const newPoints = (profileData?.points || 0) + points;
-                const newXP = (profileData?.experience || 0) + xp;
+        try {
+            const correctAnswers = answers.filter(a => a.isCorrect).length;
+            const finalScore = calculateScore(correctAnswers, quiz.questions.length);
+            const experiencePoints = Math.round(finalScore * 10);
 
-                // Update profile with new points and XP
-                const { error: updateError } = await supabase
-                    .from('profiles')
-                    .update({
-                        points: newPoints,
-                        experience: newXP,
-                    })
-                    .eq('id', user.id);
+            // Get current user stats
+            const { data: currentStats, error: statsError } = await supabase
+                .from('profiles')
+                .select('points, experience')
+                .eq('id', user.id)
+                .single();
 
-                if (updateError) throw updateError;
-
-                // Save quiz result
-                const { error: resultError } = await supabase
-                    .from('quiz_results')
-                    .insert({
-                        user_id: user.id,
-                        correct_answers: score,
-                        total_questions: quiz.questions.length,
-                        points_earned: points,
-                        xp_earned: xp,
-                        completed_at: new Date().toISOString()
-                    });
-
-                if (resultError) throw resultError;
-
-                // Navigate to results page with score data
-                navigate('/result', {
-                    state: {
-                        correctAnswers: score,
-                        totalQuestions: quiz.questions.length,
-                        points,
-                        xp
-                    }
-                });
-
-            } catch (error) {
-                console.error('Error submitting quiz results:', error);
-            } finally {
-                setIsSubmitting(false);
+            if (statsError) {
+                console.error('Error fetching stats:', statsError);
+                showFeedback('Sonuçlar kaydedilirken bir hata oluştu', 'error');
+                return;
             }
+
+            // Convert values to integers
+            const currentPoints = parseInt(currentStats?.points?.toString() || '0');
+            const currentExperience = parseInt(currentStats?.experience?.toString() || '0');
+            const newPoints = currentPoints + parseInt(finalScore.toString());
+            const newExperience = currentExperience + parseInt(experiencePoints.toString());
+
+            // Update user stats with new values
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                    points: newPoints,
+                    experience: newExperience
+                })
+                .eq('id', user.id);
+
+            if (updateError) {
+                console.error('Error updating stats:', updateError);
+                showFeedback('Sonuçlar kaydedilirken bir hata oluştu', 'error');
+                return;
+            }
+
+            // Prepare detailed answers for result page
+            const detailedAnswers = answers.map((answer, index) => {
+                const question = quiz.questions[index];
+                return {
+                    questionNumber: index + 1,
+                    isCorrect: answer.isCorrect,
+                    selectedOption: answer.selectedOption,
+                    correctOption: question.correctOptionId,
+                    questionImage: question.questionImageUrl,
+                    isTimeout: answer.isTimeout,
+                    options: question.options.map(opt => ({
+                        id: opt.id,
+                        imageUrl: opt.imageUrl,
+                        isSelected: opt.id === answer.selectedOption,
+                        isCorrect: opt.id === question.correctOptionId
+                    }))
+                };
+            });
+
+            // Navigate to results page with detailed information
+            navigate('/result', {
+                state: {
+                    correctAnswers,
+                    totalQuestions: quiz.questions.length,
+                    points: finalScore,
+                    xp: experiencePoints,
+                    answers: detailedAnswers
+                }
+            });
+
+        } catch (error) {
+            console.error('Error in quiz completion:', error);
+            showFeedback('Bir hata oluştu', 'error');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
