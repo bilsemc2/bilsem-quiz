@@ -40,7 +40,7 @@ export const ProfilePage: React.FC = () => {
         email: user?.email || "",
         school: "",
         grade: "",
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`,
+        avatar: `https://api.dicebear.com/7.x/big-ears/svg?seed=${user?.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy,curious`,
         points: 0,
         experience: 0
     });
@@ -143,7 +143,7 @@ export const ProfilePage: React.FC = () => {
                     email: user?.email || "",
                     school: data.school || "",
                     grade: data.grade || "",
-                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`,
+                    avatar: `https://api.dicebear.com/7.x/big-ears/svg?seed=${user?.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy,curious`,
                     points: data.points || 0,
                     experience: data.experience || 0
                 });
