@@ -62,7 +62,7 @@ export const ProfilePage: React.FC = () => {
 
         const { data, error } = await supabase
             .from('quiz_results')
-            .select('correct_answers, wrong_answers, created_at')
+            .select('correct_answers, total_questions, created_at')
             .eq('user_id', user.id)
             .gte('created_at', oneWeekAgo.toISOString())
             .order('created_at', { ascending: true });
@@ -91,10 +91,12 @@ export const ProfilePage: React.FC = () => {
         data?.forEach(result => {
             const dateStr = new Date(result.created_at).toISOString().split('T')[0];
             const existing = dailyStats.get(dateStr) || { date: dateStr, correct: 0, wrong: 0 };
+            const wrongAnswers = result.total_questions - result.correct_answers;
+            
             dailyStats.set(dateStr, {
                 date: dateStr,
                 correct: existing.correct + (result.correct_answers || 0),
-                wrong: existing.wrong + (result.wrong_answers || 0)
+                wrong: existing.wrong + wrongAnswers
             });
         });
 
