@@ -86,8 +86,8 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
         if (!isAnswered && timeLeft > 0) {
             const timer = setInterval(() => {
                 setTimeLeft((prev) => {
-                    if (prev <= 6 && prev > 1) { 
-                        playTimeWarning();
+                    if (prev <= 10 && prev > 1) {
+                        playTimeWarning(); // time.warning.mp3 çal
                     }
                     return prev - 1;
                 });
@@ -161,6 +161,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
             // Son soru değilse otomatik olarak sonraki soruya geç
             if (currentQuestionIndex < quiz.questions.length - 1) {
                 setTimeout(() => {
+                    playSound('next'); // Sonraki soruya geçerken next.mp3 sesini çal
                     setCurrentQuestionIndex(prev => prev + 1);
                     setTimeLeft(60);
                     setIsAnswered(false);
@@ -253,7 +254,7 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
 
     const handleNext = async () => {
         if (currentQuestionIndex < (quiz?.questions.length || 0) - 1) {
-            playSound('next');
+            playSound('next'); // Sonraki soruya geçerken next.mp3 sesini çal
             setCurrentQuestionIndex((prev) => prev + 1);
             setSelectedOption(null);
             setIsAnswered(false);
@@ -309,8 +310,14 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
                             Soru {currentQuestionIndex + 1}/{quiz.questions.length}
                         </div>
                         <div className="flex items-center space-x-4">
-                            <div className="text-base sm:text-lg font-medium text-gray-700">
-                                Süre: {formatTime(timeLeft)}
+                            <div className={`
+                                relative w-12 h-12 sm:w-14 sm:h-14
+                                flex items-center justify-center
+                                rounded-full border-4
+                                ${timeLeft <= 10 ? 'border-red-500 text-red-500 animate-pulse' : 'border-gray-300 text-gray-700'}
+                                transition-colors duration-300
+                            `}>
+                                <span className="text-lg sm:text-xl font-bold">{timeLeft}</span>
                             </div>
                         </div>
                     </div>
@@ -372,34 +379,19 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
 
                     {/* Butonlar */}
                     <div className="mt-4 sm:mt-8 flex justify-end space-x-4">
-                        {isAnswered && (
-                            isLastQuestion ? (
-                                <button
-                                    onClick={handleFinishQuiz}
-                                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white rounded-lg font-semibold
-                                             hover:bg-green-700 transition-all duration-200
-                                             transform hover:scale-105 shadow-md hover:shadow-lg
-                                             flex items-center justify-center space-x-2"
-                                >
-                                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    <span>Testi Bitir</span>
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={handleNext}
-                                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-indigo-600 text-white rounded-lg font-semibold
-                                             hover:bg-indigo-700 transition-all duration-200
-                                             transform hover:scale-105 shadow-md hover:shadow-lg
-                                             flex items-center justify-center space-x-2"
-                                >
-                                    <span>Sonraki Soru</span>
-                                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                            )
+                        {isAnswered && isLastQuestion && (
+                            <button
+                                onClick={handleFinishQuiz}
+                                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white rounded-lg font-semibold
+                                         hover:bg-green-700 transition-all duration-200
+                                         transform hover:scale-105 shadow-md hover:shadow-lg
+                                         flex items-center justify-center space-x-2"
+                            >
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>Testi Bitir</span>
+                            </button>
                         )}
                     </div>
                 </div>

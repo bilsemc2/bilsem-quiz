@@ -19,7 +19,7 @@ interface UserProfile {
     email: string;
     school: string;
     grade: string;
-    avatar: string;
+    avatar_url: string;
     points: number;
     experience: number;
 }
@@ -40,7 +40,7 @@ export const ProfilePage: React.FC = () => {
         email: user?.email || "",
         school: "",
         grade: "",
-        avatar: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy`,
+        avatar_url: "",
         points: 0,
         experience: 0
     });
@@ -108,8 +108,32 @@ export const ProfilePage: React.FC = () => {
     };
 
     useEffect(() => {
+        const fetchUserData = async () => {
+            if (user?.id) {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('name, email, school, grade, avatar_url, points, experience')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error) {
+                    console.error('Error fetching user data:', error);
+                    return;
+                }
+
+                if (data) {
+                    // Eğer avatar_url boşsa, DiceBear URL'ini kullan
+                    const avatar_url = data.avatar_url || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy`;
+                    setUserData({ ...data, avatar_url });
+                }
+            }
+        };
+
+        fetchUserData();
+    }, [user]);
+
+    useEffect(() => {
         if (user) {
-            fetchUserProfile();
             fetchQuizStats();
             fetchWeeklyStats();
         }
@@ -120,43 +144,6 @@ export const ProfilePage: React.FC = () => {
         const level = Math.floor(experience / 1000) + 1;
         const progress = (experience % 1000) / 10; // 0-100 arası progress
         return { level, progress };
-    };
-
-    const fetchUserProfile = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user?.id)
-                .single();
-
-            if (error) {
-                console.error('Error fetching user profile:', error);
-                return;
-            }
-
-            if (data) {
-                const { level, progress } = calculateLevel(data.experience || 0);
-                
-                setUserData({
-                    name: data.name || "",
-                    email: user?.email || "",
-                    school: data.school || "",
-                    grade: data.grade || "",
-                    avatar: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy`,
-                    points: data.points || 0,
-                    experience: data.experience || 0
-                });
-
-                setQuizStats(prev => ({
-                    ...prev,
-                    levelProgress: progress,
-                    currentLevel: level
-                }));
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        }
     };
 
     const fetchQuizStats = async () => {
@@ -191,17 +178,18 @@ export const ProfilePage: React.FC = () => {
         }
     };
 
-    const handleProfileUpdate = async () => {
-        try {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (user?.id) {
             const { error } = await supabase
                 .from('profiles')
-                .upsert({
-                    id: user?.id,
+                .update({
                     name: userData.name,
                     school: userData.school,
                     grade: userData.grade,
-                    updated_at: new Date().toISOString(),
-                });
+                    avatar_url: userData.avatar_url
+                })
+                .eq('id', user.id);
 
             if (error) {
                 console.error('Error updating profile:', error);
@@ -209,14 +197,12 @@ export const ProfilePage: React.FC = () => {
             }
 
             setIsEditing(false);
-        } catch (error) {
-            console.error('Error:', error);
         }
     };
 
     const handleEdit = () => {
         if (isEditing) {
-            handleProfileUpdate();
+            handleSubmit;
         }
         setIsEditing(!isEditing);
     };
@@ -236,9 +222,9 @@ export const ProfilePage: React.FC = () => {
                 <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
                     <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
                         <img
-                            src={userData.avatar}
-                            alt="Profil"
-                            className="w-32 h-32 rounded-full border-4 border-indigo-500"
+                            src={userData.avatar_url}
+                            alt={userData.name}
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white shadow-lg"
                         />
                         <div className="flex-1">
                             {isEditing ? (
