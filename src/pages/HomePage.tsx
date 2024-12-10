@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import MobileMenu from '../components/MobileMenu';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LeaderUser {
     id: string;
@@ -19,6 +20,7 @@ const slides = [
 export const HomePage: React.FC = () => {
     const [leader, setLeader] = useState<LeaderUser | null>(null);
     const [currentSlide, setCurrentSlide] = useState(0);
+    const { user } = useAuth();
 
     useEffect(() => {
         const fetchLeader = async () => {
@@ -79,13 +81,15 @@ export const HomePage: React.FC = () => {
                             <span className="mr-2">🎯</span>
                             Quiz'e Başla
                         </Link>
-                        <Link
-                            to="/signup"
-                            className="inline-flex items-center justify-center px-6 py-2 text-base font-medium rounded-xl text-indigo-600 bg-white border-2 border-indigo-100 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                        >
-                            <span className="mr-2">✍️</span>
-                            Kayıt Ol
-                        </Link>
+                        {!user && (
+                            <Link
+                                to="/signup"
+                                className="inline-flex items-center justify-center px-6 py-2 text-base font-medium rounded-xl text-indigo-600 bg-white border-2 border-indigo-100 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                            >
+                                <span className="mr-2">✍️</span>
+                                Kayıt Ol
+                            </Link>
+                        )}
                         <Link
                             to="/profile"
                             className="inline-flex items-center justify-center px-6 py-2 text-base font-medium rounded-xl text-indigo-600 bg-white border-2 border-indigo-100 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
@@ -119,16 +123,18 @@ export const HomePage: React.FC = () => {
                                 Quiz'e Başla
                             </Link>
                             <div className="flex flex-col sm:flex-row gap-4">
-                                <Link
-                                    to="/signup"
-                                    className="flex-1 inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-xl text-indigo-600 bg-white border-2 border-indigo-100 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                                >
-                                    <span className="mr-2">✍️</span>
-                                    Kayıt Ol
-                                </Link>
+                                {!user && (
+                                    <Link
+                                        to="/signup"
+                                        className="flex-1 inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-xl text-indigo-600 bg-white border-2 border-indigo-100 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                    >
+                                        <span className="mr-2">✍️</span>
+                                        Kayıt Ol
+                                    </Link>
+                                )}
                                 <Link
                                     to="/profile"
-                                    className="flex-1 inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-xl text-indigo-600 bg-white border-2 border-indigo-100 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                    className={`flex-1 inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-xl text-indigo-600 bg-white border-2 border-indigo-100 hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 ${!user ? 'flex-1' : 'w-full'}`}
                                 >
                                     <span className="mr-2">👤</span>
                                     Profilim
