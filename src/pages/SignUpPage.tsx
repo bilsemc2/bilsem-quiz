@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
-export const SignUpPage: React.FC = () => {
+export default function SignUpPage() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -240,6 +240,4 @@ export const SignUpPage: React.FC = () => {
             </div>
         </div>
     );
-};
-
-export default SignUpPage;
+}

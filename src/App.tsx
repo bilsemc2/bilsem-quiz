@@ -1,17 +1,16 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { NavBar } from './components/NavBar';
-import { HomePage } from './pages/HomePage';
-import { QuizPage } from './pages/QuizPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { ResultPage } from './pages/ResultPage';
-import { LoginPage } from './pages/LoginPage';
-import { SignUpPage } from './pages/SignUpPage';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import NavBar from './components/NavBar';
+import HomePage from './pages/HomePage';
+import QuizPage from './pages/QuizPage';
+import ProfilePage from './pages/ProfilePage';
+import ResultPage from './pages/ResultPage';
+import LoginPage from './pages/LoginPage';
+import SignUpPage from './pages/SignUpPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
-import { DrawingPage } from './pages/DrawingPage';
-import { RequireAuth } from './components/RequireAuth'; // Assuming RequireAuth is defined in this file
+import DrawingPage from './pages/DrawingPage';
+import RequireAuth from './components/RequireAuth';
 
 function App() {
   return (
@@ -23,31 +22,31 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignUpPage />} />
               <Route 
                 path="/quiz" 
                 element={
-                  <ProtectedRoute>
+                  <RequireAuth>
                     <QuizPage />
-                  </ProtectedRoute>
+                  </RequireAuth>
                 } 
               />
               <Route 
                 path="/profile" 
                 element={
-                  <ProtectedRoute>
+                  <RequireAuth>
                     <ProfilePage />
-                  </ProtectedRoute>
+                  </RequireAuth>
                 } 
               />
               <Route 
                 path="/result" 
                 element={
-                  <ProtectedRoute>
+                  <RequireAuth>
                     <ResultPage />
-                  </ProtectedRoute>
+                  </RequireAuth>
                 } 
               />
-              <Route path="/signup" element={<SignUpPage />} />
               <Route 
                 path="/drawing" 
                 element={
@@ -56,6 +55,7 @@ function App() {
                   </RequireAuth>
                 } 
               />
+              <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </div>
         </Router>

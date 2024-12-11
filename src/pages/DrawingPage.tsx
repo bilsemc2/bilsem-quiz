@@ -21,7 +21,7 @@ interface DrawingSubmission {
     created_at: string;
 }
 
-export const DrawingPage: React.FC = () => {
+export default function DrawingPage() {
     const { user } = useAuth();
     const [selectedWords, setSelectedWords] = useState<string[]>([]);
     const [timeLeft, setTimeLeft] = useState<number>(40 * 60); // 40 dakika
@@ -29,6 +29,21 @@ export const DrawingPage: React.FC = () => {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string>('');
     const [feedback, setFeedback] = useState<string>('');
+    const [scores, setScores] = useState<{
+        composition: number;
+        lines: number;
+        perspective: number;
+        proportions: number;
+        creativity: number;
+        totalScore: number;
+    }>({
+        composition: 0,
+        lines: 0,
+        perspective: 0,
+        proportions: 0,
+        creativity: 0,
+        totalScore: 0
+    });
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Kullanıcı giriş yapmamışsa ana sayfaya yönlendir
@@ -94,7 +109,9 @@ export const DrawingPage: React.FC = () => {
             setFeedback('Resminiz analiz ediliyor...');
             
             // Yapay zeka analizi
-            const feedback = await analyzeImage(base64Image, selectedWords);
+            const result = await analyzeImage(base64Image, selectedWords);
+            setFeedback(result.feedback);
+            setScores(result.scores);
 
             // Resmi Storage'a yükle
             const fileName = `${user.id}/${Date.now()}.jpg`;
@@ -113,24 +130,30 @@ export const DrawingPage: React.FC = () => {
                 .getPublicUrl(fileName);
 
             // Veritabanına kaydet
-            const { data, error } = await supabase
+            const { error: insertError } = await supabase
                 .from('drawing_submissions')
                 .insert({
                     user_id: user.id,
                     image_url: publicUrl,
                     words: selectedWords,
-                    feedback: feedback
+                    feedback: result.feedback,
+                    scores: JSON.stringify({
+                        composition: result.scores.composition,
+                        lines: result.scores.lines,
+                        perspective: result.scores.perspective,
+                        proportions: result.scores.proportions,
+                        creativity: result.scores.creativity,
+                        totalScore: result.scores.totalScore
+                    })
                 })
                 .select()
                 .single();
 
-            if (error) {
-                console.error('Error inserting submission:', error);
-                throw error;
+            if (insertError) {
+                console.error('Error inserting submission:', insertError);
+                throw insertError;
             }
 
-            setFeedback(feedback);
-            
         } catch (error) {
             console.error('Error submitting drawing:', error);
             setFeedback('Resim yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
@@ -138,30 +161,19 @@ export const DrawingPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Header */}
-                <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-                        Resim Kompozisyonu
-                    </h1>
+        <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto">
+                <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Resim Oluşturma Görevi</h2>
                     
-                    {/* Mobile Menu */}
-                    <div className="flex md:hidden items-center">
-                        <MobileMenu />
-                    </div>
-                </div>
-
-                {/* Main Content */}
-                <div className="space-y-8">
-                    {/* Words Section */}
-                    <div className="bg-white rounded-xl shadow-lg p-6">
-                        <h2 className="text-xl font-semibold mb-4">Kelimeleriniz:</h2>
-                        <div className="flex flex-wrap gap-3">
+                    {/* Kelimeler */}
+                    <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-700 mb-2">Kullanılacak Kelimeler:</h3>
+                        <div className="flex flex-wrap gap-2">
                             {selectedWords.map((word, index) => (
-                                <span
+                                <span 
                                     key={index}
-                                    className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full font-medium"
+                                    className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
                                 >
                                     {word}
                                 </span>
@@ -169,95 +181,99 @@ export const DrawingPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Timer Section */}
-                    {isDrawing && (
-                        <div className="bg-white rounded-xl shadow-lg p-6">
-                            <h2 className="text-xl font-semibold mb-4">Kalan Süre:</h2>
-                            <div className="text-4xl font-bold text-indigo-600">
-                                {formatTime(timeLeft)}
+                    {/* Süre */}
+                    <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-700 mb-2">Kalan Süre:</h3>
+                        <div className="text-2xl font-bold text-gray-900">
+                            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                        </div>
+                    </div>
+
+                    {/* Resim Yükleme */}
+                    <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-700 mb-2">Resim Yükleme:</h3>
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
+                            >
+                                Resim Seç
+                            </button>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            {imageFile && (
+                                <button
+                                    onClick={handleSubmit}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors"
+                                >
+                                    Gönder
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Önizleme */}
+                    {previewUrl && (
+                        <div className="mb-6">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2">Önizleme:</h3>
+                            <div className="relative rounded-lg overflow-hidden border border-gray-200">
+                                <img
+                                    src={previewUrl}
+                                    alt="Yüklenen resim önizlemesi"
+                                    className="w-full h-auto max-h-96 object-contain"
+                                />
                             </div>
                         </div>
                     )}
 
-                    {/* Upload Section */}
-                    <div className="bg-white rounded-xl shadow-lg p-6">
-                        {!isDrawing ? (
-                            <button
-                                onClick={handleStartDrawing}
-                                className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                                Çizime Başla
-                            </button>
-                        ) : (
-                            <div className="space-y-4">
-                                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
-                                    {previewUrl ? (
-                                        <div className="space-y-4">
-                                            <img
-                                                src={previewUrl}
-                                                alt="Preview"
-                                                className="max-w-full h-auto mx-auto rounded-lg"
-                                            />
-                                            <button
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="text-indigo-600 hover:text-indigo-800"
-                                            >
-                                                Başka bir resim seç
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="cursor-pointer"
-                                        >
-                                            <div className="text-gray-500">
-                                                <svg
-                                                    className="mx-auto h-12 w-12 text-gray-400"
-                                                    stroke="currentColor"
-                                                    fill="none"
-                                                    viewBox="0 0 48 48"
-                                                    aria-hidden="true"
-                                                >
-                                                    <path
-                                                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                                                        strokeWidth={2}
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                    />
-                                                </svg>
-                                                <p className="mt-1">Resminizi yüklemek için tıklayın</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileChange}
-                                        accept="image/*"
-                                        className="hidden"
-                                    />
-                                </div>
-
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={!imageFile}
-                                    className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 ${
-                                        imageFile
-                                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
-                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    }`}
-                                >
-                                    Resmi Gönder
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Feedback Section */}
+                    {/* Geri Bildirim */}
                     {feedback && (
-                        <div className="bg-white rounded-xl shadow-lg p-6">
-                            <h2 className="text-xl font-semibold mb-4">Geri Bildirim:</h2>
-                            <p className="text-gray-700">{feedback}</p>
+                        <div className="mt-8 p-6 bg-white rounded-lg shadow-md">
+                            <h2 className="text-2xl font-bold mb-4">Değerlendirme</h2>
+                            
+                            {/* Scores */}
+                            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 bg-blue-50 rounded-lg">
+                                    <h3 className="text-lg font-semibold mb-3">Puanlama</h3>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between">
+                                            <span>Kompozisyon:</span>
+                                            <span className="font-semibold">{scores.composition}/20</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Çizgi:</span>
+                                            <span className="font-semibold">{scores.lines}/20</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Perspektif:</span>
+                                            <span className="font-semibold">{scores.perspective}/20</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Oran-Orantı:</span>
+                                            <span className="font-semibold">{scores.proportions}/20</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Yaratıcılık:</span>
+                                            <span className="font-semibold">{scores.creativity}/20</span>
+                                        </div>
+                                        <div className="mt-4 pt-4 border-t border-blue-200 flex justify-between">
+                                            <span className="font-bold">Toplam Puan:</span>
+                                            <span className="font-bold text-lg">{scores.totalScore}/100</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Detailed Feedback */}
+                                <div className="p-4 bg-gray-50 rounded-lg">
+                                    <h3 className="text-lg font-semibold mb-3">Detaylı Geri Bildirim</h3>
+                                    <div className="whitespace-pre-wrap">{feedback}</div>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -265,5 +281,3 @@ export const DrawingPage: React.FC = () => {
         </div>
     );
 };
-
-export default DrawingPage;

@@ -14,7 +14,7 @@ interface QuizPageProps {
     onComplete?: (score: number, totalQuestions: number) => void;
 }
 
-export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
+export default function QuizPage({ onComplete }: QuizPageProps) {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [quiz, setQuiz] = useState<Quiz | null>(null);
@@ -400,4 +400,4 @@ export const QuizPage: React.FC<QuizPageProps> = ({ onComplete }) => {
             </div>
         </div>
     );
-};
+}
