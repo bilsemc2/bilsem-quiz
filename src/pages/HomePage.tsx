@@ -9,6 +9,7 @@ interface LeaderUser {
     name: string;
     avatar_url: string;
     points: number;
+    email: string;
 }
 
 const slides = [
@@ -18,30 +19,37 @@ const slides = [
 ];
 
 export const HomePage: React.FC = () => {
-    const [leader, setLeader] = useState<LeaderUser | null>(null);
+    const [leaders, setLeaders] = useState<LeaderUser[]>([]);
     const [currentSlide, setCurrentSlide] = useState(0);
     const { user } = useAuth();
 
     useEffect(() => {
-        const fetchLeader = async () => {
+        const fetchLeaders = async () => {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, name, avatar_url, points')
+                .select('id, name, avatar_url, points, email')
                 .order('points', { ascending: false })
-                .limit(1)
-                .single();
+                .limit(10);
 
             if (error) {
-                console.error('Error fetching leader:', error);
+                console.error('Error fetching leaders:', error);
                 return;
             }
 
             if (data) {
-                setLeader(data);
+                // Her kullanıcı için avatar URL'sini kontrol et ve gerekirse güncelle
+                const updatedLeaders = data.map(leader => ({
+                    ...leader,
+                    avatar_url: leader.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(leader.email)}`
+                }));
+                setLeaders(updatedLeaders);
             }
         };
 
-        fetchLeader();
+        fetchLeaders();
+        // Her 30 saniyede bir lider tablosunu güncelle
+        const interval = setInterval(fetchLeaders, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -110,7 +118,39 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 {/* Main Content */}
-                <div className="grid lg:grid-cols-2 gap-8 sm:gap-16 items-center">
+                <div className="grid lg:grid-cols-2 gap-8 sm:gap-16 items-start">
+                    {/* Right Column - Slider */}
+                    <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl mx-auto lg:mx-0 max-w-2xl w-full">
+                        <div
+                            className="flex transition-transform duration-500 ease-in-out"
+                            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                        >
+                            {slides.map((slide) => (
+                                <img
+                                    key={slide.id}
+                                    src={slide.image}
+                                    alt={slide.alt}
+                                    className="w-full h-full object-cover flex-shrink-0"
+                                />
+                            ))}
+                        </div>
+                        {/* Slider Controls */}
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                            {slides.map((_, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => goToSlide(index)}
+                                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                                        currentSlide === index
+                                            ? 'bg-white w-4'
+                                            : 'bg-white/50'
+                                    }`}
+                                    aria-label={`Go to slide ${index + 1}`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Left Column */}
                     <div className="space-y-6 sm:space-y-8">
                         {/* Action Buttons */}
@@ -143,55 +183,28 @@ export const HomePage: React.FC = () => {
                         </div>
 
                         {/* Leader Section */}
-                        {leader && (
-                            <div className="bg-white p-6 rounded-2xl shadow-lg border border-indigo-50">
-                                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
-                                    🏆 Lider
-                                </h3>
-                                <div className="flex items-center space-x-4">
-                                    <img
-                                        src={leader.avatar_url}
-                                        alt={leader.name}
-                                        className="w-12 h-12 sm:w-16 sm:h-16 rounded-full"
-                                    />
-                                    <div>
-                                        <p className="text-base sm:text-lg font-medium text-gray-900">{leader.name}</p>
-                                        <p className="text-sm sm:text-base text-indigo-600">{leader.points} puan</p>
+                        <div className="bg-white p-6 rounded-2xl shadow-lg border border-indigo-50">
+                            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
+                                🏆 Lider Tablosu
+                            </h3>
+                            <div className="space-y-4">
+                                {leaders.map((leader, index) => (
+                                    <div key={leader.id} className="flex items-center space-x-4 p-2 hover:bg-indigo-50 rounded-xl transition-colors">
+                                        <div className="flex-shrink-0 w-8 text-center font-semibold text-indigo-600">
+                                            {index + 1}
+                                        </div>
+                                        <img
+                                            src={leader.avatar_url}
+                                            alt={leader.name}
+                                            className="w-10 h-10 rounded-full"
+                                        />
+                                        <div className="flex-grow">
+                                            <p className="text-base font-medium text-gray-900">{leader.name}</p>
+                                            <p className="text-sm text-indigo-600">{leader.points} puan</p>
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
-                        )}
-                    </div>
-
-                    {/* Right Column - Slider */}
-                    <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
-                        <div
-                            className="flex transition-transform duration-500 ease-in-out"
-                            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-                        >
-                            {slides.map((slide) => (
-                                <img
-                                    key={slide.id}
-                                    src={slide.image}
-                                    alt={slide.alt}
-                                    className="w-full h-full object-cover flex-shrink-0"
-                                />
-                            ))}
-                        </div>
-                        {/* Slider Controls */}
-                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                            {slides.map((_, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => goToSlide(index)}
-                                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                                        currentSlide === index
-                                            ? 'bg-white w-4'
-                                            : 'bg-white/50'
-                                    }`}
-                                    aria-label={`Go to slide ${index + 1}`}
-                                />
-                            ))}
                         </div>
                     </div>
                 </div>

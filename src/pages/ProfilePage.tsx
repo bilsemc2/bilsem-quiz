@@ -3,6 +3,7 @@ import { useSound } from '../contexts/SoundContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import ModernProgress from '../components/ModernProgress';
+import MobileMenu from '../components/MobileMenu';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface QuizStats {
@@ -33,7 +34,6 @@ interface DailyStats {
 export const ProfilePage: React.FC = () => {
     const { volume, setVolume, isMuted, setIsMuted } = useSound();
     const { user } = useAuth();
-    const [isEditing, setIsEditing] = useState(false);
     const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
     const [userData, setUserData] = useState<UserProfile>({
         name: "",
@@ -108,28 +108,44 @@ export const ProfilePage: React.FC = () => {
     };
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            if (user?.id) {
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select('name, email, school, grade, avatar_url, points, experience')
-                    .eq('id', user.id)
-                    .single();
+        const fetchProfile = async () => {
+            if (!user) return;
 
-                if (error) {
-                    console.error('Error fetching user data:', error);
-                    return;
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (error) {
+                console.error('Error fetching profile:', error);
+                return;
+            }
+
+            if (data) {
+                // Avatar URL'sini kontrol et ve gerekirse güncelle
+                const avatar_url = data.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || '')}`;
+                
+                // Eğer avatar_url değişmişse, veritabanını güncelle
+                if (avatar_url !== data.avatar_url) {
+                    const { error: updateError } = await supabase
+                        .from('profiles')
+                        .update({ avatar_url })
+                        .eq('id', user.id);
+
+                    if (updateError) {
+                        console.error('Error updating avatar_url:', updateError);
+                    }
                 }
 
-                if (data) {
-                    // Eğer avatar_url boşsa, DiceBear URL'ini kullan
-                    const avatar_url = data.avatar_url || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.email}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy`;
-                    setUserData({ ...data, avatar_url });
-                }
+                setUserData({
+                    ...data,
+                    avatar_url
+                });
             }
         };
 
-        fetchUserData();
+        fetchProfile();
     }, [user]);
 
     useEffect(() => {
@@ -178,96 +194,45 @@ export const ProfilePage: React.FC = () => {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (user?.id) {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    name: userData.name,
-                    school: userData.school,
-                    grade: userData.grade,
-                    avatar_url: userData.avatar_url
-                })
-                .eq('id', user.id);
-
-            if (error) {
-                console.error('Error updating profile:', error);
-                return;
-            }
-
-            setIsEditing(false);
-        }
-    };
-
-    const handleEdit = () => {
-        if (isEditing) {
-            handleSubmit;
-        }
-        setIsEditing(!isEditing);
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setUserData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="max-w-4xl mx-auto">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+                        Profilim
+                    </h1>
+                    
+                    {/* Mobile Menu */}
+                    <div className="flex md:hidden items-center">
+                        <MobileMenu />
+                    </div>
+                </div>
+
                 {/* Profile Card */}
                 <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
                     <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
-                        <img
-                            src={userData.avatar_url}
-                            alt={userData.name}
-                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white shadow-lg"
-                        />
-                        <div className="flex-1">
-                            {isEditing ? (
-                                <div className="space-y-4">
-                                    <input
-                                        type="text"
-                                        value={userData.name}
-                                        onChange={handleInputChange}
-                                        name="name"
-                                        className="block w-full px-4 py-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                        placeholder="Adınız"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={userData.school}
-                                        onChange={handleInputChange}
-                                        name="school"
-                                        className="block w-full px-4 py-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                        placeholder="Okulunuz"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={userData.grade}
-                                        onChange={handleInputChange}
-                                        name="grade"
-                                        className="block w-full px-4 py-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                        placeholder="Sınıfınız"
-                                    />
-                                </div>
-                            ) : (
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">{userData.name || 'İsimsiz Kullanıcı'}</h2>
-                                    <p className="text-gray-600">{userData.email}</p>
-                                    <p className="text-gray-600">{userData.school || 'Okul bilgisi girilmemiş'}</p>
-                                    <p className="text-gray-600">{userData.grade || 'Sınıf bilgisi girilmemiş'}</p>
-                                </div>
-                            )}
-                            <button
-                                onClick={handleEdit}
-                                className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-                            >
-                                {isEditing ? 'Kaydet' : 'Düzenle'}
-                            </button>
+                        {/* Avatar */}
+                        <div className="relative">
+                            <img
+                                src={userData.avatar_url}
+                                alt={userData.name}
+                                className="w-32 h-32 rounded-full object-cover border-4 border-indigo-100"
+                            />
+                        </div>
+
+                        {/* User Info */}
+                        <div className="flex-1 text-center md:text-left">
+                            <h2 className="text-2xl font-bold text-gray-900">{userData.name}</h2>
+                            <p className="text-gray-600">{userData.email}</p>
+                            <p className="text-gray-600">{userData.school}</p>
+                            <p className="text-gray-600">{userData.grade}. Sınıf</p>
+                            <div className="mt-2">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+                                    <span className="mr-1">⭐</span>
+                                    {userData.points} Puan
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

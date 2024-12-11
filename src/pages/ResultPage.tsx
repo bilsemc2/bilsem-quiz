@@ -45,103 +45,52 @@ export const ResultPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-7xl mx-auto px-4">
-                <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
-                    {/* Yeni Quiz Başlat Butonu */}
-                    <div className="mb-8 text-center">
-                        <button
-                            onClick={() => navigate('/quiz')}
-                            className="w-full sm:w-auto bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all duration-300 active:scale-95"
-                        >
-                            Yeni Quiz Başlat
-                        </button>
-                    </div>
-
-                    {/* Soru Numaraları */}
-                    <div className="mb-8">
-                        <div className="grid grid-cols-5 sm:flex sm:flex-wrap justify-center gap-2">
-                            {result.answers.map((answer, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => {
-                                        const element = document.getElementById(`question-${index + 1}`);
-                                        if (element) {
-                                            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        }
-                                    }}
-                                    className={`
-                                        w-full h-12 sm:w-12 sm:h-12 
-                                        rounded-lg sm:rounded-xl 
-                                        font-semibold text-white 
-                                        flex items-center justify-center 
-                                        transition-all duration-300
-                                        transform hover:scale-105 hover:shadow-lg
-                                        active:scale-95
-                                        ${
-                                            answer.isTimeout 
-                                                ? 'bg-yellow-500 hover:bg-yellow-600' 
-                                                : answer.isCorrect 
-                                                    ? 'bg-emerald-500 hover:bg-emerald-600' 
-                                                    : 'bg-red-500 hover:bg-red-600'
-                                        }
-                                    `}
-                                    title={answer.isTimeout 
-                                        ? 'Süre Doldu' 
-                                        : answer.isCorrect 
-                                            ? 'Doğru Cevap' 
-                                            : 'Yanlış Cevap'
-                                    }
-                                >
-                                    {index + 1}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
+                <div className="bg-white rounded-2xl shadow-xl p-8">
                     {/* Özet Bilgiler */}
-                    <div className="mb-8 sm:mb-12">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 sm:mb-8">Quiz Sonuçları</h1>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="mb-12">
+                        <h1 className="text-3xl font-bold text-gray-800 mb-8">Quiz Sonuçları</h1>
+                        <div className="grid grid-cols-3 gap-6">
                             <div className="bg-emerald-50 rounded-xl p-4">
-                                <div className="text-xl sm:text-2xl font-bold text-emerald-600">{result.correctAnswers}</div>
+                                <div className="text-2xl font-bold text-emerald-600">{result.correctAnswers}</div>
                                 <div className="text-sm text-emerald-600">Doğru</div>
                             </div>
                             <div className="bg-red-50 rounded-xl p-4">
-                                <div className="text-xl sm:text-2xl font-bold text-red-600">{wrongAnswers}</div>
+                                <div className="text-2xl font-bold text-red-600">{wrongAnswers}</div>
                                 <div className="text-sm text-red-600">Yanlış</div>
                             </div>
                             <div className="bg-blue-50 rounded-xl p-4">
-                                <div className="text-xl sm:text-2xl font-bold text-blue-600">%{Math.round(percentage)}</div>
+                                <div className="text-2xl font-bold text-blue-600">%{Math.round(percentage)}</div>
                                 <div className="text-sm text-blue-600">Başarı</div>
                             </div>
                         </div>
                     </div>
 
                     {/* Puan ve XP */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-12">
+                    <div className="grid grid-cols-2 gap-6 mb-12">
                         <div className="bg-indigo-50 p-6 rounded-lg text-center">
-                            <h3 className="text-lg sm:text-xl font-semibold text-indigo-900 mb-2">Kazanılan Puan</h3>
-                            <div className="text-3xl sm:text-4xl font-bold text-indigo-600">{result.points}</div>
+                            <h3 className="text-lg font-semibold text-indigo-900 mb-2">Kazanılan Puan</h3>
+                            <div className="text-3xl font-bold text-indigo-600">{result.points}</div>
                         </div>
                         <div className="bg-purple-50 p-6 rounded-lg text-center">
-                            <h3 className="text-lg sm:text-xl font-semibold text-purple-900 mb-2">Kazanılan XP</h3>
-                            <div className="text-3xl sm:text-4xl font-bold text-purple-600">{result.xp}</div>
+                            <h3 className="text-lg font-semibold text-purple-900 mb-2">Kazanılan XP</h3>
+                            <div className="text-3xl font-bold text-purple-600">{result.xp}</div>
                         </div>
                     </div>
 
                     {/* Soru Detayları */}
                     <div>
-                        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Soru Detayları</h2>
-                        <div className="space-y-4 sm:space-y-8">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">Soru Detayları</h2>
+                        <div className="space-y-8">
                             {result.answers?.map((answer, index) => (
-                                <div key={index} id={`question-${index + 1}`} className="bg-gray-50 rounded-xl p-6">
+                                <div key={index} className="bg-gray-50 rounded-xl p-6">
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-4">
-                                            <h3 className="text-lg sm:text-xl font-semibold text-gray-800">
+                                            <h3 className="text-lg font-semibold text-gray-800">
                                                 Soru {index + 1}
                                             </h3>
                                             {answer.solutionVideo && (
                                                 <a
-                                                    href={`https://www.youtube.com/watch?v=${answer.solutionVideo.url.split('/').pop()}`}
+                                                    href={answer.solutionVideo.url.replace('/embed/', '/watch?v=')}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-flex items-center gap-2 text-red-600 hover:text-red-700"
@@ -196,6 +145,16 @@ export const ResultPage: React.FC = () => {
                                 </div>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Yeni Quiz Başlat Butonu */}
+                    <div className="mt-12 text-center">
+                        <button
+                            onClick={() => navigate('/quiz')}
+                            className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200"
+                        >
+                            Yeni Quiz Başlat
+                        </button>
                     </div>
                 </div>
             </div>
