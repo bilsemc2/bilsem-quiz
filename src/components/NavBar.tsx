@@ -55,16 +55,6 @@ export default function NavBar() {
                         >
                             Quiz
                         </Link>
-                        <Link
-                            to="/drawing"
-                            className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/drawing')
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                        >
-                            Resim
-                        </Link>
                         {user && (
                             <>
                                 <Link
@@ -133,17 +123,6 @@ export default function NavBar() {
                             onClick={() => setIsMenuOpen(false)}
                         >
                             Quiz
-                        </Link>
-                        <Link
-                            to="/drawing"
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/drawing')
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Resim
                         </Link>
                         {user && (
                             <>

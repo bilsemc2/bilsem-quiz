@@ -139,20 +139,12 @@ export default function HomePage() {
                 {/* Action Buttons */}
                 <div className="flex justify-center space-x-4 mb-12">
                     {user ? (
-                        <>
-                            <Link
-                                to="/quiz"
-                                className="px-8 py-3 text-lg font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                                Quiz'e Başla
-                            </Link>
-                            <Link
-                                to="/drawing"
-                                className="px-8 py-3 text-lg font-semibold text-indigo-600 bg-white border-2 border-indigo-100 rounded-xl hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                                Çizim Yap
-                            </Link>
-                        </>
+                        <Link
+                            to="/quiz"
+                            className="px-8 py-3 text-lg font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                        >
+                            Quiz'e Başla
+                        </Link>
                     ) : (
                         <>
                             <Link

@@ -9,7 +9,6 @@ import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
-import DrawingPage from './pages/DrawingPage';
 import RequireAuth from './components/RequireAuth';
 
 function App() {
@@ -44,14 +43,6 @@ function App() {
                 element={
                   <RequireAuth>
                     <ResultPage />
-                  </RequireAuth>
-                } 
-              />
-              <Route 
-                path="/drawing" 
-                element={
-                  <RequireAuth>
-                    <DrawingPage />
                   </RequireAuth>
                 } 
               />
