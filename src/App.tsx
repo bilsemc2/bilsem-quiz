@@ -10,6 +10,8 @@ import { SignUpPage } from './pages/SignUpPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
+import { DrawingPage } from './pages/DrawingPage';
+import { RequireAuth } from './components/RequireAuth'; // Assuming RequireAuth is defined in this file
 
 function App() {
   return (
@@ -46,6 +48,14 @@ function App() {
                 } 
               />
               <Route path="/signup" element={<SignUpPage />} />
+              <Route 
+                path="/drawing" 
+                element={
+                  <RequireAuth>
+                    <DrawingPage />
+                  </RequireAuth>
+                } 
+              />
             </Routes>
           </div>
         </Router>

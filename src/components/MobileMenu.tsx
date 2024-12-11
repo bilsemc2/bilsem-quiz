@@ -94,10 +94,16 @@ export const MobileMenu: React.FC = () => {
                             <Link
                                 to="/quiz"
                                 onClick={() => setIsOpen(false)}
-                                className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50"
+                                className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
                             >
-                                <span className="text-lg mr-3">🎯</span>
                                 Quiz
+                            </Link>
+                            <Link
+                                to="/drawing"
+                                onClick={() => setIsOpen(false)}
+                                className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                            >
+                                Resim
                             </Link>
                             <Link
                                 to="/profile"
