@@ -62,10 +62,10 @@ export const ProfilePage: React.FC = () => {
 
         const { data, error } = await supabase
             .from('quiz_results')
-            .select('correct_answers, total_questions, created_at')
+            .select('correct_answers, questions_answered, completed_at')
             .eq('user_id', user.id)
-            .gte('created_at', oneWeekAgo.toISOString())
-            .order('created_at', { ascending: true });
+            .gte('completed_at', oneWeekAgo.toISOString())
+            .order('completed_at', { ascending: true });
 
         if (error) {
             console.error('Error fetching weekly stats:', error);
@@ -89,9 +89,9 @@ export const ProfilePage: React.FC = () => {
 
         // Aggregate results by date
         data?.forEach(result => {
-            const dateStr = new Date(result.created_at).toISOString().split('T')[0];
+            const dateStr = new Date(result.completed_at).toISOString().split('T')[0];
             const existing = dailyStats.get(dateStr) || { date: dateStr, correct: 0, wrong: 0 };
-            const wrongAnswers = result.total_questions - result.correct_answers;
+            const wrongAnswers = result.questions_answered - result.correct_answers;
             
             dailyStats.set(dateStr, {
                 date: dateStr,
@@ -166,7 +166,7 @@ export const ProfilePage: React.FC = () => {
         try {
             const { data, error } = await supabase
                 .from('quiz_results')
-                .select('*')
+                .select('correct_answers, questions_answered')
                 .eq('user_id', user?.id);
 
             if (error) {
@@ -177,7 +177,7 @@ export const ProfilePage: React.FC = () => {
             if (data && data.length > 0) {
                 const totalQuizzes = data.length;
                 const totalCorrect = data.reduce((sum, quiz) => sum + quiz.correct_answers, 0);
-                const totalQuestions = data.reduce((sum, quiz) => sum + quiz.total_questions, 0);
+                const totalQuestions = data.reduce((sum, quiz) => sum + quiz.questions_answered, 0);
                 const totalWrong = totalQuestions - totalCorrect;
                 const averageScore = (totalCorrect / totalQuestions) * 100;
 

@@ -51,10 +51,21 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
     useEffect(() => {
         const loadQuiz = async () => {
             try {
-                const quizData = generateQuiz();
-                setQuiz(quizData);
+                // Check if there's a homework quiz in localStorage
+                const savedQuiz = localStorage.getItem('currentQuiz');
+                if (savedQuiz) {
+                    const parsedQuiz = JSON.parse(savedQuiz);
+                    setQuiz(parsedQuiz);
+                    // Clear the saved quiz
+                    localStorage.removeItem('currentQuiz');
+                } else {
+                    // If no homework quiz, generate a regular quiz
+                    const quizData = generateQuiz();
+                    setQuiz(quizData);
+                }
             } catch (error) {
                 console.error('Quiz yüklenirken hata:', error);
+                showFeedback('Quiz yüklenirken bir hata oluştu', 'error');
             }
         };
         loadQuiz();
@@ -192,6 +203,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
 
                     if (fetchError) throw fetchError;
 
+                    // Kullanıcı puanlarını güncelle
                     const { error: updateError } = await supabase
                         .from('profiles')
                         .update({
@@ -201,23 +213,25 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                         .eq('id', user.id);
 
                     if (updateError) throw updateError;
+
+                    // Quiz sonuçlarını kaydet
+                    const { error: resultError } = await supabase
+                        .from('quiz_results')
+                        .insert({
+                            user_id: user.id,
+                            score: correctAnswers,
+                            questions_answered: quiz.questions.length,
+                            correct_answers: correctAnswers,
+                            completed_at: new Date().toISOString()
+                        });
+
+                    if (resultError) throw resultError;
                 }
 
-                // Save quiz results
-                const { error: resultError } = await supabase
-                    .from('quiz_results')
-                    .insert({
-                        user_id: user?.id,
-                        correct_answers: correctAnswers,
-                        total_questions: quiz.questions.length,
-                        points_earned: points,
-                        xp_earned: xp,
-                        completed_at: new Date().toISOString()
-                    });
+                // Başarılı mesajı göster
+                showFeedback('Quiz tamamlandı! 🎉', 'success');
 
-                if (resultError) throw resultError;
-
-                // Navigate to results page with score and answers data
+                // Result sayfasına yönlendir
                 navigate('/result', {
                     state: {
                         correctAnswers,
@@ -229,7 +243,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                             return {
                                 ...answer,
                                 questionImage: question?.questionImageUrl || '',
-                                solutionVideo: question?.solutionVideo || null, // Video çözüm bilgisini ekle
+                                solutionVideo: question?.solutionVideo || null,
                                 options: question?.options.map(opt => ({
                                     ...opt,
                                     isSelected: opt.id === answer.selectedOption,
@@ -239,9 +253,13 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                         })
                     }
                 });
+                
+                // Callback'i çağır
+                if (onComplete) onComplete(correctAnswers, quiz.questions.length);
 
             } catch (error) {
-                console.error('Error submitting quiz results:', error);
+                console.error('Quiz sonuçları kaydedilirken hata:', error);
+                showFeedback('Bir hata oluştu!', 'error');
             } finally {
                 setIsSubmitting(false);
             }

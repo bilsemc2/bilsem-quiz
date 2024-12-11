@@ -7,6 +7,8 @@ import ProfilePage from './pages/ProfilePage';
 import ResultPage from './pages/ResultPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
+import AdminPage from './pages/AdminPage';
+import HomeworkPage from './pages/HomeworkPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -31,10 +33,26 @@ function App() {
                 } 
               />
               <Route 
+                path="/admin" 
+                element={
+                  <RequireAuth>
+                    <AdminPage />
+                  </RequireAuth>
+                } 
+              />
+              <Route 
                 path="/profile" 
                 element={
                   <RequireAuth>
                     <ProfilePage />
+                  </RequireAuth>
+                } 
+              />
+              <Route 
+                path="/homework" 
+                element={
+                  <RequireAuth>
+                    <HomeworkPage />
                   </RequireAuth>
                 } 
               />

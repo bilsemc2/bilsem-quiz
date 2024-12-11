@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -8,6 +8,8 @@ export default function NavBar() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     const isActive = (path: string) => {
         return location.pathname === path;
@@ -20,6 +22,23 @@ export default function NavBar() {
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
+    };
+
+    useEffect(() => {
+        checkAdminStatus();
+    }, []);
+
+    const checkAdminStatus = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin, email')
+            .eq('id', user.id)
+            .single();
+
+        setIsAdmin(profile?.is_admin && profile.email === 'yaprakyesili@msn.com');
     };
 
     return (
@@ -55,6 +74,16 @@ export default function NavBar() {
                         >
                             Quiz
                         </Link>
+                        <Link
+                            to="/homework"
+                            className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                isActive('/homework')
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                        >
+                            Ödev
+                        </Link>
                         {user && (
                             <>
                                 <Link
@@ -67,6 +96,18 @@ export default function NavBar() {
                                 >
                                     Profil
                                 </Link>
+                                {isAdmin && (
+                                    <Link
+                                        to="/admin"
+                                        className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                            isActive('/admin')
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        Admin Paneli
+                                    </Link>
+                                )}
                                 <button
                                     onClick={handleLogout}
                                     className="px-3 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
@@ -124,6 +165,17 @@ export default function NavBar() {
                         >
                             Quiz
                         </Link>
+                        <Link
+                            to="/homework"
+                            className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                isActive('/homework')
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            Ödev
+                        </Link>
                         {user && (
                             <>
                                 <Link
@@ -137,6 +189,19 @@ export default function NavBar() {
                                 >
                                     Profil
                                 </Link>
+                                {isAdmin && (
+                                    <Link
+                                        to="/admin"
+                                        className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                            isActive('/admin')
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        Admin Paneli
+                                    </Link>
+                                )}
                                 <button
                                     onClick={() => {
                                         handleLogout();
