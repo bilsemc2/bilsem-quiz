@@ -1,6 +1,8 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CircularProgress } from '../components/CircularProgress';
+import { Box, Typography, Tooltip } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 interface QuestionResult {
     questionNumber: number;
@@ -86,7 +88,7 @@ export const ResultPage: React.FC = () => {
                         <h2 className="text-2xl font-bold text-gray-800 mb-6">Soru Detayları</h2>
                         <div className="space-y-8">
                             {result.answers?.map((answer, index) => (
-                                <div key={index} className="bg-gray-50 rounded-xl p-6">
+                                <div key={index} className="bg-gray-50 rounded-xl p-6 relative">
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-4">
                                             <h3 className="text-lg font-semibold text-gray-800">
@@ -118,31 +120,47 @@ export const ResultPage: React.FC = () => {
                                     </div>
                                     
                                     {/* Soru Resmi */}
-                                    <div className="mb-6">
+                                    <div className="mb-6 relative">
                                         <img
                                             src={answer.questionImage}
                                             alt={`Soru ${index + 1}`}
-                                            className="w-full h-64 object-contain mx-auto rounded-lg bg-gray-50"
+                                            className="w-full h-[400px] object-contain bg-gray-50 rounded-lg border border-gray-200"
                                         />
+                                        
+                                        {/* Soru Numarası ve Bilgi İkonu */}
+                                        <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                                            <span className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium">
+                                                {answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1] || index + 1}
+                                            </span>
+                                            <Tooltip title="Hatalı olduğunu düşündüğünüz sorunun ID'sini yöneticiye bildirin" arrow placement="top">
+                                                <InfoOutlinedIcon 
+                                                    className="text-gray-600 hover:text-blue-600 cursor-pointer"
+                                                    sx={{ fontSize: '1.2rem' }}
+                                                />
+                                            </Tooltip>
+                                        </div>
                                     </div>
 
                                     {/* Seçenekler */}
-                                    <div className="grid grid-cols-5 gap-4">
-                                        {answer.options.map((option, optIndex) => (
-                                            <div
-                                                key={optIndex}
-                                                className={`
-                                                    relative p-4 rounded-lg transition-all duration-200 h-32
-                                                    ${option.isCorrect ? 'border-4 border-emerald-500 bg-emerald-50' :
-                                                      option.isSelected ? 'border-4 border-red-500 bg-red-50' :
-                                                      'border border-gray-200 bg-white opacity-50'}
-                                                `}
-                                            >
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                        {answer.options.map((option, optionIndex) => (
+                                            <div key={optionIndex} className={`relative rounded-lg border ${
+                                                answer.selectedOption === optionIndex 
+                                                    ? answer.isCorrect 
+                                                        ? 'border-green-500 bg-green-50' 
+                                                        : 'border-red-500 bg-red-50'
+                                                    : answer.correctOption === optionIndex
+                                                        ? 'border-green-500 bg-green-50'
+                                                        : 'border-gray-200'
+                                            }`}>
                                                 <img
                                                     src={option.imageUrl}
-                                                    alt={`Seçenek ${String.fromCharCode(65 + optIndex)}`}
-                                                    className="w-full h-full object-contain rounded"
+                                                    alt={`Seçenek ${optionIndex + 1}`}
+                                                    className="w-full h-[200px] md:h-[180px] object-contain bg-gray-50 rounded-lg p-2"
                                                 />
+                                                <div className="absolute top-2 left-2 bg-white/50 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm text-gray-700">
+                                                    {optionIndex + 1}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
