@@ -122,7 +122,7 @@ export const ResultPage: React.FC = () => {
                                         <img
                                             src={answer.questionImage}
                                             alt={`Soru ${index + 1}`}
-                                            className="max-h-[200px] object-contain mx-auto rounded-lg"
+                                            className="w-full h-64 object-contain mx-auto rounded-lg bg-gray-50"
                                         />
                                     </div>
 
@@ -132,7 +132,7 @@ export const ResultPage: React.FC = () => {
                                             <div
                                                 key={optIndex}
                                                 className={`
-                                                    relative p-4 rounded-lg transition-all duration-200
+                                                    relative p-4 rounded-lg transition-all duration-200 h-32
                                                     ${option.isCorrect ? 'border-4 border-emerald-500 bg-emerald-50' :
                                                       option.isSelected ? 'border-4 border-red-500 bg-red-50' :
                                                       'border border-gray-200 bg-white opacity-50'}
@@ -140,8 +140,8 @@ export const ResultPage: React.FC = () => {
                                             >
                                                 <img
                                                     src={option.imageUrl}
-                                                    alt={`Seçenek ${optIndex + 1}`}
-                                                    className="w-full h-auto rounded"
+                                                    alt={`Seçenek ${String.fromCharCode(65 + optIndex)}`}
+                                                    className="w-full h-full object-contain rounded"
                                                 />
                                             </div>
                                         ))}

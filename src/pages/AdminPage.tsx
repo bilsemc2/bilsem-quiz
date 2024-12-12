@@ -268,6 +268,9 @@ export default function AdminPage() {
   const [showAssignClassDialog, setShowAssignClassDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [assigningToClass, setAssigningToClass] = useState(false);
+  const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
+  const [previewQuestion, setPreviewQuestion] = useState<string | null>(null);
+  const [totalQuestions, setTotalQuestions] = useState<number>(40);
 
   useEffect(() => {
     checkAdminStatus();
@@ -879,86 +882,66 @@ export default function AdminPage() {
   };
 
   const handleAddFromQuestionPool = () => {
-    const selectedQuestions = questionPool
-      .filter(q => q.selected)
-      .map(q => q.number);
-
     if (selectedQuestions.length === 0) {
       alert('Lütfen en az bir soru seçin');
       return;
     }
 
     try {
-      const newQuestions = selectedQuestions.map(num => {
+      const newQuestions = selectedQuestions.map(id => {
         // Her seçenek için normal dosya yollarını oluştur
         const options = ['A', 'B', 'C', 'D', 'E'].map(letter => ({
-          id: `${num}${letter}`,
-          imageUrl: `/images/options/Matris/${num}/Soru-${num}${letter}.webp`,
+          id: `${id}${letter}`,
+          imageUrl: `/images/options/Matris/${id}/Soru-${id}${letter}.webp`,
           text: ''
         }));
 
         // Doğru cevap seçeneğini bul ve güncelle
-        let correctLetter;
-        switch(num) {
-          case 1: correctLetter = 'B'; break;
-          case 2: correctLetter = 'C'; break;
-          case 3: correctLetter = 'D'; break;
-          case 4: correctLetter = 'C'; break;
-          case 5: correctLetter = 'C'; break;
-          default: correctLetter = 'A';
-        }
+        const correctLetter = getCorrectLetter(Number(id));
 
         // Doğru cevap seçeneğinin yolunu güncelle
-        const correctIndex = options.findIndex(opt => opt.id === `${num}${correctLetter}`);
+        const correctIndex = options.findIndex(opt => opt.id === `${id}${correctLetter}`);
         if (correctIndex !== -1) {
-          options[correctIndex].imageUrl = `/images/options/Matris/${num}/Soru-cevap-${num}${correctLetter}.webp`;
+          options[correctIndex].imageUrl = `/images/options/Matris/${id}/Soru-cevap-${id}${correctLetter}.webp`;
         }
 
         return {
-          id: num.toString(),
-          questionImageUrl: `/images/questions/Matris/Soru-${num}.webp`,
+          id: id.toString(),
+          questionImageUrl: `/images/questions/Matris/Soru-${id}.webp`,
           question: '',
           options,
-          correctOptionId: `${num}${correctLetter}`,
-          grade: newQuiz.grade,
+          correctOptionId: `${id}${correctLetter}`,
+          grade: 1,
           subject: 'Matris'
         };
       });
 
-      if (newQuestions.length === 0) {
-        throw new Error('Seçilen sorular eklenemedi');
-      }
-
       setNewQuiz(prev => ({
         ...prev,
-        questions: [...prev.questions, ...newQuestions]
+        questions: [...(prev.questions || []), ...newQuestions]
       }));
 
       setShowQuestionPoolDialog(false);
-      
-      // Reset selection
-      setQuestionPool(prev => prev.map(q => ({ ...q, selected: false })));
+      setSelectedQuestions([]);
+      setPreviewQuestion(null);
     } catch (error) {
-      console.error('Error adding questions from pool:', error);
+      console.error('Soru ekleme hatası:', error);
       alert('Sorular eklenirken bir hata oluştu');
     }
   };
 
-  const toggleQuestionSelection = (id: string) => {
-    setQuestionPool(pool => 
-      pool.map(q => q.id === id ? { ...q, selected: !q.selected } : q)
-    );
+  const handleQuestionSelect = (questionId: string) => {
+    setSelectedQuestions(prev => {
+      if (prev.includes(questionId)) {
+        return prev.filter(id => id !== questionId);
+      } else {
+        return [...prev, questionId];
+      }
+    });
   };
 
-  const loadQuestionPool = () => {
-    // Şimdilik sadece Matris kategorisi var
-    const questions = Array.from({ length: 40 }, (_, i) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      number: i + 1,
-      category: 'Matris',
-      selected: false
-    }));
-    setQuestionPool(questions);
+  const handlePreviewQuestion = (questionId: string) => {
+    setPreviewQuestion(questionId === previewQuestion ? null : questionId);
   };
 
   const fetchClasses = async () => {
@@ -1275,6 +1258,28 @@ export default function AdminPage() {
       fetchAvailableStudents(selectedClass.id);
     }
   }, [selectedClass]);
+
+  useEffect(() => {
+    const detectTotalQuestions = async () => {
+      try {
+        const response = await fetch('/api/question-count');
+        const data = await response.json();
+        setTotalQuestions(data.count);
+      } catch (error) {
+        console.error('Soru sayısı alınamadı:', error);
+        // Hata durumunda varsayılan olarak 40 soruyu göster
+        setTotalQuestions(40);
+      }
+    };
+
+    detectTotalQuestions();
+  }, []);
+
+  const getCorrectLetter = (questionNumber: number): string => {
+    // Her 4 soruda bir A, B, C, D sıralamasını tekrarla
+    const pattern = ['A', 'B', 'C', 'D'];
+    return pattern[(questionNumber - 1) % 4];
+  };
 
   if (loading) {
     return (
@@ -1890,7 +1895,6 @@ export default function AdminPage() {
                   variant="outlined"
                   color="secondary"
                   onClick={() => {
-                    loadQuestionPool();
                     setShowQuestionPoolDialog(true);
                   }}
                 >
@@ -1922,47 +1926,90 @@ export default function AdminPage() {
         <Dialog
           open={showQuestionPoolDialog}
           onClose={() => setShowQuestionPoolDialog(false)}
-          maxWidth="md"
+          maxWidth="lg"
           fullWidth
         >
-          <DialogTitle>Soru Havuzu</DialogTitle>
+          <DialogTitle>Soru Havuzu ({totalQuestions} Soru)</DialogTitle>
           <DialogContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-              {questionPool.map(question => (
-                <Paper 
-                  key={question.id} 
-                  sx={{ 
-                    p: 2, 
-                    cursor: 'pointer',
-                    bgcolor: question.selected ? 'action.selected' : 'background.paper'
-                  }}
-                  onClick={() => toggleQuestionSelection(question.id)}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Checkbox
-                      checked={question.selected}
-                      onChange={() => toggleQuestionSelection(question.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Typography>
-                      {question.category} - Soru {question.number}
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6} sx={{ maxHeight: '80vh', overflow: 'auto' }}>
+                <List>
+                  {Array.from({ length: totalQuestions }, (_, i) => i + 1).map((num) => (
+                    <ListItem key={num}>
+                      <ListItemIcon>
+                        <Checkbox
+                          checked={selectedQuestions.includes(num.toString())}
+                          onChange={() => handleQuestionSelect(num.toString())}
+                        />
+                      </ListItemIcon>
+                      <ListItemText primary={`Soru ${num}`} />
+                      <Button 
+                        onClick={() => handlePreviewQuestion(num.toString())}
+                        variant="outlined"
+                        size="small"
+                      >
+                        {previewQuestion === num.toString() ? 'Gizle' : 'Önizle'}
+                      </Button>
+                    </ListItem>
+                  ))}
+                </List>
+              </Grid>
+              <Grid item xs={12} md={6} sx={{ maxHeight: '80vh', overflow: 'auto' }}>
+                {previewQuestion && (
+                  <Box>
+                    <Typography variant="h6" gutterBottom>
+                      Soru {previewQuestion} Önizleme
                     </Typography>
+                    <Box mb={2}>
+                      <img 
+                        src={`/images/questions/Matris/Soru-${previewQuestion}.webp`} 
+                        alt={`Soru ${previewQuestion}`}
+                        style={{ maxWidth: '100%', height: 'auto' }}
+                      />
+                    </Box>
+                    <Typography variant="h6" gutterBottom>
+                      Seçenekler
+                    </Typography>
+                    <Grid container spacing={1}>
+                      {['A', 'B', 'C', 'D', 'E'].map((letter) => (
+                        <Grid item xs={6} key={letter}>
+                          <Box>
+                            <Typography variant="subtitle1">
+                              Seçenek {letter}
+                            </Typography>
+                            <img 
+                              src={`/images/options/Matris/${previewQuestion}/Soru-${previewQuestion}${letter}.webp`}
+                              alt={`Seçenek ${letter}`}
+                              style={{ maxWidth: '100%', height: 'auto' }}
+                              onError={(e: any) => {
+                                // Eğer normal seçenek resmi yüklenmezse, doğru cevap resmini dene
+                                e.target.src = `/images/options/Matris/${previewQuestion}/Soru-cevap-${previewQuestion}${letter}.webp`;
+                              }}
+                            />
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
                   </Box>
-                </Paper>
-              ))}
-            </Box>
+                )}
+              </Grid>
+            </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShowQuestionPoolDialog(false)}>
+            <Button onClick={() => {
+              setShowQuestionPoolDialog(false);
+              setSelectedQuestions([]);
+              setPreviewQuestion(null);
+            }}>
               İptal
             </Button>
-            <Button
-              variant="contained"
+            <Button 
+              onClick={handleAddFromQuestionPool} 
+              variant="contained" 
               color="primary"
-              onClick={handleAddFromQuestionPool}
-              disabled={!questionPool.some(q => q.selected)}
+              disabled={selectedQuestions.length === 0}
             >
-              Seçili Soruları Ekle ({questionPool.filter(q => q.selected).length})
+              Seçilen Soruları Ekle ({selectedQuestions.length})
             </Button>
           </DialogActions>
         </Dialog>

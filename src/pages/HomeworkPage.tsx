@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useSound } from '../contexts/SoundContext';
+import { playSound } from '../utils/soundPlayer';
 import { Box, Typography, Paper, Button, Grid, CircularProgress, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { calculateScore } from '../utils/scoreCalculator';
@@ -34,6 +35,11 @@ export default function HomeworkPage() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [isTimeout, setIsTimeout] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
+  const [selectedAnswers, setSelectedAnswers] = useState<Array<{
+    questionIndex: number;
+    selectedOption: string;
+    isCorrect: boolean;
+  }>>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,7 +58,6 @@ export default function HomeworkPage() {
         console.log('Profile data:', profileData);
         const grade = Number(profileData.grade);
         setUserGrade(grade);
-        // Admin kontrolünü kaldırdık, sadece email kontrolü yapıyoruz
         setIsAdmin(profileData.email === 'yaprakyesili@msn.com');
 
         // Load quizzes
@@ -64,6 +69,7 @@ export default function HomeworkPage() {
 
         if (quizError) throw quizError;
 
+        console.log('Quiz data from Supabase:', JSON.stringify(quizData, null, 2));
         console.log('Quiz data before filter:', quizData);
         // Filter quizzes based on grade
         const validQuizzes = quizData.filter(quiz => {
@@ -118,17 +124,27 @@ export default function HomeworkPage() {
     setScore(0);
     setSelectedOption(null);
     setShowSolution(false);
+    setSelectedAnswers([]); // Seçilen cevapları sıfırla
   };
 
-  const handleOptionSelect = async (optionId: string) => {
-    if (isAnswered || !activeQuiz) return;
+  const handleOptionSelect = (optionId: string) => {
+    if (isAnswered) return;
 
-    setSelectedOption(optionId);
-    const currentQuestion = activeQuiz.questions[currentQuestionIndex];
+    const currentQuestion = activeQuiz?.questions[currentQuestionIndex];
     const isCorrect = optionId === currentQuestion.correctOptionId;
     
+    // Seçilen cevabı kaydet
+    setSelectedAnswers(prev => [...prev, {
+      questionIndex: currentQuestionIndex,
+      selectedOption: optionId,
+      isCorrect
+    }]);
+
     if (isCorrect) {
+      playSound('correct');
       setScore(prev => prev + 1);
+    } else {
+      playSound('incorrect');
     }
 
     setIsAnswered(true);
@@ -167,18 +183,26 @@ export default function HomeworkPage() {
             correctAnswers: score,
             totalQuestions: activeQuiz.questions.length,
             points: finalScore,
-            xp: Math.round(finalScore / 10), // XP hesaplaması
-            isHomework: true, // Homework'den geldiğini belirtmek için flag ekledik
-            answers: activeQuiz.questions.map((question, index) => ({
-              questionNumber: index + 1,
-              isCorrect: index < score, // Basitleştirilmiş doğru/yanlış bilgisi
-              selectedOption: null,
-              correctOption: question.correctOptionId,
-              questionImage: question.questionImageUrl,
-              isTimeout: false,
-              solutionVideo: question.solutionVideo,
-              options: question.options
-            }))
+            xp: Math.round(finalScore / 10),
+            isHomework: true,
+            answers: activeQuiz.questions.map((question, index) => {
+              const answer = selectedAnswers.find(a => a.questionIndex === index);
+              return {
+                questionNumber: index + 1,
+                isCorrect: answer?.isCorrect ?? false,
+                selectedOption: answer?.selectedOption ?? null,
+                correctOption: question.correctOptionId,
+                questionImage: question.questionImageUrl,
+                isTimeout: false,
+                solutionVideo: question.solutionVideo,
+                options: question.options.map(opt => ({
+                  id: opt.id,
+                  imageUrl: opt.imageUrl,
+                  isSelected: opt.id === answer?.selectedOption,
+                  isCorrect: opt.id === question.correctOptionId
+                }))
+              };
+            })
           }
         });
 
@@ -191,6 +215,7 @@ export default function HomeworkPage() {
         setIsTimeout(false);
         setSelectedOption(null);
         setShowSolution(false);
+        setSelectedAnswers([]); // Seçilen cevapları da sıfırla
       } catch (error) {
         console.error('Error saving quiz results:', error);
       }

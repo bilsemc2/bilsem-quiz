@@ -12,6 +12,7 @@ import { Question as QuizQuestion } from '../utils/quizGenerator';
 import { CircularProgress } from '../components/CircularProgress';
 import { Feedback } from '../components/Feedback';
 import YouTube from 'react-youtube';
+import { playSound } from '../utils/soundPlayer';
 
 interface QuizPageProps {
     onComplete?: (score: number, totalQuestions: number) => void;
@@ -156,7 +157,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
         }, 2000);
     };
 
-    const handleOptionSelect = (optionId: string) => {
+    const handleOptionSelect = async (optionId: string) => {
         if (!isAnswered) {
             setSelectedOption(optionId);
             setIsAnswered(true);
@@ -165,11 +166,11 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
             const isCorrect = optionId === currentQuestion.correctOptionId;
             
             if (isCorrect) {
-                // playSound('correct');
+                playSound('correct');
                 setScore(prev => prev + 1);
                 showFeedback('Doğru! 🎉', 'success');
             } else {
-                // playSound('incorrect');
+                playSound('incorrect');
                 showFeedback('Yanlış cevap! 😔', 'error');
             }
 

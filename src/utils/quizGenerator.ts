@@ -30,17 +30,50 @@ export interface Option {
 import { shuffleArray } from './arrayUtils';
 
 function getQuestionNumber(filename: string): number {
-    const match = filename.match(/Soru-(\d+)/);
+    // Önce "Soru-cevap-" kalıbını kontrol et
+    let match = filename.match(/Soru-cevap-(\d+)/);
+    if (match) return parseInt(match[1]);
+    
+    // Sonra normal "Soru-" kalıbını kontrol et
+    match = filename.match(/Soru-(\d+)/);
     return match ? parseInt(match[1]) : 0;
 }
 
 function getOptionLetter(filename: string): string {
-    const match = filename.match(/Soru-\d+([A-E])/);
-    return match ? match[1] : '';
+    console.log('Getting option letter for:', filename);
+    
+    // Önce "Soru-cevap-XXX" formatını kontrol et
+    let match = filename.match(/Soru-cevap-\d+([A-E])/);
+    if (match) {
+        console.log('Matched Soru-cevap pattern:', match[1]);
+        return match[1];
+    }
+    
+    // Sonra "Soru-XXXA" formatını kontrol et
+    match = filename.match(/Soru-\d+([A-E])/);
+    if (match) {
+        console.log('Matched Soru-XX pattern:', match[1]);
+        return match[1];
+    }
+    
+    // Son olarak "Soru-cevaba-XXX" formatını kontrol et
+    match = filename.match(/Soru-cevaba?-\d+([A-E])/);
+    if (match) {
+        console.log('Matched Soru-cevaba pattern:', match[1]);
+        return match[1];
+    }
+
+    console.warn('No option letter found in:', filename);
+    return '';
 }
 
 function isCorrectAnswer(filename: string): boolean {
-    return filename.toLowerCase().includes('-cevap-');
+    const isCorrect = filename.toLowerCase().includes('-cevap-') || 
+                     filename.toLowerCase().includes('-cevaba-') ||
+                     filename.toLowerCase().includes('-cevab-');
+    
+    console.log('Checking if correct answer:', filename, isCorrect);
+    return isCorrect;
 }
 
 function findCorrectOptionLetter(optionFiles: string[]): string {
@@ -66,6 +99,10 @@ function getQuestionOptionsPath(questionNumber: number, category: string): strin
     return `/images/options/${category}/${questionNumber}`;
 }
 
+function getOptionImageUrl(questionNumber: number, category: string, optionFile: string): string {
+    return `/images/options/${category}/${questionNumber}/${optionFile}`;
+}
+
 // Soru-video eşleştirmeleri
 const questionVideoMap: Record<string, { videoId: string; title: string }> = {
     '1': {
@@ -80,13 +117,13 @@ const questionVideoMap: Record<string, { videoId: string; title: string }> = {
 };
 
 export function generateQuiz(): Quiz {
-    const category = 'Matris'; // Quiz kategorisi
+    const category = 'Matris';
 
     // Import all images from the public directory with category
     const questionImports = import.meta.glob('/public/images/questions/Matris/*.webp', { eager: true });
     const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
 
-    // Get filenames from the imports
+    // Get filenames from the imports and convert to full paths
     const questionFiles = Object.keys(questionImports)
         .map(extractFilename)
         .sort((a, b) => getQuestionNumber(a) - getQuestionNumber(b));
@@ -98,31 +135,63 @@ export function generateQuiz(): Quiz {
         
         // Find matching option files for this question
         const matchingOptions = Object.keys(optionImports)
-            .filter(path => path.includes(`/options/${category}/${questionNumber}/`))
+            .filter(path => {
+                const filename = extractFilename(path);
+                const optionNumber = getQuestionNumber(filename);
+                return optionNumber === questionNumber;
+            })
             .map(extractFilename);
 
-        // Create options and shuffle them
-        const options = shuffleArray(matchingOptions).map(optionFile => {
+        console.log(`\nProcessing Question ${questionNumber}:`);
+        console.log('Matching options:', matchingOptions);
+
+        // Find the correct answer first
+        const correctOption = matchingOptions.find(filename => isCorrectAnswer(filename));
+        if (!correctOption) {
+            console.error(`No correct answer found for question ${questionNumber}`);
+            return null;
+        }
+
+        // Get correct letter from the correct option
+        const correctLetter = getOptionLetter(correctOption);
+        if (!correctLetter) {
+            console.error(`Could not extract correct letter from ${correctOption}`);
+            return null;
+        }
+
+        console.log(`Correct option: ${correctOption} (Letter: ${correctLetter})`);
+
+        // Create options array with correct mappings
+        const options = matchingOptions.map(optionFile => {
             const optionLetter = getOptionLetter(optionFile);
+            if (!optionLetter) {
+                console.error(`Could not extract option letter from ${optionFile}`);
+                return null;
+            }
+
+            console.log(`Processing option: ${optionFile} -> Letter: ${optionLetter}`);
+            
             return {
                 id: `${questionId}${optionLetter}`,
-                imageUrl: `${getQuestionOptionsPath(questionNumber, category)}/${optionFile}`,
+                imageUrl: getOptionImageUrl(questionNumber, category, optionFile),
                 text: ''
             };
-        });
+        }).filter(Boolean); // Remove any null options
 
-        // Find the correct answer from filenames
-        const correctOption = matchingOptions.find(filename => filename.includes('-cevap-'));
-        const correctLetter = correctOption ? getOptionLetter(correctOption) : 'A';
+        // Validate we have all 5 options
+        if (options.length !== 5) {
+            console.error(`Question ${questionNumber} has ${options.length} options instead of 5`);
+            return null;
+        }
 
         // Get video solution if exists
         const videoSolution = questionVideoMap[questionId];
 
-        return {
+        const question = {
             id: questionId,
             questionImageUrl: `/images/questions/${category}/${questionFile}`,
             question: '',
-            options,
+            options: shuffleArray(options),
             correctOptionId: `${questionId}${correctLetter}`,
             grade: 1,
             subject: category,
@@ -131,7 +200,10 @@ export function generateQuiz(): Quiz {
                 title: videoSolution.title
             } : undefined
         };
-    });
+
+        console.log(`Question ${questionNumber} correctOptionId: ${question.correctOptionId}`);
+        return question;
+    }).filter(Boolean); // Remove any null questions
 
     return {
         id: '1',
@@ -139,6 +211,6 @@ export function generateQuiz(): Quiz {
         description: 'Yetenek ve Zeka Soruları',
         grade: 1,
         subject: 'Yetenek ve Zeka',
-        questions // Tüm soruları döndür, karıştırma
+        questions
     };
 }
