@@ -1,52 +1,61 @@
 -- Create classes table
 create table if not exists public.classes (
-    id uuid default uuid_generate_v4() primary key,
+    id uuid default gen_random_uuid() primary key,
     name text not null,
     grade integer not null,
     created_by uuid references auth.users(id),
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    icon text not null default 'school' -- Material UI icon name
+);
+
+-- Drop existing policies
+drop policy if exists "Allow read access to all users" on public.classes;
+drop policy if exists "Allow insert access to admin users" on public.classes;
+drop policy if exists "Allow update access to admin users" on public.classes;
+drop policy if exists "Allow delete access to admin users" on public.classes;
+
+-- Drop and recreate the table
+drop table if exists public.classes cascade;
+
+create table public.classes (
+    id uuid default gen_random_uuid() primary key,
+    name text not null,
+    grade integer not null,
+    created_by uuid references auth.users(id),
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    icon text not null default 'school'
 );
 
 -- Enable RLS
 alter table public.classes enable row level security;
 
 -- Create policies
-create policy "Classes are viewable by everyone"
-    on public.classes for select
+create policy "Allow read access to all users"
+    on public.classes
+    for select
     using (true);
 
-create policy "Classes are insertable by admin users only"
-    on public.classes for insert
+create policy "Allow insert access to admin users"
+    on public.classes
+    for insert
     with check (
-        exists (
-            select 1 from public.profiles
-            where profiles.id = auth.uid()
-            and profiles.is_admin = true
-            and profiles.email = 'yaprakyesili@msn.com'
-        )
+        auth.jwt()->>'email' = 'yaprakyesili@msn.com'
     );
 
-create policy "Classes are updatable by admin users only"
-    on public.classes for update
+create policy "Allow update access to admin users"
+    on public.classes
+    for update
     using (
-        exists (
-            select 1 from public.profiles
-            where profiles.id = auth.uid()
-            and profiles.is_admin = true
-            and profiles.email = 'yaprakyesili@msn.com'
-        )
+        auth.jwt()->>'email' = 'yaprakyesili@msn.com'
     );
 
-create policy "Classes are deletable by admin users only"
-    on public.classes for delete
+create policy "Allow delete access to admin users"
+    on public.classes
+    for delete
     using (
-        exists (
-            select 1 from public.profiles
-            where profiles.id = auth.uid()
-            and profiles.is_admin = true
-            and profiles.email = 'yaprakyesili@msn.com'
-        )
+        auth.jwt()->>'email' = 'yaprakyesili@msn.com'
     );
 
 -- Create indexes

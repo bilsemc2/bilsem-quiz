@@ -2,44 +2,59 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import {
-  Box,
-  Container,
-  Typography,
+import { 
+  Container, 
+  Typography, 
+  Box, 
   Button,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Paper,
+  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Tab,
   Tabs,
-  MenuItem,
-  IconButton,
-  Checkbox,
-  Grid,
+  Switch,
+  FormControlLabel,
+  Chip,
   List,
   ListItem,
-  ListItemIcon,
   ListItemText,
+  ListItemIcon,
+  Grid,
   ListSubheader,
-  TableContainer,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  Chip,
+  TablePagination,
   CircularProgress,
   Divider,
-  FormControlLabel,
-  Switch
+  Checkbox,
+  Tooltip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import SchoolIcon from '@mui/icons-material/School';
+import ScienceIcon from '@mui/icons-material/Science';
+import CodeIcon from '@mui/icons-material/Code';
+import BrushIcon from '@mui/icons-material/Brush';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
+import CalculateIcon from '@mui/icons-material/Calculate';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -145,16 +160,43 @@ interface Class {
   id: string;
   name: string;
   grade: number;
+  icon: string;
   created_by: string;
 }
 
-interface Profile {
+interface UserProfile {
   id: string;
   email: string;
   full_name: string;
   grade: number;
+  is_active: boolean;
   is_vip: boolean;
+  created_at: string;
+  classes?: Class[];
 }
+
+const AVAILABLE_ICONS = [
+  { name: 'school', component: SchoolIcon },
+  { name: 'science', component: ScienceIcon },
+  { name: 'code', component: CodeIcon },
+  { name: 'brush', component: BrushIcon },
+  { name: 'music_note', component: MusicNoteIcon },
+  { name: 'sports_soccer', component: SportsSoccerIcon },
+  { name: 'calculate', component: CalculateIcon },
+  { name: 'menu_book', component: MenuBookIcon },
+  { name: 'psychology', component: PsychologyIcon },
+  { name: 'emoji_objects', component: EmojiObjectsIcon },
+];
+
+const getRandomIcon = () => {
+  const randomIndex = Math.floor(Math.random() * AVAILABLE_ICONS.length);
+  return AVAILABLE_ICONS[randomIndex].name;
+};
+
+const getIconComponent = (iconName: string) => {
+  const icon = AVAILABLE_ICONS.find(i => i.name === iconName);
+  return icon ? icon.component : SchoolIcon;
+};
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -162,7 +204,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [tabValue, setTabValue] = useState(0);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [stats, setStats] = useState<any>({
     totalUsers: 0,
     totalQuizzes: 0,
@@ -206,17 +248,26 @@ export default function AdminPage() {
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showQuestionPoolDialog, setShowQuestionPoolDialog] = useState(false);
   const [questionPool, setQuestionPool] = useState<QuestionPoolItem[]>([]);
-  const [showAddClassDialog, setShowAddClassDialog] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const [classStudents, setClassStudents] = useState<UserProfile[]>([]);
+  const [availableStudents, setAvailableStudents] = useState<UserProfile[]>([]);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showStudentDialog, setShowStudentDialog] = useState(false);
+  const [showCreateClassDialog, setShowCreateClassDialog] = useState(false);
   const [newClassName, setNewClassName] = useState('');
   const [newClassGrade, setNewClassGrade] = useState('');
   const [classes, setClasses] = useState<Class[]>([]);
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
-  const [showStudentDialog, setShowStudentDialog] = useState(false);
-  const [availableStudents, setAvailableStudents] = useState<Profile[]>([]);
-  const [classStudents, setClassStudents] = useState<Profile[]>([]);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  const [studentSearchTerm, setStudentSearchTerm] = useState('');
-  const [showOnlyVip, setShowOnlyVip] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [userFilters, setUserFilters] = useState({
+    showOnlyVip: false,
+    showOnlyActive: false,
+    gradeFilter: 'all'
+  });
+  const [showAssignClassDialog, setShowAssignClassDialog] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [assigningToClass, setAssigningToClass] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
@@ -246,29 +297,77 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  const fetchUsers = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+  const fetchStudentClasses = async (studentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('class_students')
+        .select(`
+          classes (
+            id,
+            name,
+            grade,
+            icon
+          )
+        `)
+        .eq('student_id', studentId);
 
-    if (error) {
-      console.error('Error fetching users:', error);
-      return;
+      if (error) {
+        console.error('Error fetching student classes:', error);
+        return [];
+      }
+
+      return data?.map(item => item.classes) || [];
+    } catch (error) {
+      console.error('Error in fetchStudentClasses:', error);
+      return [];
     }
+  };
 
-    // Null değerleri varsayılan değerlerle değiştir
-    const processedUsers = data?.map(user => ({
-      ...user,
-      experience: user.experience || 0,
-      full_name: user.full_name || '',
-      points: user.points || 0,
-      is_active: user.is_active ?? true,
-      is_vip: user.is_vip ?? false,
-      grade: user.grade || 1
-    })) || [];
+  const fetchUsers = async () => {
+    try {
+      // Önce tüm kullanıcıları al
+      const { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    setUsers(processedUsers);
+      if (usersError) throw usersError;
+
+      // Her kullanıcı için sınıf bilgilerini al
+      const usersWithClasses = await Promise.all(
+        users.map(async (user) => {
+          // Kullanıcının sınıflarını al
+          const { data: classStudents, error: classError } = await supabase
+            .from('class_students')
+            .select(`
+              classes (
+                id,
+                name,
+                grade,
+                icon
+              )
+            `)
+            .eq('student_id', user.id);
+
+          if (classError) {
+            console.error('Error fetching user classes:', classError);
+            return {
+              ...user,
+              classes: []
+            };
+          }
+
+          return {
+            ...user,
+            classes: classStudents?.map(cs => cs.classes) || []
+          };
+        })
+      );
+
+      setUsers(usersWithClasses);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
   };
 
   const fetchStats = async () => {
@@ -895,112 +994,145 @@ export default function AdminPage() {
     setQuestionPool(questions);
   };
 
-  const handleAddClass = async () => {
-    if (!newClassName || !newClassGrade) {
-      alert('Lütfen sınıf adı ve seviyesini giriniz');
-      return;
+  const fetchClasses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name, grade')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Her sınıfa varsayılan icon ekle
+      const classesWithIcons = (data || []).map(cls => ({
+        ...cls,
+        icon: 'school'
+      }));
+
+      setClasses(classesWithIcons);
+    } catch (error) {
+      console.error('Error fetching classes:', error);
     }
+  };
+
+  const fetchClassStudents = async (classId: string) => {
+    try {
+      // Önce sınıftaki öğrenci ID'lerini al
+      const { data: studentIds, error: studentIdsError } = await supabase
+        .from('class_students')
+        .select('student_id')
+        .eq('class_id', classId);
+
+      if (studentIdsError) throw studentIdsError;
+
+      if (!studentIds || studentIds.length === 0) {
+        setClassStudents([]);
+        return;
+      }
+
+      // Öğrenci profillerini getir
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', studentIds.map(s => s.student_id));
+
+      if (profilesError) throw profilesError;
+
+      setClassStudents(profiles || []);
+    } catch (error) {
+      console.error('Error fetching class students:', error);
+      setClassStudents([]);
+    }
+  };
+
+  const fetchAvailableStudents = async (classId: string) => {
+    try {
+      // Önce sınıftaki öğrencileri al
+      const { data: enrolledStudents, error: enrolledError } = await supabase
+        .from('class_students')
+        .select('student_id')
+        .eq('class_id', classId);
+
+      if (enrolledError) throw enrolledError;
+
+      // Kayıtlı olmayan öğrencileri getir
+      const enrolledIds = enrolledStudents?.map(s => s.student_id) || [];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .not('id', 'in', `(${enrolledIds.length > 0 ? enrolledIds.join(',') : '00000000-0000-0000-0000-000000000000'})`);
+
+      if (profilesError) throw profilesError;
+
+      setAvailableStudents(profiles || []);
+    } catch (error) {
+      console.error('Error fetching available students:', error);
+      setAvailableStudents([]);
+    }
+  };
+
+  const handleCreateClass = async () => {
+    if (!newClassName || !newClassGrade) return;
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('classes')
         .insert([
           {
             name: newClassName,
-            grade: parseInt(newClassGrade),
-            created_by: user?.id
+            grade: parseInt(newClassGrade)
           }
-        ]);
+        ])
+        .select('*')
+        .single();
 
       if (error) throw error;
 
-      alert('Sınıf başarıyla oluşturuldu');
-      setShowAddClassDialog(false);
+      // Yeni sınıfa varsayılan ikon ekle
+      const classWithIcon = {
+        ...data,
+        icon: 'school'
+      };
+
+      setClasses(prevClasses => [...prevClasses, classWithIcon]);
       setNewClassName('');
       setNewClassGrade('');
+      setShowCreateClassDialog(false);
     } catch (error) {
-      console.error('Error adding class:', error);
+      console.error('Error creating class:', error);
       alert('Sınıf oluşturulurken bir hata oluştu');
     }
   };
 
-  const loadClasses = async () => {
+  const handleDeleteClass = async (classId: string) => {
+    if (!window.confirm('Bu sınıfı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
+      return;
+    }
+
     try {
-      const { data, error } = await supabase
+      // Sınıfı sil (class_students kayıtları ON DELETE CASCADE ile otomatik silinecek)
+      const { error: classError } = await supabase
         .from('classes')
-        .select('*')
-        .order('grade', { ascending: true });
+        .delete()
+        .eq('id', classId);
 
-      if (error) throw error;
-      setClasses(data || []);
+      if (classError) throw classError;
+
+      // UI'ı güncelle
+      setClasses(prevClasses => prevClasses.filter(c => c.id !== classId));
+      setSelectedClass(null);
+
+      // Kullanıcı listesini yenile
+      await fetchUsers();
+
+      alert('Sınıf başarıyla silindi');
     } catch (error) {
-      console.error('Error loading classes:', error);
+      console.error('Error deleting class:', error);
+      alert('Sınıf silinirken bir hata oluştu');
     }
   };
 
-  const loadClassStudents = async (classId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('class_students')
-        .select(`
-          student_id,
-          profiles:student_id (
-            id,
-            email,
-            full_name,
-            grade
-          )
-        `)
-        .eq('class_id', classId);
-
-      if (error) throw error;
-      setClassStudents(data?.map(d => d.profiles) || []);
-    } catch (error) {
-      console.error('Error loading class students:', error);
-    }
-  };
-
-  const loadAvailableStudents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('is_admin', false)
-        .order('full_name', { ascending: true });
-
-      if (error) throw error;
-      setAvailableStudents(data || []);
-    } catch (error) {
-      console.error('Error loading available students:', error);
-    }
-  };
-
-  const handleAddStudents = async () => {
-    if (!selectedClass || selectedStudents.length === 0) return;
-
-    try {
-      const { error } = await supabase
-        .from('class_students')
-        .insert(
-          selectedStudents.map(studentId => ({
-            class_id: selectedClass.id,
-            student_id: studentId
-          }))
-        );
-
-      if (error) throw error;
-
-      alert('Öğrenciler başarıyla eklendi');
-      setShowStudentDialog(false);
-      setSelectedStudents([]);
-      loadClassStudents(selectedClass.id);
-    } catch (error) {
-      console.error('Error adding students:', error);
-      alert('Öğrenciler eklenirken bir hata oluştu');
-    }
-  };
-
-  const handleRemoveStudent = async (studentId: string) => {
+  const handleRemoveStudentFromClass = async (studentId: string) => {
     if (!selectedClass) return;
 
     try {
@@ -1012,31 +1144,50 @@ export default function AdminPage() {
 
       if (error) throw error;
 
-      loadClassStudents(selectedClass.id);
+      // Listeleri güncelle
+      await fetchClassStudents(selectedClass.id);
+      await fetchAvailableStudents(selectedClass.id);
     } catch (error) {
       console.error('Error removing student:', error);
       alert('Öğrenci çıkarılırken bir hata oluştu');
     }
   };
 
-  useEffect(() => {
-    checkAdminStatus();
-    fetchUsers();
-    fetchStats();
-    fetchQuizStats();
-  }, []);
+  const handleAssignStudent = async (studentId: string) => {
+    if (!selectedClass || isUpdating) return;
+    
+    try {
+      setIsUpdating(true);
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadClasses();
-    }
-  }, [isAdmin]);
+      // Öğrenciyi sınıfa ekle
+      const { error } = await supabase
+        .from('class_students')
+        .insert({
+          class_id: selectedClass.id,
+          student_id: studentId
+        });
 
-  useEffect(() => {
-    if (selectedClass) {
-      loadClassStudents(selectedClass.id);
+      if (error) {
+        console.error('Error assigning student:', error);
+        throw error;
+      }
+
+      // Tüm listeleri güncelle
+      await Promise.all([
+        fetchUsers(),
+        fetchClassStudents(selectedClass.id),
+        fetchAvailableStudents(selectedClass.id)
+      ]);
+
+      // Başarı mesajı göster
+      alert('Öğrenci başarıyla eklendi');
+    } catch (error) {
+      console.error('Error assigning student to class:', error);
+      alert('Öğrenci eklenirken bir hata oluştu');
+    } finally {
+      setIsUpdating(false);
     }
-  }, [selectedClass]);
+  };
 
   const handleToggleUserStatus = async (userId: string, newStatus: boolean) => {
     try {
@@ -1084,6 +1235,80 @@ export default function AdminPage() {
     }
   };
 
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleAssignToClass = async (classId: string) => {
+    if (!selectedUserId || assigningToClass) return;
+
+    try {
+      setAssigningToClass(true);
+
+      // Öğrenciyi sınıfa ekle
+      const { error } = await supabase
+        .from('class_students')
+        .insert({
+          class_id: classId,
+          student_id: selectedUserId
+        });
+
+      if (error) {
+        console.error('Error assigning to class:', error);
+        throw error;
+      }
+
+      // Listeleri güncelle
+      await Promise.all([
+        fetchUsers(),
+        fetchClassStudents(classId)
+      ]);
+
+      // Başarı mesajı göster
+      alert('Öğrenci sınıfa eklendi');
+    } catch (error) {
+      console.error('Error assigning to class:', error);
+      alert('Öğrenci sınıfa eklenirken bir hata oluştu');
+    } finally {
+      setAssigningToClass(false);
+    }
+  };
+
+  const handleOpenAssignClassDialog = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowAssignClassDialog(true);
+  };
+
+  const handleCloseAssignClassDialog = () => {
+    setSelectedUserId(null);
+    setShowAssignClassDialog(false);
+  };
+
+  useEffect(() => {
+    checkAdminStatus();
+    fetchUsers();
+    fetchStats();
+    fetchQuizStats();
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchClasses();
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (selectedClass) {
+      fetchClassStudents(selectedClass.id);
+      fetchAvailableStudents(selectedClass.id);
+    }
+  }, [selectedClass]);
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -1095,6 +1320,109 @@ export default function AdminPage() {
   if (!isAdmin) {
     return null;
   }
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = 
+      (user.full_name?.toLowerCase() || '').includes(userSearchTerm.toLowerCase()) ||
+      (user.email?.toLowerCase() || '').includes(userSearchTerm.toLowerCase());
+
+    const matchesVip = !userFilters.showOnlyVip || user.is_vip;
+    const matchesActive = !userFilters.showOnlyActive || user.is_active;
+    const matchesGrade = userFilters.gradeFilter === 'all' || user.grade === parseInt(userFilters.gradeFilter);
+
+    return matchesSearch && matchesVip && matchesActive && matchesGrade;
+  });
+
+  const paginatedUsers = filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  const handleOpenStudentDialog = async (classItem: Class) => {
+    setSelectedClass(classItem);
+    await fetchAvailableStudents(classItem.id);
+    setShowStudentDialog(true);
+  };
+
+  const renderClassCard = (classItem: Class) => (
+    <Grid item xs={12} sm={6} md={4} key={classItem.id}>
+      <Paper
+        sx={{
+          p: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%'
+        }}
+      >
+        <Typography variant="h6" gutterBottom>
+          {classItem.name}
+        </Typography>
+        <Typography color="textSecondary" gutterBottom>
+          {classItem.grade}. Sınıf
+        </Typography>
+        <Box sx={{ flexGrow: 1 }} />
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+          <Button
+            size="small"
+            onClick={() => handleOpenStudentDialog(classItem)}
+          >
+            Öğrenci Ekle
+          </Button>
+          <IconButton
+            size="small"
+            color="error"
+            onClick={() => handleDeleteClass(classItem.id)}
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
+      </Paper>
+    </Grid>
+  );
+
+  const renderStudentDialog = () => (
+    <Dialog
+      open={showStudentDialog}
+      onClose={() => setShowStudentDialog(false)}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>
+        {selectedClass ? `${selectedClass.name} - Öğrenci Ekle` : 'Öğrenci Ekle'}
+      </DialogTitle>
+      <DialogContent>
+        <List>
+          {availableStudents.map((student) => (
+            <ListItem
+              key={student.id}
+              secondaryAction={
+                <IconButton
+                  edge="end"
+                  aria-label="add"
+                  onClick={() => handleAssignStudent(student.id)}
+                  disabled={isUpdating}
+                >
+                  <AddIcon />
+                </IconButton>
+              }
+            >
+              <ListItemText
+                primary={student.full_name || student.email}
+                secondary={`${student.grade}. Sınıf`}
+              />
+            </ListItem>
+          ))}
+          {availableStudents.length === 0 && (
+            <ListItem>
+              <ListItemText primary="Eklenebilecek öğrenci bulunamadı" />
+            </ListItem>
+          )}
+        </List>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setShowStudentDialog(false)}>
+          Kapat
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -1119,6 +1447,66 @@ export default function AdminPage() {
         </Box>
 
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+          {/* Arama ve Filtre Bölümü */}
+          <Box sx={{ p: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+            <TextField
+              size="small"
+              label="Kullanıcı Ara"
+              value={userSearchTerm}
+              onChange={(e) => setUserSearchTerm(e.target.value)}
+              sx={{ minWidth: 200 }}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={userFilters.showOnlyVip}
+                  onChange={(e) => setUserFilters(prev => ({
+                    ...prev,
+                    showOnlyVip: e.target.checked
+                  }))}
+                />
+              }
+              label="Sadece VIP"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={userFilters.showOnlyActive}
+                  onChange={(e) => setUserFilters(prev => ({
+                    ...prev,
+                    showOnlyActive: e.target.checked
+                  }))}
+                />
+              }
+              label="Sadece Aktif"
+            />
+            <TextField
+              select
+              size="small"
+              label="Sınıf"
+              value={userFilters.gradeFilter}
+              onChange={(e) => setUserFilters(prev => ({
+                ...prev,
+                gradeFilter: e.target.value
+              }))}
+              sx={{ minWidth: 100 }}
+            >
+              <MenuItem value="all">Tümü</MenuItem>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((grade) => (
+                <MenuItem key={grade} value={grade}>
+                  {grade}. Sınıf
+                </MenuItem>
+              ))}
+            </TextField>
+            <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+              Toplam: {filteredUsers.length} kullanıcı
+            </Typography>
+          </Box>
+          
+          <Divider />
+
           <TableContainer>
             <Table stickyHeader>
               <TableHead>
@@ -1133,7 +1521,7 @@ export default function AdminPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {users.map((user) => (
+                {paginatedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>{user.full_name}</TableCell>
                     <TableCell>{user.email}</TableCell>
@@ -1161,22 +1549,87 @@ export default function AdminPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <IconButton
-                        onClick={() => handleToggleUserStatus(user.id, !user.is_active)}
-                        color={user.is_active ? "error" : "success"}
-                      >
-                        {user.is_active ? <BlockOutlinedIcon /> : <CheckCircleOutlineIcon />}
-                      </IconButton>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        {/* Kullanıcının sınıf ikonları */}
+                        {user.classes?.map((cls) => {
+                          const IconComponent = getIconComponent(cls.icon);
+                          return (
+                            <Tooltip key={cls.id} title={cls.name}>
+                              <IconComponent 
+                                fontSize="small" 
+                                color="primary"
+                              />
+                            </Tooltip>
+                          );
+                        })}
+                        {/* Sınıfa ekleme butonu */}
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleOpenAssignClassDialog(user.id)}
+                        >
+                          <AddIcon />
+                        </IconButton>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            component="div"
+            count={filteredUsers.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Sayfa başına satır:"
+            labelDisplayedRows={({ from, to, count }) => 
+              `${from}-${to} / ${count !== -1 ? count : `${to}'den fazla`}`
+            }
+          />
         </Paper>
+        {/* Sınıfa Atama Dialog'u */}
+        <Dialog
+          open={showAssignClassDialog}
+          onClose={handleCloseAssignClassDialog}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Sınıfa Ekle</DialogTitle>
+          <DialogContent>
+            <List sx={{ minWidth: 300 }}>
+              {classes.map((classItem) => (
+                <ListItem key={classItem.id}>
+                  <ListItemIcon>
+                    {React.createElement(getIconComponent(classItem.icon))}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={classItem.name}
+                    secondary={`${classItem.grade}. Sınıf`}
+                  />
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleAssignToClass(classItem.id)}
+                    disabled={assigningToClass}
+                  >
+                    {assigningToClass ? 'Ekleniyor...' : 'Ekle'}
+                  </Button>
+                </ListItem>
+              ))}
+            </List>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseAssignClassDialog}>Kapat</Button>
+          </DialogActions>
+        </Dialog>
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
+        {/* İstatistikler Tab İçeriği */}
         <Paper elevation={3} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
             Hızlı İstatistikler
@@ -1205,6 +1658,7 @@ export default function AdminPage() {
       </TabPanel>
 
       <TabPanel value={tabValue} index={2}>
+        {/* Quiz Yönetimi Tab İçeriği */}
         <Box sx={{ mb: 3 }}>
           <Button
             variant="contained"
@@ -1212,13 +1666,6 @@ export default function AdminPage() {
             onClick={() => setShowQuizForm(true)}
           >
             Yeni Quiz Oluştur
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setShowAddClassDialog(true)}
-          >
-            Yeni Sınıf Ekle
           </Button>
         </Box>
 
@@ -1553,38 +2000,6 @@ export default function AdminPage() {
           </DialogActions>
         </Dialog>
 
-        {/* Sınıf Ekle Dialog'u */}
-        <Dialog
-          open={showAddClassDialog}
-          onClose={() => setShowAddClassDialog(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>Yeni Sınıf Ekle</DialogTitle>
-          <DialogContent>
-            <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                label="Sınıf Adı"
-                value={newClassName}
-                onChange={(e) => setNewClassName(e.target.value)}
-                fullWidth
-              />
-              <TextField
-                label="Sınıf Seviyesi"
-                type="number"
-                value={newClassGrade}
-                onChange={(e) => setNewClassGrade(e.target.value)}
-                fullWidth
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowAddClassDialog(false)}>İptal</Button>
-            <Button onClick={handleAddClass} variant="contained">
-              Ekle
-            </Button>
-          </DialogActions>
-        </Dialog>
       </TabPanel>
 
       <TabPanel value={tabValue} index={3}>
@@ -1592,138 +2007,97 @@ export default function AdminPage() {
           <Typography variant="h5" gutterBottom>
             Sınıf Yönetimi
           </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setShowCreateClassDialog(true)}
+            sx={{ mb: 2 }}
+          >
+            Sınıf Ekle
+          </Button>
         </Box>
 
         {/* Sınıf Listesi */}
-        <Grid container spacing={3}>
-          {classes.map((cls) => (
-            <Grid item xs={12} md={6} key={cls.id}>
-              <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6">
-                    {cls.name} - {cls.grade}. Sınıf
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      setSelectedClass(cls);
-                      loadAvailableStudents();
-                      setShowStudentDialog(true);
-                    }}
-                  >
-                    Öğrenci Ekle
-                  </Button>
-                </Box>
-
-                {/* Sınıf Öğrencileri */}
-                <List>
-                  {classStudents.map((student) => (
-                    <ListItem
-                      key={student.id}
-                      secondaryAction={
-                        <IconButton
-                          edge="end"
-                          aria-label="delete"
-                          onClick={() => handleRemoveStudent(student.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      }
-                    >
-                      <ListItemText
-                        primary={student.full_name}
-                        secondary={student.email}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Paper>
-            </Grid>
-          ))}
+        <Grid container spacing={2}>
+          {classes.map(renderClassCard)}
         </Grid>
 
-        {/* Öğrenci Ekleme Dialog'u */}
-        <Dialog
-          open={showStudentDialog}
-          onClose={() => setShowStudentDialog(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>Öğrenci Ekle - {selectedClass?.name}</DialogTitle>
+        {/* Sınıf Ekleme Dialog'u */}
+        <Dialog open={showCreateClassDialog} onClose={() => setShowCreateClassDialog(false)}>
+          <DialogTitle>Yeni Sınıf Ekle</DialogTitle>
           <DialogContent>
-            <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-              <TextField
-                label="Öğrenci Ara"
-                variant="outlined"
-                size="small"
-                fullWidth
-                value={studentSearchTerm}
-                onChange={(e) => setStudentSearchTerm(e.target.value)}
-                sx={{ mb: 1 }}
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showOnlyVip}
-                    onChange={(e) => setShowOnlyVip(e.target.checked)}
-                  />
-                }
-                label="Sadece VIP"
-              />
-            </Box>
-            <List>
-              {availableStudents
-                .filter(student => 
-                  // Sınıfta olmayan öğrencileri filtrele
-                  !classStudents.find(cs => cs.id === student.id) &&
-                  // İsim veya email'e göre ara
-                  (student.full_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                   student.email.toLowerCase().includes(studentSearchTerm.toLowerCase())) &&
-                  // VIP filtresi
-                  (!showOnlyVip || student.is_vip)
-                )
-                .map((student) => (
-                  <ListItem key={student.id}>
-                    <ListItemIcon>
-                      <Checkbox
-                        edge="start"
-                        checked={selectedStudents.includes(student.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedStudents([...selectedStudents, student.id]);
-                          } else {
-                            setSelectedStudents(selectedStudents.filter(id => id !== student.id));
-                          }
-                        }}
-                      />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {student.full_name}
-                          {student.is_vip && (
-                            <Chip
-                              label="VIP"
-                              size="small"
-                              color="primary"
-                              sx={{ height: 20 }}
-                            />
-                          )}
-                        </Box>
-                      }
-                      secondary={student.email}
-                    />
-                  </ListItem>
-                ))}
-            </List>
+            <TextField
+              autoFocus
+              margin="dense"
+              id="class-name"
+              label="Sınıf Adı"
+              type="text"
+              fullWidth
+              value={newClassName}
+              onChange={(e) => setNewClassName(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              id="class-grade"
+              label="Sınıf Seviyesi"
+              type="number"
+              fullWidth
+              value={newClassGrade}
+              onChange={(e) => setNewClassGrade(e.target.value)}
+              variant="outlined"
+              inputProps={{ min: 1, max: 12 }}
+            />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShowStudentDialog(false)}>İptal</Button>
-            <Button onClick={handleAddStudents} variant="contained">
+            <Button onClick={() => setShowCreateClassDialog(false)}>İptal</Button>
+            <Button onClick={handleCreateClass} variant="contained" color="primary">
               Ekle
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Öğrenci Ekleme Dialog'u */}
+        {renderStudentDialog()}
+
+        {/* Sınıf Öğrencileri */}
+        {selectedClass && (
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              {selectedClass.name} Öğrencileri
+            </Typography>
+            <List>
+              {classStudents.map((student) => (
+                <ListItem key={student.id}>
+                  <ListItemText
+                    primary={student.full_name}
+                    secondary={
+                      <Box component="span" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        {student.email}
+                        {student.is_vip && (
+                          <Chip
+                            label="VIP"
+                            color="primary"
+                            size="small"
+                            sx={{ ml: 1 }}
+                          />
+                        )}
+                      </Box>
+                    }
+                  />
+                  <IconButton
+                    edge="end"
+                    color="error"
+                    onClick={() => handleRemoveStudentFromClass(student.id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+        )}
       </TabPanel>
     </Container>
   );
