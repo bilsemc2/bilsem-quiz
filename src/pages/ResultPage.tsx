@@ -27,6 +27,7 @@ interface QuizResult {
     points: number;
     xp: number;
     answers: QuestionResult[];
+    isHomework?: boolean;
 }
 
 export const ResultPage: React.FC = () => {
@@ -34,7 +35,10 @@ export const ResultPage: React.FC = () => {
     const navigate = useNavigate();
     const result = location.state as QuizResult;
 
+    console.log('ResultPage received state:', location.state);
+
     if (!result) {
+        console.log('No result state found, redirecting to home');
         navigate('/');
         return null;
     }
@@ -150,10 +154,10 @@ export const ResultPage: React.FC = () => {
                     {/* Yeni Quiz Başlat Butonu */}
                     <div className="mt-12 text-center">
                         <button
-                            onClick={() => navigate('/quiz')}
+                            onClick={() => navigate(result.isHomework ? '/homework' : '/quiz')}
                             className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200"
                         >
-                            Yeni Quiz Başlat
+                            {result.isHomework ? 'Ödevlere Geri Dön' : 'Yeni Quiz Başlat'}
                         </button>
                     </div>
                 </div>

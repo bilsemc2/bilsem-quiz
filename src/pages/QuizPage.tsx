@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useSound } from '../contexts/SoundContext';
+import { supabase } from '../lib/supabase';
+import { generateQuiz } from '../utils/quizGenerator';
 import { calculateScore } from '../utils/scoreCalculator';
+import { Quiz } from '../types/quiz';
+import { shuffleArray } from '../utils/arrayUtils';
 import { Question } from '../types/quiz';
-import { Quiz, Question as QuizQuestion, generateQuiz } from '../utils/quizGenerator';
+import { Question as QuizQuestion } from '../utils/quizGenerator';
 import { CircularProgress } from '../components/CircularProgress';
-import { playSound, playTimeWarning } from '../utils/sounds';
 import { Feedback } from '../components/Feedback';
 import YouTube from 'react-youtube';
 
@@ -55,17 +58,35 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                 const savedQuiz = localStorage.getItem('currentQuiz');
                 if (savedQuiz) {
                     const parsedQuiz = JSON.parse(savedQuiz);
+                    if (!parsedQuiz.questions || !Array.isArray(parsedQuiz.questions)) {
+                        throw new Error('Invalid quiz format');
+                    }
+
+                    // Ödevdeki soruları direkt olarak kullan
+                    console.log('Loading homework quiz with questions:', parsedQuiz.questions);
                     setQuiz(parsedQuiz);
+                    setCurrentQuestionIndex(0);
+                    setTimeLeft(60);
+                    setIsAnswered(false);
+                    setIsTimeout(false);
+                    setScore(0);
+                    setSelectedOption(null);
+                    setShowSolution(false);
+
                     // Clear the saved quiz
                     localStorage.removeItem('currentQuiz');
                 } else {
                     // If no homework quiz, generate a regular quiz
                     const quizData = generateQuiz();
+                    // Regular quizde soruları karıştır ve 10 tane seç
+                    quizData.questions = shuffleArray(quizData.questions).slice(0, 10);
                     setQuiz(quizData);
                 }
             } catch (error) {
                 console.error('Quiz yüklenirken hata:', error);
                 showFeedback('Quiz yüklenirken bir hata oluştu', 'error');
+                // Hata durumunda ana sayfaya yönlendir
+                navigate('/');
             }
         };
         loadQuiz();
@@ -98,7 +119,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
             const timer = setInterval(() => {
                 setTimeLeft((prev) => {
                     if (prev <= 10 && prev > 1) {
-                        playTimeWarning(); // time.warning.mp3 çal
+                        // playTimeWarning(); // time.warning.mp3 çal
                     }
                     return prev - 1;
                 });
@@ -111,7 +132,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
     }, [timeLeft, isAnswered]);
 
     const handleTimeUp = () => {
-        playSound('timeout');
+        // playSound('timeout');
         setIsAnswered(true);
         setIsTimeout(true);
         showFeedback('Süre doldu!', 'error');
@@ -144,11 +165,11 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
             const isCorrect = optionId === currentQuestion.correctOptionId;
             
             if (isCorrect) {
-                playSound('correct');
+                // playSound('correct');
                 setScore(prev => prev + 1);
                 showFeedback('Doğru! 🎉', 'success');
             } else {
-                playSound('incorrect');
+                // playSound('incorrect');
                 showFeedback('Yanlış cevap! 😔', 'error');
             }
 
@@ -172,7 +193,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
             // Son soru değilse otomatik olarak sonraki soruya geç
             if (currentQuestionIndex < quiz.questions.length - 1) {
                 setTimeout(() => {
-                    playSound('next'); // Sonraki soruya geçerken next.mp3 sesini çal
+                    // playSound('next'); // Sonraki soruya geçerken next.mp3 sesini çal
                     setCurrentQuestionIndex(prev => prev + 1);
                     setTimeLeft(60);
                     setIsAnswered(false);
@@ -218,11 +239,15 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                     const { error: resultError } = await supabase
                         .from('quiz_results')
                         .insert({
+                            quiz_id: quiz.id,
                             user_id: user.id,
                             score: correctAnswers,
                             questions_answered: quiz.questions.length,
                             correct_answers: correctAnswers,
-                            completed_at: new Date().toISOString()
+                            completed_at: new Date().toISOString(),
+                            title: quiz.title,
+                            subject: quiz.subject,
+                            grade: quiz.grade
                         });
 
                     if (resultError) throw resultError;
@@ -231,28 +256,30 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                 // Başarılı mesajı göster
                 showFeedback('Quiz tamamlandı! 🎉', 'success');
 
+                // Debug için state bilgisini konsola yazdır
+                const stateData = {
+                    correctAnswers,
+                    totalQuestions: quiz.questions.length,
+                    points,
+                    xp,
+                    answers: answers.map(answer => {
+                        const question = quiz.questions[answer.questionNumber - 1];
+                        return {
+                            ...answer,
+                            questionImage: question?.questionImageUrl || '',
+                            solutionVideo: question?.solutionVideo || null,
+                            options: question?.options.map(opt => ({
+                                ...opt,
+                                isSelected: opt.id === answer.selectedOption,
+                                isCorrect: opt.id === answer.correctOption
+                            })) || []
+                        };
+                    })
+                };
+                console.log('Navigating to result with state:', stateData);
+
                 // Result sayfasına yönlendir
-                navigate('/result', {
-                    state: {
-                        correctAnswers,
-                        totalQuestions: quiz.questions.length,
-                        points,
-                        xp,
-                        answers: answers.map(answer => {
-                            const question = quiz.questions[answer.questionNumber - 1];
-                            return {
-                                ...answer,
-                                questionImage: question?.questionImageUrl || '',
-                                solutionVideo: question?.solutionVideo || null,
-                                options: question?.options.map(opt => ({
-                                    ...opt,
-                                    isSelected: opt.id === answer.selectedOption,
-                                    isCorrect: opt.id === answer.correctOption
-                                })) || []
-                            };
-                        })
-                    }
-                });
+                navigate('/result', { state: stateData });
                 
                 // Callback'i çağır
                 if (onComplete) onComplete(correctAnswers, quiz.questions.length);
@@ -272,7 +299,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
 
     const handleNext = async () => {
         if (currentQuestionIndex < (quiz?.questions.length || 0) - 1) {
-            playSound('next'); // Sonraki soruya geçerken next.mp3 sesini çal
+            // playSound('next'); // Sonraki soruya geçerken next.mp3 sesini çal
             setCurrentQuestionIndex((prev) => prev + 1);
             setSelectedOption(null);
             setIsAnswered(false);
@@ -290,13 +317,13 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
             }
             showFeedback('Sonraki soru!', 'info');
         } else {
-            playSound('complete');
+            // playSound('complete');
             showFeedback('Son soruyu cevapladınız! Testi bitirmek için "Testi Bitir" butonuna tıklayın.', 'success');
         }
     };
 
     const handleFinishQuiz = async () => {
-        playSound('complete');
+        // playSound('complete');
         showFeedback('Tebrikler! Quiz tamamlandı! 🎊', 'success');
         handleQuizComplete();
     };
@@ -307,15 +334,16 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     };
 
-    if (!quiz) {
+    const currentQuestion = quiz?.questions[currentQuestionIndex];
+
+    if (!quiz || !currentQuestion) {
         return (
-            <div className="min-h-screen bg-[#f8fafc] flex justify-center items-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500"></div>
+            <div className="flex justify-center items-center min-h-screen">
+                <CircularProgress indeterminate size={48} />
             </div>
         );
     }
 
-    const currentQuestion = quiz.questions[currentQuestionIndex];
     const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
 
     return (

@@ -888,64 +888,31 @@ export default function AdminPage() {
       return;
     }
 
-    // Doğru cevapların haritası
-    const correctAnswers: { [key: number]: string } = {
-      1: 'C',
-      2: 'B',
-      3: 'D',
-      4: 'A',
-      5: 'B',
-      6: 'E',
-      7: 'C',
-      8: 'D',
-      9: 'B',
-      10: 'B',
-      11: 'C',
-      12: 'A',
-      13: 'D',
-      14: 'B',
-      15: 'E',
-      16: 'C',
-      17: 'A',
-      18: 'D',
-      19: 'E',
-      20: 'B',
-      21: 'D',
-      22: 'A',
-      23: 'C',
-      24: 'E',
-      25: 'B',
-      26: 'D',
-      27: 'A',
-      28: 'C',
-      29: 'B',
-      30: 'E',
-      31: 'A',
-      32: 'E',
-      33: 'B',
-      34: 'E',
-      35: 'E',
-      36: 'C',
-      37: 'D',
-      38: 'A',
-      39: 'B',
-      40: 'E'
-    };
-
     try {
       const newQuestions = selectedQuestions.map(num => {
-        const correctLetter = correctAnswers[num];
-        if (!correctLetter) {
-          console.error(`No correct answer mapping found for question ${num}`);
-          return null;
-        }
-
-        // Generate options with correct file paths
+        // Her seçenek için normal dosya yollarını oluştur
         const options = ['A', 'B', 'C', 'D', 'E'].map(letter => ({
           id: `${num}${letter}`,
-          imageUrl: `/images/options/Matris/${num}/Soru-${letter === correctLetter ? 'cevap-' : ''}${num}${letter}.webp`,
+          imageUrl: `/images/options/Matris/${num}/Soru-${num}${letter}.webp`,
           text: ''
         }));
+
+        // Doğru cevap seçeneğini bul ve güncelle
+        let correctLetter;
+        switch(num) {
+          case 1: correctLetter = 'B'; break;
+          case 2: correctLetter = 'C'; break;
+          case 3: correctLetter = 'D'; break;
+          case 4: correctLetter = 'C'; break;
+          case 5: correctLetter = 'C'; break;
+          default: correctLetter = 'A';
+        }
+
+        // Doğru cevap seçeneğinin yolunu güncelle
+        const correctIndex = options.findIndex(opt => opt.id === `${num}${correctLetter}`);
+        if (correctIndex !== -1) {
+          options[correctIndex].imageUrl = `/images/options/Matris/${num}/Soru-cevap-${num}${correctLetter}.webp`;
+        }
 
         return {
           id: num.toString(),
@@ -956,7 +923,7 @@ export default function AdminPage() {
           grade: newQuiz.grade,
           subject: 'Matris'
         };
-      }).filter(q => q !== null) as QuizQuestion[];
+      });
 
       if (newQuestions.length === 0) {
         throw new Error('Seçilen sorular eklenemedi');

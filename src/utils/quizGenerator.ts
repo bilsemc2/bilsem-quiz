@@ -27,6 +27,8 @@ export interface Option {
     text: string;
 }
 
+import { shuffleArray } from './arrayUtils';
+
 function getQuestionNumber(filename: string): number {
     const match = filename.match(/Soru-(\d+)/);
     return match ? parseInt(match[1]) : 0;
@@ -38,25 +40,21 @@ function getOptionLetter(filename: string): string {
 }
 
 function isCorrectAnswer(filename: string): boolean {
-    return filename.includes('-cevap-');
+    return filename.toLowerCase().includes('-cevap-');
 }
 
 function findCorrectOptionLetter(optionFiles: string[]): string {
     const correctOption = optionFiles.find(filename => isCorrectAnswer(filename));
-    if (correctOption) {
-        return getOptionLetter(correctOption);
+    if (!correctOption) {
+        console.warn('No correct answer found in options, defaulting to A');
+        return 'A';
     }
-    return 'A'; // Fallback to A if no correct answer is marked
-}
-
-// Fisher-Yates shuffle algorithm
-function shuffleArray<T>(array: T[]): T[] {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    const letter = getOptionLetter(correctOption);
+    if (!letter) {
+        console.warn('Could not extract option letter from correct answer, defaulting to A');
+        return 'A';
     }
-    return shuffled;
+    return letter;
 }
 
 function extractFilename(path: string): string {
@@ -103,9 +101,6 @@ export function generateQuiz(): Quiz {
             .filter(path => path.includes(`/options/${category}/${questionNumber}/`))
             .map(extractFilename);
 
-        // Find the correct answer from filenames
-        const correctLetter = findCorrectOptionLetter(matchingOptions);
-
         // Create options and shuffle them
         const options = shuffleArray(matchingOptions).map(optionFile => {
             const optionLetter = getOptionLetter(optionFile);
@@ -115,6 +110,10 @@ export function generateQuiz(): Quiz {
                 text: ''
             };
         });
+
+        // Find the correct answer from filenames
+        const correctOption = matchingOptions.find(filename => filename.includes('-cevap-'));
+        const correctLetter = correctOption ? getOptionLetter(correctOption) : 'A';
 
         // Get video solution if exists
         const videoSolution = questionVideoMap[questionId];
@@ -140,6 +139,6 @@ export function generateQuiz(): Quiz {
         description: 'Yetenek ve Zeka Soruları',
         grade: 1,
         subject: 'Yetenek ve Zeka',
-        questions: shuffleArray(questions).slice(0, 10) // Her quiz'de rastgele 10 soru
+        questions // Tüm soruları döndür, karıştırma
     };
 }

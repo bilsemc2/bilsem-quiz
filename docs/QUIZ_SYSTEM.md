@@ -1,5 +1,5 @@
 # Quiz Sistemi Dokümantasyonu
-
+Bana açıklama yaparken her zaman Türkçe açıklama yap.
 ## Genel Bakış
 
 Bilsem Quiz uygulamasının quiz sistemi, resim tabanlı sorular ve seçeneklerle çalışan, otomatik puanlama ve video çözümleri sunan bir yapıya sahiptir.
