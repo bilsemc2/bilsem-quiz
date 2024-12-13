@@ -54,3 +54,7 @@ categories: {
     totalQuestions: 30,  // Bu değeri değiştirin
     path: 'images/questions/Matris'
   }
+
+  git add .
+git commit -m "Değişiklik açıklaması"
+git push
