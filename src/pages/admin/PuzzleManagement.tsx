@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PuzzleData, getAllPuzzles, approvePuzzle, rejectPuzzle } from '../../lib/puzzleService';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import PuzzlePreview from '../../components/PuzzlePreview';
 
 export default function PuzzleManagement() {
     const [puzzles, setPuzzles] = useState<PuzzleData[]>([]);
@@ -87,8 +88,8 @@ export default function PuzzleManagement() {
                                         <tr key={puzzle.id}>
                                             <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6 lg:pl-8">
                                                 <div className="flex items-center">
-                                                    <div className="h-16 w-16 flex-shrink-0">
-                                                        {/* Bulmaca önizlemesi */}
+                                                    <div className="h-24 w-24 flex-shrink-0">
+                                                        <PuzzlePreview grid={puzzle.grid} scale="scale-100" />
                                                     </div>
                                                 </div>
                                             </td>
