@@ -448,7 +448,7 @@ export default function HomePage() {
                                 Giriş Yap
                             </Link>
                             <Link
-                                to="/register"
+                                to="/signup"
                                 className="px-8 py-3 text-lg font-semibold text-indigo-600 border-2 border-indigo-600 rounded-xl hover:bg-indigo-50 transition-all duration-200"
                             >
                                 Kayıt Ol
