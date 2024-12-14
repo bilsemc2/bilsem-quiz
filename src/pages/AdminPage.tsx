@@ -67,6 +67,7 @@ import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import Pagination from '@mui/material/Pagination';
 import { QUESTIONS_CONFIG } from '../config/questions';
+import { togglePuzzleStatus, deletePuzzleByAdmin, PuzzleData } from '../lib/puzzleService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -187,6 +188,13 @@ interface UserProfile {
   classes?: Class[];
 }
 
+interface PuzzleData {
+  id: string;
+  title: string;
+  created_at: string;
+  approved: boolean;
+}
+
 const AVAILABLE_ICONS = [
   { name: 'school', component: SchoolIcon },
   { name: 'science', component: ScienceIcon },
@@ -217,6 +225,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [puzzles, setPuzzles] = useState<PuzzleData[]>([]);
   const [stats, setStats] = useState<any>({
     totalUsers: 0,
     totalQuizzes: 0,
@@ -293,6 +302,7 @@ export default function AdminPage() {
     fetchUsers();
     fetchStats();
     fetchQuizStats();
+    fetchPuzzles();
   }, []);
 
   const checkAdminStatus = async () => {
@@ -506,6 +516,21 @@ export default function AdminPage() {
 
     } catch (error) {
       console.error('Error fetching user stats:', error);
+    }
+  };
+
+  const fetchPuzzles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('puzzles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setPuzzles(data || []);
+    } catch (error) {
+      console.error('Error fetching puzzles:', error);
     }
   };
 
@@ -1405,6 +1430,26 @@ export default function AdminPage() {
     setShowStudentDialog(true);
   };
 
+  const handleTogglePuzzleStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      await togglePuzzleStatus(id, currentStatus);
+      await fetchPuzzles();
+    } catch (error) {
+      console.error('Error toggling puzzle status:', error);
+    }
+  };
+
+  const handleDeletePuzzle = async (id: string, title: string) => {
+    if (window.confirm(`"${title}" adlı bulmacayı silmek istediğinize emin misiniz?`)) {
+      try {
+        await deletePuzzleByAdmin(id);
+        await fetchPuzzles();
+      } catch (error) {
+        console.error('Error deleting puzzle:', error);
+      }
+    }
+  };
+
   const renderClassCard = (classItem: Class) => (
     <Grid item xs={12} sm={6} md={4} key={classItem.id}>
       <Paper
@@ -1528,6 +1573,88 @@ export default function AdminPage() {
   const displayedQuestions = Array.from({ length: totalQuestions }, (_, i) => i + 1)
     .slice(startIndex, endIndex);
 
+  const handleApprovePuzzle = async (id: string) => {
+    try {
+      await approvePuzzle(id);
+      await fetchPuzzles();
+    } catch (error) {
+      console.error('Error approving puzzle:', error);
+    }
+  };
+
+  const handleRejectPuzzle = async (id: string) => {
+    if (window.confirm('Bu bulmacayı silmek istediğinize emin misiniz?')) {
+      try {
+        await rejectPuzzle(id);
+        await fetchPuzzles();
+      } catch (error) {
+        console.error('Error rejecting puzzle:', error);
+      }
+    }
+  };
+
+  const renderPuzzleManagement = () => {
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          Bulmaca Yönetimi
+        </Typography>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Başlık</TableCell>
+                <TableCell>Oluşturulma Tarihi</TableCell>
+                <TableCell>Durum</TableCell>
+                <TableCell>İşlemler</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {puzzles.map((puzzle) => (
+                <TableRow key={puzzle.id}>
+                  <TableCell>{puzzle.title}</TableCell>
+                  <TableCell>
+                    {new Date(puzzle.created_at).toLocaleDateString('tr-TR')}
+                  </TableCell>
+                  <TableCell>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={puzzle.approved}
+                          onChange={() => handleTogglePuzzleStatus(puzzle.id, puzzle.approved)}
+                          color={puzzle.approved ? 'success' : 'warning'}
+                        />
+                      }
+                      label={puzzle.approved ? 'Onaylı' : 'Beklemede'}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip title="Sil">
+                      <IconButton
+                        onClick={() => handleDeletePuzzle(puzzle.id, puzzle.title)}
+                        color="error"
+                        size="small"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {puzzles.length === 0 && (
+          <Box sx={{ textAlign: 'center', mt: 3, p: 3, bgcolor: 'background.paper', borderRadius: 1 }}>
+            <Typography variant="body1" color="text.secondary">
+              Henüz hiç bulmaca oluşturulmamış.
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
@@ -1540,7 +1667,7 @@ export default function AdminPage() {
           <Tab label="İstatistikler" />
           <Tab label="Quiz Yönetimi" />
           <Tab label="Sınıf Yönetimi" />
-          <Tab label="Soru Yönetimi" />
+          <Tab label="Bulmaca Yönetimi" />
         </Tabs>
       </Box>
 
@@ -2310,236 +2437,7 @@ export default function AdminPage() {
       </TabPanel>
 
       <TabPanel value={tabValue} index={4}>
-        <Box sx={{ p: 3 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            mb: 4
-          }}>
-            <Typography variant="h5" sx={{ 
-              fontWeight: 600,
-              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              Soru Yönetimi
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              sx={{
-                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                color: 'white',
-                boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
-                '&:hover': {
-                  background: 'linear-gradient(45deg, #21CBF3 30%, #2196F3 90%)',
-                }
-              }}
-            >
-              Yeni Soru Ekle
-            </Button>
-          </Box>
-
-          <Grid container spacing={3}>
-            {displayedQuestions.map((num) => (
-              <Grid item xs={12} md={6} key={num}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 3,
-                    borderRadius: 2,
-                    transition: 'all 0.3s ease',
-                    border: '1px solid rgba(0, 0, 0, 0.08)',
-                    background: 'white',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-                    }
-                  }}
-                >
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    mb: 2 
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontWeight: 600,
-                          color: 'primary.main',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1
-                        }}
-                      >
-                        <QuizIcon sx={{ fontSize: 20 }} />
-                        Soru {num}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <IconButton 
-                        size="small" 
-                        color="primary"
-                        sx={{ mr: 1 }}
-                        onClick={() => {
-                          // Edit functionality
-                          alert('Düzenleme özelliği yakında eklenecek');
-                        }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton 
-                        size="small" 
-                        color="error"
-                        onClick={() => {
-                          // Delete functionality
-                          alert('Silme özelliği yakında eklenecek');
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ mb: 2, borderRadius: 1, overflow: 'hidden', bgcolor: 'grey.50', p: 2 }}>
-                    <LazyLoadImage
-                      src={`images/questions/Matris/Soru-${num}.webp`}
-                      alt={`Soru ${num}`}
-                      effect="blur"
-                      width={150}
-                      height={150}
-                      style={{
-                        objectFit: 'contain',
-                        borderRadius: 8
-                      }}
-                    />
-                  </Box>
-
-                  <Typography variant="subtitle2" sx={{ mb: 2, color: 'text.secondary' }}>
-                    Seçenekler:
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {['A', 'B', 'C', 'D', 'E'].map((option) => (
-                      <Grid item xs={6} key={option}>
-                        <Box 
-                          key={option} 
-                          sx={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-start',
-                            gap: 2,
-                            p: 1.5,
-                            borderRadius: 2,
-                            border: option === getCorrectLetter(num) ? '2px solid #4caf50' : '1px solid rgba(0, 0, 0, 0.08)',
-                            bgcolor: option === getCorrectLetter(num) ? 'rgba(76, 175, 80, 0.08)' : 'transparent',
-                            width: '100%',
-                            '& .lazy-load-image-background': {
-                              display: 'flex !important',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              width: '30px !important',
-                              height: '30px !important'
-                            }
-                          }}
-                        >
-                          <Typography
-                            sx={{
-                              width: '24px',
-                              height: '24px',
-                              borderRadius: '12px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                              bgcolor: option === getCorrectLetter(num) ? 'success.main' : 'grey.200',
-                              color: option === getCorrectLetter(num) ? 'white' : 'text.secondary',
-                              fontSize: '0.875rem',
-                              fontWeight: 600
-                            }}
-                          >
-                            {option}
-                          </Typography>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            gap: 1, 
-                            flexShrink: 0,
-                            justifyContent: 'flex-start'
-                          }}>
-                            <LazyLoadImage
-                              src={`images/options/Matris/${num}/Soru-${num}${option}.webp`} 
-                              alt={`Seçenek ${option}`}
-                              effect="blur"
-                              width={30}
-                              height={30}
-                              style={{
-                                objectFit: 'contain',
-                                width: '100%',
-                                height: '100%'
-                              }}
-                            />
-                            <LazyLoadImage
-                              src={`images/options/Matris/${num}/Soru-cevap-${num}${option}.webp`} 
-                              alt={`Doğru Cevap ${option}`}
-                              effect="blur"
-                              width={30}
-                              height={30}
-                              style={{
-                                objectFit: 'contain',
-                                width: '100%',
-                                height: '100%'
-                              }}
-                            />
-                          </Box>
-                          {option === getCorrectLetter(num) && (
-                            <Chip
-                              label="Doğru Cevap"
-                              size="small"
-                              color="success"
-                              sx={{ 
-                                height: 24,
-                                marginLeft: 'auto',
-                                flexShrink: 0
-                              }}
-                            />
-                          )}
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2" sx={{ 
-              color: 'text.secondary',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <QuizIcon sx={{ fontSize: 16 }} />
-              Toplam {totalQuestions} soru, Sayfa {page + 1} / {Math.ceil(totalQuestions / questionsPerPage)}
-            </Typography>
-            <Pagination
-              count={Math.ceil(totalQuestions / questionsPerPage)}
-              page={page + 1}
-              onChange={handleQuestionPageChange}
-              color="primary"
-              size="large"
-              showFirstButton
-              showLastButton
-              sx={{
-                '& .MuiPaginationItem-root': {
-                  borderRadius: 2
-                }
-              }}
-            />
-          </Box>
-        </Box>
+        {renderPuzzleManagement()}
       </TabPanel>
     </Container>
   );

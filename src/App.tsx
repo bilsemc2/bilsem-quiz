@@ -10,9 +10,12 @@ import SignUpPage from './pages/SignUpPage';
 import AdminPage from './pages/AdminPage';
 import HomeworkPage from './pages/HomeworkPage';
 import DuelPage from './pages/DuelPage';
+import LogicPuzzleCreator from './pages/create';
+import PuzzleManagement from './pages/admin/PuzzleManagement';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
+import { Toaster } from 'sonner';
 
 function App() {
   return (
@@ -21,60 +24,79 @@ function App() {
         <Router>
           <div className="min-h-screen bg-gray-50">
             <NavBar />
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignUpPage />} />
-              <Route 
-                path="/quiz" 
-                element={
-                  <RequireAuth>
-                    <QuizPage />
-                  </RequireAuth>
-                } 
-              />
-              <Route 
-                path="/admin" 
-                element={
-                  <RequireAuth>
-                    <AdminPage />
-                  </RequireAuth>
-                } 
-              />
-              <Route 
-                path="/profile" 
-                element={
-                  <RequireAuth>
-                    <ProfilePage />
-                  </RequireAuth>
-                } 
-              />
-              <Route 
-                path="/homework" 
-                element={
-                  <RequireAuth>
-                    <HomeworkPage />
-                  </RequireAuth>
-                } 
-              />
-              <Route 
-                path="/result" 
-                element={
-                  <RequireAuth>
-                    <ResultPage />
-                  </RequireAuth>
-                } 
-              />
-              <Route 
-                path="/duel" 
-                element={
-                  <RequireAuth>
-                    <DuelPage />
-                  </RequireAuth>
-                } 
-              />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
+            <main className="flex-1">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignUpPage />} />
+                <Route 
+                  path="/quiz" 
+                  element={
+                    <RequireAuth>
+                      <QuizPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/admin/puzzle-management" 
+                  element={
+                    <RequireAuth requireAdmin>
+                      <PuzzleManagement />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/admin" 
+                  element={
+                    <RequireAuth requireAdmin>
+                      <AdminPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/profile" 
+                  element={
+                    <RequireAuth>
+                      <ProfilePage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/create" 
+                  element={
+                    <RequireAuth>
+                      <LogicPuzzleCreator />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/homework" 
+                  element={
+                    <RequireAuth>
+                      <HomeworkPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/result" 
+                  element={
+                    <RequireAuth>
+                      <ResultPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/duel" 
+                  element={
+                    <RequireAuth>
+                      <DuelPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+              <Toaster position="top-center" />
+            </main>
           </div>
         </Router>
       </SoundProvider>

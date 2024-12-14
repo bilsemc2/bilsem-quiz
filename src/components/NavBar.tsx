@@ -26,19 +26,12 @@ export default function NavBar() {
 
     useEffect(() => {
         checkAdminStatus();
-    }, []);
+    }, [user]);
 
     const checkAdminStatus = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin, email')
-            .eq('id', user.id)
-            .single();
-
-        setIsAdmin(profile?.is_admin && profile.email === 'yaprakyesili@msn.com');
+        setIsAdmin(user.email === 'yaprakyesili@msn.com');
     };
 
     return (
@@ -52,14 +45,12 @@ export default function NavBar() {
                         </span>
                     </Link>
 
-                    {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center space-x-4">
+                    {/* Desktop Menu */}
+                    <div className="hidden md:flex md:items-center md:space-x-4">
                         <Link
                             to="/"
                             className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/') 
-                                    ? 'bg-blue-100 text-blue-700' 
-                                    : 'text-gray-700 hover:bg-gray-100'
+                                isActive('/') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
                             }`}
                         >
                             Ana Sayfa
@@ -67,172 +58,183 @@ export default function NavBar() {
                         <Link
                             to="/quiz"
                             className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/quiz')
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'text-gray-700 hover:bg-gray-100'
+                                isActive('/quiz') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
                             }`}
                         >
                             Quiz
                         </Link>
-                        <Link
-                            to="/homework"
-                            className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/homework')
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                        >
-                            Ödev
-                        </Link>
-                        <Link
-                            to="/duel"
-                            className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/duel')
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                        >
-                            Düello
-                        </Link>
                         {user && (
                             <>
                                 <Link
-                                    to="/profile"
+                                    to="/create"
                                     className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                        isActive('/profile')
-                                            ? 'bg-blue-100 text-blue-700'
-                                            : 'text-gray-700 hover:bg-gray-100'
+                                        isActive('/create') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
                                     }`}
                                 >
-                                    Profil
+                                    Bulmaca Oluştur
                                 </Link>
-                                {isAdmin && (
+                                {user.email === 'yaprakyesili@msn.com' && (
                                     <Link
                                         to="/admin"
                                         className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                            isActive('/admin')
-                                                ? 'bg-blue-100 text-blue-700'
-                                                : 'text-gray-700 hover:bg-gray-100'
+                                            isActive('/admin') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
                                         }`}
                                     >
                                         Admin Paneli
                                     </Link>
                                 )}
+                                <Link
+                                    to="/profile"
+                                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                        isActive('/profile') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                    }`}
+                                >
+                                    Profil
+                                </Link>
                                 <button
                                     onClick={handleLogout}
-                                    className="px-3 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600"
                                 >
                                     Çıkış Yap
                                 </button>
                             </>
                         )}
+                        {!user && (
+                            <>
+                                <Link
+                                    to="/login"
+                                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                                >
+                                    Giriş Yap
+                                </Link>
+                                <Link
+                                    to="/register"
+                                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-indigo-600 bg-white border-2 border-indigo-600 rounded-lg hover:bg-indigo-50 transition-all duration-200"
+                                >
+                                    Kayıt Ol
+                                </Link>
+                            </>
+                        )}
                     </div>
 
-                    {/* Hamburger Menu Button */}
-                    <button 
-                        className="md:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                        onClick={toggleMenu}
-                        aria-label="Ana menü"
-                    >
-                        <svg 
-                            className="w-6 h-6" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
+                    {/* Mobile menu button */}
+                    <div className="md:hidden">
+                        <button
+                            onClick={toggleMenu}
+                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 focus:outline-none"
                         >
-                            <path 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                strokeWidth={2} 
-                                d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
-                            />
-                        </svg>
-                    </button>
+                            <span className="sr-only">Open main menu</span>
+                            {isMenuOpen ? (
+                                <svg
+                                    className="block h-6 w-6"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            ) : (
+                                <svg
+                                    className="block h-6 w-6"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                                </svg>
+                            )}
+                        </button>
+                    </div>
                 </div>
+            </div>
 
-                {/* Mobile Navigation Menu */}
-                <div className={`md:hidden ${isMenuOpen ? 'block' : 'hidden'}`}>
-                    <div className="px-2 pt-2 pb-3 space-y-1">
+            {/* Mobile Menu */}
+            {isMenuOpen && (
+                <div className="md:hidden">
+                    <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                         <Link
                             to="/"
                             className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/') 
-                                    ? 'bg-blue-100 text-blue-700' 
-                                    : 'text-gray-700 hover:bg-gray-100'
+                                isActive('/') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
                             }`}
                             onClick={() => setIsMenuOpen(false)}
                         >
                             Ana Sayfa
                         </Link>
-                        <Link
-                            to="/quiz"
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/quiz')
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Quiz
-                        </Link>
-                        <Link
-                            to="/homework"
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/homework')
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Ödev
-                        </Link>
-                        <Link
-                            to="/duel"
-                            className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${isActive('/duel') ? 'bg-gray-100' : ''}`}
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Düello
-                        </Link>
                         {user && (
                             <>
                                 <Link
-                                    to="/profile"
+                                    to="/quiz"
                                     className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/profile')
-                                            ? 'bg-blue-100 text-blue-700'
-                                            : 'text-gray-700 hover:bg-gray-100'
+                                        isActive('/quiz') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
                                     }`}
                                     onClick={() => setIsMenuOpen(false)}
                                 >
-                                    Profil
+                                    Quiz
                                 </Link>
-                                {isAdmin && (
+                                <Link
+                                    to="/create"
+                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                        isActive('/create') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                    }`}
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
+                                    Bulmaca Oluştur
+                                </Link>
+                                {user.email === 'yaprakyesili@msn.com' && (
                                     <Link
                                         to="/admin"
                                         className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                            isActive('/admin')
-                                                ? 'bg-blue-100 text-blue-700'
-                                                : 'text-gray-700 hover:bg-gray-100'
+                                            isActive('/admin') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
                                         }`}
                                         onClick={() => setIsMenuOpen(false)}
                                     >
                                         Admin Paneli
                                     </Link>
                                 )}
+                                <Link
+                                    to="/profile"
+                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                        isActive('/profile') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                    }`}
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
+                                    Profil
+                                </Link>
                                 <button
                                     onClick={() => {
                                         handleLogout();
                                         setIsMenuOpen(false);
                                     }}
-                                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600"
                                 >
-                                    Çıkış Yap
+                                    Çıkış
                                 </button>
+                            </>
+                        )}
+                        {!user && (
+                            <>
+                                <Link
+                                    to="/login"
+                                    className="block w-full text-center px-4 py-2 text-base font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
+                                    Giriş Yap
+                                </Link>
+                                <Link
+                                    to="/register"
+                                    className="block w-full text-center mt-2 px-4 py-2 text-base font-medium text-indigo-600 bg-white border-2 border-indigo-600 rounded-lg hover:bg-indigo-50 transition-all duration-200"
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
+                                    Kayıt Ol
+                                </Link>
                             </>
                         )}
                     </div>
                 </div>
-            </div>
+            )}
         </nav>
     );
 }

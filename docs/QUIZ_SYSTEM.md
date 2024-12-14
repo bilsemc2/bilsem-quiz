@@ -58,3 +58,11 @@ categories: {
   git add .
 git commit -m "Değişiklik açıklaması"
 git push
+
+outing ayarlarını kontrol et
+oluşturduğumuz /*create* sayfası için bir route ekle. App.tsx dosyasını düzenle
+NavBar'a *create* sayfası için bir link ekle
+$ npm run dev
+
+
+Bulmaca tahtası:
