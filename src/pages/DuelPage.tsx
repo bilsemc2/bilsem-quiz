@@ -558,6 +558,49 @@ const DuelPage = () => {
         </div>
       ) : (
         <div className="space-y-8">
+          {/* Düello Başlat Bölümü */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-bold mb-4">Düello Başlat</h2>
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Rakip ara..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            {searchTerm && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredUsers.map(user => (
+                  <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email)}`}
+                        alt={user.name}
+                        className="w-10 h-10 rounded-full"
+                      />
+                      <div>
+                        <p className="font-medium">{user.name}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleChallenge(user.id)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      Düello
+                    </button>
+                  </div>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <p className="text-center text-gray-500 col-span-full py-4">
+                    Rakip bulunamadı
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Bekleyen Düellolar */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-bold mb-4">Bekleyen Düellolar</h2>
@@ -607,49 +650,6 @@ const DuelPage = () => {
                 </p>
               )}
             </div>
-          </div>
-
-          {/* Kullanıcı Arama */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">Düello Başlat</h2>
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="Kullanıcı ara..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            {searchTerm.length >= 3 && (
-              <div className="space-y-2">
-                {filteredUsers.length > 0 ? (
-                  filteredUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                    >
-                      <span>{user.name}</span>
-                      <button
-                        onClick={() => handleChallenge(user.id)}
-                        className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                      >
-                        Düello Başlat
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center text-gray-500 py-2">
-                    Kullanıcı bulunamadı
-                  </p>
-                )}
-              </div>
-            )}
-            {searchTerm.length > 0 && searchTerm.length < 3 && (
-              <p className="text-center text-gray-500 py-2">
-                En az 3 karakter girin...
-              </p>
-            )}
           </div>
         </div>
       )}

@@ -259,12 +259,20 @@ export default function HomePage() {
                         Öğrenmeyi Eğlenceli Hale Getirin
                     </p>
                     {user ? (
-                        <Link
-                            to="/quiz"
-                            className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 mb-4 w-48"
-                        >
-                            Quiz'e Başla
-                        </Link>
+                        <div className="flex justify-center space-x-4">
+                            <Link
+                                to="/quiz"
+                                className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 mb-4 w-48"
+                            >
+                                Quiz'e Başla
+                            </Link>
+                            <Link
+                                to="/duel"
+                                className="inline-block bg-gradient-to-r from-pink-600 to-red-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-pink-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 mb-4 w-48"
+                            >
+                                Düello Başlat
+                            </Link>
+                        </div>
                     ) : (
                         <div className="space-y-4">
                             <div className="relative group inline-block">

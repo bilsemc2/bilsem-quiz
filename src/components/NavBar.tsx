@@ -63,6 +63,14 @@ export default function NavBar() {
                         >
                             Quiz
                         </Link>
+                        <Link
+                            to="/duel"
+                            className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                isActive('/duel') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                            }`}
+                        >
+                            Düello
+                        </Link>
                         {user && (
                             <>
                                 <Link
@@ -173,6 +181,15 @@ export default function NavBar() {
                                     onClick={() => setIsMenuOpen(false)}
                                 >
                                     Quiz
+                                </Link>
+                                <Link
+                                    to="/duel"
+                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                        isActive('/duel') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                    }`}
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
+                                    Düello
                                 </Link>
                                 <Link
                                     to="/create"
