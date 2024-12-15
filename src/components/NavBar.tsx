@@ -71,6 +71,12 @@ export default function NavBar() {
                         >
                             Düello
                         </Link>
+                        <Link
+                            to="/puzzle-ranking"
+                            className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium"
+                        >
+                            En İyi Bulmacalar
+                        </Link>
                         {user && (
                             <>
                                 <Link
@@ -170,6 +176,15 @@ export default function NavBar() {
                             onClick={() => setIsMenuOpen(false)}
                         >
                             Ana Sayfa
+                        </Link>
+                        <Link
+                            to="/puzzle-ranking"
+                            className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                isActive('/puzzle-ranking') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                            }`}
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            En İyi Bulmacalar
                         </Link>
                         {user && (
                             <>

@@ -145,11 +145,11 @@ export const ResultPage: React.FC = () => {
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                         {answer.options.map((option, optionIndex) => (
                                             <div key={optionIndex} className={`relative rounded-lg border ${
-                                                answer.selectedOption === optionIndex 
-                                                    ? answer.isCorrect 
+                                                answer.selectedOption === option.id
+                                                    ? option.isCorrect
                                                         ? 'border-green-500 bg-green-50' 
                                                         : 'border-red-500 bg-red-50'
-                                                    : answer.correctOption === optionIndex
+                                                    : option.isCorrect
                                                         ? 'border-green-500 bg-green-50'
                                                         : 'border-gray-200'
                                             }`}>

@@ -66,3 +66,12 @@ $ npm run dev
 
 
 Bulmaca tahtası:
+-- Cron extension'ı aktifleştir
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Her gün gece yarısı çalışacak job
+SELECT cron.schedule('0 0 * * *', $$
+  DELETE FROM duels 
+  WHERE status = 'pending' 
+  AND created_at < NOW() - INTERVAL '24 hours'
+$$);

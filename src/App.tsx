@@ -12,6 +12,8 @@ import HomeworkPage from './pages/HomeworkPage';
 import DuelPage from './pages/DuelPage';
 import LogicPuzzleCreator from './pages/create';
 import PuzzleManagement from './pages/admin/PuzzleManagement';
+import PuzzleRankingPage from './pages/PuzzleRankingPage';
+import PuzzlePage from './pages/PuzzlePage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -90,6 +92,22 @@ function App() {
                   element={
                     <RequireAuth>
                       <DuelPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/puzzle-ranking" 
+                  element={
+                    <RequireAuth>
+                      <PuzzleRankingPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/puzzle/:id" 
+                  element={
+                    <RequireAuth>
+                      <PuzzlePage />
                     </RequireAuth>
                   } 
                 />
