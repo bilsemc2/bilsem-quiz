@@ -28,8 +28,8 @@ const animalMap: { [key: string]: string } = {
     'Papağan': 'parrot',
     'Kelebek': 'butterfly',
     'Kaplan': 'eagle',
-    'Kus': 'duck'
-    
+    'Kus': 'duck',
+    'Baykuş':'owl'
 };
 
 const professionMap: { [key: string]: string } = {
@@ -71,9 +71,9 @@ const fruitMap: { [key: string]: string } = {
     'Muz': 'banana',
     'Portakal': 'orange',
     'Çilek': 'strawberry',
-    'Üzüm': 'grape',
+    'Üzüm': 'grapes',
     'Armut': 'pear',
-    'Kiraz': 'cherry',
+    'Kiraz': 'cherries',
     'Karpuz': 'watermelon',
     'Limon': 'lemon',
     'Şeftali': 'peach',
