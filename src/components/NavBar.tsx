@@ -77,7 +77,7 @@ export default function NavBar() {
                         {/* Matris Dropdown Menu */}
                         <Menu as="div" className="relative inline-block text-left">
                             <Menu.Button className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/create') || isActive('/puzzle-ranking') 
+                                isActive('/create') || isActive('/puzzle-ranking') || isActive('/create-pdf')
                                     ? 'bg-blue-100 text-blue-700' 
                                     : 'text-gray-700 hover:bg-gray-100'
                             }`}>
@@ -92,33 +92,37 @@ export default function NavBar() {
                                 leaveFrom="transform opacity-100 scale-100"
                                 leaveTo="transform opacity-0 scale-95"
                             >
-                                <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                    <div className="px-1 py-1">
-                                        <Menu.Item>
-                                            {({ active }) => (
-                                                <Link
-                                                    to="/create"
-                                                    className={`${
-                                                        active ? 'bg-blue-100 text-blue-700' : 'text-gray-700'
-                                                    } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
-                                                >
-                                                    Bulmaca Oluştur
-                                                </Link>
-                                            )}
-                                        </Menu.Item>
-                                        <Menu.Item>
-                                            {({ active }) => (
-                                                <Link
-                                                    to="/puzzle-ranking"
-                                                    className={`${
-                                                        active ? 'bg-blue-100 text-blue-700' : 'text-gray-700'
-                                                    } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
-                                                >
-                                                    En İyi Bulmacalar
-                                                </Link>
-                                            )}
-                                        </Menu.Item>
-                                    </div>
+                                <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                    <Menu.Item>
+                                        {({ active }) => (
+                                            <Link
+                                                to="/create"
+                                                className={`block px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
+                                            >
+                                                Bulmaca Oluştur
+                                            </Link>
+                                        )}
+                                    </Menu.Item>
+                                    <Menu.Item>
+                                        {({ active }) => (
+                                            <Link
+                                                to="/puzzle-ranking"
+                                                className={`block px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
+                                            >
+                                                En İyi Bulmacalar
+                                            </Link>
+                                        )}
+                                    </Menu.Item>
+                                    <Menu.Item>
+                                        {({ active }) => (
+                                            <Link
+                                                to="/create-pdf"
+                                                className={`block px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
+                                            >
+                                                PDF Oluştur
+                                            </Link>
+                                        )}
+                                    </Menu.Item>
                                 </Menu.Items>
                             </Transition>
                         </Menu>
@@ -262,6 +266,15 @@ export default function NavBar() {
                                     onClick={toggleMenu}
                                 >
                                     En İyi Bulmacalar
+                                </Link>
+                                <Link
+                                    to="/create-pdf"
+                                    className={`block px-3 py-2 rounded-md text-sm ${
+                                        isActive('/create-pdf') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                                    }`}
+                                    onClick={toggleMenu}
+                                >
+                                    PDF Oluştur
                                 </Link>
                             </div>
                         </div>

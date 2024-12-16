@@ -14,6 +14,7 @@ import LogicPuzzleCreator from './pages/create';
 import PuzzleManagement from './pages/admin/PuzzleManagement';
 import PuzzleRankingPage from './pages/PuzzleRankingPage';
 import PuzzlePage from './pages/PuzzlePage';
+import CreatePdfPage from './pages/CreatePdfPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignUpPage />} />
+                <Route path="/create-pdf" element={<CreatePdfPage />} />
                 <Route 
                   path="/quiz" 
                   element={
