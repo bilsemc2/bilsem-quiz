@@ -5,7 +5,7 @@ const timeoutSound = new Audio('/sounds/timeout.mp3');
 const tickSound = new Audio('/sounds/tick.mp3');
 const timeWarningSound = new Audio('/sounds/time-warning.mp3');
 
-export function playSound(type: 'correct' | 'incorrect' | 'timeout' | 'tick') {
+export function playSound(type: 'correct' | 'incorrect' | 'timeout' | 'tick' | 'timeWarning') {
     switch (type) {
         case 'correct':
             correctSound.currentTime = 0;
@@ -22,6 +22,10 @@ export function playSound(type: 'correct' | 'incorrect' | 'timeout' | 'tick') {
         case 'tick':
             tickSound.currentTime = 0;
             tickSound.play();
+            break;
+        case 'timeWarning':
+            timeWarningSound.currentTime = 0;
+            timeWarningSound.play();
             break;
     }
 }

@@ -160,6 +160,7 @@ interface QuizOption {
   id: string;
   imageUrl: string;
   text: string;
+  isCorrect: boolean;
 }
 
 interface QuestionPoolItem {
@@ -304,6 +305,12 @@ export default function AdminPage() {
     fetchQuizStats();
     fetchPuzzles();
   }, []);
+
+  useEffect(() => {
+    if (tabValue === 2) {
+      fetchQuizzes();
+    }
+  }, [tabValue]);
 
   const checkAdminStatus = async () => {
     if (!user) {
@@ -536,19 +543,21 @@ export default function AdminPage() {
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-    if (newValue === 2) { // Quiz yönetimi sekmesi
-      fetchQuizzes();
-    }
   };
 
   const fetchQuizzes = async () => {
     try {
+      console.log('Fetching quizzes...');
       const { data, error } = await supabase
         .from('quizzes')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching quizzes:', error);
+        throw error;
+      }
+      console.log('Fetched quizzes:', data);
       setQuizzes(data || []);
     } catch (error) {
       console.error('Error fetching quizzes:', error);
@@ -615,6 +624,7 @@ export default function AdminPage() {
       id: `${questionNumber}${optionLetter}`,
       imageUrl: `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${optionLetter}.webp`,
       text: '',
+      isCorrect: false
     };
 
     setCurrentQuestion(prev => ({
@@ -652,7 +662,8 @@ export default function AdminPage() {
       return {
         id: `${questionNumber}${letter}`,
         imageUrl: `/images/options/Matris/${questionNumber}/Soru-${isCorrect ? 'cevap-' : ''}${questionNumber}${letter}.webp`,
-        text: ''
+        text: '',
+        isCorrect
       };
     });
 
@@ -692,7 +703,8 @@ export default function AdminPage() {
         return {
           ...opt,
           id: `${questionNumber}${letter}`,
-          imageUrl: `/images/options/Matris/${questionNumber}/Soru-${isCorrect ? 'cevap-' : ''}${questionNumber}${letter}.webp`
+          imageUrl: `/images/options/Matris/${questionNumber}/Soru-${isCorrect ? 'cevap-' : ''}${questionNumber}${letter}.webp`,
+          isCorrect
         };
       });
 
@@ -877,25 +889,18 @@ export default function AdminPage() {
     const matrisQuestions = Array.from({ length: 40 }, (_, i) => i + 1).map(num => {
       // Her seçenek için resim URL'lerini oluştur
       const options = ['A', 'B', 'C', 'D', 'E'].map(letter => ({
-        id: Math.random().toString(36).substr(2, 9),
-        imageUrl: `/images/options/Matris/${num}/Soru-${num}${letter}.webp`
+        id: `${num}${letter}`,
+        imageUrl: `/images/options/Matris/${num}/Soru-${num}${letter}.webp`,
+        text: letter,
+        isCorrect: false
       }));
 
-      // Doğru cevap resmi: Soru-cevap-1C.webp formatında
-      const correctAnswerPath = `/images/options/Matris/${num}/Soru-cevap-${num}`;
-      let correctAnswer = 'A'; // Varsayılan
-
-      // Her seçenek için doğru cevap kontrolü
-      ['A', 'B', 'C', 'D', 'E'].forEach(letter => {
-        const testPath = `${correctAnswerPath}${letter}.webp`;
-        // Burada dosya varlığını kontrol etmek ideal olurdu ama client-side'da bu mümkün değil
-        // O yüzden QuizPage'de görüntülenirken kontrol edilecek
-        if (testPath.includes('cevap')) {
-          correctAnswer = letter;
-        }
-      });
-
-      const correctOption = options.find(opt => opt.text === correctAnswer);
+      // Doğru cevabı bul ve işaretle
+      const correctAnswerLetter = QUESTIONS_CONFIG[num]?.correctAnswer || 'A';
+      const correctOption = options.find(opt => opt.text === correctAnswerLetter);
+      if (correctOption) {
+        correctOption.isCorrect = true;
+      }
 
       return {
         id: num.toString(),
@@ -930,27 +935,27 @@ export default function AdminPage() {
 
     try {
       const newQuestions = selectedQuestions.map(id => {
+        const numericId = parseInt(id);
         const options = ['A', 'B', 'C', 'D', 'E'].map(letter => ({
           id: `${id}${letter}`,
-          imageUrl: `images/options/Matris/${id}/Soru-${id}${letter}.webp`,
-          text: ''
+          imageUrl: `/images/options/Matris/${id}/Soru-${id}${letter}.webp`,
+          text: letter,
+          isCorrect: false
         }));
 
-        // Doğru cevap seçeneğini bul
-        const correctLetter = findCorrectOptionLetter(options.map(opt => opt.imageUrl));
-
-        // Doğru cevap seçeneğinin yolunu güncelle
-        const correctIndex = options.findIndex(opt => opt.id === `${id}${correctLetter}`);
-        if (correctIndex !== -1) {
-          options[correctIndex].imageUrl = `images/options/Matris/${id}/Soru-cevap-${id}${correctLetter}.webp`;
+        // Doğru cevabı bul ve işaretle
+        const correctAnswerLetter = QUESTIONS_CONFIG[numericId]?.correctAnswer || 'A';
+        const correctOption = options.find(opt => opt.text === correctAnswerLetter);
+        if (correctOption) {
+          correctOption.isCorrect = true;
         }
 
         return {
           id,
-          questionImageUrl: `images/questions/Matris/Soru-${id}.webp`,
+          questionImageUrl: `/images/questions/Matris/Soru-${id}.webp`,
           question: '',
           options,
-          correctOptionId: `${id}${correctLetter}`,
+          correctOptionId: correctOption?.id || options[0].id,
           grade: editingQuiz?.grade || newQuiz.grade,
           subject: editingQuiz?.subject || newQuiz.subject
         };
@@ -2045,49 +2050,38 @@ export default function AdminPage() {
                     
                     <Typography variant="subtitle1">Seçenekler:</Typography>
                     <Stack spacing={1}>
-                      {question.options.map((option) => {
-                        const isCorrect = option.id === question.correctOptionId;
-                        const questionNumber = question.id.split('-')[1];
-                        const optionLetter = option.text.split(' ')[1];
-                        
-                        // Use the answer image path for correct option
-                        const imageUrl = isCorrect 
-                          ? question.correctOptionId 
-                          : option.imageUrl;
-
-                        return (
-                          <Paper
-                            key={option.id}
-                            elevation={0} 
-                            sx={{ 
-                              p: 1, 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: 1,
-                              bgcolor: isCorrect ? 'rgba(76, 175, 80, 0.1)' : 'background.paper',
-                              border: isCorrect ? '2px solid #4caf50' : 'none',
-                              borderRadius: 1
+                      {question.options.map((option, idx) => (
+                        <Paper
+                          key={option.id}
+                          elevation={0} 
+                          sx={{ 
+                            p: 1, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            bgcolor: option.isCorrect ? 'rgba(76, 175, 80, 0.1)' : 'background.paper',
+                            border: option.isCorrect ? '2px solid #4caf50' : 'none',
+                            borderRadius: 1
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              minWidth: 24,
+                              fontWeight: option.isCorrect ? 'bold' : 'normal',
+                              color: option.isCorrect ? 'success.dark' : 'text.primary'
                             }}
                           >
-                            <Typography
-                              sx={{
-                                minWidth: 24,
-                                fontWeight: isCorrect ? 'bold' : 'normal',
-                                color: isCorrect ? 'success.dark' : 'text.primary'
-                              }}
-                            >
-                              {optionLetter}:
-                            </Typography>
-                            <Box sx={{ maxWidth: 150 }}>
-                              <img
-                                src={imageUrl}
-                                alt={option.text}
-                                style={{ width: '100%', height: 'auto' }}
-                              />
-                            </Box>
-                          </Paper>
-                        );
-                      })}
+                            {option.text}:
+                          </Typography>
+                          <Box sx={{ maxWidth: 150 }}>
+                            <img
+                              src={option.imageUrl}
+                              alt={option.text}
+                              style={{ width: '100%', height: 'auto' }}
+                            />
+                          </Box>
+                        </Paper>
+                      ))}
                     </Stack>
                     
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>

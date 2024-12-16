@@ -47,47 +47,32 @@ export default function HomeworkPage() {
       if (!user) return;
 
       try {
+        setLoading(true);
         // Load user profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('grade, is_admin, email')
+          .select('*')
           .eq('id', user.id)
           .single();
 
         if (profileError) throw profileError;
+        
+        setUserGrade(profileData.grade);
+        setIsAdmin(profileData.is_admin);
 
-        console.log('Profile data:', profileData);
-        const grade = Number(profileData.grade);
-        setUserGrade(grade);
-        setIsAdmin(profileData.email === 'yaprakyesili@msn.com');
-
-        // Load quizzes
+        // Load quizzes for user's grade
         const { data: quizData, error: quizError } = await supabase
           .from('quizzes')
           .select('*')
           .eq('is_active', true)
+          .eq('grade', profileData.grade)
           .order('created_at', { ascending: false });
 
         if (quizError) throw quizError;
-
-        console.log('Quiz data from Supabase:', JSON.stringify(quizData, null, 2));
-        console.log('Quiz data before filter:', quizData);
-        // Filter quizzes based on grade
-        const validQuizzes = quizData.filter(quiz => {
-          const quizGrade = Number(quiz.grade);
-          console.log('Checking quiz:', quiz.title, 'quiz grade:', quizGrade, 'user grade:', grade);
-          return quiz && 
-            (profileData.email === 'yaprakyesili@msn.com' || quizGrade === grade) &&
-            quiz.title &&
-            quiz.description &&
-            Array.isArray(quiz.questions) &&
-            quiz.questions.length > 0;
-        });
-
-        console.log('Valid quizzes after filter:', validQuizzes);
-        setQuizzes(validQuizzes);
+        setQuizzes(quizData || []);
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error fetching data:', error);
+        showFeedback('Veri yüklenirken bir hata oluştu', 'error');
       } finally {
         setLoading(false);
       }
@@ -137,17 +122,18 @@ export default function HomeworkPage() {
         const normalPath = `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${optionLetter}.webp`;
         const correctPath = `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${optionLetter}.webp`;
         
-        // Eğer bu seçenek için "Soru-cevap-" dosyası varsa, bu doğru cevaptır
-        const isCorrectOption = correctPath.includes('-cevap-');
-        
         // Seçenek görseli - normal görseli kullan
         const imageUrl = normalPath;
         
-        console.log('Generated path:', { 
-          type: isCorrectOption ? 'correct' : 'incorrect',
+        // Doğru cevap kontrolü - option.isCorrect ve dosya adı kontrolü
+        const isCorrectOption = option.isCorrect === true || option.id === question.correctAnswer;
+        
+        console.log('Option details:', { 
+          id: option.id,
+          isCorrect: isCorrectOption,
           normalPath,
           correctPath,
-          path: imageUrl 
+          imageUrl
         });
 
         return {
@@ -289,41 +275,57 @@ export default function HomeworkPage() {
   const currentQuestion = activeQuiz?.questions[currentQuestionIndex];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] py-4 sm:py-8">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4">
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
         {!activeQuiz ? (
-          // Quiz list view
           <>
-            <h1 className="text-3xl font-bold text-center mb-8">Ödevlerim</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {quizzes.map((quiz) => (
-                <div
-                  key={quiz.id}
-                  className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-                >
-                  <h2 className="text-xl font-bold text-gray-800 mb-3">{quiz.title}</h2>
-                  <p className="text-gray-600 mb-4">{quiz.description}</p>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                      {quiz.grade}. Sınıf
-                    </span>
-                    <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-                      {quiz.subject}
-                    </span>
-                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                      {quiz.questions.length} Soru
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => startQuiz(quiz)}
-                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold
-                             hover:bg-indigo-700 transition-all duration-200 transform hover:scale-105"
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">Ödevler</h1>
+            {quizzes.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600 text-lg">
+                  Şu anda aktif ödev bulunmamaktadır.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {quizzes.map((quiz) => (
+                  <div
+                    key={quiz.id}
+                    className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200"
                   >
-                    Ödevi Başlat
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                          {quiz.title}
+                        </h2>
+                        <p className="text-gray-600 mb-4">{quiz.description}</p>
+                        <div className="flex gap-4 text-sm text-gray-500">
+                          <span>Ders: {quiz.subject}</span>
+                          <span>•</span>
+                          <span>{quiz.questions.length} Soru</span>
+                          <span>•</span>
+                          <span>
+                            {new Date(quiz.created_at).toLocaleDateString('tr-TR')}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => startQuiz(quiz)}
+                        className="
+                          px-6 py-2 rounded-lg
+                          bg-indigo-600 hover:bg-indigo-700
+                          text-white font-semibold
+                          transition-all duration-200
+                          hover:shadow-md hover:scale-105
+                        "
+                      >
+                        Başla
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         ) : (
           // Active quiz view

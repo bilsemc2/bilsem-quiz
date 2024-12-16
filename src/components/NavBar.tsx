@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { Menu, Transition } from '@headlessui/react';
+import { ChevronDownIcon } from '@heroicons/react/20/solid';
 
 export default function NavBar() {
     const location = useLocation();
@@ -50,7 +52,7 @@ export default function NavBar() {
                         <Link
                             to="/"
                             className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                isActive('/') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                             }`}
                         >
                             Ana Sayfa
@@ -71,74 +73,117 @@ export default function NavBar() {
                         >
                             Düello
                         </Link>
-                        <Link
-                            to="/puzzle-ranking"
-                            className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium"
-                        >
-                            En İyi Bulmacalar
-                        </Link>
+
+                        {/* Matris Dropdown Menu */}
+                        <Menu as="div" className="relative inline-block text-left">
+                            <Menu.Button className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                                isActive('/create') || isActive('/puzzle-ranking') 
+                                    ? 'bg-blue-100 text-blue-700' 
+                                    : 'text-gray-700 hover:bg-gray-100'
+                            }`}>
+                                Matris
+                                <ChevronDownIcon className="ml-2 -mr-1 h-5 w-5" aria-hidden="true" />
+                            </Menu.Button>
+                            <Transition
+                                enter="transition ease-out duration-100"
+                                enterFrom="transform opacity-0 scale-95"
+                                enterTo="transform opacity-100 scale-100"
+                                leave="transition ease-in duration-75"
+                                leaveFrom="transform opacity-100 scale-100"
+                                leaveTo="transform opacity-0 scale-95"
+                            >
+                                <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                    <div className="px-1 py-1">
+                                        <Menu.Item>
+                                            {({ active }) => (
+                                                <Link
+                                                    to="/create"
+                                                    className={`${
+                                                        active ? 'bg-blue-100 text-blue-700' : 'text-gray-700'
+                                                    } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                                                >
+                                                    Bulmaca Oluştur
+                                                </Link>
+                                            )}
+                                        </Menu.Item>
+                                        <Menu.Item>
+                                            {({ active }) => (
+                                                <Link
+                                                    to="/puzzle-ranking"
+                                                    className={`${
+                                                        active ? 'bg-blue-100 text-blue-700' : 'text-gray-700'
+                                                    } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                                                >
+                                                    En İyi Bulmacalar
+                                                </Link>
+                                            )}
+                                        </Menu.Item>
+                                    </div>
+                                </Menu.Items>
+                            </Transition>
+                        </Menu>
+
                         {user && (
                             <>
                                 <Link
-                                    to="/create"
+                                    to="/homework"
                                     className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                        isActive('/create') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                        isActive('/homework') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                                 >
-                                    Bulmaca Oluştur
+                                    Ödevler
                                 </Link>
                                 {user.email === 'yaprakyesili@msn.com' && (
                                     <Link
                                         to="/admin"
                                         className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                            isActive('/admin') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                            isActive('/admin') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                                         }`}
                                     >
-                                        Admin Paneli
+                                        Admin
                                     </Link>
                                 )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* User Menu */}
+                    <div className="hidden md:flex md:items-center">
+                        {user ? (
+                            <div className="flex items-center space-x-4">
                                 <Link
                                     to="/profile"
                                     className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                        isActive('/profile') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                        isActive('/profile') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                                 >
                                     Profil
                                 </Link>
                                 <button
                                     onClick={handleLogout}
-                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600"
+                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
                                 >
                                     Çıkış Yap
                                 </button>
-                            </>
-                        )}
-                        {!user && (
-                            <>
-                                <Link
-                                    to="/login"
-                                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                                >
-                                    Giriş Yap
-                                </Link>
-                                <Link
-                                    to="/signup"
-                                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-indigo-600 bg-white border-2 border-indigo-600 rounded-lg hover:bg-indigo-50 transition-all duration-200"
-                                >
-                                    Kayıt Ol
-                                </Link>
-                            </>
+                            </div>
+                        ) : (
+                            <Link
+                                to="/login"
+                                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                            >
+                                Giriş Yap
+                            </Link>
                         )}
                     </div>
 
-                    {/* Mobile menu button */}
-                    <div className="md:hidden">
+                    {/* Mobile Menu Button */}
+                    <div className="md:hidden flex items-center">
                         <button
                             onClick={toggleMenu}
-                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 focus:outline-none"
+                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
                         >
                             <span className="sr-only">Open main menu</span>
-                            {isMenuOpen ? (
+                            {!isMenuOpen ? (
                                 <svg
                                     className="block h-6 w-6"
                                     xmlns="http://www.w3.org/2000/svg"
@@ -146,7 +191,7 @@ export default function NavBar() {
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
                                 >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                                 </svg>
                             ) : (
                                 <svg
@@ -156,7 +201,7 @@ export default function NavBar() {
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
                                 >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             )}
                         </button>
@@ -167,102 +212,110 @@ export default function NavBar() {
             {/* Mobile Menu */}
             {isMenuOpen && (
                 <div className="md:hidden">
-                    <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <div className="px-2 pt-2 pb-3 space-y-1">
                         <Link
                             to="/"
                             className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                isActive('/') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                             }`}
-                            onClick={() => setIsMenuOpen(false)}
+                            onClick={toggleMenu}
                         >
                             Ana Sayfa
                         </Link>
                         <Link
-                            to="/puzzle-ranking"
+                            to="/quiz"
                             className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/puzzle-ranking') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                isActive('/quiz') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                             }`}
-                            onClick={() => setIsMenuOpen(false)}
+                            onClick={toggleMenu}
                         >
-                            En İyi Bulmacalar
+                            Quiz
                         </Link>
+                        <Link
+                            to="/duel"
+                            className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                isActive('/duel') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                            onClick={toggleMenu}
+                        >
+                            Düello
+                        </Link>
+                        
+                        {/* Mobile Matris Menu */}
+                        <div className="px-3 py-2">
+                            <div className="font-medium text-gray-700">Matris</div>
+                            <div className="pl-4 mt-2 space-y-2">
+                                <Link
+                                    to="/create"
+                                    className={`block px-3 py-2 rounded-md text-sm ${
+                                        isActive('/create') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                                    }`}
+                                    onClick={toggleMenu}
+                                >
+                                    Bulmaca Oluştur
+                                </Link>
+                                <Link
+                                    to="/puzzle-ranking"
+                                    className={`block px-3 py-2 rounded-md text-sm ${
+                                        isActive('/puzzle-ranking') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                                    }`}
+                                    onClick={toggleMenu}
+                                >
+                                    En İyi Bulmacalar
+                                </Link>
+                            </div>
+                        </div>
+
                         {user && (
                             <>
                                 <Link
-                                    to="/quiz"
+                                    to="/homework"
                                     className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/quiz') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                        isActive('/homework') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                                     }`}
-                                    onClick={() => setIsMenuOpen(false)}
+                                    onClick={toggleMenu}
                                 >
-                                    Quiz
-                                </Link>
-                                <Link
-                                    to="/duel"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/duel') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-                                    }`}
-                                    onClick={() => setIsMenuOpen(false)}
-                                >
-                                    Düello
-                                </Link>
-                                <Link
-                                    to="/create"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/create') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-                                    }`}
-                                    onClick={() => setIsMenuOpen(false)}
-                                >
-                                    Bulmaca Oluştur
+                                    Ödevler
                                 </Link>
                                 {user.email === 'yaprakyesili@msn.com' && (
                                     <Link
                                         to="/admin"
                                         className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                            isActive('/admin') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                            isActive('/admin') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                                         }`}
-                                        onClick={() => setIsMenuOpen(false)}
+                                        onClick={toggleMenu}
                                     >
-                                        Admin Paneli
+                                        Admin
                                     </Link>
                                 )}
                                 <Link
                                     to="/profile"
                                     className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/profile') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                        isActive('/profile') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                                     }`}
-                                    onClick={() => setIsMenuOpen(false)}
+                                    onClick={toggleMenu}
                                 >
                                     Profil
                                 </Link>
                                 <button
                                     onClick={() => {
                                         handleLogout();
-                                        setIsMenuOpen(false);
+                                        toggleMenu();
                                     }}
-                                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600"
+                                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
                                 >
-                                    Çıkış
+                                    Çıkış Yap
                                 </button>
                             </>
                         )}
                         {!user && (
-                            <>
-                                <Link
-                                    to="/login"
-                                    className="block w-full text-center px-4 py-2 text-base font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                                    onClick={() => setIsMenuOpen(false)}
-                                >
-                                    Giriş Yap
-                                </Link>
-                                <Link
-                                    to="/signup"
-                                    className="block w-full text-center mt-2 px-4 py-2 text-base font-medium text-indigo-600 bg-white border-2 border-indigo-600 rounded-lg hover:bg-indigo-50 transition-all duration-200"
-                                    onClick={() => setIsMenuOpen(false)}
-                                >
-                                    Kayıt Ol
-                                </Link>
-                            </>
+                            <Link
+                                to="/login"
+                                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                                onClick={toggleMenu}
+                            >
+                                Giriş Yap
+                            </Link>
                         )}
                     </div>
                 </div>

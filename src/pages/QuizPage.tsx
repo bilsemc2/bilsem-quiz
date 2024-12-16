@@ -95,8 +95,11 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
 
     const handleTimeout = () => {
         if (!isAnswered) {
-            handleTimeUp();
-            // Record timeout answer
+            setIsAnswered(true);
+            setIsTimeout(true);
+            playSound('timeout');
+            
+            // Cevaplar dizisine ekle
             setAnswers(prev => [...prev, {
                 questionNumber: currentQuestionIndex + 1,
                 isCorrect: false,
@@ -104,7 +107,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                 correctOption: currentQuestion.correctOptionId,
                 questionImage: currentQuestion.questionImageUrl,
                 isTimeout: true,
-                solutionVideo: currentQuestion.solutionVideo,  // Video çözüm bilgisini ekle
+                solutionVideo: currentQuestion.solutionVideo,
                 options: currentQuestion.options.map(opt => ({
                     id: opt.id,
                     imageUrl: opt.imageUrl,
@@ -112,6 +115,25 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                     isCorrect: opt.id === currentQuestion.correctOptionId
                 }))
             }]);
+
+            // 2 saniye sonra sonraki soruya geç
+            setTimeout(() => {
+                if (currentQuestionIndex < (quiz?.questions.length || 0) - 1) {
+                    // Seçeneklerin durumunu sıfırla
+                    const nextQuestion = quiz?.questions[currentQuestionIndex + 1];
+                    if (nextQuestion) {
+                        nextQuestion.options = nextQuestion.options.map(opt => ({
+                            ...opt,
+                            isSelected: false,
+                            isCorrect: false
+                        }));
+                    }
+                    handleNext();
+                } else {
+                    // Son soruysa quiz'i bitir
+                    handleQuizComplete();
+                }
+            }, 2000);
         }
     };
 
@@ -119,7 +141,8 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
         if (!isAnswered && timeLeft > 0) {
             const timer = setInterval(() => {
                 setTimeLeft((prev) => {
-                    if (prev <= 10 && prev > 1) {
+                    if (prev <= 5 && prev > 0) {
+                        playSound('timeWarning');
                     }
                     return prev - 1;
                 });
