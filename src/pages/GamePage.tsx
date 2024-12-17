@@ -51,18 +51,18 @@ export default function GamePage() {
         const fetchUserXP = async () => {
             try {
                 setLoading(true);
-                const { data, error } = await supabase
+                const { data: profileData, error: profileError } = await supabase
                     .from('profiles')
-                    .select('points')
+                    .select('experience')
                     .eq('id', user.id)
                     .single();
 
-                if (error) {
-                    console.error('Error fetching user XP:', error);
+                if (profileError) {
+                    console.error('Error fetching user XP:', profileError);
                     return;
                 }
 
-                setUserXP(data.points || 0);
+                setUserXP(profileData.experience || 0);
             } finally {
                 setLoading(false);
             }
@@ -176,7 +176,7 @@ export default function GamePage() {
 
         const { error } = await supabase
             .from('profiles')
-            .update({ points: userXP + xpReward })
+            .update({ experience: userXP + xpReward })
             .eq('id', user.id);
 
         if (error) {
