@@ -150,8 +150,104 @@ export default function HomePage() {
                     </p>
                 </div>
 
+                {/* Hero Section with Slider and Leaderboard */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                    {/* Slider */}
+                    <div className="lg:col-span-2 relative">
+                        <div className="relative h-[400px] overflow-hidden rounded-lg">
+                            <div
+                                className="flex h-full transition-transform duration-500 ease-out"
+                                style={{
+                                    transform: `translateX(-${currentSlide * 100}%)`,
+                                }}
+                            >
+                                {slides.map((s) => (
+                                    <div
+                                        key={s.id}
+                                        className="w-full h-full flex-shrink-0 relative p-4"
+                                    >
+                                        <img
+                                            src={s.image}
+                                            alt={s.alt}
+                                            className="w-full h-full object-contain rounded-lg"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                                {slides.map((_, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => goToSlide(index)}
+                                        className={`w-2 h-2 rounded-full transition-colors ${
+                                            index === currentSlide
+                                                ? 'bg-white'
+                                                : 'bg-white/50'
+                                        }`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Leaderboard */}
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <h3 className="text-lg font-semibold mb-4">Lider Tablosu</h3>
+                        <div className="space-y-4">
+                            {leaders.slice(0, 5).map((leader, index) => (
+                                <div
+                                    key={leader.id}
+                                    className="flex items-center space-x-4"
+                                >
+                                    <div className="flex-shrink-0">
+                                        <img
+                                            src={leader.avatar_url}
+                                            alt={leader.name}
+                                            className="w-10 h-10 rounded-full"
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 truncate">
+                                            {leader.name}
+                                        </p>
+                                        <p className="text-sm text-gray-500">
+                                            {leader.points} puan
+                                        </p>
+                                    </div>
+                                    <div className="flex-shrink-0">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                            #{index + 1}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Stats Section */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 border-t border-gray-100 pt-12">
+                    <QuestionCount />
+                    <div className="bg-white rounded-lg shadow-lg p-6 text-center transform hover:scale-105 transition-transform duration-200">
+                        <div className="text-3xl font-bold text-purple-600 mb-2">
+                            {activeStudentCount}
+                        </div>
+                        <div className="text-gray-600 text-sm">
+                            Aktif Öğrenci
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg shadow-lg p-6 text-center transform hover:scale-105 transition-transform duration-200">
+                        <div className="text-3xl font-bold text-pink-600 mb-2">
+                            {leaders.length > 0 ? leaders[0].points : 0}
+                        </div>
+                        <div className="text-gray-600 text-sm">
+                            En Yüksek Puan
+                        </div>
+                    </div>
+                </div>
+
                 {/* Recent Puzzles Section */}
-                <div className="bg-gradient-to-b from-purple-50 via-white to-white py-12">
+                <div className="border-t border-gray-100 pt-12">
                     <div className="container mx-auto px-4">
                         <div className="flex items-center justify-between mb-8">
                             <div>
@@ -226,116 +322,6 @@ export default function HomePage() {
                             </Link>
                         </div>
                     </div>
-                </div>
-
-                {/* Stats Section */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-                    <QuestionCount />
-                    <div className="bg-white rounded-lg shadow-lg p-6 text-center transform hover:scale-105 transition-transform duration-200">
-                        <div className="text-3xl font-bold text-purple-600 mb-2">
-                            {activeStudentCount}
-                        </div>
-                        <div className="text-gray-600 text-sm">
-                            Aktif Öğrenci
-                        </div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-lg p-6 text-center transform hover:scale-105 transition-transform duration-200">
-                        <div className="text-3xl font-bold text-pink-600 mb-2">
-                            {leaders.length > 0 ? leaders[0].points : 0}
-                        </div>
-                        <div className="text-gray-600 text-sm">
-                            En Yüksek Puan
-                        </div>
-                    </div>
-                </div>
-
-                {/* Hero Section with Slider and Leaderboard */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                    {/* Slider */}
-                    <div className="lg:col-span-2 relative">
-                        <div className="relative h-[400px] overflow-hidden rounded-lg">
-                            <div
-                                className="flex h-full transition-transform duration-500 ease-out"
-                                style={{
-                                    transform: `translateX(-${currentSlide * 100}%)`,
-                                }}
-                            >
-                                {slides.map((s) => (
-                                    <div
-                                        key={s.id}
-                                        className="w-full h-full flex-shrink-0 relative p-4"
-                                    >
-                                        <img
-                                            src={s.image}
-                                            alt={s.alt}
-                                            className="w-full h-full object-contain rounded-lg"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                                {slides.map((_, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => goToSlide(index)}
-                                        className={`w-2 h-2 rounded-full transition-colors ${
-                                            index === currentSlide
-                                                ? 'bg-white'
-                                                : 'bg-white/50'
-                                        }`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Leaderboard */}
-                    <div className="bg-white rounded-xl shadow-lg p-6">
-                        <h3 className="text-lg font-semibold mb-4">Lider Tablosu</h3>
-                        <div className="space-y-4">
-                            {leaders.slice(0, 5).map((leader, index) => (
-                                <div
-                                    key={leader.id}
-                                    className="flex items-center space-x-4"
-                                >
-                                    <div className="flex-shrink-0 w-8 text-center font-semibold">
-                                        #{index + 1}
-                                    </div>
-                                    <div className="flex-shrink-0">
-                                        <img
-                                            src={leader.avatar_url}
-                                            alt={leader.name}
-                                            className="w-8 h-8 rounded-full"
-                                        />
-                                    </div>
-                                    <div className="flex-1 truncate">{leader.name}</div>
-                                    <div className="font-semibold text-purple-600">
-                                        {leader.points}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-center space-x-4 mb-12">
-                    {!user && (
-                        <>
-                            <Link
-                                to="/login"
-                                className="px-8 py-3 text-lg font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                                Giriş Yap
-                            </Link>
-                            <Link
-                                to="/signup"
-                                className="px-8 py-3 text-lg font-semibold text-indigo-600 border-2 border-indigo-600 rounded-xl hover:bg-indigo-50 transition-all duration-200"
-                            >
-                                Kayıt Ol
-                            </Link>
-                        </>
-                    )}
                 </div>
             </div>
         </div>

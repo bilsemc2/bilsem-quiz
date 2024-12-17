@@ -67,8 +67,49 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-white">
-      {/* Recent Puzzles Section - Now at the top */}
-      <div className="container mx-auto px-4 py-12">
+      {/* Hero Section - Now at the top */}
+      <div className="container mx-auto px-4 py-16">
+        <div className="max-w-3xl mx-auto text-center space-y-8">
+          <h1 className="text-5xl font-bold text-gray-900">Bilsem Quiz</h1>
+          <p className="text-xl text-gray-600">Öğrenmeyi Eğlenceli Hale Getirin</p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link href="/quiz">
+              <Button className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors">
+                Quiz'e Başla
+              </Button>
+            </Link>
+            <Link href="/duello">
+              <Button className="w-full sm:w-auto bg-pink-600 hover:bg-pink-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors">
+                Düello Başlat
+              </Button>
+            </Link>
+          </div>
+          <p className="text-sm text-gray-500 italic max-w-2xl mx-auto">
+            Her girişte karışık 10 soru gelmektedir. Soru sayısı arttıkça benzer soruların gelme olasılığı düşecektir.
+          </p>
+        </div>
+      </div>
+
+      {/* Stats Section - In the middle */}
+      <div className="container mx-auto px-4 py-16 border-t border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-purple-600 mb-2">{stats.totalQuestions}</div>
+            <div className="text-gray-600">Toplam Soru</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-pink-600 mb-2">{stats.activeUsers}</div>
+            <div className="text-gray-600">Aktif Kullanıcı</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-purple-600 mb-2">{stats.highestScore}</div>
+            <div className="text-gray-600">En Yüksek Skor</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Puzzles Section - Now at the bottom */}
+      <div className="container mx-auto px-4 py-12 border-t border-gray-100">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -132,47 +173,6 @@ const HomePage = () => {
               </div>
             </Card>
           </Link>
-        </div>
-      </div>
-
-      {/* Hero Section - Moved below */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-3xl mx-auto text-center space-y-8">
-          <h1 className="text-5xl font-bold text-gray-900">Bilsem Quiz</h1>
-          <p className="text-xl text-gray-600">Öğrenmeyi Eğlenceli Hale Getirin</p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/quiz">
-              <Button className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors">
-                Quiz'e Başla
-              </Button>
-            </Link>
-            <Link href="/duello">
-              <Button className="w-full sm:w-auto bg-pink-600 hover:bg-pink-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors">
-                Düello Başlat
-              </Button>
-            </Link>
-          </div>
-          <p className="text-sm text-gray-500 italic max-w-2xl mx-auto">
-            Her girişte karışık 10 soru gelmektedir. Soru sayısı arttıkça benzer soruların gelme olasılığı düşecektir.
-          </p>
-        </div>
-      </div>
-
-      {/* Stats Section - At the bottom */}
-      <div className="container mx-auto px-4 py-16 border-t border-gray-100">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-600 mb-2">{stats.totalQuestions}</div>
-            <div className="text-gray-600">Toplam Soru</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-pink-600 mb-2">{stats.activeUsers}</div>
-            <div className="text-gray-600">Aktif Kullanıcı</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-600 mb-2">{stats.highestScore}</div>
-            <div className="text-gray-600">En Yüksek Skor</div>
-          </div>
         </div>
       </div>
     </div>
