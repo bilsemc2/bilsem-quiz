@@ -151,56 +151,81 @@ export default function HomePage() {
                 </div>
 
                 {/* Recent Puzzles Section */}
-                <div className="mb-16">
-                    <div className="flex items-center mb-6">
-                        <h2 className="text-2xl font-semibold text-gray-800">Son Eklenen Bulmacalar</h2>
-                    </div>
-
-                    {recentPuzzles.length === 0 ? (
-                        <div className="text-center text-gray-500 p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-                            <p className="text-base">Henüz hiç bulmaca oluşturulmamış.</p>
-                            <Link
-                                to="/create"
-                                className="inline-block mt-2 text-indigo-600 hover:text-indigo-700 text-sm"
+                <div className="bg-gradient-to-b from-purple-50 via-white to-white py-12">
+                    <div className="container mx-auto px-4">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                    Son Eklenen Bulmacalar
+                                </h2>
+                                <p className="mt-2 text-gray-600">En son eklenen bulmacaları keşfedin ve çözün</p>
+                            </div>
+                            <Link 
+                                to="/puzzle-ranking" 
+                                className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium transition-colors"
                             >
-                                İlk bulmacayı siz oluşturun!
+                                Tüm Bulmacalar
+                                <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
                             </Link>
                         </div>
-                    ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {recentPuzzles.map((puzzle) => (
                                 <Link key={puzzle.id} to={`/puzzle/${puzzle.id}`}>
-                                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 hover:shadow-md transition-shadow relative group">
-                                        <div className="flex justify-center mb-2">
-                                            <div className="transform scale-100 group-hover:scale-110 transition-transform">
-                                                <PuzzlePreview grid={puzzle.grid} />
+                                    <div className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-purple-200">
+                                        <div className="relative">
+                                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-gray-600 font-medium">
+                                                {formatDistanceToNow(new Date(puzzle.created_at), { 
+                                                    addSuffix: true,
+                                                    locale: tr 
+                                                })}
+                                            </div>
+                                            <div className="p-6 bg-gradient-to-br from-purple-50/50 to-pink-50/50">
+                                                <PuzzlePreview grid={puzzle.grid} size="sm" />
                                             </div>
                                         </div>
-                                        <p className="text-xs text-gray-500 text-center">
-                                            {formatDistanceToNow(new Date(puzzle.created_at!), {
-                                                addSuffix: true,
-                                                locale: tr
-                                            })}
-                                        </p>
+                                        <div className="p-4 border-t border-gray-100">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-2">
+                                                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                                    <p className="text-sm font-medium text-gray-700">Bulmaca #{puzzle.id.slice(-4)}</p>
+                                                </div>
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <span className="inline-flex items-center text-purple-600 font-medium">
+                                                        Çöz
+                                                        <svg className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                        </svg>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </Link>
                             ))}
-                            
-                            {/* Sen de Oluştur Kartı */}
-                            <Link to="/create">
-                                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border-2 border-dashed border-indigo-200 p-3 hover:border-indigo-400 transition-colors h-full flex flex-col items-center justify-center group">
-                                    <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mb-2 group-hover:bg-indigo-200 transition-colors">
-                                        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                        </svg>
+
+                            <Link to="/create" className="block">
+                                <div className="group h-full bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+                                    <div className="h-full relative">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        <div className="relative h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
+                                            <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <svg className="w-8 h-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-xl font-semibold text-gray-800 mb-2">Sen de Oluştur!</p>
+                                                <p className="text-gray-600">Kendi bulmacalarını oluşturmaya başla</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700 transition-colors text-center">
-                                        Sen de Oluştur!
-                                    </p>
                                 </div>
                             </Link>
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* Stats Section */}

@@ -75,3 +75,5 @@ SELECT cron.schedule('0 0 * * *', $$
   WHERE status = 'pending' 
   AND created_at < NOW() - INTERVAL '24 hours'
 $$);
+
+Sorunun asıl kaynağını buldum! professionMap objesinde "İnşaat İşçisi" ve "Astronot" meslekleri eksik. Bu yüzden bu meslekler için doğru resim yolları oluşturulamıyor.

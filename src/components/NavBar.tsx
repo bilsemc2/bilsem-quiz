@@ -171,12 +171,20 @@ export default function NavBar() {
                                 </button>
                             </div>
                         ) : (
-                            <Link
-                                to="/login"
-                                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-                            >
-                                Giriş Yap
-                            </Link>
+                            <div className="flex items-center space-x-4">
+                                <Link
+                                    to="/login"
+                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                                >
+                                    Giriş Yap
+                                </Link>
+                                <Link
+                                    to="/signup"
+                                    className="px-4 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                                >
+                                    Kayıt Ol
+                                </Link>
+                            </div>
                         )}
                     </div>
 
@@ -215,7 +223,11 @@ export default function NavBar() {
 
             {/* Mobile Menu */}
             {isMenuOpen && (
-                <div className="md:hidden">
+                <div
+                    className={`${
+                        isMenuOpen ? 'block' : 'hidden'
+                    } md:hidden absolute top-16 left-0 right-0 bg-white shadow-lg`}
+                >
                     <div className="px-2 pt-2 pb-3 space-y-1">
                         <Link
                             to="/"
@@ -315,20 +327,29 @@ export default function NavBar() {
                                         handleLogout();
                                         toggleMenu();
                                     }}
-                                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                                    className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
                                 >
                                     Çıkış Yap
                                 </button>
                             </>
                         )}
                         {!user && (
-                            <Link
-                                to="/login"
-                                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
-                                onClick={toggleMenu}
-                            >
-                                Giriş Yap
-                            </Link>
+                            <>
+                                <Link
+                                    to="/login"
+                                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                                    onClick={toggleMenu}
+                                >
+                                    Giriş Yap
+                                </Link>
+                                <Link
+                                    to="/signup"
+                                    className="block px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700"
+                                    onClick={toggleMenu}
+                                >
+                                    Kayıt Ol
+                                </Link>
+                            </>
                         )}
                     </div>
                 </div>

@@ -4,7 +4,11 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      include: '**/*.{jsx,tsx}',
+    })
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -27,4 +31,5 @@ export default defineConfig({
       },
     },
   },
+  assetsInclude: ['**/*.svg'], // SVG dosyalarını asset olarak işle
 })

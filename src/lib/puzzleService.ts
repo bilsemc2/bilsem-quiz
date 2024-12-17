@@ -38,6 +38,64 @@ export const savePuzzle = async (puzzleData: PuzzleData) => {
     }
 };
 
+// Cache configuration
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+let puzzleCache: {
+  data: PuzzleData[];
+  timestamp: number;
+} | null = null;
+
+// Optimized function for fetching recent puzzles
+export const getRecentPuzzles = async (): Promise<PuzzleData[]> => {
+  // Return cached data if fresh
+  if (puzzleCache && Date.now() - puzzleCache.timestamp < CACHE_TIME) {
+    return puzzleCache.data;
+  }
+
+  const { data, error } = await supabase
+    .from('puzzles')
+    .select('id, grid, created_at')
+    .eq('approved', true)
+    .order('created_at', { ascending: false })
+    .limit(6);
+
+  if (error) {
+    console.error('Error fetching recent puzzles:', error);
+    throw error;
+  }
+
+  // Update cache
+  puzzleCache = {
+    data,
+    timestamp: Date.now()
+  };
+
+  return data;
+};
+
+// Subscribe to real-time puzzle updates
+export const subscribeToNewPuzzles = (callback: (puzzle: PuzzleData) => void) => {
+  const channel = supabase
+    .channel('public:puzzles')
+    .on(
+      'INSERT',
+      (payload) => {
+        if (payload.new.approved) {
+          // Invalidate cache when new puzzle is added
+          puzzleCache = null;
+          callback(payload.new);
+        }
+      }
+    )
+    .subscribe();
+
+  // Return unsubscribe function
+  return () => {
+    channel.unsubscribe();
+  };
+};
+
+// Original getPuzzles function remains for other use cases
 export const getPuzzles = async (): Promise<PuzzleData[]> => {
   const { data, error } = await supabase
     .from('puzzles')
@@ -252,6 +310,80 @@ export const deletePuzzleByAdmin = async (id: string): Promise<void> => {
         }
     } catch (error) {
         console.error('Error deleting puzzle:', error);
+        throw error;
+    }
+};
+
+export const fixProfessionImages = async () => {
+    try {
+        const { data: puzzles, error: fetchError } = await supabase
+            .from('puzzles')
+            .select('*');
+
+        if (fetchError) throw fetchError;
+
+        for (const puzzle of puzzles || []) {
+            let updated = false;
+            const newGrid = puzzle.grid.map((row: any[]) => 
+                row.map((cell: any) => {
+                    if (!cell) return null;
+                    if (cell.type === 'profession') {
+                        if (cell.id === 'construction' && cell.svg?.props?.children?.props?.src === '/images/professions/unknown.png') {
+                            updated = true;
+                            return {
+                                ...cell,
+                                svg: {
+                                    ...cell.svg,
+                                    props: {
+                                        ...cell.svg.props,
+                                        children: {
+                                            ...cell.svg.props.children,
+                                            props: {
+                                                ...cell.svg.props.children.props,
+                                                src: '/images/professions/construction.png'
+                                            }
+                                        }
+                                    }
+                                }
+                            };
+                        }
+                        if (cell.id === 'astronaut' && cell.svg?.props?.children?.props?.src === '/images/professions/unknown.png') {
+                            updated = true;
+                            return {
+                                ...cell,
+                                svg: {
+                                    ...cell.svg,
+                                    props: {
+                                        ...cell.svg.props,
+                                        children: {
+                                            ...cell.svg.props.children,
+                                            props: {
+                                                ...cell.svg.props.children.props,
+                                                src: '/images/professions/astronaut.png'
+                                            }
+                                        }
+                                    }
+                                }
+                            };
+                        }
+                    }
+                    return cell;
+                })
+            );
+
+            if (updated) {
+                const { error: updateError } = await supabase
+                    .from('puzzles')
+                    .update({ grid: newGrid })
+                    .eq('id', puzzle.id);
+
+                if (updateError) throw updateError;
+            }
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error fixing profession images:', error);
         throw error;
     }
 };

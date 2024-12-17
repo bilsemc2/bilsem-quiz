@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import ModernProgress from '../components/ModernProgress';
 import MobileMenu from '../components/MobileMenu';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { toast } from 'sonner';
 
 interface QuizStats {
     totalQuizzes: number;
@@ -23,6 +24,8 @@ interface UserProfile {
     avatar_url: string;
     points: number;
     experience: number;
+    referral_code?: string;
+    referral_count?: number;
 }
 
 interface DailyStats {
@@ -42,7 +45,9 @@ export const ProfilePage: React.FC = () => {
         grade: "",
         avatar_url: "",
         points: 0,
-        experience: 0
+        experience: 0,
+        referral_code: "",
+        referral_count: 0
     });
 
     const [quizStats, setQuizStats] = useState<QuizStats>({
@@ -53,6 +58,8 @@ export const ProfilePage: React.FC = () => {
         levelProgress: 0,
         currentLevel: 1
     });
+
+    const [copySuccess, setCopySuccess] = useState(false);
 
     const fetchWeeklyStats = async () => {
         if (!user) return;
@@ -152,6 +159,8 @@ export const ProfilePage: React.FC = () => {
         if (user) {
             fetchQuizStats();
             fetchWeeklyStats();
+            fetchUserProfile();
+            generateReferralCode();
         }
     }, [user]);
 
@@ -191,6 +200,71 @@ export const ProfilePage: React.FC = () => {
             }
         } catch (error) {
             console.error('Error:', error);
+        }
+    };
+
+    const fetchUserProfile = async () => {
+        if (!user) return;
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching user profile:', error);
+            return;
+        }
+
+        if (data) {
+            setUserData(data);
+        }
+    };
+
+    const generateReferralCode = () => {
+        return Math.random().toString(36).substring(2, 8).toUpperCase();
+    };
+
+    const updateReferralCode = async () => {
+        if (!user) return;
+        
+        try {
+            const newCode = generateReferralCode();
+            
+            // Kodu güncelle
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ referral_code: newCode })
+                .eq('id', user.id);
+
+            if (updateError) throw updateError;
+
+            // State'i güncelle
+            setUserData(prev => ({ ...prev, referral_code: newCode }));
+            toast.success('Yeni referans kodunuz oluşturuldu!');
+
+        } catch (error: any) {
+            console.error('Referans kodu oluşturulurken hata:', error);
+            toast.error('Referans kodu oluşturulamadı. Lütfen tekrar deneyin.');
+        }
+    };
+
+    const copyReferralLink = async () => {
+        if (!userData.referral_code) {
+            toast.error('Önce referans kodu oluşturmanız gerekiyor.');
+            return;
+        }
+
+        const referralLink = `${window.location.origin}/signup?ref=${userData.referral_code}`;
+        try {
+            await navigator.clipboard.writeText(referralLink);
+            setCopySuccess(true);
+            toast.success('Davet linki kopyalandı!');
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            toast.error('Kopyalama başarısız oldu. Lütfen tekrar deneyin.');
         }
     };
 
@@ -333,6 +407,57 @@ export const ProfilePage: React.FC = () => {
                         />
                     </div>
                 </div>
+
+                {/* Arkadaş Davet Bölümü */}
+                <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900">Arkadaşlarını Davet Et</h2>
+                            <p className="text-gray-600 mt-1">
+                                Her başarılı davet için 50 XP kazanın!
+                            </p>
+                        </div>
+                        <div className="bg-purple-100 rounded-full px-4 py-2">
+                            <span className="text-purple-600 font-medium">
+                                {userData.referral_count || 0} Davet
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+                        <div className="flex-1 mr-4">
+                            <p className="text-sm text-gray-600 mb-1">Davet Kodunuz</p>
+                            <div className="flex">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={userData.referral_code || ''}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50"
+                                />
+                                {userData.referral_code ? (
+                                    <button
+                                        onClick={copyReferralLink}
+                                        className="px-4 py-2 bg-purple-600 text-white rounded-r-lg hover:bg-purple-700 transition duration-200"
+                                    >
+                                        {copySuccess ? 'Kopyalandı!' : 'Kopyala'}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={updateReferralCode}
+                                        className="px-4 py-2 bg-purple-600 text-white rounded-r-lg hover:bg-purple-700 transition duration-200"
+                                    >
+                                        Oluştur
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between text-gray-600">
+                        <span>Toplam Davet: {userData.referral_count || 0}</span>
+                        <span>Kazanılan XP: {(userData.referral_count || 0) * 50}</span>
+                    </div>
+                </div>
+                
             </div>
         </div>
     );
