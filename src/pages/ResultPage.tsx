@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CircularProgress } from '../components/CircularProgress';
 import { Box, Typography, Tooltip } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface QuestionResult {
     questionNumber: number;
@@ -30,12 +32,40 @@ interface QuizResult {
     xp: number;
     answers: QuestionResult[];
     isHomework?: boolean;
+    quizId?: string;
 }
 
 export const ResultPage: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const result = location.state as QuizResult;
+
+    useEffect(() => {
+        const saveQuizResults = async () => {
+            if (!user || !result) return;
+
+            try {
+                const { error } = await supabase.from('quiz_results').insert({
+                    user_id: user.id,
+                    quiz_id: result.quizId, 
+                    score: result.points,
+                    questions_answered: result.totalQuestions,
+                    correct_answers: result.correctAnswers,
+                    completed_at: new Date().toISOString(),
+                    user_answers: result.answers
+                });
+
+                if (error) {
+                    console.error('Error saving quiz results:', error);
+                }
+            } catch (error) {
+                console.error('Error in saveQuizResults:', error);
+            }
+        };
+
+        saveQuizResults();
+    }, [user, result]);
 
     console.log('ResultPage received state:', location.state);
 

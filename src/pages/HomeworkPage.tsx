@@ -36,6 +36,8 @@ export default function HomeworkPage() {
   const [isTimeout, setIsTimeout] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [feedback, setFeedback] = useState({ message: '', type: 'info' as const, show: false });
+  const [userAnswers, setUserAnswers] = useState<Array<{questionId: string, selectedAnswer: string, isCorrect: boolean}>>([]);
+  const [quizResults, setQuizResults] = useState<any[]>([]);
 
   const showFeedback = (message: string, type: 'success' | 'error' | 'info') => {
     setFeedback({ message, type, show: true });
@@ -48,6 +50,8 @@ export default function HomeworkPage() {
 
       try {
         setLoading(true);
+        console.log('Fetching data for user:', user.id);
+        
         // Load user profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -55,20 +59,37 @@ export default function HomeworkPage() {
           .eq('id', user.id)
           .single();
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile error:', profileError);
+          throw profileError;
+        }
         
+        console.log('User profile:', profileData);
         setUserGrade(profileData.grade);
         setIsAdmin(profileData.is_admin);
 
         // Load quizzes for user's grade
         const { data: quizData, error: quizError } = await supabase
           .from('quizzes')
-          .select('*')
-          .eq('is_active', true)
-          .eq('grade', profileData.grade)
-          .order('created_at', { ascending: false });
+          .select('*');
 
-        if (quizError) throw quizError;
+        if (quizError) {
+          console.error('Quiz error:', quizError);
+          throw quizError;
+        }
+
+        // Quiz verilerini detaylı logla
+        console.log('Fetched quizzes:', quizData);
+        quizData?.forEach(quiz => {
+          if (quiz.id === '1d4c4e4d-d751-414e-9df4-6cb36bd375eb') {
+            console.log('Target quiz found:', {
+              id: quiz.id,
+              questions: quiz.questions,
+              questionCount: quiz.questions?.length
+            });
+          }
+        });
+
         setQuizzes(quizData || []);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -79,6 +100,35 @@ export default function HomeworkPage() {
     };
 
     fetchData();
+  }, [user]);
+
+  // Quiz sonuçlarını yükle
+  useEffect(() => {
+    if (user) {
+      const loadQuizResults = async () => {
+        const { data, error } = await supabase
+          .from('quiz_results')
+          .select(`
+            *,
+            quiz:quiz_id (
+              id,
+              title,
+              description,
+              questions
+            )
+          `)
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.error('Error loading quiz results:', error);
+          return;
+        }
+        
+        setQuizResults(data || []);
+      };
+      
+      loadQuizResults();
+    }
   }, [user]);
 
   // Timer effect
@@ -106,30 +156,34 @@ export default function HomeworkPage() {
     console.log('Starting quiz:', quiz);
     
     // Soruları doğru resim yollarıyla güncelle
-    const questionsWithImages = quiz.questions.map((question: any) => {
-      // Soru numarasını al (sadece sayı)
-      const questionNumber = question.id.replace(/[^0-9]/g, '');
+    const questionsWithImages = quiz.questions.map((question: any, index: number) => {
+      // Soru numarasını question.number'dan al, yoksa index + 1 kullan
+      const questionNumber = question.number?.toString() || (index + 1).toString();
+      console.log('Processing question:', { 
+        questionNumber, 
+        question,
+        originalNumber: question.number,
+        index
+      });
       
       // Soru görseli
-      const questionImageUrl = `/images/questions/Matris/Soru-${questionNumber}.webp`;
+      const questionImageUrl = `images/questions/Matris/Soru-${questionNumber}.webp`;
       
       // Seçenekleri güncelle
-      const updatedOptions = question.options.map((option: any) => {
-        // Seçenek harfini al (son karakter)
-        const optionLetter = option.id.slice(-1);
-        
+      const updatedOptions = ['A', 'B', 'C', 'D', 'E'].map((optionLetter) => {
         // Normal ve doğru cevap görsellerinin yollarını oluştur
-        const normalPath = `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${optionLetter}.webp`;
-        const correctPath = `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${optionLetter}.webp`;
+        const normalPath = `images/options/Matris/${questionNumber}/Soru-${questionNumber}${optionLetter}.webp`;
+        const correctPath = `images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${optionLetter}.webp`;
         
-        // Seçenek görseli - normal görseli kullan
-        const imageUrl = normalPath;
+        // Doğru cevap kontrolü - question.correctAnswer ile karşılaştır
+        const isCorrectOption = optionLetter === question.correctAnswer;
         
-        // Doğru cevap kontrolü - option.isCorrect ve dosya adı kontrolü
-        const isCorrectOption = option.isCorrect === true || option.id === question.correctAnswer;
+        // Seçenek görseli - doğru cevap için correctPath, diğerleri için normalPath kullan
+        const imageUrl = isCorrectOption ? correctPath : normalPath;
         
         console.log('Option details:', { 
-          id: option.id,
+          questionNumber,
+          optionLetter,
           isCorrect: isCorrectOption,
           normalPath,
           correctPath,
@@ -137,16 +191,17 @@ export default function HomeworkPage() {
         });
 
         return {
-          ...option,
+          id: optionLetter,
           imageUrl,
           isCorrect: isCorrectOption
         };
       });
 
       return {
-        ...question,
+        id: questionNumber,
         questionImageUrl,
-        options: updatedOptions
+        options: updatedOptions,
+        correctAnswer: question.correctAnswer
       };
     });
 
@@ -165,6 +220,7 @@ export default function HomeworkPage() {
     setScore(0);
     setSelectedOption(null);
     setShowSolution(false);
+    setUserAnswers([]);
   };
 
   const handleOptionSelect = (optionId: string) => {
@@ -186,6 +242,7 @@ export default function HomeworkPage() {
     setSelectedOption(optionId);
     setIsAnswered(true);
     setShowSolution(true);
+    setUserAnswers(prev => [...prev, { questionId: currentQuestion.id, selectedAnswer: optionId, isCorrect }]);
   };
 
   const handleNext = useCallback(async () => {
@@ -210,7 +267,8 @@ export default function HomeworkPage() {
           score: finalScore,
           questions_answered: activeQuiz.questions.length,
           correct_answers: score,
-          completed_at: new Date().toISOString()
+          completed_at: new Date().toISOString(),
+          user_answers: userAnswers
         });
 
         if (error) throw error;
@@ -222,7 +280,22 @@ export default function HomeworkPage() {
             totalQuestions: activeQuiz.questions.length,
             points: finalScore,
             xp: Math.round(finalScore / 10),
-            isHomework: true
+            isHomework: true,
+            quizId: activeQuiz.id,
+            answers: activeQuiz.questions.map((question: any, index: number) => ({
+              questionNumber: index + 1,
+              isCorrect: userAnswers[index]?.isCorrect || false,
+              selectedOption: userAnswers[index]?.selectedAnswer || null,
+              correctOption: question.correctAnswer,
+              questionImage: question.questionImageUrl,
+              isTimeout: false,
+              options: question.options.map((option: any) => ({
+                id: option.id,
+                imageUrl: option.imageUrl,
+                isSelected: userAnswers[index]?.selectedAnswer === option.id,
+                isCorrect: option.isCorrect
+              }))
+            }))
           }
         });
 
@@ -235,12 +308,102 @@ export default function HomeworkPage() {
         setIsTimeout(false);
         setSelectedOption(null);
         setShowSolution(false);
+        setUserAnswers([]);
       } catch (error) {
         console.error('Error saving quiz results:', error);
         showFeedback('Bir hata oluştu!', 'error');
       }
     }
   }, [activeQuiz, currentQuestionIndex, score, user?.id, navigate]);
+
+  const renderQuizList = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {quizzes.map((quiz) => {
+          const quizAttempts = quizResults.filter(result => result.quiz_id === quiz.id);
+          const latestQuizResult = quizAttempts[quizAttempts.length - 1];
+          
+          return (
+          <div
+            key={quiz.id}
+            className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold mb-2">{quiz.title}</h3>
+              <p className="text-gray-600 mb-4">{quiz.description}</p>
+              
+              {latestQuizResult && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium text-gray-800">Son Quiz Sonucunuz:</h4>
+                    <span className="text-sm text-blue-600 font-medium">
+                      {quizAttempts.length} kez çözüldü
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-600">Puan:</span>
+                      <span className="ml-2 font-medium">{latestQuizResult.score}%</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Doğru Cevap:</span>
+                      <span className="ml-2 font-medium">{latestQuizResult.correct_answers}/{latestQuizResult.questions_answered}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-600">Tamamlanma:</span>
+                      <span className="ml-2 font-medium">
+                        {new Date(latestQuizResult.completed_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <h5 className="font-medium text-gray-800 mb-2">Soru Detayları:</h5>
+                    <div className="space-y-2">
+                      {quiz.questions.map((question: any, index: number) => {
+                        const userAnswer = latestQuizResult.user_answers?.[index];
+                        return (
+                          <div key={index} className="flex items-center space-x-2 text-sm">
+                            <span className="font-medium">Soru {index + 1}:</span>
+                            <span className={`${
+                              userAnswer?.isCorrect 
+                                ? 'text-green-600' 
+                                : 'text-red-600'
+                            }`}>
+                              {userAnswer?.isCorrect ? 'Doğru' : 'Yanlış'}
+                            </span>
+                            <span className="text-gray-600">
+                              (Cevabınız: {userAnswer?.selectedAnswer || '-'})
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => startQuiz(quiz)}
+                    className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  >
+                    Tekrar Çöz
+                  </button>
+                </div>
+              )}
+              
+              {!latestQuizResult && (
+                <button
+                  onClick={() => startQuiz(quiz)}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  Ödevi Başlat
+                </button>
+              )}
+            </div>
+          </div>
+        )})}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -280,52 +443,7 @@ export default function HomeworkPage() {
         {!activeQuiz ? (
           <>
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Ödevler</h1>
-            {quizzes.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-600 text-lg">
-                  Şu anda aktif ödev bulunmamaktadır.
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-6">
-                {quizzes.map((quiz) => (
-                  <div
-                    key={quiz.id}
-                    className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                          {quiz.title}
-                        </h2>
-                        <p className="text-gray-600 mb-4">{quiz.description}</p>
-                        <div className="flex gap-4 text-sm text-gray-500">
-                          <span>Ders: {quiz.subject}</span>
-                          <span>•</span>
-                          <span>{quiz.questions.length} Soru</span>
-                          <span>•</span>
-                          <span>
-                            {new Date(quiz.created_at).toLocaleDateString('tr-TR')}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => startQuiz(quiz)}
-                        className="
-                          px-6 py-2 rounded-lg
-                          bg-indigo-600 hover:bg-indigo-700
-                          text-white font-semibold
-                          transition-all duration-200
-                          hover:shadow-md hover:scale-105
-                        "
-                      >
-                        Başla
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {renderQuizList()}
           </>
         ) : (
           // Active quiz view
