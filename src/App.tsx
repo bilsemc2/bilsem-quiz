@@ -15,6 +15,7 @@ import PuzzleManagement from './pages/admin/PuzzleManagement';
 import PuzzleRankingPage from './pages/PuzzleRankingPage';
 import PuzzlePage from './pages/PuzzlePage';
 import CreatePdfPage from './pages/CreatePdfPage';
+import GamePage from './pages/GamePage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -110,6 +111,14 @@ function App() {
                   element={
                     <RequireAuth>
                       <PuzzlePage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/game" 
+                  element={
+                    <RequireAuth>
+                      <GamePage />
                     </RequireAuth>
                   } 
                 />

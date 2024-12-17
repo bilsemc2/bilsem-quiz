@@ -52,28 +52,47 @@ export default function NavBar() {
                         <Link
                             to="/"
                             className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
+                                isActive('/')
+                                    ? 'text-blue-600 bg-blue-50'
+                                    : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
                             }`}
                         >
                             Ana Sayfa
                         </Link>
-                        <Link
-                            to="/quiz"
-                            className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/quiz') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-                            }`}
-                        >
-                            Quiz
-                        </Link>
-                        <Link
-                            to="/duel"
-                            className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/duel') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-                            }`}
-                        >
-                            Düello
-                        </Link>
-
+                        {user && (
+                            <>
+                                <Link
+                                    to="/quiz"
+                                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                        isActive('/quiz')
+                                            ? 'text-blue-600 bg-blue-50'
+                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                                    }`}
+                                >
+                                    Quiz
+                                </Link>
+                                <Link
+                                    to="/duel"
+                                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                        isActive('/duel')
+                                            ? 'text-blue-600 bg-blue-50'
+                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                                    }`}
+                                >
+                                    Düello
+                                </Link>
+                                <Link
+                                    to="/game"
+                                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                        isActive('/game')
+                                            ? 'text-blue-600 bg-blue-50'
+                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                                    }`}
+                                >
+                                    Oyunlar
+                                </Link>
+                            </>
+                        )}
                         {/* Matris Dropdown Menu */}
                         <Menu as="div" className="relative inline-block text-left">
                             <Menu.Button className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${
@@ -192,30 +211,37 @@ export default function NavBar() {
                     <div className="md:hidden flex items-center">
                         <button
                             onClick={toggleMenu}
-                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
+                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
                         >
                             <span className="sr-only">Open main menu</span>
-                            {!isMenuOpen ? (
-                                <svg
-                                    className="block h-6 w-6"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            ) : (
-                                <svg
-                                    className="block h-6 w-6"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            )}
+                            <svg
+                                className={`${isMenuOpen ? 'hidden' : 'block'} h-6 w-6`}
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 6h16M4 12h16M4 18h16"
+                                />
+                            </svg>
+                            <svg
+                                className={`${isMenuOpen ? 'block' : 'hidden'} h-6 w-6`}
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -226,73 +252,55 @@ export default function NavBar() {
                 <div
                     className={`${
                         isMenuOpen ? 'block' : 'hidden'
-                    } md:hidden absolute top-16 left-0 right-0 bg-white shadow-lg`}
+                    } md:hidden absolute top-16 left-0 right-0 bg-white shadow-lg z-50`}
                 >
                     <div className="px-2 pt-2 pb-3 space-y-1">
                         <Link
                             to="/"
                             className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
+                                isActive('/')
+                                    ? 'text-blue-600 bg-blue-50'
+                                    : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
                             }`}
                             onClick={toggleMenu}
                         >
                             Ana Sayfa
                         </Link>
-                        <Link
-                            to="/quiz"
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/quiz') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                            onClick={toggleMenu}
-                        >
-                            Quiz
-                        </Link>
-                        <Link
-                            to="/duel"
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/duel') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                            onClick={toggleMenu}
-                        >
-                            Düello
-                        </Link>
-                        
-                        {/* Mobile Matris Menu */}
-                        <div className="px-3 py-2">
-                            <div className="font-medium text-gray-700">Matris</div>
-                            <div className="pl-4 mt-2 space-y-2">
-                                <Link
-                                    to="/create"
-                                    className={`block px-3 py-2 rounded-md text-sm ${
-                                        isActive('/create') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-                                    }`}
-                                    onClick={toggleMenu}
-                                >
-                                    Bulmaca Oluştur
-                                </Link>
-                                <Link
-                                    to="/puzzle-ranking"
-                                    className={`block px-3 py-2 rounded-md text-sm ${
-                                        isActive('/puzzle-ranking') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-                                    }`}
-                                    onClick={toggleMenu}
-                                >
-                                    En İyi Bulmacalar
-                                </Link>
-                                <Link
-                                    to="/create-pdf"
-                                    className={`block px-3 py-2 rounded-md text-sm ${
-                                        isActive('/create-pdf') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-                                    }`}
-                                    onClick={toggleMenu}
-                                >
-                                    PDF Oluştur
-                                </Link>
-                            </div>
-                        </div>
-
                         {user && (
                             <>
+                                <Link
+                                    to="/quiz"
+                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                        isActive('/quiz')
+                                            ? 'text-blue-600 bg-blue-50'
+                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                                    }`}
+                                    onClick={toggleMenu}
+                                >
+                                    Quiz
+                                </Link>
+                                <Link
+                                    to="/duel"
+                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                        isActive('/duel')
+                                            ? 'text-blue-600 bg-blue-50'
+                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                                    }`}
+                                    onClick={toggleMenu}
+                                >
+                                    Düello
+                                </Link>
+                                <Link
+                                    to="/game"
+                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                        isActive('/game')
+                                            ? 'text-blue-600 bg-blue-50'
+                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                                    }`}
+                                    onClick={toggleMenu}
+                                >
+                                    Oyunlar
+                                </Link>
                                 <Link
                                     to="/homework"
                                     className={`block px-3 py-2 rounded-md text-base font-medium ${
