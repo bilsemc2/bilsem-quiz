@@ -16,6 +16,8 @@ import PuzzleRankingPage from './pages/PuzzleRankingPage';
 import PuzzlePage from './pages/PuzzlePage';
 import CreatePdfPage from './pages/CreatePdfPage';
 import GamePage from './pages/GamePage';
+import CubePage from './pages/CubePage';
+import ComingSoonPage from './pages/ComingSoonPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -40,6 +42,12 @@ function App() {
                     <RequireAuth>
                       <QuizPage />
                     </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/cube" 
+                  element={
+                    <CubePage />
                   } 
                 />
                 <Route 
@@ -119,6 +127,22 @@ function App() {
                   element={
                     <RequireAuth>
                       <GamePage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/spatial/cube" 
+                  element={
+                    <RequireAuth>
+                      <CubePage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/spatial/folding" 
+                  element={
+                    <RequireAuth>
+                      <ComingSoonPage />
                     </RequireAuth>
                   } 
                 />
