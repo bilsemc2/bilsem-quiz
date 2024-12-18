@@ -22,6 +22,7 @@ import 'react-lazy-load-image-component/src/effects/blur.css';
 import AddIcon from '@mui/icons-material/Add';
 import PreviewIcon from '@mui/icons-material/Preview';
 import { supabase } from '../lib/supabase';
+import { QUESTIONS_CONFIG } from '../config/questions';
 
 interface QuestionPreview {
   number: number;
@@ -53,9 +54,9 @@ export const QuizManagement: React.FC = () => {
   const loadQuestions = async () => {
     setLoading(true);
     try {
-      // 1'den 100'e kadar olan soruları yükle
+      // 1'den QUESTIONS_CONFIG.categories.Matris.totalQuestions'e kadar olan soruları yükle
       const loadedQuestions: QuestionPreview[] = [];
-      for (let i = 1; i <= 100; i++) {
+      for (let i = 1; i <= QUESTIONS_CONFIG.categories.Matris.totalQuestions; i++) {
         const questionPreview: QuestionPreview = {
           number: i,
           questionImage: `/images/questions/Matris/Soru-${i}.webp`,

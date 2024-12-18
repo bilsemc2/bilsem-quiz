@@ -174,22 +174,22 @@ export const ResultPage: React.FC = () => {
                                     {/* Seçenekler */}
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                         {answer.options.map((option, optionIndex) => (
-                                            <div key={optionIndex} className={`relative rounded-lg border ${
+                                            <div key={optionIndex} className={`relative rounded-lg border-2 ${
                                                 answer.selectedOption === option.id
                                                     ? option.isCorrect
-                                                        ? 'border-green-500 bg-green-50' 
-                                                        : 'border-red-500 bg-red-50'
+                                                        ? 'border-green-500 bg-green-50 ring-2 ring-green-500 ring-opacity-50' 
+                                                        : 'border-red-500 bg-red-50 ring-2 ring-red-500 ring-opacity-50'
                                                     : option.isCorrect
-                                                        ? 'border-green-500 bg-green-50'
+                                                        ? 'border-green-500 bg-green-50 ring-2 ring-green-500 ring-opacity-50'
                                                         : 'border-gray-200'
                                             }`}>
                                                 <img
                                                     src={option.imageUrl}
-                                                    alt={`Seçenek ${optionIndex + 1}`}
+                                                    alt="Seçenek"
                                                     className="w-full h-[200px] md:h-[180px] object-contain bg-gray-50 rounded-lg p-2"
                                                 />
                                                 <div className="absolute top-2 left-2 bg-white/50 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm text-gray-700">
-                                                    {optionIndex + 1}
+                                                    {/* {optionIndex + 1} */}
                                                 </div>
                                             </div>
                                         ))}

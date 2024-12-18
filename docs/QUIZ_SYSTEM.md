@@ -77,3 +77,5 @@ SELECT cron.schedule('0 0 * * *', $$
 $$);
 
 Sorunun asıl kaynağını buldum! professionMap objesinde "İnşaat İşçisi" ve "Astronot" meslekleri eksik. Bu yüzden bu meslekler için doğru resim yolları oluşturulamıyor.
+
+questions.ts Soru sayısı ordan gir
