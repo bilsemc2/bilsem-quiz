@@ -18,6 +18,7 @@ import CreatePdfPage from './pages/CreatePdfPage';
 import GamePage from './pages/GamePage';
 import CubePage from './pages/CubePage';
 import ComingSoonPage from './pages/ComingSoonPage';
+import ClassEnvironmentPage from './pages/ClassEnvironmentPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -49,6 +50,14 @@ function App() {
                   element={
                     <CubePage />
                   } 
+                />
+                <Route
+                  path="/class-environment"
+                  element={
+                    <RequireAuth>
+                      <ClassEnvironmentPage />
+                    </RequireAuth>
+                  }
                 />
                 <Route 
                   path="/admin/puzzle-management" 

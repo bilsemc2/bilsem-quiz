@@ -106,25 +106,40 @@ export default function HomeworkPage() {
   useEffect(() => {
     if (user) {
       const loadQuizResults = async () => {
-        const { data, error } = await supabase
+        // First get the quiz results
+        const { data: resultsData, error: resultsError } = await supabase
           .from('quiz_results')
-          .select(`
-            *,
-            quiz:quiz_id (
-              id,
-              title,
-              description,
-              questions
-            )
-          `)
+          .select('*')
           .eq('user_id', user.id);
         
-        if (error) {
-          console.error('Error loading quiz results:', error);
+        if (resultsError) {
+          console.error('Error loading quiz results:', resultsError);
           return;
         }
-        
-        setQuizResults(data || []);
+
+        // Then fetch the associated quizzes
+        if (resultsData && resultsData.length > 0) {
+          const quizIds = resultsData.map(result => result.quiz_id);
+          const { data: quizzesData, error: quizzesError } = await supabase
+            .from('quizzes')
+            .select('id, title, description, questions')
+            .in('id', quizIds);
+
+          if (quizzesError) {
+            console.error('Error loading quizzes:', quizzesError);
+            return;
+          }
+
+          // Combine the results with quiz data
+          const combinedData = resultsData.map(result => ({
+            ...result,
+            quiz: quizzesData?.find(quiz => quiz.id === result.quiz_id)
+          }));
+
+          setQuizResults(combinedData);
+        } else {
+          setQuizResults([]);
+        }
       };
       
       loadQuizResults();

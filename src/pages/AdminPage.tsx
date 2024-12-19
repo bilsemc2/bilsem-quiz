@@ -69,6 +69,12 @@ import Pagination from '@mui/material/Pagination';
 import { QUESTIONS_CONFIG } from '../config/questions';
 import { togglePuzzleStatus, deletePuzzleByAdmin, PuzzleData } from '../lib/puzzleService';
 import { QuizManagement } from '../components/QuizManagement';
+import { UserManagement } from '../components/UserManagement';
+import { StatsManagement } from '../components/StatsManagement';
+import { QuizList } from '../components/QuizList';
+import { ClassManagement } from '../components/ClassManagement';
+import { PuzzleManagement } from '../components/PuzzleManagement';
+import QuizizzManagement from '../components/QuizizzManagement';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1675,330 +1681,44 @@ export default function AdminPage() {
           <Tab label="Quiz Yönetimi" />
           <Tab label="Sınıf Yönetimi" />
           <Tab label="Bulmaca Yönetimi" />
+          <Tab label="Quizizz" />
         </Tabs>
       </Box>
 
       <TabPanel value={tabValue} index={0}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h5" gutterBottom>
-            Kullanıcı Yönetimi
-          </Typography>
-        </Box>
-
-        <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-          {/* Arama ve Filtre Bölümü */}
-          <Box sx={{ p: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-            <TextField
-              size="small"
-              label="Kullanıcı Ara"
-              value={userSearchTerm}
-              onChange={(e) => setUserSearchTerm(e.target.value)}
-              sx={{ minWidth: 200 }}
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  size="small"
-                  checked={userFilters.showOnlyVip}
-                  onChange={(e) => setUserFilters(prev => ({
-                    ...prev,
-                    showOnlyVip: e.target.checked
-                  }))}
-                />
-              }
-              label="Sadece VIP"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  size="small"
-                  checked={userFilters.showOnlyActive}
-                  onChange={(e) => setUserFilters(prev => ({
-                    ...prev,
-                    showOnlyActive: e.target.checked
-                  }))}
-                />
-              }
-              label="Sadece Aktif"
-            />
-            <TextField
-              select
-              size="small"
-              label="Sınıf"
-              value={userFilters.gradeFilter}
-              onChange={(e) => setUserFilters(prev => ({
-                ...prev,
-                gradeFilter: e.target.value
-              }))}
-              sx={{ minWidth: 100 }}
-            >
-              <MenuItem value="all">Tümü</MenuItem>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((grade) => (
-                <MenuItem key={grade} value={grade}>
-                  {grade}. Sınıf
-                </MenuItem>
-              ))}
-            </TextField>
-            <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-              Toplam: {filteredUsers.length} kullanıcı
-            </Typography>
-          </Box>
-          
-          <Divider />
-
-          <TableContainer>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Ad Soyad</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Sınıf</TableCell>
-                  <TableCell>Kayıt Tarihi</TableCell>
-                  <TableCell>Durum</TableCell>
-                  <TableCell>VIP</TableCell>
-                  <TableCell>İşlemler</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.full_name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.grade}. Sınıf</TableCell>
-                    <TableCell>
-                      {new Date(user.created_at).toLocaleDateString('tr-TR')}
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={user.is_active ? "Aktif" : "Pasif"}
-                        color={user.is_active ? "success" : "error"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            size="small"
-                            checked={user.is_vip}
-                            onChange={(e) => handleToggleVipStatus(user.id, e.target.checked)}
-                          />
-                        }
-                        label={user.is_vip ? "VIP" : "Normal"}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        {/* Kullanıcının sınıf ikonları */}
-                        {user.classes?.map((cls) => {
-                          const IconComponent = getIconComponent(cls.icon);
-                          return (
-                            <Tooltip key={cls.id} title={cls.name}>
-                              <IconComponent 
-                                fontSize="small" 
-                                color="primary"
-                              />
-                            </Tooltip>
-                          );
-                        })}
-                        {/* Sınıfa ekleme butonu */}
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() => handleOpenAssignClassDialog(user.id)}
-                        >
-                          <AddIcon />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <TablePagination
-            component="div"
-            count={filteredUsers.length}
-            page={page}
-            onPageChange={handleChangePage}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            labelRowsPerPage="Sayfa başına satır:"
-            labelDisplayedRows={({ from, to, count }) => 
-              `${from}-${to} / ${count !== -1 ? count : `${to}'den fazla`}`
-            }
-          />
-        </Paper>
-        {/* Sınıfa Atama Dialog'u */}
-        <Dialog
-          open={showAssignClassDialog}
-          onClose={handleCloseAssignClassDialog}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Sınıfa Ekle</DialogTitle>
-          <DialogContent>
-            <List>
-              {classes.map((classItem) => (
-                <ListItem key={classItem.id}>
-                  <ListItemIcon>
-                    {React.createElement(getIconComponent(classItem.icon))}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={classItem.name}
-                    secondary={`${classItem.grade}. Sınıf`}
-                  />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleAssignToClass(classItem.id)}
-                    disabled={assigningToClass}
-                  >
-                    {assigningToClass ? 'Ekleniyor...' : 'Ekle'}
-                  </Button>
-                </ListItem>
-              ))}
-            </List>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseAssignClassDialog}>Kapat</Button>
-          </DialogActions>
-        </Dialog>
+        <UserManagement onUserUpdate={fetchStats} />
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
-        {/* İstatistikler Tab İçeriği */}
-        <Paper elevation={3} sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Hızlı İstatistikler
-          </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h4">{stats.totalUsers}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Toplam Kullanıcı
-              </Typography>
-            </Paper>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h4">{stats.totalQuizzes}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Tamamlanan Quiz
-              </Typography>
-            </Paper>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="h4">{stats.averageScore}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Ortalama Puan
-              </Typography>
-            </Paper>
-          </Box>
-        </Paper>
+        <StatsManagement />
       </TabPanel>
 
       <TabPanel value={tabValue} index={2}>
-        <QuizManagement />
+        <Box>
+          <Typography variant="h5" gutterBottom>
+            Quiz Yönetimi
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <QuizList />
+            </Grid>
+            <Grid item xs={12}>
+              <QuizManagement />
+            </Grid>
+          </Grid>
+        </Box>
       </TabPanel>
 
       <TabPanel value={tabValue} index={3}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h5" gutterBottom>
-            Sınıf Yönetimi
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => setShowCreateClassDialog(true)}
-            sx={{ mb: 2 }}
-          >
-            Sınıf Ekle
-          </Button>
-        </Box>
-
-        {/* Sınıf Listesi */}
-        <Grid container spacing={2}>
-          {classes.map(renderClassCard)}
-        </Grid>
-
-        {/* Sınıf Ekleme Dialog'u */}
-        <Dialog open={showCreateClassDialog} onClose={() => setShowCreateClassDialog(false)}>
-          <DialogTitle>Yeni Sınıf Ekle</DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              id="class-name"
-              label="Sınıf Adı"
-              type="text"
-              fullWidth
-              value={newClassName}
-              onChange={(e) => setNewClassName(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="dense"
-              id="class-grade"
-              label="Sınıf Seviyesi"
-              type="number"
-              fullWidth
-              value={newClassGrade}
-              onChange={(e) => setNewClassGrade(e.target.value)}
-              variant="outlined"
-              inputProps={{ min: 1, max: 12 }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowCreateClassDialog(false)}>İptal</Button>
-            <Button onClick={handleCreateClass} variant="contained" color="primary">
-              Ekle
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Öğrenci Ekleme Dialog'u */}
-        {renderStudentDialog()}
-
-        {/* Sınıf Öğrencileri */}
-        {selectedClass && (
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              {selectedClass.name} Öğrencileri
-            </Typography>
-            <List>
-              {classStudents.map((student) => (
-                <ListItem key={student.id}>
-                  <ListItemText
-                    primary={student.full_name}
-                    secondary={
-                      <Box component="span" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        {student.email}
-                        {student.is_vip && (
-                          <Chip
-                            label="VIP"
-                            color="primary"
-                            size="small"
-                            sx={{ ml: 1 }}
-                          />
-                        )}
-                      </Box>
-                    }
-                  />
-                  <IconButton
-                    edge="end"
-                    color="error"
-                    onClick={() => handleRemoveStudentFromClass(student.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        )}
+        <ClassManagement />
       </TabPanel>
 
       <TabPanel value={tabValue} index={4}>
-        {renderPuzzleManagement()}
+        <PuzzleManagement />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={5}>
+        <QuizizzManagement />
       </TabPanel>
     </Container>
   );

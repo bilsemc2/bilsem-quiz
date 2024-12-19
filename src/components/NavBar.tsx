@@ -51,11 +51,7 @@ export default function NavBar() {
                     <div className="hidden md:flex md:items-center md:space-x-4">
                         <Link
                             to="/"
-                            className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/')
-                                    ? 'text-blue-600 bg-blue-50'
-                                    : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                            }`}
+                            className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                         >
                             Ana Sayfa
                         </Link>
@@ -63,34 +59,24 @@ export default function NavBar() {
                             <>
                                 <Link
                                     to="/quiz"
-                                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                        isActive('/quiz')
-                                            ? 'text-blue-600 bg-blue-50'
-                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                                    }`}
+                                    className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/quiz') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                                 >
                                     Quiz
                                 </Link>
                                 <Link
                                     to="/duel"
-                                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                        isActive('/duel')
-                                            ? 'text-blue-600 bg-blue-50'
-                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                                    }`}
+                                    className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/duel') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                                 >
                                     Düello
                                 </Link>
-                                <Link
-                                    to="/game"
-                                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                        isActive('/game')
-                                            ? 'text-blue-600 bg-blue-50'
-                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                                    }`}
-                                >
-                                    Oyunlar
-                                </Link>
+                                {user.email === 'yaprakyesili@msn.com' && (
+                                    <Link
+                                        to="/admin"
+                                        className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/admin') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                                    >
+                                        Admin
+                                    </Link>
+                                )}
                             </>
                         )}
                         {/* Matris Dropdown Menu */}
@@ -98,7 +84,7 @@ export default function NavBar() {
                             <Menu.Button className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${
                                 isActive('/create') || isActive('/puzzle-ranking') || isActive('/create-pdf')
                                     ? 'bg-blue-100 text-blue-700' 
-                                    : 'text-gray-700 hover:bg-gray-100'
+                                    : 'text-gray-600 hover:bg-gray-100'
                             }`}>
                                 Matris
                                 <ChevronDownIcon className="ml-2 -mr-1 h-5 w-5" aria-hidden="true" />
@@ -146,70 +132,6 @@ export default function NavBar() {
                             </Transition>
                         </Menu>
 
-                        {user && (
-                            <>
-                                <Link
-                                    to="/homework"
-                                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                        isActive('/homework') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                                    }`}
-                                >
-                                    Ödevler
-                                </Link>
-                                {user.email === 'yaprakyesili@msn.com' && (
-                                    <Link
-                                        to="/admin"
-                                        className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                            isActive('/admin') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                                        }`}
-                                    >
-                                        Admin
-                                    </Link>
-                                )}
-                            </>
-                        )}
-                        {/* Uzamsal Zeka Dropdown Menu */}
-                        <Menu as="div" className="relative inline-block text-left">
-                            <Menu.Button className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/spatial/cube') || isActive('/spatial/folding')
-                                    ? 'bg-blue-100 text-blue-700' 
-                                    : 'text-gray-700 hover:bg-gray-100'
-                            }`}>
-                                Uzamsal Zeka
-                                <ChevronDownIcon className="ml-2 -mr-1 h-5 w-5" aria-hidden="true" />
-                            </Menu.Button>
-                            <Transition
-                                enter="transition ease-out duration-100"
-                                enterFrom="transform opacity-0 scale-95"
-                                enterTo="transform opacity-100 scale-100"
-                                leave="transition ease-in duration-75"
-                                leaveFrom="transform opacity-100 scale-100"
-                                leaveTo="transform opacity-0 scale-95"
-                            >
-                                <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                    <Menu.Item>
-                                        {({ active }) => (
-                                            <Link
-                                                to="/spatial/cube"
-                                                className={`block px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
-                                            >
-                                                3D Küp
-                                            </Link>
-                                        )}
-                                    </Menu.Item>
-                                    <Menu.Item>
-                                        {({ active }) => (
-                                            <Link
-                                                to="/spatial/folding"
-                                                className={`block px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
-                                            >
-                                                Katlama
-                                            </Link>
-                                        )}
-                                    </Menu.Item>
-                                </Menu.Items>
-                            </Transition>
-                        </Menu>
                     </div>
 
                     {/* User Menu */}
@@ -218,15 +140,13 @@ export default function NavBar() {
                             <div className="flex items-center space-x-4">
                                 <Link
                                     to="/profile"
-                                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                                        isActive('/profile') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                                    }`}
+                                    className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/profile') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                                 >
                                     Profil
                                 </Link>
                                 <button
                                     onClick={handleLogout}
-                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100"
                                 >
                                     Çıkış Yap
                                 </button>
@@ -235,7 +155,7 @@ export default function NavBar() {
                             <div className="flex items-center space-x-4">
                                 <Link
                                     to="/login"
-                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100"
                                 >
                                     Giriş Yap
                                 </Link>
@@ -253,7 +173,7 @@ export default function NavBar() {
                     <div className="md:hidden flex items-center">
                         <button
                             onClick={toggleMenu}
-                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
                         >
                             <span className="sr-only">Open main menu</span>
                             <svg
@@ -299,11 +219,7 @@ export default function NavBar() {
                     <div className="px-2 pt-2 pb-3 space-y-1">
                         <Link
                             to="/"
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                isActive('/')
-                                    ? 'text-blue-600 bg-blue-50'
-                                    : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                            }`}
+                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                             onClick={toggleMenu}
                         >
                             Ana Sayfa
@@ -312,52 +228,22 @@ export default function NavBar() {
                             <>
                                 <Link
                                     to="/quiz"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/quiz')
-                                            ? 'text-blue-600 bg-blue-50'
-                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                                    }`}
+                                    className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/quiz') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                                     onClick={toggleMenu}
                                 >
                                     Quiz
                                 </Link>
                                 <Link
                                     to="/duel"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/duel')
-                                            ? 'text-blue-600 bg-blue-50'
-                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                                    }`}
+                                    className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/duel') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                                     onClick={toggleMenu}
                                 >
                                     Düello
                                 </Link>
-                                <Link
-                                    to="/game"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/game')
-                                            ? 'text-blue-600 bg-blue-50'
-                                            : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                                    }`}
-                                    onClick={toggleMenu}
-                                >
-                                    Oyunlar
-                                </Link>
-                                <Link
-                                    to="/homework"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/homework') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                                    }`}
-                                    onClick={toggleMenu}
-                                >
-                                    Ödevler
-                                </Link>
                                 {user.email === 'yaprakyesili@msn.com' && (
                                     <Link
                                         to="/admin"
-                                        className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                            isActive('/admin') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                                        }`}
+                                        className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/admin') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                                         onClick={toggleMenu}
                                     >
                                         Admin
@@ -365,9 +251,7 @@ export default function NavBar() {
                                 )}
                                 <Link
                                     to="/profile"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                                        isActive('/profile') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                                    }`}
+                                    className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/profile') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                                     onClick={toggleMenu}
                                 >
                                     Profil
@@ -377,7 +261,7 @@ export default function NavBar() {
                                         handleLogout();
                                         toggleMenu();
                                     }}
-                                    className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                                    className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100"
                                 >
                                     Çıkış Yap
                                 </button>
@@ -387,7 +271,7 @@ export default function NavBar() {
                             <>
                                 <Link
                                     to="/login"
-                                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100"
                                     onClick={toggleMenu}
                                 >
                                     Giriş Yap

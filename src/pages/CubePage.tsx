@@ -356,6 +356,7 @@ const CubePage: React.FC = () => {
         );
         topCamera.position.set(0, 10, 0);
         topCamera.lookAt(0, 0, 0);
+        topCamera.up.set(0, 0, -1); // Ensure consistent orientation
 
         // Front view camera
         const frontCamera = new THREE.OrthographicCamera(
@@ -365,6 +366,7 @@ const CubePage: React.FC = () => {
         );
         frontCamera.position.set(0, 0, 10);
         frontCamera.lookAt(0, 0, 0);
+        frontCamera.up.set(0, 1, 0);
 
         // Right view camera
         const rightCamera = new THREE.OrthographicCamera(
@@ -374,8 +376,19 @@ const CubePage: React.FC = () => {
         );
         rightCamera.position.set(10, 0, 0);
         rightCamera.lookAt(0, 0, 0);
+        rightCamera.up.set(0, 1, 0);
 
-        return { topCamera, frontCamera, rightCamera };
+        // Left view camera
+        const leftCamera = new THREE.OrthographicCamera(
+            -GRID_SIZE/2, GRID_SIZE/2,
+            GRID_SIZE/2, -GRID_SIZE/2,
+            0.1, 1000
+        );
+        leftCamera.position.set(-10, 0, 0);
+        leftCamera.lookAt(0, 0, 0);
+        leftCamera.up.set(0, 1, 0);
+
+        return { topCamera, frontCamera, rightCamera, leftCamera };
     };
 
     const toggleCube = (x: number, y: number, z: number) => {
@@ -531,7 +544,7 @@ const CubePage: React.FC = () => {
         rendererRef.current = renderer;
 
         // Setup view cameras
-        const { topCamera, frontCamera, rightCamera } = setupViewCameras();
+        const { topCamera, frontCamera, rightCamera, leftCamera } = setupViewCameras();
 
         // Set up renderers
         const setupViewRenderer = (canvas: HTMLCanvasElement, camera: THREE.Camera) => {
