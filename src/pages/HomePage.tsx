@@ -17,9 +17,9 @@ interface LeaderUser {
 }
 
 const slides = [
-    { id: 1, image: '/images/k1.jpg', alt: 'Bilsem Quiz Hero' },
-    { id: 2, image: '/images/k2.jpg', alt: 'Bilsem Quiz Learning' },
-    { id: 3, image: '/images/k3.jpg', alt: 'Bilsem Quiz Success' },
+    { id: 1, image: '/images/k1.jpeg', alt: 'Bilsem Quiz Hero' },
+    { id: 2, image: '/images/k2.jpeg', alt: 'Bilsem Quiz Learning' },
+    { id: 3, image: '/images/k3.jpeg', alt: 'Bilsem Quiz Success' },
 ];
 
 export default function HomePage() {
