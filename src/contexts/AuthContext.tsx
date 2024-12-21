@@ -29,6 +29,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => subscription.unsubscribe();
     }, []);
 
+    useEffect(() => {
+        if (user?.id) {
+            updateLastSeen();
+            const interval = setInterval(updateLastSeen, 60000); // Update every minute
+            return () => clearInterval(interval);
+        }
+    }, [user]);
+
+    const updateLastSeen = async () => {
+        if (user?.id) {
+            await supabase
+                .from('profiles')
+                .update({ last_seen: new Date().toISOString() })
+                .eq('id', user.id);
+        }
+    };
+
     return (
         <AuthContext.Provider value={{ user, loading }}>
             {children}

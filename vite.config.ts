@@ -5,10 +5,21 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    react({
-      include: '**/*.{jsx,tsx}',
-    })
+    react()
   ],
+  server: {
+    headers: {
+      'Content-Security-Policy': `
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: blob: https:;
+        frame-ancestors 'self';
+        connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+      `.replace(/\s+/g, ' ').trim()
+    }
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

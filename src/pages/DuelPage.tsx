@@ -5,8 +5,9 @@ import { Question } from '../types/quiz';
 import { generateQuiz } from '../utils/quizGenerator';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
+import XPWarning from '@/components/XPWarning';
 
-const REQUIRED_XP = 300;
+const REQUIRED_XP = 1000;
 
 const DuelPage = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -504,77 +505,11 @@ const DuelPage = () => {
 
   if (!hasEnoughXP) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-white py-12">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="text-center space-y-6">
-            <div className="w-24 h-24 bg-purple-100 rounded-full mx-auto flex items-center justify-center">
-              <svg className="w-12 h-12 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            
-            <h1 className="text-3xl font-bold text-gray-900">
-              Düello için Daha Fazla Deneyim Kazanın!
-            </h1>
-            
-            <p className="text-lg text-gray-600 max-w-lg mx-auto">
-              Düellolara katılmak için en az {REQUIRED_XP} XP'ye ihtiyacınız var. 
-              Şu anda {currentUser?.experience || 0} XP'niz bulunuyor.
-            </p>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                XP Nasıl Kazanılır?
-              </h2>
-              <ul className="text-left space-y-3 text-gray-600">
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 text-green-500 mr-2 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Quiz'leri tamamlayarak puan kazanın
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 text-green-500 mr-2 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Arkadaşlarını davet ederek xp kazanın!
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 text-green-500 mr-2 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Günlük görevleri tamamlayarak XP kazanın
-                </li>
-              </ul>
-            </div>
-
-            <div className="flex justify-center gap-4">
-              <Link 
-                to="/quiz" 
-                className="inline-flex items-center px-6 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Quiz'e Başla
-                <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Link>
-              <Link 
-                to="/puzzle-ranking" 
-                className="inline-flex items-center px-6 py-3 bg-white text-purple-600 font-medium rounded-lg border border-purple-200 hover:border-purple-300 hover:bg-purple-50 transition-colors"
-              >
-                Bulmacaları Gör
-                <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Link>
-            </div>
-
-            <p className="text-sm text-gray-500">
-              Gerekli XP'yi kazandığınızda bu sayfaya geri dönüp düellolara katılabilirsiniz.
-            </p>
-          </div>
-        </div>
-      </div>
+      <XPWarning
+        requiredXP={REQUIRED_XP}
+        currentXP={currentUser?.experience || 0}
+        title="Düello için Daha Fazla Deneyim Kazanın!"
+      />
     );
   }
 

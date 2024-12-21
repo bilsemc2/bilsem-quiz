@@ -6,6 +6,7 @@ import ModernProgress from '../components/ModernProgress';
 import MobileMenu from '../components/MobileMenu';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
+import UserMessages from '@/components/UserMessages';
 
 interface QuizStats {
     totalQuizzes: number;
@@ -406,6 +407,12 @@ export const ProfilePage: React.FC = () => {
                             description={`${userData.experience} XP / ${quizStats.currentLevel * 1000} XP`}
                         />
                     </div>
+                </div>
+
+                {/* Mesajlar Bölümü */}
+                <div>
+                    <h2 className="text-2xl font-bold mb-4">Mesajlarım</h2>
+                    <UserMessages />
                 </div>
 
                 {/* Arkadaş Davet Bölümü */}

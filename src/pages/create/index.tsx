@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,9 @@ import { Color, colors } from '@/lib/colors';
 import { Bilsemc2Item, bilsemc2Items } from '@/lib/bilsemc2';
 import { savePuzzle } from '@/lib/puzzleService';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { useNavigate } from 'react-router-dom';
+import XPWarning from '@/components/XPWarning';
 import {
   TooltipProvider,
   TooltipRoot,
@@ -26,9 +29,12 @@ import {
   TooltipPortal,
 } from '@/components/ui/tooltip';
 
+const REQUIRED_XP = 1000;
+
 type ItemType = Letter | Animal | Number | Profession | Fruit | Color | Bilsemc2Item;
 
 const LogicPuzzleCreator = () => {
+  const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState<'letter' | 'animal' | 'number' | 'profession' | 'fruit' | 'color' | 'bilsemc2'>('letter');
   const [selectedItem, setSelectedItem] = useState<ItemType | null>(null);
   const [grid, setGrid] = useState<(ItemType | null)[][]>(
@@ -36,6 +42,28 @@ const LogicPuzzleCreator = () => {
   );
   const [title, setTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [hasEnoughXP, setHasEnoughXP] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    getCurrentUser();
+  }, []);
+
+  const getCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (data) {
+        setCurrentUser(data);
+        setHasEnoughXP(data.experience >= REQUIRED_XP);
+      }
+    }
+  };
 
   const items = {
     letter: letters,
@@ -103,6 +131,16 @@ const LogicPuzzleCreator = () => {
       setIsSaving(false);
     }
   };
+
+  if (!hasEnoughXP) {
+    return (
+      <XPWarning
+        requiredXP={REQUIRED_XP}
+        currentXP={currentUser?.experience || 0}
+        title="Bulmaca Oluşturmak için Daha Fazla Deneyim Kazanın!"
+      />
+    );
+  }
 
   return (
     <TooltipProvider>

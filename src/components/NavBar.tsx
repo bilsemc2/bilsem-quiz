@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Menu, Transition } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import Chip from '@mui/material/Chip';
 
 export default function NavBar() {
     const location = useLocation();
@@ -12,6 +14,7 @@ export default function NavBar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [onlineCount, setOnlineCount] = useState(0);
 
     const isActive = (path: string) => {
         return location.pathname === path;
@@ -28,7 +31,43 @@ export default function NavBar() {
 
     useEffect(() => {
         checkAdminStatus();
-    }, [user]);
+        const updateOnlineCount = async () => {
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('last_seen');
+
+            if (profiles) {
+                const now = new Date().getTime();
+                const onlineUsers = profiles.filter(profile => 
+                    profile.last_seen && (now - new Date(profile.last_seen).getTime()) < 5 * 60 * 1000
+                );
+                setOnlineCount(onlineUsers.length);
+            }
+        };
+
+        updateOnlineCount();
+        const interval = setInterval(updateOnlineCount, 30000);
+
+        const channel = supabase
+            .channel('online-users')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'profiles'
+                },
+                () => {
+                    updateOnlineCount();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            clearInterval(interval);
+            channel.unsubscribe();
+        };
+    }, []);
 
     const checkAdminStatus = async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -167,6 +206,22 @@ export default function NavBar() {
                                 </Link>
                             </div>
                         )}
+                    </div>
+
+                    {/* Çevrimiçi Kullanıcı Sayısı */}
+                    <div className="hidden sm:flex items-center mr-4">
+                        <Chip
+                            icon={<FiberManualRecordIcon sx={{ fontSize: 12, color: 'success.main' }} />}
+                            label={`${onlineCount} Çevrimiçi`}
+                            size="small"
+                            sx={{
+                                bgcolor: 'success.light',
+                                color: 'success.dark',
+                                '& .MuiChip-icon': {
+                                    color: 'success.main'
+                                }
+                            }}
+                        />
                     </div>
 
                     {/* Mobile Menu Button */}

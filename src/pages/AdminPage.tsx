@@ -75,6 +75,7 @@ import { QuizList } from '../components/QuizList';
 import { ClassManagement } from '../components/ClassManagement';
 import { PuzzleManagement } from '../components/PuzzleManagement';
 import QuizizzManagement from '../components/QuizizzManagement';
+import OnlineUsers from '../components/OnlineUsers';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1686,7 +1687,10 @@ export default function AdminPage() {
       </Box>
 
       <TabPanel value={tabValue} index={0}>
-        <UserManagement onUserUpdate={fetchStats} />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <OnlineUsers />
+          <UserManagement onUserUpdate={fetchStats} />
+        </Box>
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>

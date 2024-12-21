@@ -23,11 +23,14 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
 import { Toaster } from 'sonner';
+import AdminMessageNotification from './components/AdminMessageNotification';
 
 function App() {
   return (
     <AuthProvider>
       <SoundProvider>
+        <AdminMessageNotification />
+        <Toaster position="top-center" />
         <Router>
           <div className="min-h-screen bg-gray-50">
             <NavBar />
@@ -157,7 +160,6 @@ function App() {
                 />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
-              <Toaster position="top-center" />
             </main>
           </div>
         </Router>
