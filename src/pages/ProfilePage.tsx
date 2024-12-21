@@ -7,6 +7,8 @@ import MobileMenu from '../components/MobileMenu';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
 import UserMessages from '@/components/UserMessages';
+import { Badge } from '@mui/material';
+import MailIcon from '@mui/icons-material/Mail';
 
 interface QuizStats {
     totalQuizzes: number;
@@ -61,6 +63,7 @@ export const ProfilePage: React.FC = () => {
     });
 
     const [copySuccess, setCopySuccess] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const fetchWeeklyStats = async () => {
         if (!user) return;
@@ -164,6 +167,43 @@ export const ProfilePage: React.FC = () => {
             generateReferralCode();
         }
     }, [user]);
+
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data } = await supabase
+                .from('admin_messages')
+                .select('id', { count: 'exact' })
+                .eq('receiver_id', user.id)
+                .eq('read', false);
+
+            setUnreadCount(data?.length || 0);
+        };
+
+        fetchUnreadCount();
+
+        // Realtime subscription for new messages
+        const channel = supabase
+            .channel('messages-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'admin_messages'
+                },
+                () => {
+                    fetchUnreadCount();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            channel.unsubscribe();
+        };
+    }, []);
 
     const calculateLevel = (experience: number) => {
         // Her 1000 XP'de bir level atlama
@@ -285,6 +325,17 @@ export const ProfilePage: React.FC = () => {
                                 alt={userData.name}
                                 className="w-32 h-32 rounded-full object-cover border-4 border-indigo-100"
                             />
+                            {unreadCount > 0 && (
+                                <div className="absolute -top-2 -right-2">
+                                    <Badge 
+                                        badgeContent={unreadCount} 
+                                        color="error"
+                                        overlap="circular"
+                                    >
+                                        <MailIcon color="action" />
+                                    </Badge>
+                                </div>
+                            )}
                         </div>
 
                         {/* User Info */}

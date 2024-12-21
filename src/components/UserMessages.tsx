@@ -81,22 +81,52 @@ const UserMessages = () => {
 
   const fetchMessages = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      console.log('No user found');
+      return;
+    }
+    console.log('Current user:', user);
 
+    // Önce basit bir sorgu deneyelim
+    const { data: simpleData, error: simpleError } = await supabase
+      .from('admin_messages')
+      .select('*');
+    
+    console.log('All messages in table:', simpleData);
+
+    // Şimdi asıl sorgumuzu yapalım
     const { data, error } = await supabase
       .from('admin_messages')
       .select(`
-        *,
-        sender:sender_id(name)
+        id,
+        message,
+        sender_id,
+        receiver_id,
+        created_at,
+        read,
+        sender:profiles!admin_messages_sender_id_fkey(name)
       `)
       .eq('receiver_id', user.id)
       .order('created_at', { ascending: false });
 
+    if (error) {
+      console.error('Error fetching messages:', error);
+      return;
+    }
+
+    console.log('Filtered messages for user:', data);
+    console.log('User ID we are filtering for:', user.id);
+
     if (data) {
       const formattedMessages = data.map(msg => ({
-        ...msg,
-        sender_name: msg.sender?.name
+        id: msg.id,
+        message: msg.message,
+        sender_id: msg.sender_id,
+        created_at: msg.created_at,
+        read: msg.read,
+        sender_name: msg.sender?.name || 'Admin'
       }));
+      console.log('Formatted messages:', formattedMessages);
       setMessages(formattedMessages);
       setUnreadCount(formattedMessages.filter(msg => !msg.read).length);
     }

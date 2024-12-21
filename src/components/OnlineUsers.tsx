@@ -114,7 +114,25 @@ const OnlineUsers = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase
+    // Admin kontrolü
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      toast.error('Sadece adminler mesaj gönderebilir');
+      return;
+    }
+
+    console.log('Sending message:', {
+      sender_id: user.id,
+      receiver_id: selectedUser.id,
+      message
+    });
+
+    const { data, error } = await supabase
       .from('admin_messages')
       .insert([
         {
@@ -122,9 +140,13 @@ const OnlineUsers = () => {
           receiver_id: selectedUser.id,
           message
         }
-      ]);
+      ])
+      .select();
+
+    console.log('Insert result:', { data, error });
 
     if (error) {
+      console.error('Error sending message:', error);
       toast.error('Mesaj gönderilemedi');
     } else {
       toast.success('Mesaj gönderildi');
