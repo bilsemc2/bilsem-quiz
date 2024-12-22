@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import XPWarning from './XPWarning';
 
 const REQUIRED_XP = 100;
-const SHOW_PROBABILITY = 0.1; // 10'da 1 olasılık
+const SHOW_PROBABILITY = 1; // 10'da 1 olasılık
 const COOLDOWN_HOURS = 24; // 24 saat bekleme süresi
 
 interface QuizizzSurpriseProps {
@@ -47,6 +47,30 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
   const updateLastShownTime = () => {
     if (currentUser?.id) {
       localStorage.setItem(`lastQuizizzSurprise_${currentUser.id}`, new Date().toISOString());
+    }
+  };
+
+  const fetchQuizizzCode = async () => {
+    try {
+      const { data: codes, error } = await supabase
+        .from('quizizz_codes')
+        .select('*')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Quizizz kodu alınırken hata:', error);
+        return;
+      }
+
+      if (codes) {
+        setQuizizzCode(codes.code);
+      }
+    } catch (error) {
+      console.error('Quizizz kodu alınırken hata:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,29 +143,6 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
     }
   };
 
-  const fetchQuizizzCode = async () => {
-    try {
-      const { data: codes, error } = await supabase
-        .from('quizizz_codes')
-        .select('code')
-        .limit(1)
-        .single();
-
-      if (codes && !error) {
-        setQuizizzCode(codes.code);
-        // Kullanılan kodu sil
-        await supabase
-          .from('quizizz_codes')
-          .delete()
-          .match({ code: codes.code });
-      }
-    } catch (error) {
-      console.error('Quizizz kodu alınırken hata:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (loading) return null;
 
   const quizizzUrl = quizizzCode ? `https://quizizz.com/join?gc=${quizizzCode}` : '';
@@ -181,7 +182,7 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
               <div className="text-sm text-gray-600">
                 <p className="mb-4">
                   Giriş yap ve özel Quizizz kodları kazanma şansı yakala! 
-                  XP biriktir, düellolara katıl ve sürpriz ödüller kazan.
+                  XP biriktir, arkadaşını davet et, düellolara katıl ve sürpriz ödüller kazan.
                 </p>
                 <Link
                   to="/login"
@@ -241,14 +242,11 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
                     <span>{REQUIRED_XP} XP</span>
                   </div>
                 </div>
-              </div>
-
-              <div className="text-xs text-gray-500">
                 <p>XP Kazanma Yolları:</p>
                 <ul className="list-disc list-inside mt-1 space-y-1">
                   <li>Quiz çözerek</li>
-                  <li>Düellolar kazanarak</li>
-                  <li>Soru oluşturarak</li>
+                  <li>Arkadaşını siteye davet ederek</li>
+                  <li>Günlük giriş yaparak</li>
                 </ul>
               </div>
             </div>
@@ -256,7 +254,7 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
         </motion.div>
       )}
 
-      {quizizzCode && (
+      {shouldShow && quizizzCode && (
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -269,7 +267,7 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                     <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -277,7 +275,7 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
                   </h3>
                 </div>
                 <button
-                  onClick={() => setQuizizzCode(null)}
+                  onClick={() => setShouldShow(false)}
                   className="text-gray-400 hover:text-gray-500"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -286,44 +284,39 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
                 </button>
               </div>
 
-              <div>
-                <p className="text-sm text-gray-600 mb-2">
-                  Özel Quizizz kodunuz:
+              <div className="text-sm text-gray-600">
+                <p className="mb-4">
+                  Özel bir Quizizz kodu kazandın! Bu kodu arkadaşlarınla paylaşabilirsin.
                 </p>
-                <div className="bg-gray-50 rounded-lg p-3 font-mono text-lg font-semibold text-center text-blue-600">
-                  {quizizzCode}
+                <div className="bg-gray-50 p-4 rounded-lg mb-4 text-center">
+                  <p className="text-lg font-mono font-bold text-gray-800">
+                    {quizizzCode}
+                  </p>
                 </div>
-              </div>
-
-              {showQR && (
-                <div className="mt-4 p-4 bg-white rounded-lg border border-gray-100 flex justify-center">
-                  <QRCodeSVG value={quizizzUrl} size={150} />
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => window.open(quizizzUrl, '_blank')}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                {showQR ? (
+                  <div className="flex justify-center mb-4">
+                    <QRCodeSVG
+                      value={`https://quizizz.com/join?gc=${quizizzCode}`}
+                      size={150}
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowQR(true)}
+                    className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mb-4"
+                  >
+                    QR Kodu Göster
+                  </button>
+                )}
+                <a
+                  href={`https://quizizz.com/join?gc=${quizizzCode}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-center"
                 >
-                  <span className="flex items-center justify-center">
-                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                    Quizizz'e Git
-                  </span>
-                </button>
-                <button
-                  onClick={() => setShowQR(!showQR)}
-                  className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                >
-                  {showQR ? 'QR\'ı Gizle' : 'QR Göster'}
-                </button>
+                  Quizizz'e Git
+                </a>
               </div>
-
-              <p className="text-xs text-gray-500 text-center">
-                Bu kod sadece bir kez kullanılabilir.
-              </p>
             </div>
           </Card>
         </motion.div>
