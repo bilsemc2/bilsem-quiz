@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -18,6 +18,12 @@ export default defineConfig({
         frame-ancestors 'self';
         connect-src 'self' https://*.supabase.co wss://*.supabase.co;
       `.replace(/\s+/g, ' ').trim()
+    },
+    hmr: {
+      overlay: false // HMR overlay'i devre dışı bırak
+    },
+    watch: {
+      usePolling: false // Polling'i devre dışı bırak
     }
   },
   resolve: {
@@ -26,10 +32,24 @@ export default defineConfig({
     },
   },
   publicDir: 'public',
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@mui/material',
+      '@emotion/react',
+      '@emotion/styled'
+    ]
+  },
   build: {
     assetsDir: 'assets',
     rollupOptions: {
       output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'mui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled'],
+        },
         assetFileNames: (assetInfo) => {
           let extType = assetInfo.name.split('.').at(1);
           if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {

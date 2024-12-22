@@ -170,7 +170,12 @@ export default function NavBar() {
                                 </Menu.Items>
                             </Transition>
                         </Menu>
-
+                        <Link
+                            to="/blog"
+                            className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/blog') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                        >
+                            Blog
+                        </Link>
                     </div>
 
                     {/* User Menu */}
@@ -340,6 +345,13 @@ export default function NavBar() {
                                 </Link>
                             </>
                         )}
+                        <Link
+                            to="/blog"
+                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/blog') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                            onClick={toggleMenu}
+                        >
+                            Blog
+                        </Link>
                     </div>
                 </div>
             )}

@@ -19,6 +19,7 @@ import GamePage from './pages/GamePage';
 import CubePage from './pages/CubePage';
 import ComingSoonPage from './pages/ComingSoonPage';
 import ClassEnvironmentPage from './pages/ClassEnvironmentPage';
+import BlogPage from './pages/BlogPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -159,6 +160,8 @@ function App() {
                   } 
                 />
                 <Route path="*" element={<Navigate to="/" />} />
+                <Route path="/blog" element={<BlogPage />} />
+                <Route path="/blog/:slug" element={<BlogPage />} />
               </Routes>
             </main>
           </div>

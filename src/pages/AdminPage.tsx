@@ -76,6 +76,11 @@ import { ClassManagement } from '../components/ClassManagement';
 import { PuzzleManagement } from '../components/PuzzleManagement';
 import QuizizzManagement from '../components/QuizizzManagement';
 import OnlineUsers from '../components/OnlineUsers';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import SaveIcon from '@mui/icons-material/Save';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -204,6 +209,15 @@ interface PuzzleData {
   approved: boolean;
 }
 
+interface BlogPost {
+  id: string;
+  title: string;
+  content: string;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 const AVAILABLE_ICONS = [
   { name: 'school', component: SchoolIcon },
   { name: 'science', component: ScienceIcon },
@@ -305,6 +319,39 @@ export default function AdminPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [openBlogDialog, setOpenBlogDialog] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+  const [newPost, setNewPost] = useState({
+    title: '',
+    content: '',
+    published: false
+  });
+
+  const modules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      [{ 'font': [] }],
+      [{ 'size': ['small', false, 'large', 'huge'] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'align': [] }],
+      ['link', 'image', 'video'],
+      ['clean']
+    ],
+  };
+
+  const formats = [
+    'header',
+    'font',
+    'size',
+    'bold', 'italic', 'underline', 'strike',
+    'color', 'background',
+    'list', 'bullet',
+    'align',
+    'link', 'image', 'video'
+  ];
 
   useEffect(() => {
     checkAdminStatus();
@@ -312,6 +359,7 @@ export default function AdminPage() {
     fetchStats();
     fetchQuizStats();
     fetchPuzzles();
+    fetchBlogPosts();
   }, []);
 
   useEffect(() => {
@@ -546,6 +594,21 @@ export default function AdminPage() {
       setPuzzles(data || []);
     } catch (error) {
       console.error('Error fetching puzzles:', error);
+    }
+  };
+
+  const fetchBlogPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setBlogPosts(data || []);
+    } catch (error) {
+      console.error('Error fetching blog posts:', error);
     }
   };
 
@@ -1464,6 +1527,144 @@ export default function AdminPage() {
     }
   };
 
+  const handleCreatePost = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('blog_posts')
+      .insert([
+        {
+          title: newPost.title,
+          content: newPost.content,
+          published: newPost.published,
+          author_id: user.id
+        }
+      ]);
+
+    if (error) {
+      alert('Blog yazısı eklenirken bir hata oluştu');
+    } else {
+      alert('Blog yazısı başarıyla eklendi');
+      setOpenBlogDialog(false);
+      setNewPost({ title: '', content: '', published: false });
+    }
+  };
+
+  const handleUpdatePost = async (postId: string, published: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('blog_posts')
+        .update({ 
+          published: !published, // Mevcut durumun tersini ayarla
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', postId);
+
+      if (error) {
+        alert('Blog yazısı güncellenirken bir hata oluştu');
+        console.error('Error updating post:', error);
+      } else {
+        alert(`Blog yazısı ${!published ? 'yayınlandı' : 'taslağa alındı'}`);
+        // Yazıları yeniden yükle
+        fetchBlogPosts();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Bir hata oluştu');
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (window.confirm('Bu blog yazısını silmek istediğinize emin misiniz?')) {
+      const { error } = await supabase
+        .from('blog_posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) {
+        alert('Blog yazısı silinirken bir hata oluştu');
+      } else {
+        alert('Blog yazısı başarıyla silindi');
+      }
+    }
+  };
+
+  const handleOpenBlogDialog = (post?: BlogPost) => {
+    if (post) {
+      setSelectedPost(post);
+      setNewPost({
+        title: post.title,
+        content: post.content,
+        published: post.published
+      });
+    } else {
+      setSelectedPost(null);
+      setNewPost({
+        title: '',
+        content: '',
+        published: false
+      });
+    }
+    setOpenBlogDialog(true);
+  };
+
+  const handleCloseBlogDialog = () => {
+    setOpenBlogDialog(false);
+    setSelectedPost(null);
+    setNewPost({
+      title: '',
+      content: '',
+      published: false
+    });
+  };
+
+  const handleSavePost = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      let error;
+
+      if (selectedPost) {
+        // Mevcut yazıyı güncelle
+        const { error: updateError } = await supabase
+          .from('blog_posts')
+          .update({
+            title: newPost.title,
+            content: newPost.content,
+            published: newPost.published,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedPost.id);
+        error = updateError;
+      } else {
+        // Yeni yazı ekle
+        const { error: insertError } = await supabase
+          .from('blog_posts')
+          .insert([{
+            title: newPost.title,
+            content: newPost.content,
+            published: newPost.published,
+            author_id: user.id
+          }]);
+        error = insertError;
+      }
+
+      if (error) {
+        toast.error(selectedPost ? 'Blog yazısı güncellenirken bir hata oluştu' : 'Blog yazısı eklenirken bir hata oluştu');
+        console.error('Error:', error);
+      } else {
+        toast.success(selectedPost ? 'Blog yazısı başarıyla güncellendi' : 'Blog yazısı başarıyla eklendi');
+        handleCloseBlogDialog();
+        fetchBlogPosts();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Bir hata oluştu');
+    }
+  };
+
   const renderClassCard = (classItem: Class) => (
     <Grid item xs={12} sm={6} md={4} key={classItem.id}>
       <Paper
@@ -1669,8 +1870,100 @@ export default function AdminPage() {
     );
   };
 
+  const renderBlogManagement = () => {
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          Blog Yönetimi
+        </Typography>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Başlık</TableCell>
+                <TableCell>Son Güncelleme</TableCell>
+                <TableCell>Durum</TableCell>
+                <TableCell>İşlemler</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {blogPosts.map((post) => (
+                <TableRow key={post.id}>
+                  <TableCell>{post.title}</TableCell>
+                  <TableCell>
+                    {new Date(post.updated_at || post.created_at).toLocaleDateString('tr-TR')}
+                  </TableCell>
+                  <TableCell>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={post.published}
+                          onChange={() => handleUpdatePost(post.id, post.published)}
+                          color={post.published ? 'success' : 'warning'}
+                        />
+                      }
+                      label={
+                        <Typography 
+                          variant="body2" 
+                          color={post.published ? 'success.main' : 'warning.main'}
+                        >
+                          {post.published ? 'Yayında' : 'Taslak'}
+                        </Typography>
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Tooltip title="Düzenle">
+                        <IconButton
+                          onClick={() => handleOpenBlogDialog(post)}
+                          color="primary"
+                          size="small"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Sil">
+                        <IconButton
+                          onClick={() => handleDeletePost(post.id)}
+                          color="error"
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {blogPosts.length === 0 && (
+          <Box sx={{ textAlign: 'center', mt: 3, p: 3, bgcolor: 'background.paper', borderRadius: 1 }}>
+            <Typography variant="body1" color="text.secondary">
+              Henüz hiç blog yazısı oluşturulmamış.
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <Typography variant="h4" component="h1" gutterBottom>
         Admin Paneli
       </Typography>
@@ -1682,6 +1975,7 @@ export default function AdminPage() {
           <Tab label="Quiz Yönetimi" />
           <Tab label="Sınıf Yönetimi" />
           <Tab label="Bulmaca Yönetimi" />
+          <Tab label="Blog Yönetimi" />
           <Tab label="Quizizz" />
         </Tabs>
       </Box>
@@ -1722,8 +2016,133 @@ export default function AdminPage() {
       </TabPanel>
 
       <TabPanel value={tabValue} index={5}>
+        <Box>
+          <Typography variant="h5" gutterBottom>
+            Blog Yönetimi
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                onClick={() => handleOpenBlogDialog()}
+              >
+                Yeni Blog Yazısı
+              </Button>
+            </Grid>
+            <Grid item xs={12}>
+              {renderBlogManagement()}
+            </Grid>
+          </Grid>
+        </Box>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={6}>
         <QuizizzManagement />
       </TabPanel>
+
+      <Dialog
+        open={openBlogDialog}
+        onClose={handleCloseBlogDialog}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle sx={{ 
+          borderBottom: 1, 
+          borderColor: 'divider',
+          mb: 2,
+          pb: 2
+        }}>
+          <Typography variant="h5" component="div" fontWeight="bold">
+            {selectedPost ? 'Blog Yazısını Düzenle' : 'Yeni Blog Yazısı'}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+            <TextField
+              label="Başlık"
+              fullWidth
+              value={newPost.title}
+              onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
+              InputProps={{
+                sx: { 
+                  fontSize: '1.5rem',
+                  '& input': {
+                    fontWeight: 'bold'
+                  }
+                }
+              }}
+            />
+            
+            <Box>
+              <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                İçerik
+              </Typography>
+              <Box sx={{ 
+                '& .ql-container': {
+                  height: '400px',
+                  fontSize: '1.1rem',
+                  lineHeight: '1.6'
+                },
+                '& .ql-editor': {
+                  padding: '20px'
+                }
+              }}>
+                <ReactQuill
+                  value={newPost.content}
+                  onChange={(content) => setNewPost(prev => ({ ...prev, content }))}
+                  modules={modules}
+                  formats={formats}
+                  theme="snow"
+                />
+              </Box>
+            </Box>
+
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 2,
+              mt: 2,
+              pt: 2,
+              borderTop: 1,
+              borderColor: 'divider'
+            }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={newPost.published}
+                    onChange={(e) => setNewPost(prev => ({ ...prev, published: e.target.checked }))}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {newPost.published ? 'Yayında' : 'Taslak'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {newPost.published ? 'Bu yazı hemen yayınlanacak' : 'Bu yazı taslak olarak kaydedilecek'}
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, borderTop: 1, borderColor: 'divider' }}>
+          <Button 
+            onClick={handleCloseBlogDialog}
+            color="inherit"
+          >
+            İptal
+          </Button>
+          <Button 
+            onClick={handleSavePost}
+            variant="contained"
+            startIcon={<SaveIcon />}
+          >
+            {selectedPost ? 'Güncelle' : (newPost.published ? 'Yayınla' : 'Kaydet')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
