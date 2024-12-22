@@ -6,6 +6,7 @@ import { Menu, Transition } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Chip from '@mui/material/Chip';
+import XPWarning from './XPWarning';
 
 export default function NavBar() {
     const location = useLocation();
@@ -15,6 +16,7 @@ export default function NavBar() {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [onlineCount, setOnlineCount] = useState(0);
+    const [userXP, setUserXP] = useState(0);
 
     const isActive = (path: string) => {
         return location.pathname === path;
@@ -31,6 +33,21 @@ export default function NavBar() {
 
     useEffect(() => {
         checkAdminStatus();
+        const fetchUserXP = async () => {
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('xp')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (profile) {
+                    setUserXP(profile.xp || 0);
+                }
+            }
+        };
+
+        fetchUserXP();
         const updateOnlineCount = async () => {
             const { data: profiles } = await supabase
                 .from('profiles')
@@ -67,7 +84,7 @@ export default function NavBar() {
             clearInterval(interval);
             channel.unsubscribe();
         };
-    }, []);
+    }, [user]);
 
     const checkAdminStatus = async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -300,15 +317,6 @@ export default function NavBar() {
                                 >
                                     Düello
                                 </Link>
-                                {user.email === 'yaprakyesili@msn.com' && (
-                                    <Link
-                                        to="/admin"
-                                        className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/admin') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
-                                        onClick={toggleMenu}
-                                    >
-                                        Admin
-                                    </Link>
-                                )}
                                 <Link
                                     to="/profile"
                                     className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/profile') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}

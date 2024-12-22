@@ -503,187 +503,189 @@ const DuelPage = () => {
     }
   };
 
-  if (!hasEnoughXP) {
-    return (
-      <XPWarning
-        requiredXP={REQUIRED_XP}
-        currentXP={currentUser?.experience || 0}
-        title="Düello için Daha Fazla Deneyim Kazanın!"
-      />
-    );
-  }
-
   return (
-    <div className="container mx-auto p-4">
-      {duelStatus === 'in_progress' && activeDuel ? (
-        <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="p-8">
-            <div className="flex items-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-800">Soru</h3>
-              <div className="ml-auto">
-                <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                  Düello Sorusu
-                </span>
-              </div>
-            </div>
-            
-            {currentQuestion && (
-              <>
-                <div className="mb-8">
-                  <div className="relative rounded-xl overflow-hidden shadow-md">
-                    <img 
-                      src={currentQuestion.question_image_url} 
-                      alt="Soru" 
-                      className="w-full h-auto max-h-[400px] object-contain"
-                    />
-                  </div>
-                </div>
-
-                {/* Masaüstü için 5 sütun, mobil için 2 sütun */}
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4 mb-8">
-                  {currentQuestion.options?.map((option: any, index: number) => (
-                    <button
-                      key={option.id}
-                      onClick={() => setAnswer(option.id)}
-                      className={`group relative overflow-hidden rounded-xl transition-all duration-300 ${
-                        answer === option.id 
-                          ? 'ring-4 ring-blue-500 ring-opacity-50 transform scale-[1.02]' 
-                          : 'hover:shadow-lg hover:transform hover:scale-[1.01]'
-                      }`}
-                    >
-                      <div className={`absolute inset-0 transition-opacity duration-300 ${
-                        answer === option.id ? 'bg-blue-500 opacity-10' : 'opacity-0 group-hover:opacity-5'
-                      }`} />
-                      <div className="relative">
-                        <img 
-                          src={option.imageUrl} 
-                          alt={`Seçenek ${index + 1}`} 
-                          className="w-full h-auto rounded-xl"
-                        />
-                        <div className={`absolute top-2 left-2 lg:top-3 lg:left-3 w-6 h-6 lg:w-8 lg:h-8 flex items-center justify-center rounded-full text-xs lg:text-sm font-bold ${
-                          answer === option.id
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-200 text-gray-600'
-                        }`}>
-                          {String.fromCharCode(65 + index)}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={submitAnswer}
-                    disabled={!answer}
-                    className={`px-8 py-4 rounded-xl font-semibold text-white transition-all duration-300 ${
-                      answer
-                        ? 'bg-blue-500 hover:bg-blue-600 hover:shadow-lg transform hover:scale-[1.02]'
-                        : 'bg-gray-300 cursor-not-allowed'
-                    }`}
-                  >
-                    {answer ? 'Cevabı Gönder' : 'Bir seçenek seçin'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      {!hasEnoughXP ? (
+        <div className="flex items-center justify-center min-h-[80vh]">
+          <XPWarning
+            requiredXP={REQUIRED_XP}
+            currentXP={currentUser?.experience || 0}
+            title="Düello için XP Yetersiz"
+          />
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Düello Başlat Bölümü */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">Düello Başlat</h2>
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="Rakip ara..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            {searchTerm && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredUsers.map(user => (
-                  <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email)}`}
-                        alt={user.name}
-                        className="w-10 h-10 rounded-full"
-                      />
-                      <div>
-                        <p className="font-medium">{user.name}</p>
+        <div className="container mx-auto p-4">
+          {duelStatus === 'in_progress' && activeDuel ? (
+            <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="p-8">
+                <div className="flex items-center mb-6">
+                  <h3 className="text-2xl font-bold text-gray-800">Soru</h3>
+                  <div className="ml-auto">
+                    <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                      Düello Sorusu
+                    </span>
+                  </div>
+                </div>
+                
+                {currentQuestion && (
+                  <>
+                    <div className="mb-8">
+                      <div className="relative rounded-xl overflow-hidden shadow-md">
+                        <img 
+                          src={currentQuestion.question_image_url} 
+                          alt="Soru" 
+                          className="w-full h-auto max-h-[400px] object-contain"
+                        />
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleChallenge(user.id)}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      Düello
-                    </button>
-                  </div>
-                ))}
-                {filteredUsers.length === 0 && (
-                  <p className="text-center text-gray-500 col-span-full py-4">
-                    Rakip bulunamadı
-                  </p>
+
+                    {/* Masaüstü için 5 sütun, mobil için 2 sütun */}
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4 mb-8">
+                      {currentQuestion.options?.map((option: any, index: number) => (
+                        <button
+                          key={option.id}
+                          onClick={() => setAnswer(option.id)}
+                          className={`group relative overflow-hidden rounded-xl transition-all duration-300 ${
+                            answer === option.id 
+                              ? 'ring-4 ring-blue-500 ring-opacity-50 transform scale-[1.02]' 
+                              : 'hover:shadow-lg hover:transform hover:scale-[1.01]'
+                          }`}
+                        >
+                          <div className={`absolute inset-0 transition-opacity duration-300 ${
+                            answer === option.id ? 'bg-blue-500 opacity-10' : 'opacity-0 group-hover:opacity-5'
+                          }`} />
+                          <div className="relative">
+                            <img 
+                              src={option.imageUrl} 
+                              alt={`Seçenek ${index + 1}`} 
+                              className="w-full h-auto rounded-xl"
+                            />
+                            <div className={`absolute top-2 left-2 lg:top-3 lg:left-3 w-6 h-6 lg:w-8 lg:h-8 flex items-center justify-center rounded-full text-xs lg:text-sm font-bold ${
+                              answer === option.id
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {String.fromCharCode(65 + index)}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={submitAnswer}
+                        disabled={!answer}
+                        className={`px-8 py-4 rounded-xl font-semibold text-white transition-all duration-300 ${
+                          answer
+                            ? 'bg-blue-500 hover:bg-blue-600 hover:shadow-lg transform hover:scale-[1.02]'
+                            : 'bg-gray-300 cursor-not-allowed'
+                        }`}
+                      >
+                        {answer ? 'Cevabı Gönder' : 'Bir seçenek seçin'}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
-            )}
-          </div>
-
-          {/* Bekleyen Düellolar */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">Bekleyen Düellolar</h2>
-            <div className="space-y-4">
-              {pendingDuels.map(duel => renderDuelCard(duel))}
-              {pendingDuels.length === 0 && (
-                <p className="text-center text-gray-500 py-4">
-                  Bekleyen düello bulunmuyor
-                </p>
-              )}
             </div>
-          </div>
-
-          {/* Tamamlanan Düellolar */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">Tamamlanan Düellolar</h2>
-            <div className="space-y-4">
-              {completedDuels.map(duel => {
-                const isChallenger = duel.challenger_id === currentUser?.id;
-                return (
-                  <div key={duel.id} className="border p-4 rounded-lg bg-gray-50">
-                    <div className="flex justify-between items-center">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold">
-                            {isChallenger ? `${duel.challenged?.name}'e karşı` : `${duel.challenger?.name}'e karşı`}
-                          </h3>
-                          <span className={`px-2 py-1 rounded text-sm font-medium ${
-                            duel.result === 'draw' ? 'bg-yellow-100 text-yellow-800' :
-                            (duel.result === 'challenger_won' && isChallenger) || (duel.result === 'challenged_won' && !isChallenger) ?
-                            'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {getDuelResultText(duel, isChallenger)}
-                          </span>
+          ) : (
+            <div className="space-y-8">
+              {/* Düello Başlat Bölümü */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-2xl font-bold mb-4">Düello Başlat</h2>
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Rakip ara..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                {searchTerm && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredUsers.map(user => (
+                      <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email)}`}
+                            alt={user.name}
+                            className="w-10 h-10 rounded-full"
+                          />
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600">
-                          Tamamlanma: {formatDate(duel.completed_at)}
-                        </p>
+                        <button
+                          onClick={() => handleChallenge(user.id)}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                          Düello
+                        </button>
                       </div>
-                    </div>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <p className="text-center text-gray-500 col-span-full py-4">
+                        Rakip bulunamadı
+                      </p>
+                    )}
                   </div>
-                );
-              })}
-              {completedDuels.length === 0 && (
-                <p className="text-center text-gray-500 py-4">
-                  Tamamlanan düello bulunmuyor
-                </p>
-              )}
+                )}
+              </div>
+
+              {/* Bekleyen Düellolar */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-2xl font-bold mb-4">Bekleyen Düellolar</h2>
+                <div className="space-y-4">
+                  {pendingDuels.map(duel => renderDuelCard(duel))}
+                  {pendingDuels.length === 0 && (
+                    <p className="text-center text-gray-500 py-4">
+                      Bekleyen düello bulunmuyor
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Tamamlanan Düellolar */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-2xl font-bold mb-4">Tamamlanan Düellolar</h2>
+                <div className="space-y-4">
+                  {completedDuels.map(duel => {
+                    const isChallenger = duel.challenger_id === currentUser?.id;
+                    return (
+                      <div key={duel.id} className="border p-4 rounded-lg bg-gray-50">
+                        <div className="flex justify-between items-center">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-lg font-semibold">
+                                {isChallenger ? `${duel.challenged?.name}'e karşı` : `${duel.challenger?.name}'e karşı`}
+                              </h3>
+                              <span className={`px-2 py-1 rounded text-sm font-medium ${
+                                duel.result === 'draw' ? 'bg-yellow-100 text-yellow-800' :
+                                (duel.result === 'challenger_won' && isChallenger) || (duel.result === 'challenged_won' && !isChallenger) ?
+                                'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                                {getDuelResultText(duel, isChallenger)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              Tamamlanma: {formatDate(duel.completed_at)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {completedDuels.length === 0 && (
+                    <p className="text-center text-gray-500 py-4">
+                      Tamamlanan düello bulunmuyor
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

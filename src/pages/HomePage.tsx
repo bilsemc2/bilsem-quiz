@@ -7,6 +7,7 @@ import { PuzzleData, getPuzzles } from '../lib/puzzleService';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import PuzzlePreview from '../components/PuzzlePreview';
+import QuizizzSurprise from '../components/QuizizzSurprise';
 
 interface LeaderUser {
     id: string;
@@ -322,6 +323,11 @@ export default function HomePage() {
                             </Link>
                         </div>
                     </div>
+                </div>
+
+                <div className="container mx-auto px-4 py-8">
+                    <QuizizzSurprise currentUser={user} />
+                    {/* Diğer ana sayfa içeriği */}
                 </div>
             </div>
         </div>

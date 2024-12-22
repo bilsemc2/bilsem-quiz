@@ -134,11 +134,15 @@ const LogicPuzzleCreator = () => {
 
   if (!hasEnoughXP) {
     return (
-      <XPWarning
-        requiredXP={REQUIRED_XP}
-        currentXP={currentUser?.experience || 0}
-        title="Bulmaca Oluşturmak için Daha Fazla Deneyim Kazanın!"
-      />
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="flex items-center justify-center min-h-[80vh]">
+          <XPWarning
+            requiredXP={REQUIRED_XP}
+            currentXP={currentUser?.experience || 0}
+            title="Soru Oluşturmak için XP Yetersiz"
+          />
+        </div>
+      </div>
     );
   }
 
