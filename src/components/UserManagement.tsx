@@ -26,7 +26,7 @@ interface User {
   full_name: string;
   points: number;
   experience: number;
-  is_admin: boolean;
+  is_vip: boolean;
   is_active: boolean;
 }
 
@@ -73,17 +73,17 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
     setPage(0);
   };
 
-  const handleToggleAdmin = async (userId: string, currentStatus: boolean) => {
+  const handleToggleVip = async (userId: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_admin: !currentStatus })
+        .update({ is_vip: !currentStatus })
         .eq('id', userId);
 
       if (error) throw error;
 
       setUsers(users.map(user => 
-        user.id === userId ? { ...user, is_admin: !currentStatus } : user
+        user.id === userId ? { ...user, is_vip: !currentStatus } : user
       ));
 
       if (onUserUpdate) onUserUpdate();
@@ -157,7 +157,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
               <TableCell>Email</TableCell>
               <TableCell align="right">Puanlar</TableCell>
               <TableCell align="right">Deneyim</TableCell>
-              <TableCell align="center">Admin</TableCell>
+              <TableCell align="center">Vip</TableCell>
               <TableCell align="center">Durum</TableCell>
               <TableCell align="center">İşlemler</TableCell>
             </TableRow>
@@ -173,8 +173,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
                   <TableCell align="right">{user.experience}</TableCell>
                   <TableCell align="center">
                     <Switch
-                      checked={user.is_admin}
-                      onChange={() => handleToggleAdmin(user.id, user.is_admin)}
+                      checked={user.is_vip}
+                      onChange={() => handleToggleVip(user.id, user.is_vip)}
                       color="primary"
                     />
                   </TableCell>

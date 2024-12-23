@@ -37,12 +37,12 @@ export default function NavBar() {
             if (user) {
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('xp')
+                    .select('experience')
                     .eq('id', user.id)
                     .single();
                 
                 if (profile) {
-                    setUserXP(profile.xp || 0);
+                    setUserXP(profile.experience || 0);
                 }
             }
         };
