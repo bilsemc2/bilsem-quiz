@@ -56,7 +56,8 @@ categories: {
   }
 
   git add .
-git commit -m "Değişiklik açıklaması"
+git commit -m "Değişiklik açıklaması" 
+git commit -m feat: Matris bölümü için 212-222 arası soru görselleri eklendi
 git push
 
 outing ayarlarını kontrol et
