@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import XPWarning from './XPWarning';
 
 const REQUIRED_XP = 10;
-const SHOW_PROBABILITY = 0.25; // 10'da 1 olasılık
+const SHOW_PROBABILITY = 0.25; // 10'da 4 olasılık
 const COOLDOWN_HOURS = 24; // 24 saat bekleme süresi
 
 interface QuizizzSurpriseProps {
