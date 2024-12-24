@@ -245,7 +245,7 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
                 <ul className="list-disc list-inside mt-1 space-y-1">
                   <li>Quiz çözerek</li>
                   <li>Arkadaşını siteye davet ederek</li>
-                  <li>Günlük giriş yaparak</li>
+                  
                 </ul>
               </div>
             </div>
