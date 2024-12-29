@@ -1,5 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { useEffect, useState } from 'react';
 import { 
   Puzzle, 
   BoxIcon, 
@@ -10,7 +13,12 @@ import {
   KeyRound,
   FileText
 } from 'lucide-react';
-import Snowfall from '../components/Snowfall';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 const games = [
   {
@@ -80,8 +88,7 @@ const games = [
 
 const BilsemC2Page = () => {
   return (
-    <div className="container mx-auto px-4 py-8 relative">
-      <Snowfall />
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold text-center mb-8">BilsemC2 Oyunları</h1>
         
