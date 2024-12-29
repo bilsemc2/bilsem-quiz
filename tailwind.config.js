@@ -19,7 +19,7 @@ export default {
       },
       animation: {
         'spin-slow': 'spin 3s linear infinite',
-        'blob': 'blob 7s infinite',
+        'gradient': 'gradient 3s linear infinite',
       },
       keyframes: {
         blob: {
@@ -36,9 +36,20 @@ export default {
             transform: 'translate(0px, 0px) scale(1)',
           },
         },
+        gradient: {
+          '0%, 100%': {
+            'background-position': '0% 50%'
+          },
+          '50%': {
+            'background-position': '100% 50%'
+          },
+        }
       },
       scale: {
         '102': '1.02',
+      },
+      backgroundSize: {
+        '300%': '300%',
       },
     },
   },

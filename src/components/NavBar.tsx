@@ -115,11 +115,11 @@ export default function NavBar() {
                     <div className="flex-shrink-0 flex items-center">
                         <Link to="/" className="flex items-center space-x-2">
                             <img
-                                src="/logo.webp"
+                                src="/bilsemc2.svg"
                                 alt="Bilsem sınavı"
-                                className="w-10 h-10 rounded-full"
+                                className="w-10 h-10"
                             />
-                            <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent font-extrabold text-lg tracking-wide">
+                            <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 animate-gradient bg-300% bg-clip-text text-transparent font-extrabold text-lg tracking-wide">
                                 BilsemC2
                             </span>
                         </Link>
