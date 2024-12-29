@@ -72,8 +72,6 @@ import { QuizManagement } from '../components/QuizManagement';
 import { UserManagement } from '../components/UserManagement';
 import { StatsManagement } from '../components/StatsManagement';
 import { QuizList } from '../components/QuizList';
-import { ClassManagement } from '../components/ClassManagement';
-import { PuzzleManagement } from '../components/PuzzleManagement';
 import QuizizzManagement from '../components/QuizizzManagement';
 import OnlineUsers from '../components/OnlineUsers';
 import ReactQuill from 'react-quill';
@@ -82,6 +80,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
+import ClassManagement from '../components/ClassManagement';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -685,7 +684,7 @@ export default function AdminPage() {
 
     const newOption: QuizOption = {
       id: `${questionNumber}${optionLetter}`,
-      imageUrl: `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${optionLetter}.webp`,
+      imageUrl: `/src/images/options/Matris/${questionNumber}/Soru-${questionNumber}${optionLetter}.webp`,
       text: '',
       isCorrect: false
     };
@@ -703,7 +702,7 @@ export default function AdminPage() {
     }
 
     const questionNumber = (newQuiz.questions.length + 1).toString();
-    const questionImageUrl = `/images/questions/Matris/Soru-${questionNumber}.webp`;
+    const questionImageUrl = `/src/images/questions/Matris/Soru-${questionNumber}.webp`;
     
     // Find the correct option by looking for "cevap" in the filename
     const correctOption = currentQuestion.options.find(opt => opt.imageUrl.includes('cevap'));
@@ -724,7 +723,7 @@ export default function AdminPage() {
       const isCorrect = letter === correctLetter;
       return {
         id: `${questionNumber}${letter}`,
-        imageUrl: `/images/options/Matris/${questionNumber}/Soru-${isCorrect ? 'cevap-' : ''}${questionNumber}${letter}.webp`,
+        imageUrl: `/src/images/options/Matris/${questionNumber}/Soru-${isCorrect ? 'cevap-' : ''}${questionNumber}${letter}.webp`,
         text: '',
         isCorrect
       };
@@ -766,7 +765,7 @@ export default function AdminPage() {
         return {
           ...opt,
           id: `${questionNumber}${letter}`,
-          imageUrl: `/images/options/Matris/${questionNumber}/Soru-${isCorrect ? 'cevap-' : ''}${questionNumber}${letter}.webp`,
+          imageUrl: `/src/images/options/Matris/${questionNumber}/Soru-${isCorrect ? 'cevap-' : ''}${questionNumber}${letter}.webp`,
           isCorrect
         };
       });
@@ -953,7 +952,7 @@ export default function AdminPage() {
       // Her seçenek için resim URL'lerini oluştur
       const options = ['A', 'B', 'C', 'D', 'E'].map(letter => ({
         id: `${num}${letter}`,
-        imageUrl: `/images/options/Matris/${num}/Soru-${num}${letter}.webp`,
+        imageUrl: `/src/images/options/Matris/${num}/Soru-${num}${letter}.webp`,
         text: letter,
         isCorrect: false
       }));
@@ -967,7 +966,7 @@ export default function AdminPage() {
 
       return {
         id: num.toString(),
-        questionImageUrl: `/images/questions/Matris/Soru-${num}.webp`,
+        questionImageUrl: `/src/images/questions/Matris/Soru-${num}.webp`,
         question: `Matris Soru ${num}`,
         options,
         correctOptionId: correctOption?.id || options[0].id,
@@ -1001,7 +1000,7 @@ export default function AdminPage() {
         const numericId = parseInt(id);
         const options = ['A', 'B', 'C', 'D', 'E'].map(letter => ({
           id: `${id}${letter}`,
-          imageUrl: `/images/options/Matris/${id}/Soru-${id}${letter}.webp`,
+          imageUrl: `/src/images/options/Matris/${id}/Soru-${id}${letter}.webp`,
           text: letter,
           isCorrect: false
         }));
@@ -1015,7 +1014,7 @@ export default function AdminPage() {
 
         return {
           id,
-          questionImageUrl: `/images/questions/Matris/Soru-${id}.webp`,
+          questionImageUrl: `/src/images/questions/Matris/Soru-${id}.webp`,
           question: '',
           options,
           correctOptionId: correctOption?.id || options[0].id,
@@ -1820,10 +1819,10 @@ export default function AdminPage() {
           <Tab label="İstatistikler" />
           <Tab label="Quiz Yönetimi" />
           <Tab label="Sınıf Yönetimi" />
+          <Tab label="Blog Yönetimi" />
           <Tab label="Bulmaca Yönetimi" />
           <Tab label="Quizizz Yönetimi" />
           <Tab label="XP Gereksinimleri" />
-          <Tab label="Blog Yönetimi" />
         </Tabs>
       </Box>
 
@@ -1859,18 +1858,6 @@ export default function AdminPage() {
       </TabPanel>
 
       <TabPanel value={tabValue} index={4}>
-        <PuzzleManagement />
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={5}>
-        <QuizizzManagement />
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={6}>
-        <XPRequirementsManagement />
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={7}>
         <Box>
           <Typography variant="h5" gutterBottom>
             Blog Yönetimi
@@ -1889,6 +1876,74 @@ export default function AdminPage() {
             </Grid>
           </Grid>
         </Box>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={5}>
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Bulmaca Yönetimi
+          </Typography>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Başlık</TableCell>
+                  <TableCell>Oluşturulma Tarihi</TableCell>
+                  <TableCell>Durum</TableCell>
+                  <TableCell>İşlemler</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {puzzles.map((puzzle) => (
+                  <TableRow key={puzzle.id}>
+                    <TableCell>{puzzle.title}</TableCell>
+                    <TableCell>
+                      {new Date(puzzle.created_at).toLocaleDateString('tr-TR')}
+                    </TableCell>
+                    <TableCell>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={puzzle.approved}
+                            onChange={() => handleTogglePuzzleStatus(puzzle.id, puzzle.approved)}
+                            color={puzzle.approved ? 'success' : 'warning'}
+                          />
+                        }
+                        label={puzzle.approved ? 'Onaylı' : 'Beklemede'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title="Sil">
+                        <IconButton
+                          onClick={() => handleDeletePuzzle(puzzle.id, puzzle.title)}
+                          color="error"
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {puzzles.length === 0 && (
+            <Box sx={{ textAlign: 'center', mt: 3, p: 3, bgcolor: 'background.paper', borderRadius: 1 }}>
+              <Typography variant="body1" color="text.secondary">
+                Henüz hiç bulmaca oluşturulmamış.
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={6}>
+        <QuizizzManagement />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={7}>
+        <XPRequirementsManagement />
       </TabPanel>
 
       <Dialog

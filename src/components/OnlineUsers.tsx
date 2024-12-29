@@ -93,8 +93,13 @@ const OnlineUsers = () => {
   const updateOnlineStatus = async () => {
     const { data: profiles, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, last_seen')
       .order('name');
+
+    if (error) {
+      console.error('Profil bilgileri alınamadı:', error);
+      return;
+    }
 
     if (profiles) {
       const now = new Date().getTime();

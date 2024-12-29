@@ -18,9 +18,9 @@ interface LeaderUser {
 }
 
 const slides = [
-    { id: 1, image: '/images/k1.jpeg', alt: 'Bilsem Quiz Hero' },
-    { id: 2, image: '/images/k2.jpeg', alt: 'Bilsem Quiz Learning' },
-    { id: 3, image: '/images/k3.jpeg', alt: 'Bilsem Quiz Success' },
+    { id: 1, image: '/images/k1.jpg', alt: 'Bilsem Sınavı Hero' },
+    { id: 2, image: '/images/k2.jpg', alt: 'Bilsem Sınavı Learning' },
+    { id: 3, image: '/images/k3.jpg', alt: 'Bilsem sınavı Success' },
 ];
 
 export default function HomePage() {
@@ -110,7 +110,7 @@ export default function HomePage() {
                 {/* Header */}
                 <div className="text-center mb-12">
                     <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                        Bilsem Quiz
+                        Bilsemc2 - Çocuğunuzun geleceği ile oynayın
                     </h1>
                     <p className="text-xl text-gray-600 mb-6">
                         Öğrenmeyi Eğlenceli Hale Getirin
@@ -121,7 +121,7 @@ export default function HomePage() {
                                 to="/quiz"
                                 className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 mb-4 w-48"
                             >
-                                Quiz'e Başla
+                                Sınava Başla
                             </Link>
                             <Link
                                 to="/duel"
@@ -138,16 +138,16 @@ export default function HomePage() {
                                     to="/login"
                                     className="relative block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 w-48"
                                 >
-                                    Quiz'e Başla
+                                    Sınava Başla
                                 </Link>
                             </div>
                             <p className="text-sm text-indigo-600 font-medium animate-bounce">
-                                🎮 Heyecan verici quizlere başlamak için giriş yapın!
+                                🎮 Heyecan verici sınavlara başlamak için giriş yapın!
                             </p>
                         </div>
                     )}
                     <p className="text-sm text-gray-500 italic mt-3 max-w-md mx-auto">
-                        Her girişte karışık 10 soru gelmektedir. Soru sayısı arttıkça benzer soruların gelme olasılığı düşecektir.
+                        Her girişte karışık 10 soru gelmektedir. Ve her girişte 10 xp'niz azalmaktadır. Soru sayısı arttıkça benzer soruların gelme olasılığı düşecektir.
                     </p>
                 </div>
 

@@ -214,22 +214,9 @@ Eğer kullanıcının XP'si yetersizse showXPWarning true olarak ayarlanıyor
 XP Kazanma:
 Kullanıcılar quiz çözerek XP kazanabiliyorlar
 XP güncellemeleri Supabase veritabanında yapılıyor
-Veritabanındaki XP güncellemelerini görmek için profiles tablosuna yapılan diğer sorguları da kontrol edelim:
 
-Searched in
-bilsem-quiz/src
-0 results
-XP güncellemelerini görmek için başka bir arama yapalım:
 
-Searched in
-bilsem-quiz/src
-0 results
-Başka bir arama deneyelim:
 
-Searched in
-bilsem-quiz/src
-0 results
-Hmmm, XP güncellemelerinin yapıldığı dosyayı bulamadık. Quiz sayfasına bakalım, çünkü XP'ler genellikle quiz tamamlandığında güncellenir:
 
 Analyzed
 

@@ -52,6 +52,7 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Class {
   id: string;
@@ -83,6 +84,7 @@ const AVAILABLE_ICONS = [
 ];
 
 export const ClassManagement: React.FC = () => {
+  const { user } = useAuth();
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,6 +199,15 @@ export const ClassManagement: React.FC = () => {
 
   const handleOpenStudentDialog = async (classId: string) => {
     try {
+      const selectedClass = classes.find(c => c.id === classId);
+      
+      // Yetki kontrolü: Sadece sınıfı oluşturan kişi veya admin öğrenci ekleyebilir
+      if (!selectedClass) return;
+      if (selectedClass.created_by !== user?.id && !user?.is_admin) {
+        setError('Bu sınıfa öğrenci ekleme yetkiniz yok');
+        return;
+      }
+
       // Önce sınıftaki mevcut öğrenci ID'lerini al
       const { data: existingStudents, error: existingError } = await supabase
         .from('class_students')
@@ -217,7 +228,7 @@ export const ClassManagement: React.FC = () => {
       if (error) throw error;
 
       setAvailableStudents(students || []);
-      setSelectedClass(classes.find(c => c.id === classId) || null);
+      setSelectedClass(selectedClass);
       setOpenStudentDialog(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Öğrenciler yüklenirken bir hata oluştu');
@@ -298,26 +309,30 @@ export const ClassManagement: React.FC = () => {
                 </Typography>
               </CardContent>
               <CardActions>
-                <Button
-                  size="small"
-                  startIcon={<PersonAddIcon />}
-                  onClick={() => handleOpenStudentDialog(cls.id)}
-                >
-                  Öğrenci Ekle
-                </Button>
-                <IconButton
-                  size="small"
-                  onClick={() => handleOpenDialog(cls)}
-                >
-                  <EditIcon />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => handleDeleteClass(cls.id)}
-                >
-                  <DeleteIcon />
-                </IconButton>
+                {(cls.created_by === user?.id || user?.is_admin) && (
+                  <>
+                    <Button
+                      size="small"
+                      startIcon={<PersonAddIcon />}
+                      onClick={() => handleOpenStudentDialog(cls.id)}
+                    >
+                      Öğrenci Ekle
+                    </Button>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpenDialog(cls)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDeleteClass(cls.id)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </>
+                )}
               </CardActions>
             </Card>
           </Grid>
@@ -502,3 +517,5 @@ export const ClassManagement: React.FC = () => {
     </Box>
   );
 };
+
+export default ClassManagement;

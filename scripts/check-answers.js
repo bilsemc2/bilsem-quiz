@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const baseDir = path.join(__dirname, '../public/images/options/Matris');
+const baseDir = path.join(__dirname, '../src/images/options/Matris');
 
 // Her soru için doğru cevapları bul
 const questions = fs.readdirSync(baseDir)

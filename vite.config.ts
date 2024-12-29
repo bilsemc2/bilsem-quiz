@@ -32,6 +32,7 @@ export default defineConfig({
     },
   },
   publicDir: 'public',
+  assetsInclude: ['**/*.webp', '**/*.svg'], // WebP ve SVG dosyalarını asset olarak işle
   optimizeDeps: {
     include: [
       'react',
@@ -62,5 +63,4 @@ export default defineConfig({
       },
     },
   },
-  assetsInclude: ['**/*.svg'], // SVG dosyalarını asset olarak işle
 })

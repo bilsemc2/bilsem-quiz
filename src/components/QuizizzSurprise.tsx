@@ -21,6 +21,7 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
   const [showXPWarning, setShowXPWarning] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+  const [showNoCodesMessage, setShowNoCodesMessage] = useState(false);
 
   const resetAllStates = () => {
     setQuizizzCode(null);
@@ -28,6 +29,7 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
     setShowXPWarning(false);
     setShowLoginPrompt(false);
     setShouldShow(false);
+    setShowNoCodesMessage(false);
   };
 
   const canShowSurprise = () => {
@@ -50,21 +52,46 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
   };
 
   const fetchQuizizzCode = async () => {
+    if (!currentUser?.id) return;
+
     try {
+      // Kullanıcının daha önce gördüğü kodları al
+      const { data: seenCodes } = await supabase
+        .from('user_quizizz_codes')
+        .select('code_id')
+        .eq('user_id', currentUser.id);
+
+      const seenCodeIds = seenCodes?.map(item => item.code_id) || [];
+
+      // Kullanıcının görmediği aktif kodları al
       const { data: codes, error } = await supabase
         .from('quizizz_codes')
         .select('*')
         .eq('is_active', true)
-        .limit(1)
-        .single();
+        .not('id', 'in', `(${seenCodeIds.join(',')})`);
 
       if (error) {
         console.error('Quizizz kodu alınırken hata:', error);
         return;
       }
 
-      if (codes) {
-        setQuizizzCode(codes.code);
+      if (codes && codes.length > 0) {
+        // Rastgele bir kod seç
+        const randomIndex = Math.floor(Math.random() * codes.length);
+        const selectedCode = codes[randomIndex];
+        setQuizizzCode(selectedCode.code);
+        setShowNoCodesMessage(false);
+
+        // Seçilen kodu kullanıcının gördüğü kodlar listesine ekle
+        await supabase
+          .from('user_quizizz_codes')
+          .insert({
+            user_id: currentUser.id,
+            code_id: selectedCode.id,
+            seen_at: new Date().toISOString()
+          });
+      } else {
+        setShowNoCodesMessage(true);
       }
     } catch (error) {
       console.error('Quizizz kodu alınırken hata:', error);
@@ -315,6 +342,52 @@ const QuizizzSurprise: React.FC<QuizizzSurpriseProps> = ({ currentUser }) => {
                 >
                   Quizizz'e Git
                 </a>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {showNoCodesMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          className="fixed bottom-8 right-8 z-50"
+        >
+          <Card className="bg-white rounded-lg shadow-xl p-6 max-w-sm">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Harika İlerleme! 🌟
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowNoCodesMessage(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="text-sm text-gray-600">
+                <p className="mb-4">
+                  Tebrikler! Şu ana kadar mevcut tüm Quizizz kodlarını topladın. Yeni kodlar eklendiğinde sana haber vereceğiz.
+                </p>
+                <p>Bu arada yapabileceğin diğer aktiviteler:</p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Arkadaşlarını davet et</li>
+                  <li>Yeni quizler çöz</li>
+                  <li>Liderlik tablosunda yüksel</li>
+                </ul>
               </div>
             </div>
           </Card>

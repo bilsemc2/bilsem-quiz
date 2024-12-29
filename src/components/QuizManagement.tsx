@@ -59,11 +59,11 @@ export const QuizManagement: React.FC = () => {
       for (let i = 1; i <= QUESTIONS_CONFIG.categories.Matris.totalQuestions; i++) {
         const questionPreview: QuestionPreview = {
           number: i,
-          questionImage: `/images/questions/Matris/Soru-${i}.webp`,
+          questionImage: `/src/images/questions/Matris/Soru-${i}.webp`,
           options: ['A', 'B', 'C', 'D', 'E'].map(letter => ({
             letter,
-            optionImage: `/images/options/Matris/${i}/Soru-${i}${letter}.webp`,
-            answerImage: `/images/options/Matris/${i}/Soru-cevap-${i}${letter}.webp`
+            optionImage: `/src/images/options/Matris/${i}/Soru-${i}${letter}.webp`,
+            answerImage: `/src/images/options/Matris/${i}/Soru-cevap-${i}${letter}.webp`
           }))
         };
 

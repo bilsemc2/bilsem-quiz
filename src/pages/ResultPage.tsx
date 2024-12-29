@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CircularProgress } from '../components/CircularProgress';
-import { Box, Typography, Tooltip } from '@mui/material';
+import { Box, Typography, Tooltip, Button } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { supabase } from '../lib/supabase';
+import SchoolIcon from '@mui/icons-material/School';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import { useAuth } from '../contexts/AuthContext';
 
 interface QuestionResult {
@@ -39,33 +40,7 @@ export const ResultPage: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const result = location.state as QuizResult;
-
-    useEffect(() => {
-        const saveQuizResults = async () => {
-            if (!user || !result) return;
-
-            try {
-                const { error } = await supabase.from('quiz_results').insert({
-                    user_id: user.id,
-                    quiz_id: result.quizId, 
-                    score: result.points,
-                    questions_answered: result.totalQuestions,
-                    correct_answers: result.correctAnswers,
-                    completed_at: new Date().toISOString(),
-                    user_answers: result.answers
-                });
-
-                if (error) {
-                    console.error('Error saving quiz results:', error);
-                }
-            } catch (error) {
-                console.error('Error in saveQuizResults:', error);
-            }
-        };
-
-        saveQuizResults();
-    }, [user, result]);
+    const result = location.state?.state || location.state as QuizResult;
 
     console.log('ResultPage received state:', location.state);
 
@@ -198,6 +173,86 @@ export const ResultPage: React.FC = () => {
                             ))}
                         </div>
                     </div>
+
+                    {/* Yanlış Cevaplar */}
+                    {result.answers.filter(answer => !answer.isCorrect).length > 0 && (
+                        <div className="mt-12">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Yanlış Cevaplarınız</h2>
+                            <div className="grid grid-cols-1 gap-6">
+                                {result.answers.filter(answer => !answer.isCorrect).map((answer, index) => (
+                                    <div key={index} className="bg-white rounded-xl shadow-lg p-6">
+                                        <div className="flex flex-col space-y-4">
+                                            {/* Soru Görseli */}
+                                            {answer.questionImage && (
+                                                <div className="flex justify-center">
+                                                    <img
+                                                        src={answer.questionImage}
+                                                        alt={`Soru ${answer.questionNumber}`}
+                                                        className="max-h-[200px] object-contain rounded-lg"
+                                                    />
+                                                </div>
+                                            )}
+                                            
+                                            {/* Soru Numarası ve Durum */}
+                                            <div className="flex justify-between items-center">
+                                                <div className="text-lg font-semibold text-gray-700">
+                                                    Soru {answer.questionNumber}
+                                                </div>
+                                                <div className="flex space-x-2">
+                                                    <Button
+                                                        variant="contained"
+                                                        color="primary"
+                                                        onClick={() => navigate('/ogretmenim', { 
+                                                            state: { 
+                                                                wrongAnswer: answer,
+                                                                quizId: result.quizId
+                                                            }
+                                                        })}
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                                                    >
+                                                        <SchoolIcon className="w-5 h-5" />
+                                                        <span>Ersan Öğretmene Sor</span>
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Seçenekler */}
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                                                {answer.options.map((option, optionIndex) => (
+                                                    <div
+                                                        key={optionIndex}
+                                                        className={`
+                                                            relative rounded-lg overflow-hidden
+                                                            ${option.isCorrect ? 'border-4 border-emerald-500' : 
+                                                              option.isSelected ? 'border-4 border-red-500' : 'border border-gray-200'}
+                                                        `}
+                                                    >
+                                                        <img
+                                                            src={option.imageUrl}
+                                                            alt={`Seçenek ${optionIndex + 1}`}
+                                                            className="w-full h-auto"
+                                                        />
+                                                        {(option.isCorrect || option.isSelected) && (
+                                                            <div className={`
+                                                                absolute top-2 right-2 rounded-full p-1
+                                                                ${option.isCorrect ? 'bg-emerald-500' : 'bg-red-500'}
+                                                            `}>
+                                                                {option.isCorrect ? (
+                                                                    <CheckCircleIcon className="w-5 h-5 text-white" />
+                                                                ) : (
+                                                                    <BlockOutlinedIcon className="w-5 h-5 text-white" />
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Yeni Quiz Başlat Butonu */}
                     <div className="mt-12 text-center">

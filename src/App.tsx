@@ -5,11 +5,13 @@ import HomePage from './pages/HomePage';
 import QuizPage from './pages/QuizPage';
 import ProfilePage from './pages/ProfilePage';
 import ResultPage from './pages/ResultPage';
+import TeacherPage from './pages/TeacherPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import AdminPage from './pages/AdminPage';
 import HomeworkPage from './pages/HomeworkPage';
 import DuelPage from './pages/DuelPage';
+import MirrorPage from './pages/MirrorPage';
 import LogicPuzzleCreator from './pages/create';
 import PuzzleManagement from './pages/admin/PuzzleManagement';
 import XPRequirementsPage from './pages/admin/XPRequirementsPage';
@@ -21,9 +23,18 @@ import CubePage from './pages/CubePage';
 import ComingSoonPage from './pages/ComingSoonPage';
 import ClassEnvironmentPage from './pages/ClassEnvironmentPage';
 import BlogPage from './pages/BlogPage';
+import UnfoldedCubePage from './pages/UnfoldedCubePage';
+import AdvancedMissingPieceGame from './pages/MissingPiecePage';
+import BilsemC2Page from './pages/BilsemC2Page';
+import MirrorGame from './components/MirrorGame';
+import CubeCountingPage from './pages/CubeCountingPage';
+import ShapeGamePage from './pages/ShapeGamePage';
+import RotationGamePage from './pages/RotationGamePage';
+import VisualEncoderPage from './pages/VisualEncoderPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
+import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
 import AdminMessageNotification from './components/AdminMessageNotification';
 
@@ -41,12 +52,35 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignUpPage />} />
-                <Route path="/create-pdf" element={<CreatePdfPage />} />
+                <Route 
+                  path="/create-pdf" 
+                  element={
+                    <RequireAuth>
+                      <CreatePdfPage />
+                    </RequireAuth>
+                  } 
+                />
                 <Route 
                   path="/quiz" 
                   element={
-                    <RequireAuth>
+                    <ProtectedRoute>
                       <QuizPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/duel" 
+                  element={
+                    <RequireAuth>
+                      <DuelPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/mirror" 
+                  element={
+                    <RequireAuth>
+                      <MirrorPage />
                     </RequireAuth>
                   } 
                 />
@@ -105,6 +139,14 @@ function App() {
                   } 
                 />
                 <Route 
+                  path="/puzzle-creator" 
+                  element={
+                    <RequireAuth>
+                      <LogicPuzzleCreator />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
                   path="/homework" 
                   element={
                     <RequireAuth>
@@ -121,10 +163,10 @@ function App() {
                   } 
                 />
                 <Route 
-                  path="/duel" 
+                  path="/ogretmenim" 
                   element={
                     <RequireAuth>
-                      <DuelPage />
+                      <TeacherPage />
                     </RequireAuth>
                   } 
                 />
@@ -168,9 +210,17 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                <Route path="*" element={<Navigate to="/" />} />
+                <Route path="/unfolded-cube" element={<UnfoldedCubePage />} />
+                <Route path="/missing-piece" element={<AdvancedMissingPieceGame />} />
+                <Route path="/bilsemc2" element={<BilsemC2Page />} />
+                <Route path="/mirror-games" element={<MirrorGame />} />
+                <Route path="/cube-counting" element={<CubeCountingPage />} />
+                <Route path="/shape-game" element={<ShapeGamePage />} />
+                <Route path="/rotation-game" element={<RotationGamePage />} />
+                <Route path="/visual-encoder" element={<VisualEncoderPage />} />
                 <Route path="/blog" element={<BlogPage />} />
                 <Route path="/blog/:slug" element={<BlogPage />} />
+                <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </main>
           </div>

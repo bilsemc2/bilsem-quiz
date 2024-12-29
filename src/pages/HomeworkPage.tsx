@@ -182,13 +182,13 @@ export default function HomeworkPage() {
       });
       
       // Soru görseli
-      const questionImageUrl = `images/questions/Matris/Soru-${questionNumber}.webp`;
+      const questionImageUrl = `/src/images/questions/Matris/Soru-${questionNumber}.webp`;
       
       // Seçenekleri güncelle
       const updatedOptions = ['A', 'B', 'C', 'D', 'E'].map((optionLetter) => {
         // Normal ve doğru cevap görsellerinin yollarını oluştur
-        const normalPath = `images/options/Matris/${questionNumber}/Soru-${questionNumber}${optionLetter}.webp`;
-        const correctPath = `images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${optionLetter}.webp`;
+        const normalPath = `/src/images/options/Matris/${questionNumber}/Soru-${questionNumber}${optionLetter}.webp`;
+        const correctPath = `/src/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${optionLetter}.webp`;
         
         // Doğru cevap kontrolü - question.correctAnswer ile karşılaştır
         const isCorrectOption = optionLetter === question.correctAnswer;

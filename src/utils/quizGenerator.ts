@@ -40,31 +40,13 @@ function getQuestionNumber(filename: string): number {
 }
 
 function getOptionLetter(filename: string): string {
-    console.log('Getting option letter for:', filename);
-    
     // Önce "Soru-cevap-XXX" formatını kontrol et
     let match = filename.match(/Soru-cevap-\d+([A-E])/);
-    if (match) {
-        console.log('Matched Soru-cevap pattern:', match[1]);
-        return match[1];
-    }
+    if (match) return match[1];
     
-    // Sonra "Soru-XXXA" formatını kontrol et
+    // Sonra "Soru-XXX" formatını kontrol et
     match = filename.match(/Soru-\d+([A-E])/);
-    if (match) {
-        console.log('Matched Soru-XX pattern:', match[1]);
-        return match[1];
-    }
-    
-    // Son olarak "Soru-cevaba-XXX" formatını kontrol et
-    match = filename.match(/Soru-cevaba?-\d+([A-E])/);
-    if (match) {
-        console.log('Matched Soru-cevaba pattern:', match[1]);
-        return match[1];
-    }
-
-    console.warn('No option letter found in:', filename);
-    return '';
+    return match ? match[1] : '';
 }
 
 function isCorrectAnswer(filename: string): boolean {
@@ -72,19 +54,16 @@ function isCorrectAnswer(filename: string): boolean {
                      filename.toLowerCase().includes('-cevaba-') ||
                      filename.toLowerCase().includes('-cevab-');
     
-    console.log('Checking if correct answer:', filename, isCorrect);
     return isCorrect;
 }
 
 function findCorrectOptionLetter(optionFiles: string[]): string {
     const correctOption = optionFiles.find(filename => isCorrectAnswer(filename));
     if (!correctOption) {
-        console.warn('No correct answer found in options, defaulting to A');
         return 'A';
     }
     const letter = getOptionLetter(correctOption);
     if (!letter) {
-        console.warn('Could not extract option letter from correct answer, defaulting to A');
         return 'A';
     }
     return letter;
@@ -96,11 +75,11 @@ function extractFilename(path: string): string {
 }
 
 function getQuestionOptionsPath(questionNumber: number, category: string): string {
-    return `/images/options/${category}/${questionNumber}`;
+    return `/src/images/options/${category}/${questionNumber}`;
 }
 
 function getOptionImageUrl(questionNumber: number, category: string, optionFile: string): string {
-    return `images/options/${category}/Soru-cevap-${questionNumber}${getOptionLetter(optionFile)}.webp`;
+    return `/src/images/options/${category}/Soru-cevap-${questionNumber}${getOptionLetter(optionFile)}.webp`;
 }
 
 // Soru-video eşleştirmeleri
@@ -120,8 +99,8 @@ export function generateQuiz(): Quiz {
     const category = 'Matris';
 
     // Import all images from the public directory with category
-    const questionImports = import.meta.glob('/public/images/questions/Matris/*.webp', { eager: true });
-    const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
+    const questionImports = import.meta.glob('/src/images/questions/Matris/*.webp', { eager: true });
+    const optionImports = import.meta.glob('/src/images/options/Matris/**/*.webp', { eager: true });
 
     // Get filenames from the imports and convert to full paths
     const questionFiles = Object.keys(questionImports)
@@ -142,9 +121,6 @@ export function generateQuiz(): Quiz {
             })
             .map(extractFilename);
 
-        console.log(`\nProcessing Question ${questionNumber}:`);
-        console.log('Matching options:', matchingOptions);
-
         // Find the correct answer first
         const correctOption = matchingOptions.find(filename => isCorrectAnswer(filename));
         if (!correctOption) {
@@ -159,14 +135,12 @@ export function generateQuiz(): Quiz {
             return null;
         }
 
-        console.log(`Correct option: ${correctOption} (Letter: ${correctLetter})`);
-
         // Create options array with correct mappings
         const options = ['A', 'B', 'C', 'D', 'E'].map(optionLetter => {
             const isCorrectOption = optionLetter === correctLetter;
             return {
                 id: `${questionId}${optionLetter}`,
-                imageUrl: `images/options/${category}/${questionNumber}/Soru-${isCorrectOption ? 'cevap-' : ''}${questionNumber}${optionLetter}.webp`,
+                imageUrl: `/src/images/options/${category}/${questionNumber}/Soru-${isCorrectOption ? 'cevap-' : ''}${questionNumber}${optionLetter}.webp`,
                 text: ''
             };
         });
@@ -176,7 +150,7 @@ export function generateQuiz(): Quiz {
 
         const question = {
             id: questionId,
-            questionImageUrl: `images/questions/${category}/Soru-${questionNumber}.webp`,
+            questionImageUrl: `/src/images/questions/${category}/Soru-${questionNumber}.webp`,
             question: '',
             options: shuffleArray(options),
             correctOptionId: `${questionId}${correctLetter}`,

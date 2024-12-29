@@ -3,16 +3,16 @@ import { Question } from '../types/quiz';
 export const fetchQuestionFromStorage = async (questionNumber: number): Promise<Question | null> => {
   try {
     // Soru görseli
-    const questionUrl = `images/questions/Matris/Soru-${questionNumber}.webp`;
+    const questionUrl = `/src/images/questions/Matris/Soru-${questionNumber}.webp`;
 
     // Normal seçenek görselleri (yanlış cevaplar)
     const optionUrls = ['A', 'B', 'C', 'D', 'E'].map(letter => 
-      `images/options/Matris/${questionNumber}/Soru-${questionNumber}${letter}.webp`
+      `/src/images/options/Matris/${questionNumber}/Soru-${questionNumber}${letter}.webp`
     );
 
     // Doğru cevap görselini bul
     const correctAnswerPattern = new RegExp(`Soru-cevap-${questionNumber}[A-E]\\.webp$`);
-    const correctAnswerUrl = `images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}D.webp`;
+    const correctAnswerUrl = `/src/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}D.webp`;
     const correctAnswer = correctAnswerUrl.match(/[A-E]\.webp$/)?.[0][0] || '';
 
     // Doğru cevabı options dizisine ekle

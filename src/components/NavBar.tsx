@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -6,7 +6,8 @@ import { Menu, Transition } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Chip from '@mui/material/Chip';
-import XPWarning from './XPWarning';
+import { Fragment } from 'react';
+import { BoxIcon, Puzzle, FlipHorizontal2, Package, Shapes, RotateCw, KeyRound, FileText } from 'lucide-react';
 
 export default function NavBar() {
     const location = useLocation();
@@ -107,21 +108,30 @@ export default function NavBar() {
     }, [user]);
 
     return (
-        <nav className="bg-white shadow-lg">
+        <nav className="bg-white shadow-md fixed w-full top-0 z-50">
             <div className="max-w-7xl mx-auto px-4">
                 <div className="flex justify-between items-center h-16">
                     {/* Logo */}
-                    <Link to="/" className="flex-shrink-0">
-                        <span className="text-xl font-bold text-blue-600">
-                            BilsemC2
-                        </span>
-                    </Link>
+                    <div className="flex-shrink-0 flex items-center">
+                        <Link to="/" className="flex items-center space-x-2">
+                            <img
+                                src="/logo.webp"
+                                alt="Bilsem sınavı"
+                                className="w-10 h-10 rounded-full"
+                            />
+                            <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent font-extrabold text-lg tracking-wide">
+                                BilsemC2
+                            </span>
+                        </Link>
+                    </div>
 
                     {/* Desktop Menu */}
-                    <div className="hidden md:flex md:items-center md:space-x-4">
+                    <div className="hidden md:flex md:items-center md:space-x-6">
                         <Link
                             to="/"
-                            className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                            className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                isActive('/') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                            }`}
                         >
                             Ana Sayfa
                         </Link>
@@ -129,81 +139,191 @@ export default function NavBar() {
                             <>
                                 <Link
                                     to="/quiz"
-                                    className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/quiz') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                                    className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                        isActive('/quiz') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                    }`}
                                 >
-                                    Quiz
+                                    Quizeka
                                 </Link>
                                 <Link
                                     to="/duel"
-                                    className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/duel') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                                    className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                        isActive('/duel') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                    }`}
                                 >
                                     Düello
                                 </Link>
+                                <Menu as="div" className="relative inline-block text-left">
+                                    <Menu.Button className="inline-flex items-center px-3 py-2 text-lg font-semibold rounded-lg hover:opacity-90 transition-all duration-200">
+                                        <span className="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent font-extrabold tracking-wide">
+                                            BilsemC2
+                                        </span>
+                                        <ChevronDownIcon className="w-5 h-5 ml-1 text-indigo-500" />
+                                    </Menu.Button>
+                                    <Transition
+                                        as={Fragment}
+                                        enter="transition ease-out duration-100"
+                                        enterFrom="transform opacity-0 scale-95"
+                                        enterTo="transform opacity-100 scale-100"
+                                        leave="transition ease-in duration-75"
+                                        leaveFrom="transform opacity-100 scale-100"
+                                        leaveTo="transform opacity-0 scale-95"
+                                    >
+                                        <Menu.Items className="absolute right-0 w-56 mt-2 origin-top-right bg-white divide-y divide-gray-100 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 z-50">
+                                            <div className="px-1 py-1">
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/bilsemc2"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <Package className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-extrabold text-lg tracking-wide">
+                                                                BilsemC2
+                                                            </span>
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/missing-piece"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <Puzzle className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            Eksik Parça
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/unfolded-cube"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <BoxIcon className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            Açık Küp
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/cube-counting"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <Package className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            Küp Sayma
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/mirror-games"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <FlipHorizontal2 className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            Ayna Simetrisi
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/shape-game"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <Shapes className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            Şekil Oyunu
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/rotation-game"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <RotateCw className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            Döndürme Oyunu
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/visual-encoder"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <KeyRound className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            Şifreleme
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/puzzle-creator"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <Puzzle className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            Bulmaca Oluştur
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/create-pdf"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <FileText className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            PDF Oluştur
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                            </div>
+                                        </Menu.Items>
+                                    </Transition>
+                                </Menu>
                                 {isAdmin && (
                                     <Link
                                         to="/admin"
-                                        className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/admin') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                                        className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                            isActive('/admin') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                        }`}
                                     >
                                         Admin
                                     </Link>
                                 )}
                             </>
                         )}
-                        {/* Matris Dropdown Menu */}
-                        <Menu as="div" className="relative inline-block text-left">
-                            <Menu.Button className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${
-                                isActive('/create') || isActive('/puzzle-ranking') || isActive('/create-pdf')
-                                    ? 'bg-blue-100 text-blue-700' 
-                                    : 'text-gray-600 hover:bg-gray-100'
-                            }`}>
-                                Matris
-                                <ChevronDownIcon className="ml-2 -mr-1 h-5 w-5" aria-hidden="true" />
-                            </Menu.Button>
-                            <Transition
-                                enter="transition ease-out duration-100"
-                                enterFrom="transform opacity-0 scale-95"
-                                enterTo="transform opacity-100 scale-100"
-                                leave="transition ease-in duration-75"
-                                leaveFrom="transform opacity-100 scale-100"
-                                leaveTo="transform opacity-0 scale-95"
-                            >
-                                <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                    <Menu.Item>
-                                        {({ active }) => (
-                                            <Link
-                                                to="/create"
-                                                className={`block px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
-                                            >
-                                                Bulmaca Oluştur
-                                            </Link>
-                                        )}
-                                    </Menu.Item>
-                                    <Menu.Item>
-                                        {({ active }) => (
-                                            <Link
-                                                to="/puzzle-ranking"
-                                                className={`block px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
-                                            >
-                                                En İyi Bulmacalar
-                                            </Link>
-                                        )}
-                                    </Menu.Item>
-                                    <Menu.Item>
-                                        {({ active }) => (
-                                            <Link
-                                                to="/create-pdf"
-                                                className={`block px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
-                                            >
-                                                PDF Oluştur
-                                            </Link>
-                                        )}
-                                    </Menu.Item>
-                                </Menu.Items>
-                            </Transition>
-                        </Menu>
                         <Link
                             to="/blog"
-                            className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/blog') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                            className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                isActive('/blog') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                            }`}
                         >
                             Blog
                         </Link>
@@ -215,13 +335,15 @@ export default function NavBar() {
                             <div className="flex items-center space-x-4">
                                 <Link
                                     to="/profile"
-                                    className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/profile') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                                    className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                        isActive('/profile') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                    }`}
                                 >
                                     Profil
                                 </Link>
                                 <button
                                     onClick={handleLogout}
-                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100"
+                                    className="text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200"
                                 >
                                     Çıkış Yap
                                 </button>
@@ -230,13 +352,13 @@ export default function NavBar() {
                             <div className="flex items-center space-x-4">
                                 <Link
                                     to="/login"
-                                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100"
+                                    className="text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200"
                                 >
                                     Giriş Yap
                                 </Link>
                                 <Link
                                     to="/signup"
-                                    className="px-4 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                                    className="text-lg font-semibold px-3 py-2 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all duration-200"
                                 >
                                     Kayıt Ol
                                 </Link>
@@ -301,82 +423,219 @@ export default function NavBar() {
             </div>
 
             {/* Mobile Menu */}
-            {isMenuOpen && (
-                <div
-                    className={`${
-                        isMenuOpen ? 'block' : 'hidden'
-                    } md:hidden absolute top-16 left-0 right-0 bg-white shadow-lg z-50`}
-                >
-                    <div className="px-2 pt-2 pb-3 space-y-1">
-                        <Link
-                            to="/"
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
-                            onClick={toggleMenu}
-                        >
-                            Ana Sayfa
-                        </Link>
-                        {user && (
-                            <>
-                                <Link
-                                    to="/quiz"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/quiz') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
-                                    onClick={toggleMenu}
-                                >
-                                    Quiz
-                                </Link>
-                                <Link
-                                    to="/duel"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/duel') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
-                                    onClick={toggleMenu}
-                                >
-                                    Düello
-                                </Link>
-                                <Link
-                                    to="/profile"
-                                    className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/profile') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
-                                    onClick={toggleMenu}
-                                >
-                                    Profil
-                                </Link>
-                                <button
-                                    onClick={() => {
-                                        handleLogout();
-                                        toggleMenu();
-                                    }}
-                                    className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100"
-                                >
-                                    Çıkış Yap
-                                </button>
-                            </>
-                        )}
-                        {!user && (
-                            <>
-                                <Link
-                                    to="/login"
-                                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100"
-                                    onClick={toggleMenu}
-                                >
-                                    Giriş Yap
-                                </Link>
-                                <Link
-                                    to="/signup"
-                                    className="block px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700"
-                                    onClick={toggleMenu}
-                                >
-                                    Kayıt Ol
-                                </Link>
-                            </>
-                        )}
-                        <Link
-                            to="/blog"
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/blog') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
-                            onClick={toggleMenu}
-                        >
-                            Blog
-                        </Link>
+            <Transition
+                show={isMenuOpen}
+                enter="transition-opacity ease-linear duration-300"
+                enterFrom="opacity-0"
+                enterTo="opacity-100"
+                leave="transition-opacity ease-linear duration-300"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
+                className="fixed inset-0 z-50"
+            >
+                <div className="relative z-50">
+                    {/* Backdrop */}
+                    <Transition.Child
+                        enter="transition-opacity ease-linear duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="transition-opacity ease-linear duration-300"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-black bg-opacity-25" />
+                    </Transition.Child>
+
+                    {/* Panel */}
+                    <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-white shadow-xl overflow-y-auto">
+                        <div className="px-6 py-3 space-y-2">
+                            <Link
+                                to="/"
+                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                    isActive('/') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                }`}
+                                onClick={toggleMenu}
+                            >
+                                Ana Sayfa
+                            </Link>
+                            {user && (
+                                <>
+                                    <Link
+                                        to="/quiz"
+                                        className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                            isActive('/quiz') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                        }`}
+                                        onClick={toggleMenu}
+                                    >
+                                        Quizeka
+                                    </Link>
+                                    <Link
+                                        to="/duel"
+                                        className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                            isActive('/duel') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                        }`}
+                                        onClick={toggleMenu}
+                                    >
+                                        Düello
+                                    </Link>
+                                    <div className="px-6 py-3">
+                                        <div className="font-medium text-gray-600 mb-2">BilsemC2</div>
+                                        <div className="space-y-2">
+                                            <Link
+                                                to="/bilsemc2"
+                                                className={`block py-3 text-lg font-bold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/bilsemc2') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <Package className="w-5 h-5 mr-3" />
+                                                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-extrabold text-lg tracking-wide">
+                                                    BilsemC2
+                                                </span>
+                                            </Link>
+                                            <Link
+                                                to="/missing-piece"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/missing-piece') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <Puzzle className="w-5 h-5 mr-3" />
+                                                Eksik Parça
+                                            </Link>
+                                            <Link
+                                                to="/unfolded-cube"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/unfolded-cube') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <BoxIcon className="w-5 h-5 mr-3" />
+                                                Açık Küp
+                                            </Link>
+                                            <Link
+                                                to="/cube-counting"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/cube-counting') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <Package className="w-5 h-5 mr-3" />
+                                                Küp Sayma
+                                            </Link>
+                                            <Link
+                                                to="/mirror-games"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/mirror-games') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <FlipHorizontal2 className="w-5 h-5 mr-3" />
+                                                Ayna Simetrisi
+                                            </Link>
+                                            <Link
+                                                to="/shape-game"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/shape-game') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <Shapes className="w-5 h-5 mr-3" />
+                                                Şekil Oyunu
+                                            </Link>
+                                            <Link
+                                                to="/rotation-game"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/rotation-game') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <RotateCw className="w-5 h-5 mr-3" />
+                                                Döndürme Oyunu
+                                            </Link>
+                                            <Link
+                                                to="/visual-encoder"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/visual-encoder') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <KeyRound className="w-5 h-5 mr-3" />
+                                                Şifreleme
+                                            </Link>
+                                            <Link
+                                                to="/puzzle-creator"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/puzzle-creator') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <Puzzle className="w-5 h-5 mr-3" />
+                                                Bulmaca Oluştur
+                                            </Link>
+                                            <Link
+                                                to="/create-pdf"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/create-pdf') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <FileText className="w-5 h-5 mr-3" />
+                                                PDF Oluştur
+                                            </Link>
+                                        </div>
+                                    </div>
+                                    <Link
+                                        to="/profile"
+                                        className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                            isActive('/profile') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                        }`}
+                                        onClick={toggleMenu}
+                                    >
+                                        Profil
+                                    </Link>
+                                    <button
+                                        onClick={() => {
+                                            handleLogout();
+                                            toggleMenu();
+                                        }}
+                                        className="w-full text-left py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200"
+                                    >
+                                        Çıkış Yap
+                                    </button>
+                                </>
+                            )}
+                            {!user && (
+                                <>
+                                    <Link
+                                        to="/login"
+                                        className="block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200"
+                                        onClick={toggleMenu}
+                                    >
+                                        Giriş Yap
+                                    </Link>
+                                    <Link
+                                        to="/signup"
+                                        className="block py-3 text-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-all duration-200"
+                                        onClick={toggleMenu}
+                                    >
+                                        Kayıt Ol
+                                    </Link>
+                                </>
+                            )}
+                            <Link
+                                to="/blog"
+                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                    isActive('/blog') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                }`}
+                                onClick={toggleMenu}
+                            >
+                                Blog
+                            </Link>
+                        </div>
                     </div>
                 </div>
-            )}
+            </Transition>
         </nav>
     );
 }
