@@ -1,0 +1,5 @@
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "frame-ancestors 'self' https://*.google.com https://*.googlesyndication.com https://*.googletagmanager.com"
+    X-Frame-Options = "ALLOW-FROM https://www.google.com https://googleads.g.doubleclick.net https://www.googletagmanager.com"
