@@ -321,7 +321,7 @@ const CreatePdfPage: React.FC = () => {
                           {/* Soru görseli */}
                           <div className="question-image mb-3 flex justify-center" style={{ height: '110px', width: '85%' }}>
                             <img
-                              src={`/src/images/questions/Matris/Soru-${questionNum}.webp`}
+                              src={`/images/questions/Matris/Soru-${questionNum}.webp`}
                               alt={`Soru ${questionNum}`}
                               className="h-full object-contain"
                             />
@@ -334,13 +334,13 @@ const CreatePdfPage: React.FC = () => {
                                 <span className="text-xs font-bold mb-1">{option}</span>
                                 <div className="option-image-container flex justify-center" style={{ height: '50px', width: '100%' }}>
                                   <img
-                                    src={`/src/images/options/Matris/${questionNum}/Soru-${questionNum}${option}.webp`}
+                                    src={`/images/options/Matris/${questionNum}/Soru-${questionNum}${option}.webp`}
                                     alt={`Seçenek ${option}`}
                                     className="h-full object-contain"
                                     onError={(e) => {
                                       const img = e.target as HTMLImageElement;
-                                      if (img.src !== `/src/images/options/Matris/${questionNum}/Soru-cevap-${questionNum}${option}.webp`) {
-                                        img.src = `/src/images/options/Matris/${questionNum}/Soru-cevap-${questionNum}${option}.webp`;
+                                      if (img.src !== `/images/options/Matris/${questionNum}/Soru-cevap-${questionNum}${option}.webp`) {
+                                        img.src = `/images/options/Matris/${questionNum}/Soru-cevap-${questionNum}${option}.webp`;
                                       }
                                     }}
                                   />
@@ -377,7 +377,7 @@ const CreatePdfPage: React.FC = () => {
                         {['A', 'B', 'C', 'D', 'E'].map((option) => (
                           <img
                             key={option}
-                            src={`/src/images/options/Matris/${questionNum}/Soru-cevap-${questionNum}${option}.webp`}
+                            src={`/images/options/Matris/${questionNum}/Soru-cevap-${questionNum}${option}.webp`}
                             alt={`Soru ${questionNum} cevap`}
                             className="h-[40px] object-contain"
                             onLoad={(e) => {

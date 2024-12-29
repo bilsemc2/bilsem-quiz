@@ -75,11 +75,11 @@ function extractFilename(path: string): string {
 }
 
 function getQuestionOptionsPath(questionNumber: number, category: string): string {
-    return `/src/images/options/${category}/${questionNumber}`;
+    return `/images/options/${category}/${questionNumber}`;
 }
 
 function getOptionImageUrl(questionNumber: number, category: string, optionFile: string): string {
-    return `/src/images/options/${category}/Soru-cevap-${questionNumber}${getOptionLetter(optionFile)}.webp`;
+    return `/images/options/${category}/Soru-cevap-${questionNumber}${getOptionLetter(optionFile)}.webp`;
 }
 
 // Soru-video eşleştirmeleri
@@ -99,8 +99,8 @@ export function generateQuiz(): Quiz {
     const category = 'Matris';
 
     // Import all images from the public directory with category
-    const questionImports = import.meta.glob('/src/images/questions/Matris/*.webp', { eager: true });
-    const optionImports = import.meta.glob('/src/images/options/Matris/**/*.webp', { eager: true });
+    const questionImports = import.meta.glob('/public/images/questions/Matris/*.webp', { eager: true });
+    const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
 
     // Get filenames from the imports and convert to full paths
     const questionFiles = Object.keys(questionImports)
@@ -140,7 +140,7 @@ export function generateQuiz(): Quiz {
             const isCorrectOption = optionLetter === correctLetter;
             return {
                 id: `${questionId}${optionLetter}`,
-                imageUrl: `/src/images/options/${category}/${questionNumber}/Soru-${isCorrectOption ? 'cevap-' : ''}${questionNumber}${optionLetter}.webp`,
+                imageUrl: `/images/options/${category}/${questionNumber}/Soru-${isCorrectOption ? 'cevap-' : ''}${questionNumber}${optionLetter}.webp`,
                 text: ''
             };
         });
@@ -150,7 +150,7 @@ export function generateQuiz(): Quiz {
 
         const question = {
             id: questionId,
-            questionImageUrl: `/src/images/questions/${category}/Soru-${questionNumber}.webp`,
+            questionImageUrl: `/images/questions/${category}/Soru-${questionNumber}.webp`,
             question: '',
             options: shuffleArray(options),
             correctOptionId: `${questionId}${correctLetter}`,

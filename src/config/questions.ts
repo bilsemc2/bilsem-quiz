@@ -3,7 +3,7 @@ export const QUESTIONS_CONFIG = {
   categories: {
     Matris: {
       totalQuestions: 314,
-      path: 'images/questions/Matris'
+      path: '/images/questions/Matris'
     }
   }
 };
