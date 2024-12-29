@@ -31,7 +31,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  publicDir: 'src/images',
+  publicDir: 'public',
   assetsInclude: ['**/*.webp', '**/*.svg'], // WebP ve SVG dosyalarını asset olarak işle
   optimizeDeps: {
     include: [
@@ -53,7 +53,7 @@ export default defineConfig({
         },
         assetFileNames: (assetInfo) => {
           let extType = assetInfo.name.split('.').at(1);
-          if (/png|jpe?g|svg|gif|tiff|bmp|ico|webp/i.test(extType)) {
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
             extType = 'img';
           } else if (/css/i.test(extType)) {
             extType = 'css';
@@ -66,6 +66,5 @@ export default defineConfig({
         entryFileNames: 'assets/js/[name]-[hash].js',
       },
     },
-    copyPublicDir: true
   },
 })
