@@ -40,8 +40,7 @@ export default defineConfig({
       'react-router-dom',
       '@mui/material',
       '@emotion/react',
-      '@emotion/styled',
-      'react-quill'
+      '@emotion/styled'
     ]
   },
   build: {
@@ -50,8 +49,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'mui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled'],
-          'quill': ['react-quill']
+          'mui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled']
         },
         assetFileNames: (assetInfo) => {
           let extType = assetInfo.name.split('.').at(1);

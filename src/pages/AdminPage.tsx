@@ -21,28 +21,29 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Checkbox,
-  Tooltip,
-  Stack,
-  Alert,
-  Avatar,
-  CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Switch,
   FormControlLabel,
-  Chip,
+  CircularProgress,
+  Card,
+  CardContent,
+  CardActions,
+  Tooltip,
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
-  ListSubheader,
+  ListItemSecondaryAction,
+  Divider,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Chip,
+  Alert,
+  Snackbar,
   TablePagination,
-  Divider
+  LinearProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -63,8 +64,6 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
-import 'react-lazy-load-image-component/src/effects/blur.css';
 import Pagination from '@mui/material/Pagination';
 import { QUESTIONS_CONFIG } from '../config/questions';
 import { togglePuzzleStatus, deletePuzzleByAdmin, PuzzleData } from '../lib/puzzleService';
@@ -74,8 +73,6 @@ import { StatsManagement } from '../components/StatsManagement';
 import { QuizList } from '../components/QuizList';
 import QuizizzManagement from '../components/QuizizzManagement';
 import OnlineUsers from '../components/OnlineUsers';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import SaveIcon from '@mui/icons-material/Save';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -326,31 +323,6 @@ export default function AdminPage() {
     content: '',
     published: false
   });
-
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      [{ 'font': [] }],
-      [{ 'size': ['small', false, 'large', 'huge'] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'align': [] }],
-      ['link', 'image', 'video'],
-      ['clean']
-    ],
-  };
-
-  const formats = [
-    'header',
-    'font',
-    'size',
-    'bold', 'italic', 'underline', 'strike',
-    'color', 'background',
-    'list', 'bullet',
-    'align',
-    'link', 'image', 'video'
-  ];
 
   useEffect(() => {
     const initializePage = async () => {
@@ -1983,24 +1955,15 @@ export default function AdminPage() {
               <Typography variant="subtitle1" color="text.secondary" gutterBottom>
                 İçerik
               </Typography>
-              <Box sx={{ 
-                '& .ql-container': {
-                  height: '400px',
-                  fontSize: '1.1rem',
-                  lineHeight: '1.6'
-                },
-                '& .ql-editor': {
-                  padding: '20px'
-                }
-              }}>
-                <ReactQuill
-                  value={newPost.content}
-                  onChange={(content) => setNewPost(prev => ({ ...prev, content }))}
-                  modules={modules}
-                  formats={formats}
-                  theme="snow"
-                />
-              </Box>
+              <TextField
+                fullWidth
+                multiline
+                rows={10}
+                variant="outlined"
+                label="İçerik"
+                value={newPost.content}
+                onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+              />
             </Box>
 
             <Box sx={{ 
