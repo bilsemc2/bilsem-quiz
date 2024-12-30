@@ -247,3 +247,5 @@ Her quiz sonucu quiz_results tablosuna kaydediliyor
 Kullanıcının toplam XP'si profiles tablosunda tutuluyor
 Quiz sonuçları ve kazanılan XP konsola yazdırılıyor (debug için)
 calculateScore fonksiyonunu da görmek ister misiniz? Bu fonksiyon XP miktarının nasıl hesaplandığını gösterecektir.
+
+config/question.ts
