@@ -71,8 +71,9 @@ export default function LoginPage() {
     setResetSuccess(false);
 
     try {
+      const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/reset-password?type=recovery`
+        redirectTo: `${siteUrl}/reset-password?type=recovery`
       });
 
       if (error) throw error;
