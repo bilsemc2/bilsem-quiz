@@ -153,7 +153,7 @@ const MemoryGamePage = () => {
       })));
 
       // Hedef resmi ve seçenekleri ayarla
-      setTargetImage({ ...target, position: -1 });
+      setTargetImage({ ...target, position: Math.random() });
       setOptions(allOptions);
 
       setLoading(false);
