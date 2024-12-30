@@ -7,7 +7,7 @@ import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Chip from '@mui/material/Chip';
 import { Fragment } from 'react';
-import { BoxIcon, Puzzle, FlipHorizontal2, Package, Shapes, RotateCw, KeyRound, FileText } from 'lucide-react';
+import { BoxIcon, Puzzle, FlipHorizontal2, Package, Shapes, RotateCw, KeyRound, FileText, Brain } from 'lucide-react';
 
 export default function NavBar() {
     const location = useLocation();
@@ -303,6 +303,19 @@ export default function NavBar() {
                                                         </Link>
                                                     )}
                                                 </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            to="/memory-game"
+                                                            className={`${
+                                                                active ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'text-gray-700 hover:text-indigo-500'
+                                                            } group flex items-center px-4 py-2 text-lg font-semibold rounded-md w-full transition-all duration-200`}
+                                                        >
+                                                            <Brain className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-indigo-500'}`} />
+                                                            Hafıza Oyunu
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
                                             </div>
                                         </Menu.Items>
                                     </Transition>
@@ -582,6 +595,16 @@ export default function NavBar() {
                                             >
                                                 <FileText className="w-5 h-5 mr-3" />
                                                 PDF Oluştur
+                                            </Link>
+                                            <Link
+                                                to="/memory-game"
+                                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                                    isActive('/memory-game') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                                }`}
+                                                onClick={toggleMenu}
+                                            >
+                                                <Brain className="w-5 h-5 mr-3" />
+                                                Hafıza Oyunu
                                             </Link>
                                         </div>
                                     </div>

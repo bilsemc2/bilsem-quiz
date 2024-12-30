@@ -32,6 +32,7 @@ import ShapeGamePage from './pages/ShapeGamePage';
 import RotationGamePage from './pages/RotationGamePage';
 import VisualEncoderPage from './pages/VisualEncoderPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import MemoryGamePage from './pages/MemoryGamePage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -222,6 +223,14 @@ function App() {
                 <Route path="/visual-encoder" element={<VisualEncoderPage />} />
                 <Route path="/blog" element={<BlogPage />} />
                 <Route path="/blog/:slug" element={<BlogPage />} />
+                <Route 
+                  path="/memory-game" 
+                  element={
+                    <RequireAuth>
+                      <MemoryGamePage />
+                    </RequireAuth>
+                  } 
+                />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </main>

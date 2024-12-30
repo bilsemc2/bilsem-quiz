@@ -50,9 +50,8 @@ function getOptionLetter(filename: string): string {
 }
 
 function isCorrectAnswer(filename: string): boolean {
-    const isCorrect = filename.toLowerCase().includes('-cevap-') || 
-                     filename.toLowerCase().includes('-cevaba-') ||
-                     filename.toLowerCase().includes('-cevab-');
+    const isCorrect = filename.toLowerCase().includes('-cevap-')
+                    
     
     return isCorrect;
 }
