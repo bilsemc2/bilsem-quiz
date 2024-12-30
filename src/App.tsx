@@ -31,6 +31,7 @@ import CubeCountingPage from './pages/CubeCountingPage';
 import ShapeGamePage from './pages/ShapeGamePage';
 import RotationGamePage from './pages/RotationGamePage';
 import VisualEncoderPage from './pages/VisualEncoderPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -51,6 +52,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/signup" element={<SignUpPage />} />
                 <Route 
                   path="/create-pdf" 
