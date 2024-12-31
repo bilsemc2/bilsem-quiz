@@ -40,6 +40,7 @@ interface User {
   is_vip: boolean;
   is_active: boolean;
   grade?: number;
+  referred_by?: string;
   classes?: { class_id: string }[];
   class_students?: {
     classes: {
@@ -75,6 +76,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
     points: 0,
     experience: 0,
     grade: 0,
+    referred_by: '',
   });
   const [filters, setFilters] = useState({
     name: '',
@@ -267,6 +269,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
       points: user.points || 0,
       experience: user.experience || 0,
       grade: user.grade || 0,
+      referred_by: user.referred_by || '',
     });
     setEditDialogOpen(true);
   };
@@ -284,6 +287,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
           points: editFormData.points,
           experience: editFormData.experience,
           grade: editFormData.grade,
+          referred_by: editFormData.referred_by,
         })
         .eq('id', editingUser.id);
 
@@ -470,42 +474,50 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
         <DialogContent>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
+              fullWidth
               label="Ad Soyad"
               name="name"
               value={editFormData.name}
               onChange={handleInputChange}
-              fullWidth
             />
             <TextField
+              fullWidth
               label="E-posta"
               name="email"
               value={editFormData.email}
               onChange={handleInputChange}
-              fullWidth
             />
             <TextField
+              fullWidth
+              label="Referans Kodu"
+              name="referred_by"
+              value={editFormData.referred_by || ''}
+              onChange={handleInputChange}
+              helperText="Kullanıcıyı kim davet etti?"
+            />
+            <TextField
+              fullWidth
+              type="number"
               label="Puan"
               name="points"
-              type="number"
               value={editFormData.points}
               onChange={handleInputChange}
-              fullWidth
             />
             <TextField
+              fullWidth
+              type="number"
               label="Deneyim"
               name="experience"
-              type="number"
               value={editFormData.experience}
               onChange={handleInputChange}
-              fullWidth
             />
             <TextField
+              fullWidth
+              type="number"
               label="Sınıf Seviyesi"
               name="grade"
-              type="number"
               value={editFormData.grade}
               onChange={handleInputChange}
-              fullWidth
             />
             <FormControl fullWidth>
               <InputLabel>Sınıflar</InputLabel>
