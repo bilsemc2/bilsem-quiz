@@ -11,7 +11,8 @@ import {
   FlipHorizontal2,
   RotateCcw,
   KeyRound,
-  FileText
+  FileText,
+  Brain
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,22 @@ import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 
 const games = [
+  {
+    title: 'Hafıza Oyunu',
+    description: 'Görsel hafızanızı test edin ve geliştirin. Resimleri eşleştirin ve puanınızı artırın!',
+    icon: <Brain className="w-12 h-12 text-emerald-500" />,
+    path: '/memory-game',
+    color: 'bg-emerald-100',
+    isNew: true
+  },
+  {
+    title: 'Hafıza Oyunu 2',
+    description: 'Daha zorlu hafıza egzersizleri ile kendinizi geliştirin. Yeni seviyeler ve farklı zorluklar!',
+    icon: <Brain className="w-12 h-12 text-cyan-500" />,
+    path: '/memory-game-2',
+    color: 'bg-cyan-100',
+    isNew: true
+  },
   {
     title: 'Bulmaca Oluştur',
     description: 'Kendi bulmacalarınızı oluşturun ve paylaşın. Yaratıcılığınızı konuşturun!',
@@ -89,7 +106,7 @@ const games = [
 const BilsemC2Page = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold text-center mb-8">BilsemC2 Oyunları</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -97,14 +114,17 @@ const BilsemC2Page = () => {
             <Link
               key={index}
               to={game.path}
-              className={`${game.color} p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300`}
+              className="group relative"
             >
-              <div className="flex items-center space-x-4">
-                {game.icon}
-                <div>
-                  <h2 className="text-xl font-semibold">{game.title}</h2>
-                  <p className="text-gray-600 mt-2">{game.description}</p>
+              <div className={`${game.color} p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-shrink-0">{game.icon}</div>
+                  {game.isNew && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">Yeni!</span>
+                  )}
                 </div>
+                <h3 className="text-xl font-bold text-gray-800 mt-4">{game.title}</h3>
+                <p className="text-gray-600 mt-2">{game.description}</p>
               </div>
             </Link>
           ))}

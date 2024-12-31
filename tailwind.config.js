@@ -15,11 +15,24 @@ export default {
           100: '#e0f2fe',
           500: '#0ea5e9',
           600: '#0284c7',
+          700: '#0369a1',
         },
+        secondary: {
+          50: '#f0fdf4',
+          500: '#10b981',
+          600: '#059669',
+        },
+        accent: {
+          500: '#f59e0b',
+          600: '#d97706',
+        },
+        background: '#F9FAFB',
       },
       animation: {
         'spin-slow': 'spin 3s linear infinite',
         'gradient': 'gradient 3s linear infinite',
+        'fadeIn': 'fadeIn 0.5s ease-in',
+        'slideUp': 'slideUp 0.5s ease-out',
       },
       keyframes: {
         blob: {
@@ -43,13 +56,27 @@ export default {
           '50%': {
             'background-position': '100% 50%'
           },
-        }
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { 
+            transform: 'translateY(20px)',
+            opacity: '0',
+          },
+          '100%': {
+            transform: 'translateY(0)',
+            opacity: '1',
+          },
+        },
       },
       scale: {
         '102': '1.02',
       },
       backgroundSize: {
-        '300%': '300%',
+        '200%': '200%',
       },
     },
   },
