@@ -167,10 +167,16 @@ const BlogPage = () => {
           </Box>
 
           <Box sx={{ p: 4 }}>
-            <div 
-              className="blog-content"
-              dangerouslySetInnerHTML={{ __html: selectedPost.content }}
-            />
+            {selectedPost && (
+              <Box sx={{ maxWidth: '800px', mx: 'auto', p: 3 }}>
+                <Typography variant="h4" component="h1" gutterBottom>
+                  {selectedPost.title}
+                </Typography>
+                <Box sx={{ mt: 4, typography: 'body1' }}>
+                  <ReactMarkdown>{selectedPost.content}</ReactMarkdown>
+                </Box>
+              </Box>
+            )}
           </Box>
         </Box>
       </Container>

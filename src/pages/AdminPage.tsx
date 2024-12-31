@@ -78,6 +78,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
 import ClassManagement from '../components/ClassManagement';
+import ReactMarkdown from 'react-markdown';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1953,17 +1954,35 @@ export default function AdminPage() {
             
             <Box>
               <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                İçerik
+                İçerik (Markdown destekli)
               </Typography>
               <TextField
                 fullWidth
                 multiline
                 rows={10}
                 variant="outlined"
-                label="İçerik"
+                placeholder="# Başlık
+## Alt Başlık
+**Kalın yazı** ve *italik yazı*
+
+- Liste öğesi 1
+- Liste öğesi 2
+
+[Link](https://example.com)
+
+![Resim açıklaması](resim-url)"
                 value={newPost.content}
                 onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
               />
+            </Box>
+
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                Önizleme
+              </Typography>
+              <Paper sx={{ p: 3, bgcolor: 'grey.50' }}>
+                <ReactMarkdown>{newPost.content}</ReactMarkdown>
+              </Paper>
             </Box>
 
             <Box sx={{ 
