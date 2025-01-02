@@ -103,8 +103,8 @@ export default function SignUpPage() {
 
                 // Başarı mesajı
                 const successMessage = formData.referralCode
-                    ? `Kayıt başarılı! ${INITIAL_XP} XP ile başlıyorsunuz ve arkadaşınız da ${INITIAL_XP} XP kazandı. Lütfen email adresinizi onaylayın ve giriş yapın.`
-                    : `Kayıt başarılı! ${INITIAL_XP} XP ile başlıyorsunuz. Lütfen email adresinizi onaylayın ve giriş yapın.`;
+                    ? `Kayıt başarılı! ${INITIAL_XP} XP ile başlıyorsunuz ve arkadaşınız da ${INITIAL_XP} XP kazandı. Şimdi giriş yapabilirsiniz.`
+                    : `Kayıt başarılı! ${INITIAL_XP} XP ile başlıyorsunuz. Şimdi giriş yapabilirsiniz.`;
                 
                 alert(successMessage);
             }
