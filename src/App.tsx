@@ -34,12 +34,14 @@ import VisualEncoderPage from './pages/VisualEncoderPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import MemoryGamePage from './pages/MemoryGamePage';
 import MemoryGamePage2 from './pages/MemoryGamePage2';
+import FoldingGamesPage from './pages/FoldingGamesPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
 import AdminMessageNotification from './components/AdminMessageNotification';
+import ExtensionIcon from '@mui/icons-material/Extension';
 
 function App() {
   return (
@@ -237,6 +239,14 @@ function App() {
                   element={
                     <RequireAuth>
                       <MemoryGamePage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/folding" 
+                  element={
+                    <RequireAuth>
+                      <FoldingGamesPage />
                     </RequireAuth>
                   } 
                 />

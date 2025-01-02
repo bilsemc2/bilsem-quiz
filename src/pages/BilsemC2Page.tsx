@@ -100,6 +100,13 @@ const games = [
     icon: <FileText className="w-12 h-12 text-orange-500" />,
     path: '/create-pdf',
     color: 'bg-orange-100'
+  },
+  {
+    title: 'Kağıt Katlama',
+    description: 'Uzamsal düşünme becerilerini geliştir!',
+    icon: <Puzzle className="w-12 h-12 text-purple-500" />,
+    path: '/folding',
+    color: 'bg-purple-100'
   }
 ];
 
