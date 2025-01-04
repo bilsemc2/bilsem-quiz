@@ -56,9 +56,9 @@ categories: {
   }
 
   git add .
-git commit -m "Değişiklik açıklaması" 
+git commit -m ‘msg’
 git commit -m feat: Matris bölümü için 212-222 arası soru görselleri eklendi
-git push
+git push origin master 
 
 outing ayarlarını kontrol et
 oluşturduğumuz /*create* sayfası için bir route ekle. App.tsx dosyasını düzenle
