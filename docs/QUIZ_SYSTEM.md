@@ -54,7 +54,7 @@ categories: {
     totalQuestions: 30,  // Bu değeri değiştirin
     path: 'images/questions/Matris'
   }
-
+git status
   git add .
 git commit -m ‘msg’
 git commit -m feat: Matris bölümü için 212-222 arası soru görselleri eklendi
