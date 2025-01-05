@@ -330,6 +330,19 @@ export default function AdminPage() {
       if (authLoading || !user) return;
 
       try {
+        // Admin kontrolü
+        const { data: adminCheck } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+
+        if (!adminCheck?.is_admin) {
+          alert('Bu sayfaya erişim yetkiniz yok!');
+          navigate('/');
+          return;
+        }
+
         await Promise.all([
           fetchUsers(),
           fetchStats(),
@@ -339,6 +352,7 @@ export default function AdminPage() {
         ]);
       } catch (error) {
         console.error('Veriler yüklenirken hata:', error);
+        alert('Bir hata oluştu. Lütfen tekrar deneyin.');
       } finally {
         setLoading(false);
       }
@@ -815,35 +829,56 @@ export default function AdminPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editingUser) return;
+    if (!editingUser || !user) {
+      toast.error('Kullanıcı bilgisi bulunamadı');
+      return;
+    }
 
     try {
+      // Admin kontrolü
+      const { data: adminCheck, error: adminError } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+
+      if (adminError) {
+        throw new Error('Admin kontrolü yapılırken bir hata oluştu');
+      }
+
+      if (!adminCheck?.is_admin) {
+        throw new Error('Admin yetkisine sahip değilsiniz');
+      }
+
+      // Güncelleme işlemi
       const { data, error } = await supabase
         .from('profiles')
         .update({
           full_name: editFormData.full_name,
           points: editFormData.points,
-          experience: editFormData.experience
+          experience: editFormData.experience,
+          updated_at: new Date().toISOString()
         })
         .eq('id', editingUser.id)
-        .select();
+        .select()
+        .single();
 
       if (error) {
-        console.error('Error updating user:', error);
-        alert('Kullanıcı güncellenirken bir hata oluştu: ' + error.message);
-        return;
+        console.error('Update error:', error);
+        throw new Error(error.message);
       }
 
-      if (data) {
-        console.log('User updated successfully:', data);
-        alert('Kullanıcı başarıyla güncellendi!');
+      if (!data) {
+        throw new Error('Güncelleme başarılı ancak veri dönmedi');
       }
 
+      toast.success('Kullanıcı başarıyla güncellendi!');
       setEditingUser(null);
-      fetchUsers();
+      fetchUsers(); // Kullanıcı listesini yenile
+
     } catch (error) {
       console.error('Error in handleSaveEdit:', error);
-      alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+      toast.error(error instanceof Error ? error.message : 'Güncelleme sırasında bir hata oluştu');
     }
   };
 
