@@ -53,9 +53,29 @@ const AdvancedMissingPieceGame = () => {
   const generatePattern = () => {
     const settings = difficultySettings[difficulty];
     const patternType = settings.patterns[Math.floor(Math.random() * settings.patterns.length)];
-    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FF8B94', '#845EC2', '#D65DB1', '#FF9671'];
-    const backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-    const foregroundColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    // Daha canlı ve kontrast renkler
+    const vibrantColors = [
+      '#FF0000', // Kırmızı
+      '#00FF00', // Yeşil
+      '#0000FF', // Mavi
+      '#FF00FF', // Magenta
+      '#FFFF00', // Sarı
+      '#00FFFF', // Cyan
+      '#FF8800', // Turuncu
+      '#FF0088', // Pembe
+      '#8800FF', // Mor
+      '#00FF88', // Turkuaz
+    ];
+
+    // Kontrast renk seçimi
+    const getContrastColor = (baseColor: string) => {
+      const colors = vibrantColors.filter(c => c !== baseColor);
+      return colors[Math.floor(Math.random() * colors.length)];
+    };
+
+    const backgroundColor = vibrantColors[Math.floor(Math.random() * vibrantColors.length)];
+    const foregroundColor = getContrastColor(backgroundColor);
     
     const basePattern = {
       type: patternType,
@@ -63,31 +83,35 @@ const AdvancedMissingPieceGame = () => {
       foregroundColor,
       size: 20 + Math.random() * 30,
       rotation: Math.random() * 360,
-      opacity: 0.8 + Math.random() * 0.2,
+      opacity: 0.9 + Math.random() * 0.1, // Daha yüksek opaklık
       id: `pattern-${Math.random().toString(36).substr(2, 9)}`
     };
 
     const getPatternDefs = (pattern) => {
+      const strokeWidth = pattern.size / 6; // Daha kalın çizgiler
+      
       switch (pattern.type) {
         case 'dots':
           return `
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
-              <circle cx="${pattern.size/2}" cy="${pattern.size/2}" r="${pattern.size/4}" fill="${pattern.foregroundColor}"/>
+              <circle cx="${pattern.size/2}" cy="${pattern.size/2}" r="${pattern.size/3}" 
+                      fill="${pattern.foregroundColor}" stroke="none"/>
             </pattern>
           `;
         case 'stripes':
           return `
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
-              <rect width="${pattern.size}" height="${pattern.size/4}" fill="${pattern.foregroundColor}"/>
+              <rect width="${pattern.size}" height="${pattern.size/3}" fill="${pattern.foregroundColor}"/>
             </pattern>
           `;
         case 'zigzag':
           return `
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
-              <path d="M0 0 L${pattern.size/2} ${pattern.size} L${pattern.size} 0" stroke="${pattern.foregroundColor}" fill="none" stroke-width="${pattern.size/4}"/>
+              <path d="M0 0 L${pattern.size/2} ${pattern.size} L${pattern.size} 0" 
+                    stroke="${pattern.foregroundColor}" fill="none" stroke-width="${strokeWidth}"/>
             </pattern>
           `;
         case 'waves':
@@ -95,7 +119,7 @@ const AdvancedMissingPieceGame = () => {
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
               <path d="M0 ${pattern.size/2} Q${pattern.size/4} 0 ${pattern.size/2} ${pattern.size/2} T${pattern.size} ${pattern.size/2}" 
-                    stroke="${pattern.foregroundColor}" fill="none" stroke-width="${pattern.size/4}"/>
+                    stroke="${pattern.foregroundColor}" fill="none" stroke-width="${strokeWidth}"/>
             </pattern>
           `;
         case 'checkerboard':
@@ -103,7 +127,8 @@ const AdvancedMissingPieceGame = () => {
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
               <rect width="${pattern.size/2}" height="${pattern.size/2}" fill="${pattern.foregroundColor}"/>
-              <rect x="${pattern.size/2}" y="${pattern.size/2}" width="${pattern.size/2}" height="${pattern.size/2}" fill="${pattern.foregroundColor}"/>
+              <rect x="${pattern.size/2}" y="${pattern.size/2}" width="${pattern.size/2}" height="${pattern.size/2}" 
+                    fill="${pattern.foregroundColor}"/>
             </pattern>
           `;
         case 'crosshatch':
@@ -111,7 +136,7 @@ const AdvancedMissingPieceGame = () => {
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
               <path d="M0 0 L${pattern.size} ${pattern.size} M0 ${pattern.size} L${pattern.size} 0" 
-                    stroke="${pattern.foregroundColor}" stroke-width="${pattern.size/8}"/>
+                    stroke="${pattern.foregroundColor}" stroke-width="${strokeWidth}"/>
             </pattern>
           `;
         case 'honeycomb':
@@ -120,14 +145,15 @@ const AdvancedMissingPieceGame = () => {
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size*3}" height="${pattern.size*1.732}">
               <rect width="${pattern.size*3}" height="${pattern.size*1.732}" fill="${pattern.backgroundColor}"/>
               <path d="M${s},0 l${s},${s*0.866} l0,${s*1.732} l-${s},${s*0.866} l-${s},-${s*0.866} l0,-${s*1.732} z" 
-                    fill="none" stroke="${pattern.foregroundColor}" stroke-width="${pattern.size/8}"/>
+                    fill="none" stroke="${pattern.foregroundColor}" stroke-width="${strokeWidth}"/>
             </pattern>
           `;
         case 'triangles':
           return `
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
-              <path d="M0 0 L${pattern.size} 0 L${pattern.size/2} ${pattern.size}" fill="${pattern.foregroundColor}"/>
+              <path d="M0 0 L${pattern.size} 0 L${pattern.size/2} ${pattern.size}" 
+                    fill="${pattern.foregroundColor}" stroke="${pattern.backgroundColor}" stroke-width="1"/>
             </pattern>
           `;
         case 'circles':
@@ -135,7 +161,7 @@ const AdvancedMissingPieceGame = () => {
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
               <circle cx="${pattern.size/2}" cy="${pattern.size/2}" r="${pattern.size/3}" 
-                      stroke="${pattern.foregroundColor}" fill="none" stroke-width="${pattern.size/8}"/>
+                      stroke="${pattern.foregroundColor}" fill="none" stroke-width="${strokeWidth}"/>
             </pattern>
           `;
         case 'diamonds':
@@ -143,7 +169,7 @@ const AdvancedMissingPieceGame = () => {
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
               <path d="M${pattern.size/2} 0 L${pattern.size} ${pattern.size/2} L${pattern.size/2} ${pattern.size} L0 ${pattern.size/2} Z" 
-                    fill="${pattern.foregroundColor}"/>
+                    fill="${pattern.foregroundColor}" stroke="${pattern.backgroundColor}" stroke-width="1"/>
             </pattern>
           `;
         case 'stars':
@@ -161,7 +187,8 @@ const AdvancedMissingPieceGame = () => {
           return `
             <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
               <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
-              <path d="${starPath}Z" fill="${pattern.foregroundColor}"/>
+              <path d="${starPath}Z" fill="${pattern.foregroundColor}" 
+                    stroke="${pattern.backgroundColor}" stroke-width="1"/>
             </pattern>
           `;
         default:
