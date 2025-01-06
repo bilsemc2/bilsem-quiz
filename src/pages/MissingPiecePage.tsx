@@ -22,6 +22,7 @@ const AdvancedMissingPieceGame = () => {
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
 
   const svgSize = 300;
   const pieceSize = 60;
@@ -29,19 +30,19 @@ const AdvancedMissingPieceGame = () => {
   // Zorluk seviyesine göre ayarlar
   const difficultySettings = {
     easy: {
-      shapes: ['circle', 'rect'],
+      patterns: ['dots', 'stripes', 'zigzag', 'waves', 'checkerboard'],
       timeLimit: 30,
       numShapes: 10,
       numOptions: 4
     },
     medium: {
-      shapes: ['circle', 'rect', 'polygon', 'path'],
+      patterns: ['dots', 'stripes', 'zigzag', 'waves', 'checkerboard', 'crosshatch', 'honeycomb', 'triangles'],
       timeLimit: 25,
       numShapes: 15,
       numOptions: 6
     },
     hard: {
-      shapes: ['circle', 'rect', 'polygon', 'path', 'ellipse'],
+      patterns: ['dots', 'stripes', 'zigzag', 'waves', 'checkerboard', 'crosshatch', 'honeycomb', 'triangles', 'circles', 'diamonds', 'stars'],
       timeLimit: 20,
       numShapes: 20,
       numOptions: 8
@@ -49,51 +50,172 @@ const AdvancedMissingPieceGame = () => {
   };
 
   // Karmaşık şekil oluşturma
-  const generateShape = () => {
+  const generatePattern = () => {
     const settings = difficultySettings[difficulty];
-    const shapeType = settings.shapes[Math.floor(Math.random() * settings.shapes.length)];
+    const patternType = settings.patterns[Math.floor(Math.random() * settings.patterns.length)];
     const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FF8B94', '#845EC2', '#D65DB1', '#FF9671'];
+    const backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    const foregroundColor = colors[Math.floor(Math.random() * colors.length)];
     
-    const baseShape = {
-      type: shapeType,
-      x: Math.random() * svgSize * 0.8 + svgSize * 0.1, // Merkeze daha yakın
-      y: Math.random() * svgSize * 0.8 + svgSize * 0.1, // Merkeze daha yakın
-      size: 30 + Math.random() * 50, // Daha büyük boyutlar
-      color: colors[Math.floor(Math.random() * colors.length)],
+    const basePattern = {
+      type: patternType,
+      backgroundColor,
+      foregroundColor,
+      size: 20 + Math.random() * 30,
       rotation: Math.random() * 360,
-      opacity: 0.8 + Math.random() * 0.2 // Daha opak
+      opacity: 0.8 + Math.random() * 0.2,
+      id: `pattern-${Math.random().toString(36).substr(2, 9)}`
     };
 
-    // Ekstra özellikler ekle
-    switch (shapeType) {
-      case 'polygon':
-        return {
-          ...baseShape,
-          points: Array(4 + Math.floor(Math.random() * 4)) // Daha fazla köşe
-            .fill()
-            .map(() => ({
-              x: baseShape.x + (Math.random() - 0.5) * baseShape.size * 1.2,
-              y: baseShape.y + (Math.random() - 0.5) * baseShape.size * 1.2
-            }))
-        };
-      case 'path':
-        const curveSize = baseShape.size * 1.5; // Daha büyük eğriler
-        return {
-          ...baseShape,
-          d: `M ${baseShape.x} ${baseShape.y} 
-              q ${Math.random() * curveSize - curveSize/2} ${Math.random() * curveSize - curveSize/2} 
-                ${Math.random() * curveSize - curveSize/2} ${Math.random() * curveSize - curveSize/2}
-              t ${Math.random() * curveSize - curveSize/2} ${Math.random() * curveSize - curveSize/2}`
-        };
-      default:
-        return baseShape;
-    }
+    const getPatternDefs = (pattern) => {
+      switch (pattern.type) {
+        case 'dots':
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <circle cx="${pattern.size/2}" cy="${pattern.size/2}" r="${pattern.size/4}" fill="${pattern.foregroundColor}"/>
+            </pattern>
+          `;
+        case 'stripes':
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <rect width="${pattern.size}" height="${pattern.size/4}" fill="${pattern.foregroundColor}"/>
+            </pattern>
+          `;
+        case 'zigzag':
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <path d="M0 0 L${pattern.size/2} ${pattern.size} L${pattern.size} 0" stroke="${pattern.foregroundColor}" fill="none" stroke-width="${pattern.size/4}"/>
+            </pattern>
+          `;
+        case 'waves':
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <path d="M0 ${pattern.size/2} Q${pattern.size/4} 0 ${pattern.size/2} ${pattern.size/2} T${pattern.size} ${pattern.size/2}" 
+                    stroke="${pattern.foregroundColor}" fill="none" stroke-width="${pattern.size/4}"/>
+            </pattern>
+          `;
+        case 'checkerboard':
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <rect width="${pattern.size/2}" height="${pattern.size/2}" fill="${pattern.foregroundColor}"/>
+              <rect x="${pattern.size/2}" y="${pattern.size/2}" width="${pattern.size/2}" height="${pattern.size/2}" fill="${pattern.foregroundColor}"/>
+            </pattern>
+          `;
+        case 'crosshatch':
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <path d="M0 0 L${pattern.size} ${pattern.size} M0 ${pattern.size} L${pattern.size} 0" 
+                    stroke="${pattern.foregroundColor}" stroke-width="${pattern.size/8}"/>
+            </pattern>
+          `;
+        case 'honeycomb':
+          const s = pattern.size / 2;
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size*3}" height="${pattern.size*1.732}">
+              <rect width="${pattern.size*3}" height="${pattern.size*1.732}" fill="${pattern.backgroundColor}"/>
+              <path d="M${s},0 l${s},${s*0.866} l0,${s*1.732} l-${s},${s*0.866} l-${s},-${s*0.866} l0,-${s*1.732} z" 
+                    fill="none" stroke="${pattern.foregroundColor}" stroke-width="${pattern.size/8}"/>
+            </pattern>
+          `;
+        case 'triangles':
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <path d="M0 0 L${pattern.size} 0 L${pattern.size/2} ${pattern.size}" fill="${pattern.foregroundColor}"/>
+            </pattern>
+          `;
+        case 'circles':
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <circle cx="${pattern.size/2}" cy="${pattern.size/2}" r="${pattern.size/3}" 
+                      stroke="${pattern.foregroundColor}" fill="none" stroke-width="${pattern.size/8}"/>
+            </pattern>
+          `;
+        case 'diamonds':
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <path d="M${pattern.size/2} 0 L${pattern.size} ${pattern.size/2} L${pattern.size/2} ${pattern.size} L0 ${pattern.size/2} Z" 
+                    fill="${pattern.foregroundColor}"/>
+            </pattern>
+          `;
+        case 'stars':
+          const points = 5;
+          const outerRadius = pattern.size / 3;
+          const innerRadius = outerRadius * 0.4;
+          let starPath = '';
+          for (let i = 0; i < points * 2; i++) {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const angle = (i * Math.PI) / points;
+            const x = pattern.size/2 + Math.cos(angle) * radius;
+            const y = pattern.size/2 + Math.sin(angle) * radius;
+            starPath += (i === 0 ? 'M' : 'L') + `${x},${y}`;
+          }
+          return `
+            <pattern id="${pattern.id}" patternUnits="userSpaceOnUse" width="${pattern.size}" height="${pattern.size}">
+              <rect width="${pattern.size}" height="${pattern.size}" fill="${pattern.backgroundColor}"/>
+              <path d="${starPath}Z" fill="${pattern.foregroundColor}"/>
+            </pattern>
+          `;
+        default:
+          return '';
+      }
+    };
+
+    return {
+      ...basePattern,
+      defs: getPatternDefs(basePattern)
+    };
+  };
+
+  const renderPattern = (pattern, key = '') => {
+    return (
+      <g key={key}>
+        <defs dangerouslySetInnerHTML={{ __html: pattern.defs }} />
+        <rect
+          x="0"
+          y="0"
+          width={svgSize}
+          height={svgSize}
+          fill={`url(#${pattern.id})`}
+          opacity={pattern.opacity}
+          transform={`rotate(${pattern.rotation} ${svgSize/2} ${svgSize/2})`}
+        />
+      </g>
+    );
   };
 
   // Desen oluştur
-  const generatePattern = () => {
+  const generatePatternList = () => {
     const settings = difficultySettings[difficulty];
-    return Array(settings.numShapes).fill().map(() => generateShape());
+    return Array(settings.numShapes).fill().map(() => generatePattern());
+  };
+
+  // Ses efektleri
+  const sounds = {
+    correct: new Audio('/sounds/correct.mp3'),
+    incorrect: new Audio('/sounds/wrong.mp3'),
+    tick: new Audio('/sounds/tick.mp3'),
+    timeWarning: new Audio('/sounds/time-warning.mp3'),
+    timeout: new Audio('/sounds/timeout.mp3'),
+    complete: new Audio('/sounds/complete.mp3'),
+    next: new Audio('/sounds/next.mp3')
+  };
+
+  // Ses çalma fonksiyonu
+  const playSound = (soundName: keyof typeof sounds) => {
+    if (isSoundEnabled) {
+      const sound = sounds[soundName];
+      sound.currentTime = 0;
+      sound.play().catch(error => console.log('Ses çalma hatası:', error));
+    }
   };
 
   // Zamanlayıcı
@@ -105,6 +227,12 @@ const AdvancedMissingPieceGame = () => {
           if (prev <= 6) setShowTimeWarning(true);
           return prev - 1;
         });
+        
+        // 10 saniye kala uyarı
+        if (timeLeft === 10) {
+          setShowTimeWarning(true);
+          playSound('timeWarning');
+        }
       }, 1000);
     } else if (timeLeft === 0) {
       endGame();
@@ -119,6 +247,7 @@ const AdvancedMissingPieceGame = () => {
     if (score > highScore) {
       setHighScore(score);
     }
+    playSound('timeout');
   };
 
   // Profil bilgilerini yükle
@@ -148,82 +277,11 @@ const AdvancedMissingPieceGame = () => {
     setTimeout(() => setShowNotification(false), 3000);
   };
 
-  // Şekil çizme
-  const renderShape = (shape, index) => {
-    const key = `shape-${index}-${shape.type}-${shape.x}-${shape.y}`;
-    
-    switch (shape.type) {
-      case 'circle':
-        return (
-          <circle
-            key={key}
-            cx={shape.x}
-            cy={shape.y}
-            r={shape.size / 2}
-            fill={shape.color}
-            opacity={shape.opacity}
-            transform={`rotate(${shape.rotation} ${shape.x} ${shape.y})`}
-          />
-        );
-      case 'rectangle':
-        return (
-          <rect
-            key={key}
-            x={shape.x - shape.size / 2}
-            y={shape.y - shape.size / 2}
-            width={shape.size}
-            height={shape.size}
-            fill={shape.color}
-            opacity={shape.opacity}
-            transform={`rotate(${shape.rotation} ${shape.x} ${shape.y})`}
-          />
-        );
-      case 'polygon':
-        return (
-          <polygon
-            key={key}
-            points={shape.points
-              .map(point => `${point.x},${point.y}`)
-              .join(' ')}
-            fill={shape.color}
-            opacity={shape.opacity}
-            transform={`rotate(${shape.rotation} ${shape.x} ${shape.y})`}
-          />
-        );
-      case 'path':
-        return (
-          <path
-            key={key}
-            d={shape.d}
-            fill="none"
-            stroke={shape.color}
-            strokeWidth="3"
-            opacity={shape.opacity}
-            transform={`rotate(${shape.rotation} ${shape.x} ${shape.y})`}
-          />
-        );
-      case 'ellipse':
-        return (
-          <ellipse
-            key={key}
-            cx={shape.x}
-            cy={shape.y}
-            rx={shape.size / 2}
-            ry={shape.size / 3}
-            fill={shape.color}
-            opacity={shape.opacity}
-            transform={`rotate(${shape.rotation} ${shape.x} ${shape.y})`}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
   // Yeni oyun başlat
   const startNewGame = () => {
+    playSound('next');
     const settings = difficultySettings[difficulty];
-    const newPattern = generatePattern();
+    const newPattern = generatePatternList();
     setGamePattern(newPattern);
     
     const x = Math.floor(Math.random() * (svgSize - pieceSize));
@@ -233,20 +291,17 @@ const AdvancedMissingPieceGame = () => {
     
     // Yanlış seçenekler için doğru desene benzer ama farklı desenler oluştur
     const createSimilarPattern = (originalPattern, variationLevel) => {
-      return originalPattern.map(shape => {
+      return originalPattern.map(pattern => {
         const variation = variationLevel * (Math.random() * 0.4 + 0.8); // 0.8-1.2 arası rastgele çarpan
         return {
-          ...shape,
+          ...pattern,
           // Pozisyonu biraz değiştir
-          x: shape.x + (Math.random() - 0.5) * 20 * variation,
-          y: shape.y + (Math.random() - 0.5) * 20 * variation,
-          // Boyutu biraz değiştir
-          size: shape.size * (0.9 + Math.random() * 0.2 * variation),
+          size: pattern.size * (0.9 + Math.random() * 0.2 * variation),
           // Rotasyonu biraz değiştir
-          rotation: shape.rotation + (Math.random() - 0.5) * 45 * variation,
+          rotation: pattern.rotation + (Math.random() - 0.5) * 45 * variation,
           // Rengi benzer tonda değiştir
-          color: adjustColor(shape.color, variation * 20),
-          opacity: shape.opacity * (0.9 + Math.random() * 0.2)
+          foregroundColor: adjustColor(pattern.foregroundColor, variation * 20),
+          opacity: pattern.opacity * (0.9 + Math.random() * 0.2)
         };
       });
     };
@@ -349,6 +404,7 @@ const AdvancedMissingPieceGame = () => {
     } else {
       setStreak(0);
     }
+    playSound(option.isCorrect ? 'correct' : 'incorrect');
   };
 
   return (
@@ -430,7 +486,7 @@ const AdvancedMissingPieceGame = () => {
           {/* Ana oyun alanı */}
           <div className="relative bg-white rounded-lg shadow-lg p-4">
             <svg width={svgSize} height={svgSize} className="border rounded">
-              {gamePattern?.map((shape, i) => renderShape(shape, i))}
+              {gamePattern?.map((pattern, i) => renderPattern(pattern, i))}
               
               <rect
                 x={missingPiece.x}
@@ -447,29 +503,33 @@ const AdvancedMissingPieceGame = () => {
           </div>
 
           {/* Seçenekler */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-4 gap-2 mt-4">
             {options.map((option, index) => (
               <div
-                key={index}
-                className={`relative cursor-pointer transform transition-all hover:scale-105 ${
-                  showResult
-                    ? option.isCorrect
-                      ? 'ring-4 ring-green-500 animate-bounce'
-                      : selectedOption === index
-                      ? 'ring-4 ring-red-500 animate-shake'
-                      : ''
-                    : 'hover:shadow-lg'
+                key={`option-${index}`}
+                className={`relative cursor-pointer transform transition-all duration-200 hover:scale-105 ${
+                  selectedOption === index ? 'ring-2 ring-blue-500 scale-105' : ''
                 }`}
-                onClick={() => !showResult && handleSelection(option, index)}
+                style={{ width: '80px', height: '80px' }}
+                onClick={() => handleSelection(option, index)}
               >
                 <svg
-                  width={pieceSize}
-                  height={pieceSize}
-                  className="border rounded bg-white w-full h-full"
+                  className="border rounded bg-white w-full h-full shadow-sm hover:shadow-md transition-shadow"
                   viewBox={`${option.x} ${option.y} ${pieceSize} ${pieceSize}`}
                 >
-                  {option.pattern?.map((shape, i) => renderShape(shape, i))}
+                  {option.pattern?.map((pattern, i) => renderPattern(pattern, i))}
                 </svg>
+                <div 
+                  className={`absolute inset-0 border-2 rounded ${
+                    showResult
+                      ? option.isCorrect
+                        ? 'border-green-500 bg-green-100 bg-opacity-20'
+                        : selectedOption === index
+                        ? 'border-red-500 bg-red-100 bg-opacity-20'
+                        : ''
+                      : 'border-gray-200'
+                  }`}
+                />
               </div>
             ))}
           </div>
@@ -503,6 +563,22 @@ const AdvancedMissingPieceGame = () => {
           {notificationMessage}
         </div>
       )}
+      {/* Ses kontrolü */}
+      <button
+        onClick={() => setIsSoundEnabled(!isSoundEnabled)}
+        className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100"
+      >
+        {isSoundEnabled ? (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M12 18.012l-7-4.2V10.2l7-4.2v12.012z" />
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+          </svg>
+        )}
+      </button>
     </RequireAuth>
   );
 };
