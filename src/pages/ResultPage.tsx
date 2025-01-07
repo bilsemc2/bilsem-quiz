@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Typography, Tooltip, Button } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SchoolIcon from '@mui/icons-material/School';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
+import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import { useAuth } from '../contexts/AuthContext';
 
 interface QuestionResult {
@@ -36,22 +37,41 @@ interface QuizResult {
     quizId?: string;
 }
 
-export const ResultPage: React.FC = () => {
+export default function ResultPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const result = location.state?.state || location.state as QuizResult;
+    
+    // State'i doğrudan location.state'den al
+    const result = location.state;
 
-    console.log('ResultPage received state:', location.state);
+    console.log('ResultPage state:', location.state);
 
-    if (!result) {
-        console.log('No result state found, redirecting to home');
-        navigate('/');
-        return null;
-    }
+    useEffect(() => {
+        if (!result || !result.correctAnswers) {
+            console.log('Invalid result state:', result);
+            navigate('/', { replace: true });
+            return;
+        }
+    }, [result, navigate]);
+
+    if (!result || !result.correctAnswers) return null;
 
     const percentage = (result.correctAnswers / result.totalQuestions) * 100;
     const wrongAnswers = result.totalQuestions - result.correctAnswers;
+    const canPlayBallGame = result.correctAnswers >= 1;
+
+    // Oyun butonuna tıklama işleyicisi
+    const handlePlayGame = () => {
+        if (canPlayBallGame) {
+            navigate('/ball-game', { 
+                state: { 
+                    fromResult: true,
+                    previousState: result // Mevcut state'i BallGame'e gönder
+                } 
+            });
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
@@ -86,6 +106,37 @@ export const ResultPage: React.FC = () => {
                             <h3 className="text-lg font-semibold text-purple-900 mb-2">Kazanılan XP</h3>
                             <div className="text-3xl font-bold text-purple-600">{result.xp}</div>
                         </div>
+                    </div>
+
+                    {/* BallGame Butonu */}
+                    <div className="mb-12 text-center">
+                        <Tooltip title={
+                            canPlayBallGame 
+                                ? "Top oyununu oynamaya hazırsın!" 
+                                : "Top oyununu oynamak için en az 10 doğru cevap gerekiyor"
+                        } arrow>
+                            <span>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    startIcon={<SportsEsportsIcon />}
+                                    onClick={handlePlayGame}
+                                    disabled={!canPlayBallGame}
+                                    className={`px-6 py-3 rounded-full transform transition-all duration-300 ${
+                                        canPlayBallGame 
+                                            ? 'hover:scale-105 bg-gradient-to-r from-primary-500 to-primary-600' 
+                                            : 'opacity-50 cursor-not-allowed'
+                                    }`}
+                                >
+                                    {canPlayBallGame ? 'Top Oyununu Oyna!' : 'Top Oyunu Kilitli'}
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        {!canPlayBallGame && (
+                            <p className="mt-2 text-sm text-gray-500">
+                                {1 - result.correctAnswers} doğru cevap verirsen top oyununu oynayabilirsin!
+                            </p>
+                        )}
                     </div>
 
                     {/* Soru Detayları */}
@@ -267,6 +318,4 @@ export const ResultPage: React.FC = () => {
             </div>
         </div>
     );
-};
-
-export default ResultPage;
+}

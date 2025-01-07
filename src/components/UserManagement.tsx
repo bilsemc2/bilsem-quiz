@@ -30,6 +30,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 interface User {
   id: string;
@@ -278,48 +279,86 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
     if (!editingUser) return;
 
     try {
-      // Kullanıcı bilgilerini güncelle
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          name: editFormData.name,
-          email: editFormData.email,
-          points: editFormData.points,
-          experience: editFormData.experience,
-          grade: editFormData.grade,
-          referred_by: editFormData.referred_by,
-        })
-        .eq('id', editingUser.id);
+      // Sayısal değerleri kontrol et
+      const points = Number(editFormData.points);
+      const experience = Number(editFormData.experience);
+      const grade = Number(editFormData.grade);
 
-      if (updateError) throw updateError;
-
-      // Mevcut sınıf ilişkilerini sil
-      const { error: deleteError } = await supabase
-        .from('class_students')
-        .delete()
-        .eq('student_id', editingUser.id);
-
-      if (deleteError) throw deleteError;
-
-      // Yeni sınıf ilişkilerini ekle
-      if (selectedClasses.length > 0) {
-        const { error: insertError } = await supabase
-          .from('class_students')
-          .insert(
-            selectedClasses.map((classId) => ({
-              student_id: editingUser.id,
-              class_id: classId,
-            }))
-          );
-
-        if (insertError) throw insertError;
+      if (isNaN(points) || isNaN(experience) || isNaN(grade)) {
+        throw new Error('Puanlar ve deneyim sayısal değer olmalıdır');
       }
 
+      if (points < 0 || experience < 0) {
+        throw new Error('Puanlar ve deneyim negatif olamaz');
+      }
+
+      // Güncellenecek veriyi hazırla
+      const updateData: any = {
+        name: editFormData.name,
+        email: editFormData.email,
+        points: points,
+        experience: experience,
+        grade: grade,
+      };
+
+      // Eğer referred_by değeri varsa ve geçerli bir değerse ekle
+      if (editFormData.referred_by && editFormData.referred_by.trim() !== '') {
+        // Referans kodunu doğrudan kullan çünkü referred_by text tipinde
+        const { data: referredUser, error: referredError } = await supabase
+          .from('profiles')
+          .select('referral_code')
+          .eq('referral_code', editFormData.referred_by)
+          .single();
+
+        if (referredError) {
+          console.error('Referans kontrol hatası:', referredError);
+          throw new Error('Geçersiz referans kodu');
+        }
+
+        if (referredUser) {
+          // Referans kodunu doğrudan kaydet
+          updateData.referred_by = editFormData.referred_by;
+        }
+      } else {
+        // Boş referred_by değerini null olarak ayarla
+        updateData.referred_by = null;
+      }
+
+      // Debug log ekle
+      console.log('Güncellenecek veriler:', {
+        id: editingUser.id,
+        ...updateData
+      });
+
+      // Profil bilgilerini güncelle
+      const { data, error: updateError } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', editingUser.id)
+        .select();
+
+      if (updateError) {
+        console.error('Güncelleme hatası:', updateError);
+        throw updateError;
+      }
+
+      console.log('Güncelleme başarılı:', data);
+
+      // UI'ı güncelle
+      setUsers(users.map(user =>
+        user.id === editingUser.id
+          ? {
+              ...user,
+              ...updateData
+            }
+          : user
+      ));
+
       setEditDialogOpen(false);
-      fetchUsers();
-      if (onUserUpdate) onUserUpdate();
+      toast.success('Kullanıcı başarıyla güncellendi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kullanıcı güncellenirken bir hata oluştu');
+      console.error('Hata:', err);
+      toast.error(err instanceof Error ? err.message : 'Kullanıcı güncellenirken hata oluştu');
     }
   };
 
