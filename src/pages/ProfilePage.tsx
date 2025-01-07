@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import UserMessages from '@/components/UserMessages';
 import { Badge } from '@mui/material';
 import MailIcon from '@mui/icons-material/Mail';
+import { useNavigate } from 'react-router-dom';
 
 interface QuizStats {
     totalQuizzes: number;
@@ -40,6 +41,7 @@ interface DailyStats {
 export const ProfilePage: React.FC = () => {
     const { volume, setVolume, isMuted, setIsMuted } = useSound();
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
     const [userData, setUserData] = useState<UserProfile>({
         name: "",
@@ -309,6 +311,33 @@ export const ProfilePage: React.FC = () => {
         }
     };
 
+    const handleClassroomEntry = async () => {
+        try {
+            // Kullanıcının sınıf kaydını kontrol et
+            const { data: classData, error: classError } = await supabase
+                .from('class_students')
+                .select(`
+                    class:classes (
+                        id,
+                        grade
+                    )
+                `)
+                .eq('student_id', user?.id)
+                .single();
+
+            if (classError || !classData?.class) {
+                toast.error('Sınıf bilginiz bulunamadı. Lütfen profilinizi güncelleyin.');
+                return;
+            }
+
+            // Sınıf sayfasına yönlendir
+            navigate(`/classroom/${classData.class.grade}`);
+        } catch (error) {
+            console.error('Sınıf bilgisi alınırken hata:', error);
+            toast.error('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -352,6 +381,18 @@ export const ProfilePage: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div className="mb-8 flex justify-center">
+                    <button
+                        onClick={handleClassroomEntry}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center space-x-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span>Sınıfa Gir</span>
+                    </button>
                 </div>
 
                 {/* Points and XP */}

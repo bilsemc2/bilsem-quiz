@@ -35,6 +35,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import MemoryGamePage from './pages/MemoryGamePage';
 import MemoryGamePage2 from './pages/MemoryGamePage2';
 import FoldingGamesPage from './pages/FoldingGamesPage';
+import ClassroomPage from './pages/ClassroomPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -249,6 +250,14 @@ function App() {
                       <FoldingGamesPage />
                     </RequireAuth>
                   } 
+                />
+                <Route
+                  path="/classroom/:grade"
+                  element={
+                    <RequireAuth>
+                      <ClassroomPage />
+                    </RequireAuth>
+                  }
                 />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>

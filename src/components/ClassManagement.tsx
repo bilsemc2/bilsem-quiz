@@ -60,6 +60,7 @@ interface Class {
   grade: number;
   icon: string;
   created_by: string;
+  teacher_id: string;
   student_count?: number;
 }
 
@@ -167,7 +168,9 @@ export const ClassManagement: React.FC = () => {
           .insert([{
             name: className,
             grade: classGrade,
-            icon: classIcon
+            icon: classIcon,
+            created_by: user?.id,
+            teacher_id: user?.id
           }]);
 
         if (error) throw error;
@@ -219,15 +222,25 @@ export const ClassManagement: React.FC = () => {
       // Mevcut öğrenci ID'lerini bir diziye dönüştür
       const existingStudentIds = existingStudents?.map(s => s.student_id) || [];
 
-      // Sınıfta olmayan öğrencileri getir
-      const { data: students, error } = await supabase
+      console.log('Mevcut öğrenciler:', existingStudentIds);
+
+      // Tüm öğrencileri getir ve client-side filtrele
+      const { data: allStudents, error } = await supabase
         .from('profiles')
-        .select('id, name, email, grade')
-        .not('id', 'in', existingStudentIds.length > 0 ? `(${existingStudentIds.join(',')})` : '(0)');
+        .select('id, name, email, grade');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Öğrenci getirme hatası:', error);
+        throw error;
+      }
 
-      setAvailableStudents(students || []);
+      // Client-side filtreleme
+      const availableStudents = allStudents?.filter(
+        student => !existingStudentIds.includes(student.id)
+      ) || [];
+
+      console.log('Kullanılabilir öğrenciler:', availableStudents);
+      setAvailableStudents(availableStudents);
       setSelectedClass(selectedClass);
       setOpenStudentDialog(true);
     } catch (err) {
