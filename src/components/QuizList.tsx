@@ -20,12 +20,18 @@ import {
   DialogActions,
   Button,
   TextField,
-  TablePagination
+  TablePagination,
+  Grid,
+  FormGroup,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import SchoolIcon from '@mui/icons-material/School';
 import { supabase } from '../lib/supabase';
+import { toast } from 'react-toastify';
 
 interface Quiz {
   id: string;
@@ -38,10 +44,19 @@ interface Quiz {
   is_active: boolean;
   created_at: string;
   created_by: string;
+  assigned_classes?: string[];
+}
+
+interface Class {
+  id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
 }
 
 export const QuizList: React.FC = () => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -50,6 +65,19 @@ export const QuizList: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewQuestions, setPreviewQuestions] = useState<Array<{
+    number: number;
+    questionImage: string;
+    options: Array<{
+      letter: string;
+      optionImage: string;
+      answerImage: string;
+    }>;
+    correctAnswer: string;
+  }>>([]);
 
   const fetchQuizzes = async () => {
     try {
@@ -70,8 +98,23 @@ export const QuizList: React.FC = () => {
     }
   };
 
+  const fetchClasses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setClasses(data || []);
+    } catch (err) {
+      console.error('Sınıflar yüklenirken hata:', err);
+    }
+  };
+
   useEffect(() => {
     fetchQuizzes();
+    fetchClasses();
   }, []);
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -150,6 +193,111 @@ export const QuizList: React.FC = () => {
     }
   };
 
+  const handleAssignClick = async (quiz: Quiz) => {
+    setSelectedQuiz(quiz);
+    const assignedClasses = await loadQuizAssignments(quiz.id);
+    setSelectedClasses(assignedClasses);
+    setAssignDialogOpen(true);
+  };
+
+  const handleAssignSave = async () => {
+    if (!selectedQuiz) return;
+
+    try {
+      // Kullanıcı bilgisini al
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error('Kullanıcı bilgisi alınamadı:', userError);
+        throw userError;
+      }
+      console.log('Kullanıcı bilgisi:', user);
+
+      // Önce eski atamaları silelim
+      const { error: deleteError } = await supabase
+        .from('quiz_class_assignments')
+        .delete()
+        .eq('quiz_id', selectedQuiz.id);
+
+      if (deleteError) {
+        console.error('Eski atamalar silinemedi:', deleteError);
+        throw deleteError;
+      }
+      console.log('Eski atamalar silindi');
+
+      // Yeni atamaları ekleyelim
+      const assignments = selectedClasses.map(classId => ({
+        quiz_id: selectedQuiz.id,
+        class_id: classId,
+        assigned_by: user.id
+      }));
+      console.log('Eklenecek atamalar:', assignments);
+
+      const { data: insertData, error: insertError } = await supabase
+        .from('quiz_class_assignments')
+        .insert(assignments)
+        .select();
+
+      if (insertError) {
+        console.error('Yeni atamalar eklenemedi:', insertError);
+        throw insertError;
+      }
+      console.log('Yeni atamalar eklendi:', insertData);
+
+      // UI'ı güncelleyelim
+      setQuizzes(quizzes.map(quiz =>
+        quiz.id === selectedQuiz.id
+          ? { ...quiz, assigned_classes: selectedClasses }
+          : quiz
+      ));
+
+      setAssignDialogOpen(false);
+      setSelectedQuiz(null);
+      toast.success('Quiz başarıyla sınıflara atandı');
+    } catch (err) {
+      console.error('Quiz atama hatası:', err);
+      toast.error('Quiz sınıflara atanırken bir hata oluştu');
+    }
+  };
+
+  // Quiz'in atandığı sınıfları yükle
+  const loadQuizAssignments = async (quizId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('quiz_class_assignments')
+        .select('class_id')
+        .eq('quiz_id', quizId);
+
+      if (error) throw error;
+
+      return data.map(assignment => assignment.class_id);
+    } catch (err) {
+      console.error('Sınıf atamaları yüklenirken hata:', err);
+      return [];
+    }
+  };
+
+  const handlePreviewClick = async (quiz: Quiz) => {
+    try {
+      // Quiz'deki her soru için detaylı bilgileri hazırla
+      const questions = quiz.questions.map(q => ({
+        number: q.number,
+        questionImage: `/images/questions/Matris/Soru-${q.number}.webp`,
+        correctAnswer: q.correctAnswer,
+        options: ['A', 'B', 'C', 'D', 'E'].map(letter => ({
+          letter,
+          optionImage: `/images/options/Matris/${q.number}/Soru-${q.number}${letter}.webp`,
+          answerImage: `/images/options/Matris/${q.number}/Soru-cevap-${q.number}${letter}.webp`
+        }))
+      }));
+
+      setPreviewQuestions(questions);
+      setPreviewDialogOpen(true);
+    } catch (error) {
+      console.error('Önizleme hazırlanırken hata:', error);
+      setError('Önizleme hazırlanırken bir hata oluştu');
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -202,6 +350,15 @@ export const QuizList: React.FC = () => {
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                      <Tooltip title="Sınıflara Ata">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleAssignClick(quiz)}
+                        >
+                          <SchoolIcon />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Düzenle">
                         <IconButton
                           size="small"
@@ -214,6 +371,7 @@ export const QuizList: React.FC = () => {
                         <IconButton
                           size="small"
                           color="primary"
+                          onClick={() => handlePreviewClick(quiz)}
                         >
                           <VisibilityIcon />
                         </IconButton>
@@ -275,6 +433,173 @@ export const QuizList: React.FC = () => {
           <Button onClick={() => setEditDialogOpen(false)}>İptal</Button>
           <Button onClick={handleEditSave} variant="contained" color="primary">
             Kaydet
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Sınıf Atama Dialog'u */}
+      <Dialog
+        open={assignDialogOpen}
+        onClose={() => setAssignDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Sınıflara Ata</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            {selectedQuiz && (
+              <Typography variant="subtitle1" gutterBottom>
+                {selectedQuiz.title}
+              </Typography>
+            )}
+            <FormGroup>
+              {classes.map((cls) => (
+                <FormControlLabel
+                  key={cls.id}
+                  control={
+                    <Checkbox
+                      checked={selectedClasses.includes(cls.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedClasses([...selectedClasses, cls.id]);
+                        } else {
+                          setSelectedClasses(selectedClasses.filter(id => id !== cls.id));
+                        }
+                      }}
+                    />
+                  }
+                  label={cls.name}
+                />
+              ))}
+            </FormGroup>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAssignDialogOpen(false)}>İptal</Button>
+          <Button onClick={handleAssignSave} variant="contained" color="primary">
+            Kaydet
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Quiz Önizleme Dialog'u */}
+      <Dialog
+        open={previewDialogOpen}
+        onClose={() => setPreviewDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          Quiz Önizleme
+          {selectedQuiz && (
+            <Typography variant="subtitle1" color="text.secondary">
+              {selectedQuiz.title}
+            </Typography>
+          )}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ py: 2 }}>
+            {previewQuestions.map((question, index) => (
+              <Box key={question.number} sx={{ mb: 4 }}>
+                <Typography variant="h6" gutterBottom>
+                  Soru {index + 1}: #{question.number}
+                </Typography>
+                
+                {/* Soru Görseli */}
+                <Box sx={{ mb: 2 }}>
+                  <img
+                    src={question.questionImage}
+                    alt={`Soru ${question.number}`}
+                    style={{
+                      width: '100%',
+                      maxHeight: '400px',
+                      objectFit: 'contain'
+                    }}
+                    onError={(e) => {
+                      console.error(`Error loading question image: ${question.questionImage}`);
+                    }}
+                  />
+                </Box>
+
+                {/* Seçenekler */}
+                <Typography variant="h6" gutterBottom>
+                  Seçenekler
+                </Typography>
+                <Grid container spacing={2}>
+                  {question.options.map((option) => {
+                    const isCorrect = question.correctAnswer === option.letter;
+                    
+                    return (
+                      <Grid item xs={12} sm={6} key={option.letter}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            p: 1.5,
+                            borderRadius: 1,
+                            border: isCorrect
+                              ? '2px solid #4caf50'
+                              : '1px solid rgba(0, 0, 0, 0.12)',
+                            bgcolor: isCorrect
+                              ? 'rgba(76, 175, 80, 0.08)'
+                              : 'transparent'
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: isCorrect
+                                ? 'success.main'
+                                : 'grey.200',
+                              color: isCorrect
+                                ? 'white'
+                                : 'text.secondary'
+                            }}
+                          >
+                            {option.letter}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <img
+                              src={option.optionImage}
+                              alt={`Seçenek ${option.letter}`}
+                              style={{
+                                width: '50px',
+                                height: '50px',
+                                objectFit: 'contain'
+                              }}
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement;
+                                if (img.src !== option.answerImage) {
+                                  img.src = option.answerImage;
+                                }
+                              }}
+                            />
+                          </Box>
+                          {isCorrect && (
+                            <Chip
+                              label="Doğru Cevap"
+                              color="success"
+                              size="small"
+                            />
+                          )}
+                        </Box>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewDialogOpen(false)}>
+            Kapat
           </Button>
         </DialogActions>
       </Dialog>

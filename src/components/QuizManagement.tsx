@@ -44,19 +44,29 @@ export const QuizManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [quizTitle, setQuizTitle] = useState('');
   const [quizDescription, setQuizDescription] = useState('');
+  const [totalQuestions, setTotalQuestions] = useState(0);
   const questionsPerPage = 12;
 
   // Soruları yükle
   useEffect(() => {
     loadQuestions();
-  }, []);
+  }, [page]);
 
   const loadQuestions = async () => {
     setLoading(true);
     try {
-      // 1'den QUESTIONS_CONFIG.categories.Matris.totalQuestions'e kadar olan soruları yükle
+      // Toplam soru sayısını al (ilk kez yüklendiğinde)
+      if (totalQuestions === 0) {
+        setTotalQuestions(QUESTIONS_CONFIG.categories.Matris.totalQuestions);
+      }
+
+      // Sadece mevcut sayfa için soruları yükle
+      const startIndex = (page - 1) * questionsPerPage + 1;
+      const endIndex = Math.min(page * questionsPerPage, QUESTIONS_CONFIG.categories.Matris.totalQuestions);
+      
       const loadedQuestions: QuestionPreview[] = [];
-      for (let i = 1; i <= QUESTIONS_CONFIG.categories.Matris.totalQuestions; i++) {
+      
+      for (let i = startIndex; i <= endIndex; i++) {
         const questionPreview: QuestionPreview = {
           number: i,
           questionImage: `/images/questions/Matris/Soru-${i}.webp`,
@@ -84,7 +94,7 @@ export const QuizManagement: React.FC = () => {
                   console.log(`[Question ${i}] Image not found:`, src);
                   resolve(false);
                 };
-                img.src = option.answerImage;
+                img.src = src;  
               });
             };
 
@@ -309,7 +319,6 @@ export const QuizManagement: React.FC = () => {
 
       <Grid container spacing={2}>
         {questions
-          .slice((page - 1) * questionsPerPage, page * questionsPerPage)
           .map((question) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={question.number}>
               <Card 
@@ -376,7 +385,7 @@ export const QuizManagement: React.FC = () => {
 
       <Box mt={3} display="flex" justifyContent="center">
         <Pagination
-          count={Math.ceil(questions.length / questionsPerPage)}
+          count={Math.ceil(totalQuestions / questionsPerPage)}
           page={page}
           onChange={(_, value) => setPage(value)}
           color="primary"

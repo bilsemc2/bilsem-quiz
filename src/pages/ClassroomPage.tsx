@@ -13,11 +13,13 @@ interface Announcement {
 }
 
 interface Assignment {
-    id: number;
+    id: string;
     title: string;
-    due_date: string;
     description: string;
+    assigned_at: string;
+    questions: any[];
     status: 'pending' | 'completed';
+    score: number | null;
 }
 
 interface ClassMember {
@@ -58,6 +60,58 @@ const fetchClassMembers = async (classId: number) => {
 
     if (error) throw error;
     return data?.map(item => item.profiles) || [];
+};
+
+const fetchAssignments = async (classId: number, userId: string) => {
+    try {
+        // 1. Sınıfa atanmış quizleri al
+        const { data: assignmentsData, error: assignmentsError } = await supabase
+            .from('quiz_class_assignments')
+            .select(`
+                quiz_id,
+                assigned_at,
+                quiz:quizzes (
+                    id,
+                    title,
+                    description,
+                    questions
+                )
+            `)
+            .eq('class_id', classId)
+            .order('assigned_at', { ascending: true });
+
+        if (assignmentsError) throw assignmentsError;
+
+        if (!assignmentsData?.length) return [];
+
+        // 2. Bu quizler için kullanıcının sonuçlarını al
+        const quizIds = assignmentsData.map(a => a.quiz.id);
+        const { data: resultsData, error: resultsError } = await supabase
+            .from('quiz_results')
+            .select('*')
+            .eq('user_id', userId)
+            .in('quiz_id', quizIds);
+
+        if (resultsError) throw resultsError;
+
+        // 3. Verileri birleştir
+        return assignmentsData.map(assignment => {
+            const result = resultsData?.find(r => r.quiz_id === assignment.quiz.id);
+            
+            return {
+                id: assignment.quiz.id,
+                title: assignment.quiz.title,
+                description: assignment.quiz.description,
+                assigned_at: assignment.assigned_at,
+                questions: assignment.quiz.questions,
+                status: result ? 'completed' : 'pending',
+                score: result?.score || null
+            };
+        });
+    } catch (error) {
+        console.error('Quiz atamaları yüklenirken hata:', error);
+        throw error;
+    }
 };
 
 const checkStudentAccess = async (userId: string, grade: string) => {
@@ -142,7 +196,7 @@ export const ClassroomPage: React.FC = () => {
         if (!hasClassAccess || !grade) return;
 
         setLoading(true);
-        console.log('Sınıf verileri yükleniyor...'); // Debug log
+        console.log('Sınıf verileri yükleniyor...');
 
         const classData = await withErrorHandling(
             () => fetchClassData(grade),
@@ -150,15 +204,28 @@ export const ClassroomPage: React.FC = () => {
         );
 
         if (classData) {
-            console.log('Sınıf bulundu:', classData); // Debug log
+            console.log('Sınıf bulundu:', classData);
+            
+            // Sınıf üyelerini getir
             const members = await withErrorHandling(
                 () => fetchClassMembers(classData.id),
                 'Sınıf üyeleri yüklenirken hata oluştu'
             );
 
             if (members) {
-                console.log('Sınıf üyeleri:', members); // Debug log
+                console.log('Sınıf üyeleri:', members);
                 setClassMembers(members);
+            }
+
+            // Ödevleri getir
+            const assignments = await withErrorHandling(
+                () => fetchAssignments(classData.id, user.id),
+                'Ödevler yüklenirken hata oluştu'
+            );
+
+            if (assignments) {
+                console.log('Ödevler:', assignments);
+                setAssignments(assignments);
             }
         }
 
@@ -240,7 +307,10 @@ export const ClassroomPage: React.FC = () => {
                                                 </span>
                                             </div>
                                             <div className="mt-2 text-sm text-gray-500">
-                                                Teslim Tarihi: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}
+                                                Atanma Tarihi: {new Date(assignment.assigned_at).toLocaleDateString('tr-TR')}
+                                            </div>
+                                            <div className="mt-2 text-sm text-gray-500">
+                                                Puan: {assignment.score}
                                             </div>
                                         </div>
                                     ))}

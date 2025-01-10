@@ -15,15 +15,18 @@ export default defineConfig({
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com;
         img-src 'self' data: blob: https:;
-        frame-ancestors 'self';
-        connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+        connect-src 'self' 
+          https://*.supabase.co 
+          wss://*.supabase.co 
+          https://*.elevenlabs.io 
+          https://evmos-evm.publicnode.com/;
       `.replace(/\s+/g, ' ').trim()
     },
     hmr: {
-      overlay: false // HMR overlay'i devre dışı bırak
+      overlay: false
     },
     watch: {
-      usePolling: false // Polling'i devre dışı bırak
+      usePolling: false
     }
   },
   resolve: {

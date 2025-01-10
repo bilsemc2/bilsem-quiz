@@ -1,0 +1,27 @@
+"use client";
+import "./chunk-C6WWHQR7.js";
+import "./chunk-DPMW6DRX.js";
+import {
+  createSvgIcon
+} from "./chunk-NQJPVQBN.js";
+import "./chunk-RGNGTCU6.js";
+import {
+  require_jsx_runtime
+} from "./chunk-6H6IX42F.js";
+import "./chunk-HQ6ZTAWL.js";
+import "./chunk-ZM6LQ52J.js";
+import "./chunk-2KHBIA62.js";
+import "./chunk-W4EHDCLL.js";
+import {
+  __toESM
+} from "./chunk-EWTE5DHJ.js";
+
+// node_modules/@mui/icons-material/esm/Science.js
+var import_jsx_runtime = __toESM(require_jsx_runtime());
+var Science_default = createSvgIcon((0, import_jsx_runtime.jsx)("path", {
+  d: "M19.8 18.4 14 10.67V6.5l1.35-1.69c.26-.33.03-.81-.39-.81H9.04c-.42 0-.65.48-.39.81L10 6.5v4.17L4.2 18.4c-.49.66-.02 1.6.8 1.6h14c.82 0 1.29-.94.8-1.6"
+}), "Science");
+export {
+  Science_default as default
+};
+//# sourceMappingURL=@mui_icons-material_Science.js.map

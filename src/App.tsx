@@ -45,6 +45,8 @@ import { Toaster } from 'sonner';
 import AdminMessageNotification from './components/AdminMessageNotification';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import toast from 'react-hot-toast';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Hata mesajını gösterecek bileşen
 const LocationAwareRouter: React.FC = () => {
@@ -287,15 +289,18 @@ const LocationAwareRouter: React.FC = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <SoundProvider>
-        <AdminMessageNotification />
-        <Toaster position="top-center" />
-        <Router>
-          <LocationAwareRouter />
-        </Router>
-      </SoundProvider>
-    </AuthProvider>
+    <>
+      <AuthProvider>
+        <SoundProvider>
+          <AdminMessageNotification />
+          <Toaster position="top-center" />
+          <Router>
+            <LocationAwareRouter />
+          </Router>
+        </SoundProvider>
+      </AuthProvider>
+      <ToastContainer position="bottom-right" />
+    </>
   );
 }
 
