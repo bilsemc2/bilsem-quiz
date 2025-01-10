@@ -269,7 +269,7 @@ export default function AdminPage() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [showUserStats, setShowUserStats] = useState(false);
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [assignments, setQuizzes] = useState<Quiz[]>([]);
   const [showQuizForm, setShowQuizForm] = useState(false);
   const [newQuiz, setNewQuiz] = useState<NewQuizForm>({
     title: '',
@@ -596,20 +596,20 @@ export default function AdminPage() {
 
   const fetchQuizzes = async () => {
     try {
-      console.log('Fetching quizzes...');
+      console.log('Fetching assignments...');
       const { data, error } = await supabase
-        .from('quizzes')
+        .from('assignments')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching quizzes:', error);
+        console.error('Error fetching assignments:', error);
         throw error;
       }
-      console.log('Fetched quizzes:', data);
+      console.log('Fetched assignments:', data);
       setQuizzes(data || []);
     } catch (error) {
-      console.error('Error fetching quizzes:', error);
+      console.error('Error fetching assignments:', error);
     }
   };
 
@@ -626,7 +626,7 @@ export default function AdminPage() {
 
     try {
       const { data, error } = await supabase
-        .from('quizzes')
+        .from('assignments')
         .insert([{
           title: newQuiz.title,
           description: newQuiz.description,
@@ -767,7 +767,7 @@ export default function AdminPage() {
   const handleToggleQuizStatus = async (quizId: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase
-        .from('quizzes')
+        .from('assignments')
         .update({ is_active: !currentStatus })
         .eq('id', quizId);
 
@@ -904,7 +904,7 @@ export default function AdminPage() {
 
     try {
       const { data, error } = await supabase
-        .from('quizzes')
+        .from('assignments')
         .update({
           title: editingQuiz.title,
           description: editingQuiz.description,

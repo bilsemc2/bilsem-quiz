@@ -42,6 +42,7 @@ interface Quiz {
     correctAnswer: string;
   }>;
   is_active: boolean;
+  status: 'pending' | 'completed';
   created_at: string;
   created_by: string;
   assigned_classes?: string[];
@@ -83,7 +84,7 @@ export const QuizList: React.FC = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('quizzes')
+        .from('assignments')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -92,7 +93,7 @@ export const QuizList: React.FC = () => {
       setQuizzes(data || []);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Quizler yüklenirken bir hata oluştu');
+      setError(err instanceof Error ? err.message : 'Ödevler yüklenirken bir hata oluştu');
     } finally {
       setLoading(false);
     }
@@ -138,7 +139,7 @@ export const QuizList: React.FC = () => {
 
     try {
       const { error } = await supabase
-        .from('quizzes')
+        .from('assignments')
         .update({
           title: editTitle,
           description: editDescription
@@ -154,32 +155,36 @@ export const QuizList: React.FC = () => {
       ));
       setEditDialogOpen(false);
       setSelectedQuiz(null);
+      toast.success('Ödev başarıyla güncellendi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Quiz güncellenirken bir hata oluştu');
+      setError(err instanceof Error ? err.message : 'Ödev güncellenirken bir hata oluştu');
+      toast.error('Ödev güncellenirken bir hata oluştu');
     }
   };
 
   const handleDeleteQuiz = async (quizId: string) => {
-    if (!window.confirm('Bu quizi silmek istediğinizden emin misiniz?')) return;
+    if (!window.confirm('Bu ödevi silmek istediğinizden emin misiniz?')) return;
 
     try {
       const { error } = await supabase
-        .from('quizzes')
+        .from('assignments')
         .delete()
         .eq('id', quizId);
 
       if (error) throw error;
 
       setQuizzes(quizzes.filter(quiz => quiz.id !== quizId));
+      toast.success('Ödev başarıyla silindi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Quiz silinirken bir hata oluştu');
+      setError(err instanceof Error ? err.message : 'Ödev silinirken bir hata oluştu');
+      toast.error('Ödev silinirken bir hata oluştu');
     }
   };
 
   const handleToggleActive = async (quizId: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase
-        .from('quizzes')
+        .from('assignments')
         .update({ is_active: !currentStatus })
         .eq('id', quizId);
 
@@ -188,8 +193,10 @@ export const QuizList: React.FC = () => {
       setQuizzes(quizzes.map(quiz =>
         quiz.id === quizId ? { ...quiz, is_active: !currentStatus } : quiz
       ));
+      toast.success('Ödev durumu güncellendi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Quiz durumu güncellenirken bir hata oluştu');
+      setError(err instanceof Error ? err.message : 'Ödev durumu güncellenirken bir hata oluştu');
+      toast.error('Ödev durumu güncellenirken bir hata oluştu');
     }
   };
 
@@ -210,7 +217,6 @@ export const QuizList: React.FC = () => {
         console.error('Kullanıcı bilgisi alınamadı:', userError);
         throw userError;
       }
-      console.log('Kullanıcı bilgisi:', user);
 
       // Önce eski atamaları silelim
       const { error: deleteError } = await supabase
@@ -222,26 +228,23 @@ export const QuizList: React.FC = () => {
         console.error('Eski atamalar silinemedi:', deleteError);
         throw deleteError;
       }
-      console.log('Eski atamalar silindi');
 
       // Yeni atamaları ekleyelim
       const assignments = selectedClasses.map(classId => ({
         quiz_id: selectedQuiz.id,
         class_id: classId,
-        assigned_by: user.id
+        assigned_by: user.id,
+        created_at: new Date().toISOString()
       }));
-      console.log('Eklenecek atamalar:', assignments);
 
-      const { data: insertData, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('quiz_class_assignments')
-        .insert(assignments)
-        .select();
+        .insert(assignments);
 
       if (insertError) {
         console.error('Yeni atamalar eklenemedi:', insertError);
         throw insertError;
       }
-      console.log('Yeni atamalar eklendi:', insertData);
 
       // UI'ı güncelleyelim
       setQuizzes(quizzes.map(quiz =>
@@ -252,10 +255,10 @@ export const QuizList: React.FC = () => {
 
       setAssignDialogOpen(false);
       setSelectedQuiz(null);
-      toast.success('Quiz başarıyla sınıflara atandı');
+      toast.success('Ödev başarıyla sınıflara atandı');
     } catch (err) {
-      console.error('Quiz atama hatası:', err);
-      toast.error('Quiz sınıflara atanırken bir hata oluştu');
+      console.error('Ödev atama hatası:', err);
+      toast.error('Ödev sınıflara atanırken bir hata oluştu');
     }
   };
 
@@ -309,7 +312,7 @@ export const QuizList: React.FC = () => {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Quiz Listesi
+        Ödev Listesi
       </Typography>
 
       {error && (
@@ -410,18 +413,18 @@ export const QuizList: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Quiz Düzenle</DialogTitle>
+        <DialogTitle>Ödev Düzenle</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               fullWidth
-              label="Quiz Başlığı"
+              label="Ödev Başlığı"
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
             />
             <TextField
               fullWidth
-              label="Quiz Açıklaması"
+              label="Ödev Açıklaması"
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
               multiline
@@ -490,7 +493,7 @@ export const QuizList: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          Quiz Önizleme
+          Ödev Önizleme
           {selectedQuiz && (
             <Typography variant="subtitle1" color="text.secondary">
               {selectedQuiz.title}
