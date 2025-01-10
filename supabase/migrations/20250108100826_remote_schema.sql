@@ -194,7 +194,7 @@ create table "public"."quizizz_codes" (
 
 alter table "public"."quizizz_codes" enable row level security;
 
-create table "public"."quizzes" (
+create table "public"."assignment" (
     "id" uuid not null default uuid_generate_v4(),
     "title" text not null,
     "description" text,

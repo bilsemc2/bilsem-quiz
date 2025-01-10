@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, Typography, Grid, Button } from '@mui/material';
@@ -25,6 +25,7 @@ interface ClassQuiz extends Quiz {
 const ClassEnvironment: React.FC = () => {
     const { grade } = useParams();
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [classQuizzes, setClassQuizzes] = useState<ClassQuiz[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -97,8 +98,7 @@ const ClassEnvironment: React.FC = () => {
     };
 
     const startQuiz = (quizId: string) => {
-        // Quiz sayfasına yönlendir
-        window.location.href = `/quiz/${quizId}`;
+        navigate(`/quiz/${quizId}`);
     };
 
     if (loading) {

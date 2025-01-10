@@ -37,6 +37,8 @@ import MemoryGamePage2 from './pages/MemoryGamePage2';
 import FoldingGamesPage from './pages/FoldingGamesPage';
 import ClassroomPage from './pages/ClassroomPage';
 import BallGame from './pages/BallGame';
+import AssignmentQuizPage from './pages/AssignmentQuizPage';
+import AssignmentResults from './pages/AssignmentResults';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -83,9 +85,33 @@ const LocationAwareRouter: React.FC = () => {
           <Route 
             path="/quiz" 
             element={
-              <ProtectedRoute>
+              <RequireAuth>
                 <QuizPage />
-              </ProtectedRoute>
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/assignment-quiz/:assignmentId" 
+            element={
+              <RequireAuth>
+                <AssignmentQuizPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/assignments/:assignmentId/quiz" 
+            element={
+              <RequireAuth>
+                <AssignmentQuizPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/assignments/:assignmentId/results" 
+            element={
+              <RequireAuth>
+                <AssignmentResults />
+              </RequireAuth>
             } 
           />
           <Route 
@@ -265,7 +291,7 @@ const LocationAwareRouter: React.FC = () => {
             } 
           />
           <Route
-            path="/classroom/:grade"
+            path="/classroom/:classId"
             element={
               <RequireAuth>
                 <ClassroomPage />

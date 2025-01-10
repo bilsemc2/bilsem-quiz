@@ -30,6 +30,7 @@ interface UserProfile {
     experience: number;
     referral_code?: string;
     referral_count?: number;
+    class_id?: string;
 }
 
 interface DailyStats {
@@ -120,27 +121,48 @@ export const ProfilePage: React.FC = () => {
         setWeeklyStats(statsArray);
     };
 
-    useEffect(() => {
-        const fetchProfile = async () => {
-            if (!user) return;
+    const fetchUserProfile = async () => {
+        if (!user) return;
 
-            const { data, error } = await supabase
+        try {
+            // Profil ve sınıf bilgilerini tek sorguda alalım
+            const { data: profileData, error: profileError } = await supabase
                 .from('profiles')
-                .select('*')
+                .select(`
+                    *,
+                    class_students!left (
+                        class_id,
+                        classes!inner (
+                            id,
+                            name,
+                            grade
+                        )
+                    )
+                `)
                 .eq('id', user.id)
                 .single();
 
-            if (error) {
-                console.error('Error fetching profile:', error);
+            if (profileError) {
+                console.error('Error fetching profile:', profileError);
                 return;
             }
 
-            if (data) {
+            if (profileData) {
                 // Avatar URL'sini kontrol et ve gerekirse güncelle
-                const avatar_url = data.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || '')}`;
+                const avatar_url = profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || '')}`;
                 
-                // Eğer avatar_url değişmişse, veritabanını güncelle
-                if (avatar_url !== data.avatar_url) {
+                // Sınıf bilgisini çıkart
+                const class_id = profileData.class_students?.[0]?.class_id;
+                
+                // State'i tek seferde güncelle
+                setUserData({
+                    ...profileData,
+                    avatar_url,
+                    class_id
+                });
+
+                // Avatar URL güncellenmesi gerekiyorsa güncelle
+                if (avatar_url !== profileData.avatar_url) {
                     const { error: updateError } = await supabase
                         .from('profiles')
                         .update({ avatar_url })
@@ -150,25 +172,24 @@ export const ProfilePage: React.FC = () => {
                         console.error('Error updating avatar_url:', updateError);
                     }
                 }
-
-                setUserData({
-                    ...data,
-                    avatar_url
-                });
             }
-        };
+        } catch (err) {
+            console.error('Exception in fetchUserProfile:', err);
+        }
+    };
 
-        fetchProfile();
+    useEffect(() => {
+        console.log('useEffect triggered with user:', user);
+        if (user) {
+            fetchUserProfile();
+            fetchQuizStats();
+            fetchWeeklyStats();
+        }
     }, [user]);
 
     useEffect(() => {
-        if (user) {
-            fetchQuizStats();
-            fetchWeeklyStats();
-            fetchUserProfile();
-            generateReferralCode();
-        }
-    }, [user]);
+        console.log('Current userData:', userData);
+    }, [userData]);
 
     useEffect(() => {
         const fetchUnreadCount = async () => {
@@ -243,25 +264,6 @@ export const ProfilePage: React.FC = () => {
             }
         } catch (error) {
             console.error('Error:', error);
-        }
-    };
-
-    const fetchUserProfile = async () => {
-        if (!user) return;
-
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-        if (error) {
-            console.error('Error fetching user profile:', error);
-            return;
-        }
-
-        if (data) {
-            setUserData(data);
         }
     };
 
@@ -384,15 +386,19 @@ export const ProfilePage: React.FC = () => {
                 </div>
 
                 <div className="mb-8 flex justify-center">
-                    <button
-                        onClick={handleClassroomEntry}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center space-x-2"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                        <span>Sınıfa Gir</span>
-                    </button>
+                    {userData.class_id ? (
+                        <button
+                            onClick={() => navigate(`/classroom/${userData.class_id}`)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center space-x-2"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            <span>Sınıfıma Git</span>
+                        </button>
+                    ) : (
+                        <p className="text-sm text-gray-500">Henüz bir sınıfa atanmadınız.</p>
+                    )}
                 </div>
 
                 {/* Points and XP */}

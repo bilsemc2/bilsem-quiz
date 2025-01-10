@@ -30,11 +30,11 @@ interface ClassMember {
 }
 
 // Yardımcı fonksiyonlar
-const fetchClassData = async (grade: string) => {
+const fetchClassData = async (classId: string) => {
     const { data, error } = await supabase
         .from('classes')
         .select('*')
-        .eq('grade', grade)
+        .eq('id', classId)
         .single();
     
     if (error) throw error;
@@ -43,7 +43,7 @@ const fetchClassData = async (grade: string) => {
     return data;
 };
 
-const fetchClassMembers = async (classId: number) => {
+const fetchClassMembers = async (classId: string) => {
     const { data, error } = await supabase
         .from('class_students')
         .select(`
@@ -55,14 +55,13 @@ const fetchClassMembers = async (classId: number) => {
                 points
             )
         `)
-        .eq('class_id', classId)
-        .order('profiles(points)', { ascending: false });
-
+        .eq('class_id', classId);
+    
     if (error) throw error;
     return data?.map(item => item.profiles) || [];
 };
 
-const fetchAssignments = async (classId: number, userId: string) => {
+const fetchAssignments = async (classId: string, userId: string) => {
     try {
         // 1. Sınıfa atanmış quizleri al
         const { data: assignmentsData, error: assignmentsError } = await supabase
@@ -70,7 +69,7 @@ const fetchAssignments = async (classId: number, userId: string) => {
             .select(`
                 quiz_id,
                 assigned_at,
-                quiz:quizzes (
+                quiz:assignments (
                     id,
                     title,
                     description,
@@ -114,24 +113,16 @@ const fetchAssignments = async (classId: number, userId: string) => {
     }
 };
 
-const checkStudentAccess = async (userId: string, grade: string) => {
+const checkStudentAccess = async (userId: string, classId: string) => {
     const { data, error } = await supabase
         .from('class_students')
-        .select(`
-            *,
-            class:classes (
-                id, name, grade, icon
-            )
-        `)
+        .select('*')
+        .eq('class_id', classId)
         .eq('student_id', userId)
-        .eq('class.grade', parseInt(grade))
         .single();
-
-    if (error || !data?.class) {
-        throw new Error('Bu sınıfa erişim yetkiniz bulunmamaktadır.');
-    }
-
-    return data;
+    
+    if (error) throw error;
+    return !!data;
 };
 
 // Wrapper fonksiyon
@@ -151,12 +142,13 @@ const withErrorHandling = async <T,>(
 };
 
 export const ClassroomPage: React.FC = () => {
-    const { grade } = useParams<{ grade: string }>();
+    const { classId } = useParams<{ classId: string }>();
     const { user } = useAuth();
     const navigate = useNavigate();
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [classMembers, setClassMembers] = useState<ClassMember[]>([]);
+    const [classData, setClassData] = useState<{ name: string; grade: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const [hasClassAccess, setHasClassAccess] = useState(false);
 
@@ -164,18 +156,18 @@ export const ClassroomPage: React.FC = () => {
         if (user) {
             checkClassAccess();
         }
-    }, [user, grade]);
+    }, [user, classId]);
 
     useEffect(() => {
-        if (hasClassAccess && grade) {
+        if (hasClassAccess && classId) {
             fetchClassroomData();
         }
-    }, [hasClassAccess, grade]);
+    }, [hasClassAccess, classId]);
 
     const checkClassAccess = async () => {
         setLoading(true);
         
-        if (!grade || !user) {
+        if (!classId || !user) {
             setHasClassAccess(false);
             toast.error('Geçersiz sınıf bilgisi.');
             navigate('/profile');
@@ -183,7 +175,7 @@ export const ClassroomPage: React.FC = () => {
         }
 
         const result = await withErrorHandling(
-            () => checkStudentAccess(user.id, grade),
+            () => checkStudentAccess(user.id, classId),
             'Sınıf erişimi kontrol edilirken hata oluştu',
             () => navigate('/profile')
         );
@@ -193,22 +185,23 @@ export const ClassroomPage: React.FC = () => {
     };
 
     const fetchClassroomData = async () => {
-        if (!hasClassAccess || !grade) return;
+        if (!hasClassAccess || !classId) return;
 
         setLoading(true);
         console.log('Sınıf verileri yükleniyor...');
 
         const classData = await withErrorHandling(
-            () => fetchClassData(grade),
+            () => fetchClassData(classId),
             'Sınıf verileri yüklenirken hata oluştu'
         );
 
         if (classData) {
             console.log('Sınıf bulundu:', classData);
+            setClassData(classData);
             
             // Sınıf üyelerini getir
             const members = await withErrorHandling(
-                () => fetchClassMembers(classData.id),
+                () => fetchClassMembers(classId),
                 'Sınıf üyeleri yüklenirken hata oluştu'
             );
 
@@ -219,7 +212,7 @@ export const ClassroomPage: React.FC = () => {
 
             // Ödevleri getir
             const assignments = await withErrorHandling(
-                () => fetchAssignments(classData.id, user.id),
+                () => fetchAssignments(classId, user.id),
                 'Ödevler yüklenirken hata oluştu'
             );
 
@@ -260,7 +253,9 @@ export const ClassroomPage: React.FC = () => {
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">{grade}. Sınıf</h1>
+                    <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                        {classData?.name || 'Sınıf Yükleniyor...'}
+                    </h1>
                     <p className="text-lg text-gray-600">Hoş geldin! Burada sınıfınla ilgili her şeyi bulabilirsin.</p>
                 </div>
 
@@ -292,25 +287,51 @@ export const ClassroomPage: React.FC = () => {
                             {assignments.length > 0 ? (
                                 <div className="space-y-4">
                                     {assignments.map((assignment) => (
-                                        <div key={assignment.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                                            <div className="flex justify-between items-start">
+                                        <div
+                                            key={assignment.id}
+                                            className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                                        >
+                                            <div className="flex justify-between items-center">
                                                 <div>
-                                                    <h3 className="font-semibold text-lg">{assignment.title}</h3>
-                                                    <p className="text-gray-600 mt-1">{assignment.description}</p>
+                                                    <h3 className="text-lg font-semibold text-gray-900">
+                                                        {assignment.title}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-600">
+                                                        {assignment.description}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Atanma: {new Date(assignment.assigned_at).toLocaleDateString()}
+                                                    </p>
                                                 </div>
-                                                <span className={`px-3 py-1 rounded-full text-sm ${
-                                                    assignment.status === 'completed' 
-                                                    ? 'bg-green-100 text-green-800' 
-                                                    : 'bg-yellow-100 text-yellow-800'
-                                                }`}>
-                                                    {assignment.status === 'completed' ? 'Tamamlandı' : 'Bekliyor'}
-                                                </span>
-                                            </div>
-                                            <div className="mt-2 text-sm text-gray-500">
-                                                Atanma Tarihi: {new Date(assignment.assigned_at).toLocaleDateString('tr-TR')}
-                                            </div>
-                                            <div className="mt-2 text-sm text-gray-500">
-                                                Puan: {assignment.score}
+                                                <div className="flex items-center space-x-4">
+                                                    {assignment.status === 'completed' ? (
+                                                        <div className="flex items-center">
+                                                            <span className="text-green-600 font-medium mr-2">
+                                                                {assignment.score}/10
+                                                            </span>
+                                                            <svg
+                                                                className="h-6 w-6 text-green-500"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M5 13l4 4L19 7"
+                                                                />
+                                                            </svg>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => navigate(`/assignment-quiz/${assignment.id}`)}
+                                                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                                                        >
+                                                            Başla
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}

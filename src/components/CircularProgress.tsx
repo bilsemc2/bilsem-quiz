@@ -1,31 +1,58 @@
+import React from 'react';
+
 interface CircularProgressProps {
-    percentage?: number;
+    timeLeft: number;
+    totalTime: number;
+    onTimeout: () => void;
     size?: number;
     strokeWidth?: number;
-    circleColor?: string;
-    text?: string;
-    indeterminate?: boolean;
+    className?: string;
 }
 
 export const CircularProgress: React.FC<CircularProgressProps> = ({
-    percentage = 0,
+    timeLeft = 0,
+    totalTime = 60,
+    onTimeout,
     size = 40,
     strokeWidth = 4,
-    circleColor = 'rgb(37 99 235)',
-    text,
-    indeterminate = false
+    className = ''
 }) => {
-    const radius = (size - strokeWidth) / 2;
+    // Geçerli değerler kontrolü
+    const validTimeLeft = Math.max(0, Math.min(timeLeft, totalTime));
+    const validTotalTime = Math.max(1, totalTime); // 0'a bölmeyi önlemek için minimum 1
+    
+    const radius = Math.max(0, (size - strokeWidth) / 2);
     const circumference = radius * 2 * Math.PI;
-    const offset = circumference - ((percentage || 0) / 100) * circumference;
+    const progress = (validTimeLeft / validTotalTime) * 100;
+    const offset = Number.isFinite(circumference) ? circumference - (progress / 100) * circumference : 0;
+
+    // Renk değişimi için sınıflar
+    const getColorClass = () => {
+        if (validTimeLeft <= 5) return 'text-red-500';
+        if (validTimeLeft <= 15) return 'text-yellow-500';
+        return 'text-blue-500';
+    };
+
+    // Zamanı formatla
+    const formatTime = (seconds: number) => {
+        const validSeconds = Math.max(0, Math.round(seconds));
+        const minutes = Math.floor(validSeconds / 60);
+        const remainingSeconds = validSeconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    };
+
+    // Geçersiz boyut kontrolü
+    if (size <= 0 || strokeWidth <= 0 || size <= strokeWidth) {
+        return null;
+    }
 
     return (
-        <div className="relative" style={{ width: size, height: size }}>
+        <div className="relative inline-flex items-center justify-center">
             <svg
-                className={`transform -rotate-90 ${indeterminate ? 'animate-spin' : ''}`}
+                className={`transform -rotate-90 ${className}`}
                 style={{ width: size, height: size }}
             >
-                {/* Background circle */}
+                {/* Arka plan dairesi */}
                 <circle
                     className="text-gray-200"
                     strokeWidth={strokeWidth}
@@ -35,28 +62,25 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
                     cx={size / 2}
                     cy={size / 2}
                 />
-                {/* Progress circle */}
+                {/* İlerleme dairesi */}
                 <circle
-                    className={`transition-all duration-300 ${indeterminate ? 'opacity-75' : ''}`}
+                    className={`transition-all duration-300 ${getColorClass()}`}
                     strokeWidth={strokeWidth}
-                    stroke={circleColor}
+                    stroke="currentColor"
                     fill="transparent"
                     r={radius}
                     cx={size / 2}
                     cy={size / 2}
                     style={{
                         strokeDasharray: circumference,
-                        strokeDashoffset: indeterminate ? 0 : offset,
+                        strokeDashoffset: offset,
+                        transition: 'stroke-dashoffset 0.3s ease'
                     }}
                 />
             </svg>
-            {text && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-sm font-medium" style={{ color: circleColor }}>
-                        {text}
-                    </span>
-                </div>
-            )}
+            <span className={`absolute font-medium text-sm ${getColorClass()}`}>
+                {formatTime(validTimeLeft)}
+            </span>
         </div>
     );
 };

@@ -4,6 +4,7 @@ import { playSound } from '../utils/soundPlayer';
 interface TimerState {
     timeLeft: number;
     isRunning: boolean;
+    progress: number;
 }
 
 interface TimerActions {
@@ -19,7 +20,8 @@ export const useQuizTimer = (
 ): [TimerState, TimerActions] => {
     const [state, setState] = useState<TimerState>({
         timeLeft: initialTime,
-        isRunning: false
+        isRunning: false,
+        progress: 100
     });
 
     useEffect(() => {
@@ -29,6 +31,7 @@ export const useQuizTimer = (
             timer = setInterval(() => {
                 setState(prev => {
                     const newTimeLeft = prev.timeLeft - 1;
+                    const newProgress = (newTimeLeft / initialTime) * 100;
                     
                     // Son 5 saniye uyarısı
                     if (newTimeLeft <= 5 && newTimeLeft > 0) {
@@ -44,14 +47,19 @@ export const useQuizTimer = (
                     return {
                         ...prev,
                         timeLeft: newTimeLeft,
-                        isRunning: newTimeLeft > 0
+                        isRunning: newTimeLeft > 0,
+                        progress: newProgress
                     };
                 });
             }, 1000);
         }
 
-        return () => clearInterval(timer);
-    }, [state.isRunning, onTimeout]);
+        return () => {
+            if (timer) {
+                clearInterval(timer);
+            }
+        };
+    }, [state.isRunning, onTimeout, initialTime]);
 
     const startTimer = useCallback(() => {
         setState(prev => ({ ...prev, isRunning: true }));
@@ -64,22 +72,19 @@ export const useQuizTimer = (
     const resetTimer = useCallback((newTime: number = initialTime) => {
         setState({
             timeLeft: newTime,
-            isRunning: false
+            isRunning: false,
+            progress: 100
         });
     }, [initialTime]);
 
-    const formatTime = useCallback((time: number) => {
+    const formatTime = useCallback((time: number): string => {
         const minutes = Math.floor(time / 60);
         const seconds = time % 60;
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }, []);
 
-    const actions: TimerActions = {
-        startTimer,
-        stopTimer,
-        resetTimer,
-        formatTime
-    };
-
-    return [state, actions];
+    return [
+        state,
+        { startTimer, stopTimer, resetTimer, formatTime }
+    ];
 };
