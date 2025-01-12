@@ -234,7 +234,7 @@ export const QuizList: React.FC = () => {
         quiz_id: selectedQuiz.id,
         class_id: classId,
         assigned_by: user.id,
-        created_at: new Date().toISOString()
+        assigned_at: new Date().toISOString()
       }));
 
       const { error: insertError } = await supabase

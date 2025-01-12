@@ -382,10 +382,7 @@ export const ProfilePage: React.FC = () => {
                                 </span>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <div className="mb-8 flex justify-center">
+                        <div className="mb-8 flex justify-center">
                     {userData.class_id ? (
                         <button
                             onClick={() => navigate(`/classroom/${userData.class_id}`)}
@@ -400,6 +397,10 @@ export const ProfilePage: React.FC = () => {
                         <p className="text-sm text-gray-500">Henüz bir sınıfa atanmadınız.</p>
                     )}
                 </div>
+                    </div>
+                </div>
+
+          
 
                 {/* Points and XP */}
                 <div className="grid grid-cols-2 gap-6 mb-8">

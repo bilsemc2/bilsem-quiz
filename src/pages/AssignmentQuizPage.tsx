@@ -27,9 +27,20 @@ export default function AssignmentQuizPage({ onComplete }: AssignmentQuizPagePro
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [quizState, quizActions] = useQuizState();
+    const [shuffledQuestions, setShuffledQuestions] = useState<AssignmentQuestion[]>([]);
+    const [shuffledOptions, setShuffledOptions] = useState<{ [key: number]: string[] }>({});
 
-    // Süre dolduğunda çağrılacak fonksiyon
-    const handleTimeout = () => {
+    // Fisher-Yates karıştırma algoritması
+    const shuffleArray = <T,>(array: T[]): T[] => {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    };
+
+    const [timerState, timerActions] = useQuizTimer(60, () => {
         if (!quizState.isAnswered && quizState.currentQuestion && quizState.quiz) {
             // Yanlış cevap olarak kaydet
             quizActions.addAnswer({
@@ -60,9 +71,7 @@ export default function AssignmentQuizPage({ onComplete }: AssignmentQuizPagePro
                 timerActions.startTimer();
             }
         }
-    };
-
-    const [timerState, timerActions] = useQuizTimer(60, handleTimeout);
+    });
     const [feedbackState, feedbackActions] = useQuizFeedback();
 
     useEffect(() => {
@@ -92,18 +101,30 @@ export default function AssignmentQuizPage({ onComplete }: AssignmentQuizPagePro
                 return;
             }
 
-            // Soruları formatla
+            // Soruları formatla ve karıştır
             const questions = assignment.questions as AssignmentQuestion[];
             console.log('Ham sorular:', questions);
 
-            const formattedQuestions = questions.map(q => {
+            // Soruları ve seçenekleri bir kez karıştır ve sakla
+            const shuffled = shuffleArray(questions);
+            setShuffledQuestions(shuffled);
+
+            // Her soru için seçenekleri karıştır ve sakla
+            const optionsMap: { [key: number]: string[] } = {};
+            shuffled.forEach(q => {
+                optionsMap[q.number] = shuffleArray(['A', 'B', 'C', 'D', 'E']);
+            });
+            setShuffledOptions(optionsMap);
+
+            const formattedQuestions = shuffled.map(q => {
                 console.log('Soru formatlanıyor:', q);
+                
                 return {
                     id: `q${q.number}`,
                     number: q.number,
                     text: '',
                     imageUrl: `/images/questions/Matris/Soru-${q.number}.webp`,
-                    options: ['A', 'B', 'C', 'D', 'E'].map(option => ({
+                    options: optionsMap[q.number].map(option => ({
                         id: option,
                         text: '',
                         imageUrl: `/images/options/Matris/${q.number}/Soru${option === q.correctAnswer ? '-cevap' : ''}-${q.number}${option}.webp`
@@ -147,7 +168,31 @@ export default function AssignmentQuizPage({ onComplete }: AssignmentQuizPagePro
     const handleAssignmentComplete = async (quiz: any, answers: Answer[]) => {
         try {
             const score = answers.filter(a => a.isCorrect).length;
-            const totalQuestions = answers.length;
+            const totalQuestions = quiz.questions.length;
+            
+            // Tüm soruların cevaplarını kontrol et
+            const allAnswers = quiz.questions.map((question: any, index: number) => {
+                const existingAnswer = answers.find(a => a.questionNumber === question.number);
+                if (existingAnswer) {
+                    return existingAnswer;
+                }
+                // Cevaplanmamış soru varsa, zaman aşımı olarak işaretle
+                return {
+                    questionNumber: question.number,
+                    isCorrect: false,
+                    selectedOption: '',
+                    correctOption: question.correctOption,
+                    questionImage: question.imageUrl,
+                    isTimeout: true,
+                    solutionVideo: null,
+                    options: question.options.map((opt: any) => ({
+                        id: opt.id,
+                        imageUrl: opt.imageUrl,
+                        isSelected: false,
+                        isCorrect: opt.id === question.correctOption
+                    }))
+                };
+            });
             
             // Ödev sonucunu kaydet
             const { error: resultError } = await supabase
@@ -155,18 +200,18 @@ export default function AssignmentQuizPage({ onComplete }: AssignmentQuizPagePro
                 .insert({
                     assignment_id: assignmentId,
                     student_id: user?.id,
-                    answers,
+                    answers: allAnswers, // Tüm cevapları kaydet
                     score,
                     total_questions: totalQuestions,
                     completed_at: new Date().toISOString(),
-                    status: 'completed' // Durumu completed olarak ayarla
+                    status: 'completed'
                 });
 
             if (resultError) throw resultError;
 
             // Ödevi tamamlandı olarak işaretle
             const { error: updateError } = await supabase
-                .from('assignments') // assignments tablosunu güncelle
+                .from('assignments')
                 .update({ status: 'completed' })
                 .eq('id', assignmentId);
 
@@ -300,7 +345,38 @@ export default function AssignmentQuizPage({ onComplete }: AssignmentQuizPagePro
                                 <CircularProgress
                                     timeLeft={timerState.timeLeft}
                                     totalTime={60}
-                                    onTimeout={handleTimeout}
+                                    onTimeout={() => {
+                                        if (!quizState.isAnswered && quizState.currentQuestion && quizState.quiz) {
+                                            // Yanlış cevap olarak kaydet
+                                            quizActions.addAnswer({
+                                                questionNumber: quizState.currentQuestion.number,
+                                                isCorrect: false,
+                                                selectedOption: '',
+                                                correctOption: quizState.currentQuestion.correctOption,
+                                                questionImage: quizState.currentQuestion.imageUrl,
+                                                isTimeout: true,
+                                                solutionVideo: null,
+                                                options: quizState.currentQuestion.options.map(opt => ({
+                                                    id: opt.id,
+                                                    imageUrl: opt.imageUrl,
+                                                    isSelected: false,
+                                                    isCorrect: opt.id === quizState.currentQuestion.correctOption
+                                                }))
+                                            });
+
+                                            // Son soru kontrolü
+                                            if (quizState.currentQuestionIndex === quizState.quiz!.questions.length - 1) {
+                                                handleAssignmentComplete(quizState.quiz, [...quizState.answers]);
+                                            } else {
+                                                // Sonraki soruya geç
+                                                quizActions.setCurrentQuestionIndex(quizState.currentQuestionIndex + 1);
+                                                quizActions.setSelectedOption(null);
+                                                quizActions.setIsAnswered(false);
+                                                timerActions.resetTimer(60);
+                                                timerActions.startTimer();
+                                            }
+                                        }
+                                    }}
                                     size={80}
                                     strokeWidth={8}
                                     className="text-blue-600"

@@ -135,6 +135,42 @@ export default function NavBar() {
                         >
                             Ana Sayfa
                         </Link>
+                        {!user && (
+                            <>
+                                <Link
+                                    to="/services"
+                                    className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                        isActive('/services') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                    }`}
+                                >
+                                    Hizmetler
+                                </Link>
+                                <Link
+                                    to="/how-it-works"
+                                    className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                        isActive('/how-it-works') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                    }`}
+                                >
+                                    Nasıl Çalışır?
+                                </Link>
+                                <Link
+                                    to="/faq"
+                                    className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                        isActive('/faq') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                    }`}
+                                >
+                                    SSS
+                                </Link>
+                                <Link
+                                    to="/contact"
+                                    className={`text-lg font-semibold px-3 py-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                        isActive('/contact') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                    }`}
+                                >
+                                    İletişim
+                                </Link>
+                            </>
+                        )}
                         {user && (
                             <>
                                 <Link
@@ -471,6 +507,46 @@ export default function NavBar() {
                             >
                                 Ana Sayfa
                             </Link>
+                            {!user && (
+                                <>
+                                    <Link
+                                        to="/services"
+                                        className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                            isActive('/services') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                        }`}
+                                        onClick={toggleMenu}
+                                    >
+                                        Hizmetler
+                                    </Link>
+                                    <Link
+                                        to="/how-it-works"
+                                        className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                            isActive('/how-it-works') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                        }`}
+                                        onClick={toggleMenu}
+                                    >
+                                        Nasıl Çalışır?
+                                    </Link>
+                                    <Link
+                                        to="/faq"
+                                        className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                            isActive('/faq') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                        }`}
+                                        onClick={toggleMenu}
+                                    >
+                                        SSS
+                                    </Link>
+                                    <Link
+                                        to="/contact"
+                                        className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                            isActive('/contact') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                        }`}
+                                        onClick={toggleMenu}
+                                    >
+                                        İletişim
+                                    </Link>
+                                </>
+                            )}
                             {user && (
                                 <>
                                     <Link
@@ -654,6 +730,15 @@ export default function NavBar() {
                                 onClick={toggleMenu}
                             >
                                 Blog
+                            </Link>
+                            <Link
+                                to="/contact"
+                                className={`block py-3 text-lg font-semibold rounded-lg hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white transition-all duration-200 ${
+                                    isActive('/contact') ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent'
+                                }`}
+                                onClick={toggleMenu}
+                            >
+                                İletişim
                             </Link>
                         </div>
                     </div>

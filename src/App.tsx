@@ -39,6 +39,10 @@ import ClassroomPage from './pages/ClassroomPage';
 import BallGame from './pages/BallGame';
 import AssignmentQuizPage from './pages/AssignmentQuizPage';
 import AssignmentResults from './pages/AssignmentResults';
+import ServicesPage from './pages/ServicesPage';
+import HowItWorksPage from './pages/HowItWorksPage';
+import FAQPage from './pages/FAQPage';
+import ContactPage from './pages/ContactPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -74,6 +78,10 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/services" element={<ServicesPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route 
             path="/create-pdf" 
             element={

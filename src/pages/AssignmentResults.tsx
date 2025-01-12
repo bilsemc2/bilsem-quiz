@@ -108,66 +108,85 @@ export default function AssignmentResults() {
             </div>
 
             {/* Soru Detayları */}
-            <div className="space-y-8">
+            <div className="space-y-6">
                 {result.answers.map((answer, index) => (
-                    <div key={index} className="bg-white rounded-lg shadow p-6">
-                        <div className="mb-4">
-                            <h3 className="text-lg font-semibold mb-2">Soru {answer.questionNumber}</h3>
-                            <img 
-                                src={answer.questionImage} 
-                                alt={`Soru ${answer.questionNumber}`}
-                                className="max-w-full h-auto rounded-lg mb-4"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                            {answer.options.map((option) => (
-                                <div 
-                                    key={option.id}
-                                    className={`relative rounded-lg overflow-hidden border-2 ${
-                                        option.isSelected && option.isCorrect ? 'border-green-500' :
-                                        option.isSelected && !option.isCorrect ? 'border-red-500' :
-                                        option.isCorrect ? 'border-green-500' : 'border-gray-200'
-                                    }`}
-                                >
+                    <div key={index} className="bg-white rounded-lg shadow p-4">
+                        <div className="grid grid-cols-12 gap-4">
+                            {/* Sol taraf - Soru */}
+                            <div className="col-span-5 relative">
+                                {/* Quiz sırasındaki numara (sol üst) */}
+                                <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs font-semibold z-10">
+                                    Soru {index + 1}
+                                </div>
+                                
+                                {/* Sorunun kendi numarası (sağ alt) */}
+                                <div className="absolute bottom-2 right-2 bg-gray-800 text-white px-2 py-0.5 rounded-full text-xs font-semibold z-10">
+                                    #{answer.questionNumber}
+                                </div>
+                                
+                                <div className="max-w-[300px] mx-auto">
                                     <img 
-                                        src={option.imageUrl} 
-                                        alt={`Seçenek ${option.id}`}
-                                        className="w-full h-auto"
+                                        src={answer.questionImage} 
+                                        alt={`Soru ${answer.questionNumber}`}
+                                        className="w-full h-auto rounded-lg"
                                     />
-                                    {option.isSelected && (
-                                        <div className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center ${
-                                            option.isCorrect ? 'bg-green-500' : 'bg-red-500'
-                                        }`}>
-                                            {option.isCorrect ? (
-                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                                </svg>
-                                            ) : (
-                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
+                                </div>
+                            </div>
+
+                            {/* Sağ taraf - Seçenekler */}
+                            <div className="col-span-7">
+                                <div className="grid grid-cols-5 gap-2">
+                                    {answer.options.map((option) => (
+                                        <div 
+                                            key={option.id}
+                                            className={`relative rounded-lg overflow-hidden border-2 ${
+                                                option.isSelected && option.isCorrect ? 'border-green-500' :
+                                                option.isSelected && !option.isCorrect ? 'border-red-500' :
+                                                option.isCorrect ? 'border-green-500' : 'border-gray-200'
+                                            }`}
+                                        >
+                                            <div className="max-w-[120px] mx-auto">
+                                                <img 
+                                                    src={option.imageUrl} 
+                                                    alt={`Seçenek ${option.id}`}
+                                                    className="w-full h-auto"
+                                                />
+                                            </div>
+                                            {option.isSelected && (
+                                                <div className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center ${
+                                                    option.isCorrect ? 'bg-green-500' : 'bg-red-500'
+                                                }`}>
+                                                    {option.isCorrect ? (
+                                                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    ) : (
+                                                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
+                                    ))}
+                                </div>
+
+                                {/* Sonuç Göstergesi */}
+                                <div className={`mt-2 p-2 rounded-lg text-sm ${
+                                    answer.isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                    {answer.isTimeout ? (
+                                        <p>Süre doldu! Doğru cevap: {answer.options.findIndex(opt => opt.isCorrect) + 1}. seçenek</p>
+                                    ) : (
+                                        <p>
+                                            {answer.isCorrect ? 
+                                                'Doğru cevap!' : 
+                                                `Yanlış cevap. Doğru cevap: ${answer.options.findIndex(opt => opt.isCorrect) + 1}. seçenek`
+                                            }
+                                        </p>
                                     )}
                                 </div>
-                            ))}
-                        </div>
-
-                        {/* Sonuç Göstergesi */}
-                        <div className={`mt-4 p-3 rounded-lg ${
-                            answer.isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                            {answer.isTimeout ? (
-                                <p>Süre doldu! Doğru cevap: {answer.correctOption}</p>
-                            ) : (
-                                <p>
-                                    {answer.isCorrect ? 
-                                        'Doğru cevap!' : 
-                                        `Yanlış cevap. Doğru cevap: ${answer.correctOption}`
-                                    }
-                                </p>
-                            )}
+                            </div>
                         </div>
                     </div>
                 ))}

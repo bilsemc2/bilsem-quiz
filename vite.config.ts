@@ -11,7 +11,10 @@ export default defineConfig({
     headers: {
       'Content-Security-Policy': `
         default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' 
+          https://pagead2.googlesyndication.com
+          https://*.adtrafficquality.google
+          https://*.doubleclick.net;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com;
         img-src 'self' data: blob: https:;
@@ -19,7 +22,15 @@ export default defineConfig({
           https://*.supabase.co 
           wss://*.supabase.co 
           https://*.elevenlabs.io 
-          https://evmos-evm.publicnode.com/;
+          https://evmos-evm.publicnode.com/
+          https://*.google.com
+          https://*.googlesyndication.com
+          https://*.adtrafficquality.google/;
+        frame-src 'self' 
+          https://www.google.com 
+          https://pagead2.googlesyndication.com
+          https://*.doubleclick.net
+          https://*.adtrafficquality.google;
       `.replace(/\s+/g, ' ').trim()
     },
     hmr: {

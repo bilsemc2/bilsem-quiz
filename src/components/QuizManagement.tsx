@@ -151,7 +151,7 @@ export const QuizManagement: React.FC = () => {
 
     try {
       const { data: quiz, error: quizError } = await supabase
-        .from('quizzes')
+        .from('assignments')
         .insert([
           {
             title: quizTitle,
