@@ -83,7 +83,7 @@ export default function SignUpPage() {
                         referred_by: formData.referralCode || null,
                         avatar_url: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${formData.name}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy`,
                         points: 0,
-                        experience: INITIAL_XP // Başlangıç XP'si veriyoruz
+                        experience: INITIAL_XP
                     })
                     .eq('id', authData.user.id);
 
@@ -101,15 +101,24 @@ export default function SignUpPage() {
                     }
                 }
 
+                // Otomatik giriş yap
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: formData.email,
+                    password: formData.password
+                });
+
+                if (signInError) throw signInError;
+
                 // Başarı mesajı
                 const successMessage = formData.referralCode
-                    ? `Kayıt başarılı! ${INITIAL_XP} XP ile başlıyorsunuz ve arkadaşınız da ${INITIAL_XP} XP kazandı. Şimdi giriş yapabilirsiniz.`
-                    : `Kayıt başarılı! ${INITIAL_XP} XP ile başlıyorsunuz. Şimdi giriş yapabilirsiniz.`;
+                    ? `Kayıt başarılı! ${INITIAL_XP} XP ile başlıyorsunuz ve arkadaşınız da ${INITIAL_XP} XP kazandı.`
+                    : `Kayıt başarılı! ${INITIAL_XP} XP ile başlıyorsunuz.`;
                 
                 alert(successMessage);
+                
+                // Quiz sayfasına yönlendir
+                navigate('/quiz');
             }
-
-            navigate('/login');
         } catch (err: any) {
             console.error('Signup error:', err);
             setError(err.message);
