@@ -60,6 +60,9 @@ import toast from 'react-hot-toast';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import FilledEmptyPage from './pages/FilledEmptyPage';
+import FallingNumbersGame from './components/FallingNumbersGame/FallingNumbersGame';
+import FallingNumbersPage from './pages/FallingNumbersPage';
+import BubbleNumbersPage from './pages/BubbleNumbersPage';
 
 // Hata mesajını gösterecek bileşen
 const LocationAwareRouter: React.FC = () => {
@@ -392,6 +395,10 @@ const LocationAwareRouter: React.FC = () => {
               </RequireAuth>
             } 
           />
+          <Route path="/games" element={<GamePage />} />
+          <Route path="/falling-numbers" element={<FallingNumbersPage />} />
+          <Route path="/cube" element={<CubePage />} />
+          <Route path="/bubble-numbers" element={<BubbleNumbersPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>

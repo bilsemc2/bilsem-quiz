@@ -94,82 +94,117 @@ const questionVideoMap: Record<string, { videoId: string; title: string }> = {
     // Diğer sorular için video ID'leri buraya eklenecek
 };
 
-export function generateQuiz(): Quiz {
+export async function generateQuiz(questionCount: number = 10): Promise<Quiz> {
     const category = 'Matris';
 
-    // Import all images from the public directory with category
-    const questionImports = import.meta.glob('/public/images/questions/Matris/*.webp', { eager: true });
-    const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
+    try {
+        // Import all images from the public directory with category
+        const questionImports = import.meta.glob('/public/images/questions/Matris/*.webp', { eager: true });
+        const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
 
-    // Get filenames from the imports and convert to full paths
-    const questionFiles = Object.keys(questionImports)
-        .map(extractFilename)
-        .sort((a, b) => getQuestionNumber(a) - getQuestionNumber(b));
-
-    // Generate questions
-    const questions = questionFiles.map((questionFile, index) => {
-        const questionNumber = index + 1;
-        const questionId = questionNumber.toString();
-        
-        // Find matching option files for this question
-        const matchingOptions = Object.keys(optionImports)
-            .filter(path => {
-                const filename = extractFilename(path);
-                const optionNumber = getQuestionNumber(filename);
-                return optionNumber === questionNumber;
-            })
-            .map(extractFilename);
-
-        // Find the correct answer first
-        const correctOption = matchingOptions.find(filename => isCorrectAnswer(filename));
-        if (!correctOption) {
-            console.error(`No correct answer found for question ${questionNumber}`);
-            return null;
+        if (Object.keys(questionImports).length === 0) {
+            throw new Error('Soru resimleri bulunamadı');
         }
 
-        // Get correct letter from the correct option
-        const correctLetter = getOptionLetter(correctOption);
-        if (!correctLetter) {
-            console.error(`Could not extract correct letter from ${correctOption}`);
-            return null;
+        if (Object.keys(optionImports).length === 0) {
+            throw new Error('Seçenek resimleri bulunamadı');
         }
 
-        // Create options array with correct mappings
-        const options = ['A', 'B', 'C', 'D', 'E'].map(optionLetter => {
-            const isCorrectOption = optionLetter === correctLetter;
-            return {
-                id: `${questionId}${optionLetter}`,
-                imageUrl: `/images/options/${category}/${questionNumber}/Soru-${isCorrectOption ? 'cevap-' : ''}${questionNumber}${optionLetter}.webp`,
-                text: ''
-            };
-        });
+        // Get filenames and randomly select questionCount questions
+        const allQuestionFiles = Object.keys(questionImports)
+            .map(extractFilename)
+            .sort((a, b) => getQuestionNumber(a) - getQuestionNumber(b));
 
-        // Get video solution if exists
-        const videoSolution = questionVideoMap[questionId];
+        // Rastgele questionCount kadar soru seç
+        const selectedQuestionFiles = shuffleArray([...allQuestionFiles]).slice(0, questionCount);
 
-        const question = {
-            id: questionId,
-            questionImageUrl: `/images/questions/${category}/Soru-${questionNumber}.webp`,
-            question: '',
-            options: shuffleArray(options),
-            correctOptionId: `${questionId}${correctLetter}`,
+        // Generate questions
+        const questions = selectedQuestionFiles.map((questionFile) => {
+            const questionNumber = getQuestionNumber(questionFile);
+            const questionId = questionNumber.toString();
+            
+            try {
+                // Tüm seçenekleri ve doğru cevapları bul
+                const optionPaths = Object.keys(optionImports)
+                    .filter(path => path.includes(`/Matris/${questionNumber}/`))
+                    .map(path => ({
+                        path,
+                        letter: getOptionLetter(extractFilename(path)),
+                        isAnswer: path.includes('cevap')
+                    }))
+                    .filter(opt => opt.letter); // Geçersiz harfleri filtrele
+
+                if (optionPaths.length === 0) {
+                    console.error(`Soru ${questionNumber} için seçenek bulunamadı`);
+                    return null;
+                }
+
+                // Doğru cevabı bul
+                const correctOption = optionPaths.find(opt => opt.isAnswer);
+                if (!correctOption) {
+                    console.error(`Soru ${questionNumber} için doğru cevap bulunamadı`);
+                    return null;
+                }
+
+                // Her harf için seçenek oluştur
+                const options = ['A', 'B', 'C', 'D', 'E'].map(letter => {
+                    const option = optionPaths.find(opt => opt.letter === letter);
+                    if (!option) {
+                        console.error(`Soru ${questionNumber} için ${letter} seçeneği bulunamadı`);
+                        return null;
+                    }
+
+                    return {
+                        id: `${questionId}${letter}`,
+                        imageUrl: option.path.replace('/public', ''),
+                        text: ''
+                    };
+                });
+
+                // Eksik seçenek varsa soruyu atla
+                if (options.some(opt => !opt)) {
+                    console.error(`Soru ${questionNumber} için eksik seçenek var`);
+                    return null;
+                }
+
+                // Get video solution if exists
+                const videoSolution = questionVideoMap[questionId];
+
+                return {
+                    id: questionId,
+                    questionImageUrl: `/images/questions/${category}/Soru-${questionNumber}.webp`,
+                    question: '',
+                    options: shuffleArray(options),
+                    correctOptionId: `${questionId}${correctOption.letter}`,
+                    grade: 1,
+                    subject: category,
+                    solutionVideo: videoSolution ? {
+                        url: `https://www.youtube.com/embed/${videoSolution.videoId}`,
+                        title: videoSolution.title
+                    } : undefined
+                };
+            } catch (error) {
+                console.error(`Soru ${questionNumber} oluşturulurken hata:`, error);
+                return null;
+            }
+        }).filter(Boolean); // Remove any null questions
+
+        const validQuestions = questions.filter(Boolean);
+
+        if (validQuestions.length === 0) {
+            throw new Error('Hiç geçerli soru oluşturulamadı');
+        }
+
+        return {
+            id: Math.random().toString(36).substr(2, 9),
+            title: 'Matris Testi',
+            description: 'Matris mantık soruları',
             grade: 1,
             subject: category,
-            solutionVideo: videoSolution ? {
-                url: `https://www.youtube.com/embed/${videoSolution.videoId}`,
-                title: videoSolution.title
-            } : undefined
+            questions: validQuestions
         };
-
-        return question;
-    }).filter(Boolean); // Remove any null questions
-
-    return {
-        id: Math.random().toString(36).substr(2, 9),
-        title: 'Matris Testi',
-        description: 'Matris mantık soruları',
-        grade: 1,
-        subject: category,
-        questions: questions
-    };
+    } catch (error) {
+        console.error('Quiz oluşturulurken hata:', error);
+        throw error;
+    }
 }

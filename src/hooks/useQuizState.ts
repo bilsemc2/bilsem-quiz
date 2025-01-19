@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Quiz, Question } from '../types/quiz';
 import { generateQuiz } from '../utils/quizGenerator';
-import { shuffleArray } from '../utils/arrayUtils';
 import toast from 'react-hot-toast';
 
 interface Answer {
@@ -82,21 +81,19 @@ export const useQuizState = (): [QuizState, QuizActions] => {
 
     const loadQuiz = async () => {
         try {
-            // Check if there's a homework quiz in localStorage
+            // Check if there's a saved quiz
             const savedQuiz = localStorage.getItem('currentQuiz');
             if (savedQuiz) {
                 const parsedQuiz = JSON.parse(savedQuiz);
                 if (!parsedQuiz.questions || !Array.isArray(parsedQuiz.questions)) {
-                    throw new Error('Invalid quiz format');
+                    throw new Error('Geçersiz quiz formatı');
                 }
 
                 setState(prev => ({ ...prev, quiz: parsedQuiz }));
                 localStorage.removeItem('currentQuiz');
             } else {
                 // If no homework quiz, generate a regular quiz
-                const quizData = generateQuiz();
-                // Regular quizde soruları karıştır ve 10 tane seç
-                quizData.questions = shuffleArray(quizData.questions).slice(0, 10);
+                const quizData = await generateQuiz(10);
                 setState(prev => ({ ...prev, quiz: quizData }));
             }
 
