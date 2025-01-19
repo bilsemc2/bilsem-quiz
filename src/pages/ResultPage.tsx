@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Typography, Tooltip, Button } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -25,6 +25,9 @@ interface QuestionResult {
         isSelected: boolean;
         isCorrect: boolean;
     }>;
+    question: {
+        type: string;
+    }
 }
 
 interface QuizResult {
@@ -59,16 +62,51 @@ export default function ResultPage() {
 
     const percentage = (result.correctAnswers / result.totalQuestions) * 100;
     const wrongAnswers = result.totalQuestions - result.correctAnswers;
-    const canPlayBallGame = result.correctAnswers >= 1;
 
-    // Oyun butonuna tıklama işleyicisi
-    const handlePlayGame = () => {
+    // State tanımları
+    const [canPlayBallGame, setCanPlayBallGame] = useState(false);
+    const [canPlayFallingNumbers, setCanPlayFallingNumbers] = useState(false);
+    const [canPlayBubbleNumbers, setCanPlayBubbleNumbers] = useState(false);
+
+    useEffect(() => {
+        if (result?.answers) {
+            const correctAnswers = result.answers.filter(a => a.isCorrect).length;
+            setCanPlayBallGame(correctAnswers >= 3);
+            setCanPlayFallingNumbers(correctAnswers >= 5);
+            setCanPlayBubbleNumbers(correctAnswers >= 7);
+        }
+    }, [result]);
+
+    // Oyun butonlarına tıklama işleyicileri
+    const handlePlayBallGame = () => {
         if (canPlayBallGame) {
             navigate('/ball-game', { 
                 state: { 
                     fromResult: true,
-                    previousState: result // Mevcut state'i BallGame'e gönder
+                    previousState: result
                 } 
+            });
+        }
+    };
+
+    const handlePlayFallingNumbers = () => {
+        if (canPlayFallingNumbers) {
+            navigate('/falling-numbers', {
+                state: {
+                    fromResult: true,
+                    previousState: result
+                }
+            });
+        }
+    };
+
+    const handlePlayBubbleNumbers = () => {
+        if (canPlayBubbleNumbers) {
+            navigate('/bubble-numbers', {
+                state: {
+                    fromResult: true,
+                    previousState: result
+                }
             });
         }
     };
@@ -108,35 +146,77 @@ export default function ResultPage() {
                         </div>
                     </div>
 
-                    {/* BallGame Butonu */}
-                    <div className="mb-12 text-center">
-                        <Tooltip title={
-                            canPlayBallGame 
-                                ? "Top oyununu oynamaya hazırsın!" 
-                                : "Top oyununu oynamak için en az 10 doğru cevap gerekiyor"
-                        } arrow>
-                            <span>
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    startIcon={<SportsEsportsIcon />}
-                                    onClick={handlePlayGame}
-                                    disabled={!canPlayBallGame}
-                                    className={`px-6 py-3 rounded-full transform transition-all duration-300 ${
-                                        canPlayBallGame 
-                                            ? 'hover:scale-105 bg-gradient-to-r from-primary-500 to-primary-600' 
-                                            : 'opacity-50 cursor-not-allowed'
-                                    }`}
-                                >
-                                    {canPlayBallGame ? 'Top Oyununu Oyna!' : 'Top Oyunu Kilitli'}
-                                </Button>
-                            </span>
-                        </Tooltip>
-                        {!canPlayBallGame && (
-                            <p className="mt-2 text-sm text-gray-500">
-                                {1 - result.correctAnswers} doğru cevap verirsen top oyununu oynayabilirsin!
-                            </p>
-                        )}
+                    {/* Oyunlar Bölümü */}
+                    <div className="mt-8 mb-12">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4">Mini Oyunlar</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {/* Top Oyunu Kartı */}
+                            <div className={`p-4 rounded-lg border ${
+                                canPlayBallGame 
+                                    ? 'border-blue-200 hover:border-blue-400 cursor-pointer' 
+                                    : 'border-gray-200 opacity-50'
+                                }`}
+                                onClick={canPlayBallGame ? handlePlayBallGame : undefined}
+                            >
+                                <div className="flex items-center justify-center mb-2">
+                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                                        <path d="M12 6V18M6 12H18" stroke="currentColor" strokeWidth="2"/>
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-center">Top Oyunu</h3>
+                                {!canPlayBallGame && (
+                                    <p className="text-sm text-gray-500 text-center mt-2">
+                                        En az 3 doğru gerekli
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Düşen Sayılar Oyunu Kartı */}
+                            <div className={`p-4 rounded-lg border ${
+                                canPlayFallingNumbers 
+                                    ? 'border-blue-200 hover:border-blue-400 cursor-pointer' 
+                                    : 'border-gray-200 opacity-50'
+                                }`}
+                                onClick={canPlayFallingNumbers ? handlePlayFallingNumbers : undefined}
+                            >
+                                <div className="flex items-center justify-center mb-2">
+                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 4V20M12 20L8 16M12 20L16 16" stroke="currentColor" strokeWidth="2"/>
+                                        <path d="M6 8h12" stroke="currentColor" strokeWidth="2"/>
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-center">Düşen Sayılar</h3>
+                                {!canPlayFallingNumbers && (
+                                    <p className="text-sm text-gray-500 text-center mt-2">
+                                        En az 5 doğru gerekli
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Sayı Baloncukları Oyunu Kartı */}
+                            <div className={`p-4 rounded-lg border ${
+                                canPlayBubbleNumbers 
+                                    ? 'border-blue-200 hover:border-blue-400 cursor-pointer' 
+                                    : 'border-gray-200 opacity-50'
+                                }`}
+                                onClick={canPlayBubbleNumbers ? handlePlayBubbleNumbers : undefined}
+                            >
+                                <div className="flex items-center justify-center mb-2">
+                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2"/>
+                                        <circle cx="8" cy="9" r="2" fill="currentColor"/>
+                                        <circle cx="16" cy="15" r="3" fill="currentColor"/>
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-center">Sayı Baloncukları</h3>
+                                {!canPlayBubbleNumbers && (
+                                    <p className="text-sm text-gray-500 text-center mt-2">
+                                        En az 7 doğru gerekli
+                                    </p>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Soru Detayları */}
