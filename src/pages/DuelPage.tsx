@@ -133,15 +133,15 @@ const DuelPage = () => {
   const handleChallenge = async (user: User) => {
     try {
       if (!currentUser?.id) {
-        console.error('Düello başlatılamadı: Kullanıcı girişi yapılmamış');
+        console.error('Düello başlatılamadı: Kullanıcı girişi yapılmamış!');
         return;
       }
 
       setSelectedUser(user);
       const now = new Date().toISOString();
       
-      const quiz = generateQuiz();
-      const randomQuestion = quiz.questions[Math.floor(Math.random() * quiz.questions.length)];
+      const quiz = await generateQuiz(1); // Sadece 1 soru istiyoruz
+      const randomQuestion = quiz.questions[0]; // İlk soruyu al
 
       const duelData = {
         challenger_id: currentUser.id,
