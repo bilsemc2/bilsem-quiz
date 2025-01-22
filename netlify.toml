@@ -5,7 +5,7 @@
     X-Frame-Options = "ALLOW-FROM https://www.google.com https://googleads.g.doubleclick.net https://www.googletagmanager.com"
 
 [build]
-  command = "npm run build"
+  command = "npm install --platform=linux --arch=x64 @esbuild/linux-x64 && npm run build"
   publish = "dist"
 
 [build.processing]
