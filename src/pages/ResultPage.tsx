@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Box, Typography, Tooltip, Button } from '@mui/material';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { Box, Typography, Tooltip, Button, IconButton, Dialog, DialogTitle, DialogContent } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
+import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import HelpIcon from '@mui/icons-material/Help';
 
 interface QuestionResult {
     questionNumber: number;
@@ -27,7 +29,8 @@ interface QuestionResult {
     }>;
     question: {
         type: string;
-    }
+    };
+    explanation?: string;
 }
 
 interface QuizResult {
@@ -45,28 +48,23 @@ export default function ResultPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
     
-    // State'i doğrudan location.state'den al
-    const result = location.state;
-
-    console.log('ResultPage state:', location.state);
-
-    useEffect(() => {
-        if (!result || !result.correctAnswers) {
-            console.log('Invalid result state:', result);
-            navigate('/', { replace: true });
-            return;
-        }
-    }, [result, navigate]);
-
-    if (!result || !result.correctAnswers) return null;
-
-    const percentage = (result.correctAnswers / result.totalQuestions) * 100;
-    const wrongAnswers = result.totalQuestions - result.correctAnswers;
-
-    // State tanımları
+    const [result, setResult] = useState<QuizResult | null>(null);
+    const [questionDetails, setQuestionDetails] = useState<{ [key: string]: any }>({});
     const [canPlayBallGame, setCanPlayBallGame] = useState(false);
     const [canPlayFallingNumbers, setCanPlayFallingNumbers] = useState(false);
     const [canPlayBubbleNumbers, setCanPlayBubbleNumbers] = useState(false);
+    const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!location.state || !location.state.correctAnswers) {
+            console.log('Invalid result state:', location.state);
+            navigate('/', { replace: true });
+            return;
+        }
+
+        setResult(location.state);
+        fetchQuestionDetails(location.state.answers);
+    }, [location.state, navigate]);
 
     useEffect(() => {
         if (result?.answers) {
@@ -76,6 +74,37 @@ export default function ResultPage() {
             setCanPlayBubbleNumbers(correctAnswers >= 7);
         }
     }, [result]);
+
+    const fetchQuestionDetails = async (answers: QuestionResult[]) => {
+        try {
+            const questionNumbers = answers.map(answer => {
+                const match = answer.questionImage.match(/Soru-(\d+)\.webp/);
+                return match ? match[1] : null;
+            }).filter(Boolean);
+
+            const { data, error } = await supabase
+                .from('questions')
+                .select('question_image_url, solution_video, text')
+                .in('question_image_url', questionNumbers.map(num => `images/questions/Matris/Soru-${num}.webp`));
+
+            if (error) throw error;
+
+            const detailsMap = data.reduce((acc: any, item) => {
+                const match = item.question_image_url.match(/Soru-(\d+)\.webp/);
+                if (match) {
+                    acc[match[1]] = {
+                        solution_video: item.solution_video,
+                        text: item.text
+                    };
+                }
+                return acc;
+            }, {});
+
+            setQuestionDetails(detailsMap);
+        } catch (error) {
+            console.error('Error fetching question details:', error);
+        }
+    };
 
     // Oyun butonlarına tıklama işleyicileri
     const handlePlayBallGame = () => {
@@ -110,6 +139,11 @@ export default function ResultPage() {
             });
         }
     };
+
+    if (!result) return null;
+
+    const percentage = (result.correctAnswers / result.totalQuestions) * 100;
+    const wrongAnswers = result.totalQuestions - result.correctAnswers;
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
@@ -223,85 +257,99 @@ export default function ResultPage() {
                     <div>
                         <h2 className="text-2xl font-bold text-gray-800 mb-6">Soru Detayları</h2>
                         <div className="space-y-8">
-                            {result.answers?.map((answer, index) => (
-                                <div key={index} className="bg-gray-50 rounded-xl p-6 relative">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-4">
-                                            <h3 className="text-lg font-semibold text-gray-800">
-                                                Soru {index + 1}
-                                            </h3>
-                                            {answer.solutionVideo && (
-                                                <a
-                                                    href={answer.solutionVideo.url.replace('/embed/', '/watch?v=')}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-2 text-red-600 hover:text-red-700"
-                                                    title={answer.solutionVideo.title}
-                                                >
-                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                                                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
-                                                    </svg>
-                                                    <span className="text-sm font-medium">Video Çözüm</span>
-                                                </a>
-                                            )}
+                            {result.answers?.map((answer, index) => {
+                                const questionNumber = answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1];
+                                const details = questionNumber ? questionDetails[questionNumber] : null;
+                                
+                                return (
+                                    <div key={index} className="bg-white rounded-lg shadow p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center space-x-2">
+                                                <Typography variant="h6" component="h3">
+                                                    Soru {index + 1}
+                                                </Typography>
+                                                {answer.isCorrect ? (
+                                                    <CheckCircleIcon className="text-green-500" />
+                                                ) : (
+                                                    <BlockOutlinedIcon className="text-red-500" />
+                                                )}
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                {details?.solution_video && (
+                                                    <Tooltip title="Video çözümü göster">
+                                                        <IconButton
+                                                            onClick={() => setSelectedVideo(details.solution_video.embed_code)}
+                                                        >
+                                                            <SchoolIcon className="text-blue-500" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className={`px-4 py-2 rounded-full ${
-                                            answer.isTimeout ? 'bg-yellow-100 text-yellow-800' :
-                                            answer.isCorrect ? 'bg-emerald-100 text-emerald-800' :
-                                            'bg-red-100 text-red-800'
-                                        }`}>
-                                            {answer.isTimeout ? 'Süre Doldu' :
-                                             answer.isCorrect ? 'Doğru' : 'Yanlış'}
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Soru Resmi */}
-                                    <div className="mb-6 relative">
-                                        <img
-                                            src={answer.questionImage}
-                                            alt={`Soru ${index + 1}`}
-                                            className="w-full h-[400px] object-contain bg-gray-50 rounded-lg border border-gray-200"
-                                        />
-                                        
-                                        {/* Soru Numarası ve Bilgi İkonu */}
-                                        <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                                            <span className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium">
-                                                {answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1] || index + 1}
-                                            </span>
-                                            <Tooltip title="Hatalı olduğunu düşündüğünüz sorunun ID'sini yöneticiye bildirin" arrow placement="top">
-                                                <InfoOutlinedIcon 
-                                                    className="text-gray-600 hover:text-blue-600 cursor-pointer"
-                                                    sx={{ fontSize: '1.2rem' }}
-                                                />
-                                            </Tooltip>
-                                        </div>
-                                    </div>
 
-                                    {/* Seçenekler */}
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                        {answer.options.map((option, optionIndex) => (
-                                            <div key={optionIndex} className={`relative rounded-lg border ${
-                                                answer.selectedOption === option.id
-                                                    ? option.isCorrect
-                                                        ? 'border-green-500 bg-green-50' 
-                                                        : 'border-red-500 bg-red-50'
-                                                    : option.isCorrect
-                                                        ? 'border-green-500 bg-green-50'
-                                                        : 'border-gray-200'
-                                            }`}>
-                                                <img
-                                                    src={option.imageUrl}
-                                                    alt={`Seçenek ${optionIndex + 1}`}
-                                                    className="w-full h-[200px] md:h-[180px] object-contain bg-gray-50 rounded-lg p-2"
-                                                />
-                                                <div className="absolute top-2 left-2 bg-white/50 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm text-gray-700">
-                                                    {optionIndex + 1}
+                                        {/* Açıklama */}
+                                        {details?.text && (
+                                            <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                                <div className="flex items-start space-x-2">
+                                                    <HelpIcon className="text-blue-500 mt-1" />
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {details.text}
+                                                    </Typography>
                                                 </div>
                                             </div>
-                                        ))}
+                                        )}
+
+                                        {/* Soru Resmi */}
+                                        <div className="mb-6 relative">
+                                            <img
+                                                src={answer.questionImage}
+                                                alt={`Soru ${index + 1}`}
+                                                className="w-full h-[400px] object-contain bg-gray-50 rounded-lg border border-gray-200"
+                                            />
+                                            
+                                            {/* Soru Numarası */}
+                                            <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                                                <span className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium">
+                                                    {answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1] || index + 1}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Seçenekler */}
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                            {answer.options.map((option, optionIndex) => (
+                                                <div key={optionIndex} className={`relative rounded-lg border ${
+                                                    answer.selectedOption === option.id
+                                                        ? option.isCorrect
+                                                            ? 'border-green-500 bg-green-50' 
+                                                            : 'border-red-500 bg-red-50'
+                                                        : option.isCorrect
+                                                            ? 'border-green-500 bg-green-50'
+                                                            : 'border-gray-200'
+                                                }`}>
+                                                    <img
+                                                        src={option.imageUrl}
+                                                        alt={`Seçenek ${optionIndex + 1}`}
+                                                        className="w-full h-[200px] md:h-[180px] object-contain bg-gray-50 rounded-lg p-2"
+                                                    />
+                                                    {(option.isCorrect || option.isSelected) && (
+                                                        <div className={`
+                                                            absolute top-2 right-2 rounded-full p-1
+                                                            ${option.isCorrect ? 'bg-emerald-500' : 'bg-red-500'}
+                                                        `}>
+                                                            {option.isCorrect ? (
+                                                                <CheckCircleIcon className="w-5 h-5 text-white" />
+                                                            ) : (
+                                                                <BlockOutlinedIcon className="w-5 h-5 text-white" />
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -311,7 +359,7 @@ export default function ResultPage() {
                             <h2 className="text-2xl font-bold text-gray-800 mb-6">Yanlış Cevaplarınız</h2>
                             <div className="grid grid-cols-1 gap-6">
                                 {result.answers.filter(answer => !answer.isCorrect).map((answer, index) => (
-                                    <div key={index} className="bg-white rounded-xl shadow-lg p-6">
+                                    <div key={index} className="bg-white rounded-lg shadow-lg p-6">
                                         <div className="flex flex-col space-y-4">
                                             {/* Soru Görseli */}
                                             {answer.questionImage && (
@@ -396,6 +444,46 @@ export default function ResultPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Video Dialog */}
+            <Dialog 
+                open={!!selectedVideo} 
+                onClose={() => setSelectedVideo(null)}
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogTitle>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                        Video Çözüm
+                        <IconButton onClick={() => setSelectedVideo(null)} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    {selectedVideo && (
+                        <Box sx={{ 
+                            width: '100%',
+                            height: '600px',
+                            '& iframe': {
+                                width: '100%',
+                                height: '100%',
+                                border: 'none'
+                            }
+                        }}>
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                src={`https://www.youtube.com/embed/${selectedVideo}`}
+                                title="Video Çözüm"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                            />
+                        </Box>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

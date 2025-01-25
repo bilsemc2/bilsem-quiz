@@ -100,7 +100,7 @@ const DuelPage = () => {
           challenger:profiles!challenger_id(id, name, email),
           challenged:profiles!challenged_id(id, name, email)
         `)
-        .or(`challenger_id.eq.${currentUser.id},challenged_id.eq.${currentUser.id}`)
+        .or(`challenger_id.eq.${currentUser?.id},challenged_id.eq.${currentUser?.id}`)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -112,7 +112,7 @@ const DuelPage = () => {
         const pendingDuels = duels.filter(duel => duel.status === 'pending');
         const inProgressDuels = duels.filter(duel => {
           if (duel.status === 'in_progress') {
-            const isChallenger = duel.challenger_id === currentUser.id;
+            const isChallenger = duel.challenger_id === currentUser?.id;
             const myAnswer = isChallenger ? duel.challenger_answer : duel.challenged_answer;
             const otherAnswer = isChallenger ? duel.challenged_answer : duel.challenger_answer;
             return myAnswer || otherAnswer;
@@ -131,6 +131,8 @@ const DuelPage = () => {
   };
 
   const handleChallenge = async (user: User) => {
+    if (!currentUser) return;
+    
     try {
       if (!currentUser?.id) {
         console.error('Düello başlatılamadı: Kullanıcı girişi yapılmamış!');
@@ -178,6 +180,8 @@ const DuelPage = () => {
   };
 
   const acceptDuel = async (duelId: string) => {
+    if (!currentUser) return;
+    
     try {
       const { error: updateError } = await supabase
         .from('duels')
@@ -197,6 +201,8 @@ const DuelPage = () => {
   };
 
   const checkActiveDuel = async () => {
+    if (!currentUser) return;
+    
     try {
       const { data: duels, error } = await supabase
         .from('duels')
@@ -212,7 +218,7 @@ const DuelPage = () => {
           challenged:profiles!challenged_id(id, name, email)
         `)
         .eq('status', 'in_progress')
-        .or(`challenger_id.eq.${currentUser.id},challenged_id.eq.${currentUser.id}`)
+        .or(`challenger_id.eq.${currentUser?.id},challenged_id.eq.${currentUser?.id}`)
         .order('created_at', { ascending: false });
 
       if (error && error.code !== 'PGRST116') {
@@ -237,7 +243,7 @@ const DuelPage = () => {
             solutionVideo: questionData.solutionVideo
           });
 
-          const isChallenger = activeDuel.challenger_id === currentUser.id;
+          const isChallenger = activeDuel.challenger_id === currentUser?.id;
           const hasAnswered = isChallenger 
             ? activeDuel.challenger_answer 
             : activeDuel.challenged_answer;
@@ -258,6 +264,8 @@ const DuelPage = () => {
   };
 
   const handleSubmitAnswer = async (duelId: string, answer: string, isChallenger: boolean) => {
+    if (!currentUser) return;
+    
     try {
       const updateField = isChallenger ? 'challenger_answer' : 'challenged_answer';
       
