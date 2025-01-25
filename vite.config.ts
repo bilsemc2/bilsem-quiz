@@ -30,7 +30,9 @@ export default defineConfig({
           https://www.google.com 
           https://pagead2.googlesyndication.com
           https://*.doubleclick.net
-          https://*.adtrafficquality.google;
+          https://*.adtrafficquality.google
+          https://www.youtube.com
+          https://youtube.com;
       `.replace(/\s+/g, ' ').trim()
     },
     hmr: {
@@ -67,18 +69,14 @@ export default defineConfig({
           'mui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled']
         },
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name.endsWith('.webp')) {
-            return 'assets/images/[name]-[hash][extname]'
+          if (!assetInfo.name) return 'assets/[name].[hash][extname]';
+          if (assetInfo.name.endsWith('.css')) {
+            return 'assets/css/[name].[hash][extname]';
           }
-          let extType = assetInfo.name.split('.').at(1);
-          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
-            extType = 'img';
-          } else if (/css/i.test(extType)) {
-            extType = 'css';
-          } else if (/mp3|wav|ogg/i.test(extType)) {
-            extType = 'audio';
+          if (assetInfo.name.endsWith('.js')) {
+            return 'assets/js/[name].[hash][extname]';
           }
-          return `assets/${extType}/[name]-[hash][extname]`;
+          return 'assets/[name].[hash][extname]';
         },
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
