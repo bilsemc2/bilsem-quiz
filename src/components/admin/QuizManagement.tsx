@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -29,6 +29,7 @@ import {
   Card,
   CardMedia,
   CardContent,
+  Skeleton,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -110,6 +111,63 @@ const QuizManagement: React.FC = () => {
   const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+
+  // Resim önbelleği için Map
+  const imageCache = useMemo(() => new Map<string, string>(), []);
+
+  // Resim URL'sini önbellekten al veya yükle
+  const getImageUrl = useCallback(async (path: string): Promise<string> => {
+    if (imageCache.has(path)) {
+      return imageCache.get(path)!;
+    }
+
+    try {
+      const response = await fetch(path);
+      if (!response.ok) return '';
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      imageCache.set(path, url);
+      return url;
+    } catch (error) {
+      console.error('Resim yüklenirken hata:', error);
+      return '';
+    }
+  }, [imageCache]);
+
+  // Component unmount olduğunda önbelleği temizle
+  useEffect(() => {
+    return () => {
+      imageCache.forEach(url => URL.revokeObjectURL(url));
+      imageCache.clear();
+    };
+  }, [imageCache]);
+
+  // Resim yükleme durumunu takip et
+  const [loadingImages, setLoadingImages] = useState(false);
+
+  // Mevcut soru için resimleri yükle
+  useEffect(() => {
+    if (!previewQuiz) return;
+
+    const loadImages = async () => {
+      setLoadingImages(true);
+      const currentQuestion = previewQuiz.questions[currentQuestionIndex];
+      
+      // Soru resmini yükle
+      await getImageUrl(`/images/questions/Matris/Soru-${currentQuestion.number}.webp`);
+      
+      // Seçenek resimlerini yükle
+      for (const option of ['A', 'B', 'C', 'D', 'E']) {
+        const isCorrect = option === currentQuestion.correct_option;
+        await getImageUrl(getOptionImagePath(currentQuestion.number, option, isCorrect));
+      }
+      
+      setLoadingImages(false);
+    };
+
+    loadImages();
+  }, [previewQuiz, currentQuestionIndex, getImageUrl]);
 
   useEffect(() => {
     fetchQuizzes();
@@ -903,17 +961,21 @@ const QuizManagement: React.FC = () => {
                   <Typography variant="h6" gutterBottom>
                     Soru
                   </Typography>
-                  <img
-                    src={`/images/questions/Matris/Soru-${previewQuiz.questions[currentQuestionIndex].number}.webp`}
-                    alt={`Soru ${previewQuiz.questions[currentQuestionIndex].number}`}
-                    style={{ 
-                      width: '100%',
-                      height: 'auto',
-                      marginBottom: '1rem',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '4px'
-                    }}
-                  />
+                  {loadingImages ? (
+                    <Skeleton variant="rectangular" width="100%" height={300} />
+                  ) : (
+                    <img
+                      src={imageCache.get(`/images/questions/Matris/Soru-${previewQuiz.questions[currentQuestionIndex].number}.webp`) || ''}
+                      alt={`Soru ${previewQuiz.questions[currentQuestionIndex].number}`}
+                      style={{ 
+                        width: '100%',
+                        height: 'auto',
+                        marginBottom: '1rem',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  )}
                 </Box>
 
                 {/* Sağ taraf - Seçenekler */}
@@ -933,6 +995,12 @@ const QuizManagement: React.FC = () => {
                   <Grid container spacing={1}>
                     {['A', 'B', 'C', 'D', 'E'].map((option) => {
                       const isCorrect = option === previewQuiz.questions[currentQuestionIndex].correct_option;
+                      const imagePath = getOptionImagePath(
+                        previewQuiz.questions[currentQuestionIndex].number,
+                        option,
+                        isCorrect
+                      );
+                      
                       return (
                         <Grid item xs={12} key={option}>
                           <Card 
@@ -954,20 +1022,20 @@ const QuizManagement: React.FC = () => {
                             >
                               {option}
                             </Typography>
-                            <CardMedia
-                              component="img"
-                              image={getOptionImagePath(
-                                previewQuiz.questions[currentQuestionIndex].number,
-                                option,
-                                isCorrect
-                              )}
-                              alt={`Seçenek ${option}`}
-                              sx={{ 
-                                height: '70px', 
-                                width: '200px',
-                                objectFit: 'contain'
-                              }}
-                            />
+                            {loadingImages ? (
+                              <Skeleton variant="rectangular" width={200} height={70} />
+                            ) : (
+                              <CardMedia
+                                component="img"
+                                image={imageCache.get(imagePath) || ''}
+                                alt={`Seçenek ${option}`}
+                                sx={{ 
+                                  height: '70px', 
+                                  width: '200px',
+                                  objectFit: 'contain'
+                                }}
+                              />
+                            )}
                             {showCorrectAnswer && isCorrect && (
                               <Typography 
                                 variant="subtitle2" 
