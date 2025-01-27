@@ -233,7 +233,7 @@ export const QuizList: React.FC = () => {
       const assignments = selectedClasses.map(classId => ({
         quiz_id: selectedQuiz.id,
         class_id: classId,
-        assigned_by: user.id,
+        assigned_by: user?.id || '',
         assigned_at: new Date().toISOString()
       }));
 
@@ -518,7 +518,7 @@ export const QuizList: React.FC = () => {
                       maxHeight: '400px',
                       objectFit: 'contain'
                     }}
-                    onError={(e) => {
+                    onError={() => {
                       console.error(`Error loading question image: ${question.questionImage}`);
                     }}
                   />

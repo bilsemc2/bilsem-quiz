@@ -52,15 +52,12 @@ import ClassesPage from './pages/school/ClassesPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
-import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
 import AdminMessageNotification from './components/AdminMessageNotification';
-import ExtensionIcon from '@mui/icons-material/Extension';
 import toast from 'react-hot-toast';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import FilledEmptyPage from './pages/FilledEmptyPage';
-import FallingNumbersGame from './components/FallingNumbersGame/FallingNumbersGame';
 import FallingNumbersPage from './pages/FallingNumbersPage';
 import BubbleNumbersPage from './pages/BubbleNumbersPage';
 
@@ -164,6 +161,14 @@ const LocationAwareRouter: React.FC = () => {
             }
           />
           <Route 
+            path="/admin/*" 
+            element={
+              <RequireAuth requireAdmin>
+                <AdminPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
             path="/admin/puzzle-management" 
             element={
               <RequireAuth requireAdmin>
@@ -176,14 +181,6 @@ const LocationAwareRouter: React.FC = () => {
             element={
               <RequireAuth requireAdmin>
                 <XPRequirementsPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/admin" 
-            element={
-              <RequireAuth requireAdmin>
-                <AdminPage />
               </RequireAuth>
             } 
           />
