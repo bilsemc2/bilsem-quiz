@@ -17,7 +17,6 @@ import {
 } from '@mui/material';
 import { MAX_QUESTION_NUMBER, ITEMS_PER_PAGE } from '../../config/constants';
 
-// Question tipi
 interface Question {
   id: string;
   text: string;
@@ -40,7 +39,7 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>(initialSelectedQuestions);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
@@ -54,41 +53,33 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
     return `/images/questions/Matris/Soru-${questionNumber}.webp`;
   };
 
-  useEffect(() => {
-    loadQuestions();
-  }, []);
-
-  const loadQuestions = async () => {
+  const loadQuestionsForPage = async (pageNum: number) => {
     try {
       setLoading(true);
       setError(null);
       
-      // Tüm soru dosyalarını al
-      const questionFiles = Array.from({ length: MAX_QUESTION_NUMBER }, (_, i) => i + 1);
-      const questions: Question[] = [];
-      let loadedCount = 0;
-
-      // Her soru için
-      for (const questionNumber of questionFiles) {
+      const startIndex = (pageNum - 1) * questionsPerPage;
+      const endIndex = Math.min(startIndex + questionsPerPage, MAX_QUESTION_NUMBER);
+      const pageQuestions: Question[] = [];
+      
+      for (let i = startIndex + 1; i <= endIndex; i++) {
         try {
-          // Soru resminin varlığını kontrol et
-          const questionImagePath = `/images/questions/Matris/Soru-${questionNumber}.webp`;
+          const questionImagePath = `/images/questions/Matris/Soru-${i}.webp`;
           const questionResponse = await fetch(questionImagePath);
           
           if (!questionResponse.ok) {
             continue;
           }
 
-          // Doğru cevabı bul
-          const correctAnswer = await findCorrectAnswer(questionNumber);
+          const correctAnswer = await findCorrectAnswer(i);
           if (!correctAnswer) {
             continue;
           }
           
-          questions.push({
-            id: questionNumber.toString(),
-            text: `Soru ${questionNumber}`,
-            number: questionNumber,
+          pageQuestions.push({
+            id: i.toString(),
+            text: `Soru ${i}`,
+            number: i,
             options: ['A', 'B', 'C', 'D', 'E'],
             correct_option: correctAnswer,
             points: 10,
@@ -96,42 +87,58 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
             difficulty: 2,
           });
 
-          loadedCount++;
-          setLoadingProgress((loadedCount / MAX_QUESTION_NUMBER) * 100);
+          setLoadingProgress(((i - startIndex) / questionsPerPage) * 100);
         } catch (error) {
-          console.error(`Soru ${questionNumber} yüklenirken hata:`, error);
+          console.error(`Soru ${i} yüklenirken hata:`, error);
         }
       }
 
-      if (questions.length === 0) {
-        throw new Error('Hiç soru yüklenemedi');
-      }
-
-      setQuestions(questions);
-      setTotalQuestions(questions.length);
+      setQuestions(pageQuestions);
     } catch (error) {
       console.error('Sorular yüklenirken hata:', error);
       setError('Sorular yüklenirken hata oluştu. Lütfen sayfayı yenileyin.');
     } finally {
       setLoading(false);
+      setLoadingProgress(0);
     }
   };
 
+  const calculateTotalQuestions = async () => {
+    let count = 0;
+    for (let i = 1; i <= MAX_QUESTION_NUMBER; i++) {
+      const questionImagePath = `/images/questions/Matris/Soru-${i}.webp`;
+      try {
+        const response = await fetch(questionImagePath);
+        if (response.ok) {
+          count++;
+        }
+      } catch {
+        continue;
+      }
+    }
+    setTotalQuestions(count);
+  };
+
+  useEffect(() => {
+    calculateTotalQuestions();
+  }, []);
+
+  useEffect(() => {
+    loadQuestionsForPage(page);
+  }, [page]);
+
   const findCorrectAnswer = async (questionNumber: number): Promise<string | null> => {
     try {
-      // Önce tüm seçenek dosyalarını kontrol et
       const optionFiles = await Promise.all(['A', 'B', 'C', 'D', 'E'].map(async letter => {
         const normalPath = `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${letter}.webp`;
         const correctPath = `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${letter}.webp`;
         
         try {
-          // Doğru cevap dosyasını kontrol et
           const correctResponse = await fetch(correctPath);
           if (correctResponse.ok) {
             return { letter, isCorrect: true };
           }
           
-          // Normal dosyayı kontrol et
           const normalResponse = await fetch(normalPath);
           if (normalResponse.ok) {
             return { letter, isCorrect: false };
@@ -143,13 +150,8 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
         }
       }));
       
-      // Doğru cevabı bul
       const correctOption = optionFiles.find(option => option?.isCorrect);
-      if (correctOption) {
-        return correctOption.letter;
-      }
-      
-      return null;
+      return correctOption ? correctOption.letter : null;
     } catch (err) {
       console.error(`Soru ${questionNumber} için hata:`, err);
       return null;
@@ -163,7 +165,6 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
         ? prev.filter(q => q.id !== question.id)
         : [...prev, question];
       
-      // Seçili soruları parent komponente bildir
       onQuestionsSelected(newSelectedQuestions);
       return newSelectedQuestions;
     });
@@ -176,11 +177,6 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
   const filteredQuestions = questions.filter(question =>
     question.text.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const paginatedQuestions = filteredQuestions.slice(
-    (page - 1) * questionsPerPage,
-    page * questionsPerPage
   );
 
   return (
@@ -219,7 +215,7 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
       ) : (
         <>
           <Grid container spacing={2}>
-            {paginatedQuestions.map((question) => (
+            {filteredQuestions.map((question) => (
               <Grid item xs={12} sm={6} md={4} key={question.id}>
                 <Card 
                   sx={{ 
@@ -253,7 +249,7 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
           <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
             <Pagination
-              count={Math.ceil(filteredQuestions.length / questionsPerPage)}
+              count={Math.ceil(totalQuestions / questionsPerPage)}
               page={page}
               onChange={(_, value) => setPage(value)}
               color="primary"
@@ -262,7 +258,6 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
         </>
       )}
 
-      {/* Soru Önizleme Dialog'u */}
       <Dialog
         open={showPreview}
         onClose={() => setShowPreview(false)}
