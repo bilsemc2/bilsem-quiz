@@ -40,8 +40,6 @@ import {
   Assignment as AssignmentIcon,
   Check as CheckIcon,
   Close as CloseIcon,
-  ArrowBack as ArrowBackIcon,
-  ArrowForward as ArrowForwardIcon,
   NavigateBefore as NavigateBeforeIcon,
   NavigateNext as NavigateNextIcon,
 } from '@mui/icons-material';
