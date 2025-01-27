@@ -5,8 +5,8 @@
     X-Frame-Options = "ALLOW-FROM https://www.google.com https://googleads.g.doubleclick.net https://www.googletagmanager.com"
 
 [build]
-  command = "npm install && npm run build"
   publish = "dist"
+  command = "NODE_OPTIONS='--max-old-space-size=4096' npm install && NODE_OPTIONS='--max-old-space-size=4096' npm run build"
 
 [build.processing]
   skip_processing = false
