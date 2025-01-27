@@ -92,42 +92,75 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log('Kullanıcılar yükleniyor...');
       
       // Önce kullanıcıları al
       const { data: users, error: usersError } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (usersError) throw usersError;
+      console.log('Kullanıcı verileri:', users);
+      
+      if (usersError) {
+        console.error('Kullanıcı verisi alınırken hata:', usersError);
+        throw usersError;
+      }
+
+      if (!users) {
+        console.log('Kullanıcı verisi bulunamadı');
+        setUsers([]);
+        return;
+      }
 
       // Her kullanıcı için sınıf bilgilerini al
       const usersWithClasses = await Promise.all(
-        (users || []).map(async (user) => {
-          const { data: classStudents, error: classError } = await supabase
-            .from('class_students')
-            .select(`
-              class_id,
-              classes (
-                id,
-                name,
-                grade
-              )
-            `)
-            .eq('student_id', user.id);
+        users.map(async (user) => {
+          try {
+            console.log(`${user.email} için sınıf bilgileri alınıyor...`);
+            const { data: classStudents, error: classError } = await supabase
+              .from('class_students')
+              .select(`
+                class_id,
+                classes (
+                  id,
+                  name,
+                  grade
+                )
+              `)
+              .eq('student_id', user.id);
 
-          if (classError) throw classError;
+            if (classError) {
+              console.error(`${user.email} için sınıf bilgileri alınırken hata:`, classError);
+              return {
+                ...user,
+                class_students: []
+              };
+            }
 
-          return {
-            ...user,
-            class_students: classStudents
-          };
+            return {
+              ...user,
+              class_students: classStudents || []
+            };
+          } catch (err) {
+            console.error(`${user.email} için sınıf bilgileri alınırken beklenmeyen hata:`, err);
+            return {
+              ...user,
+              class_students: []
+            };
+          }
         })
       );
 
+      console.log('Tüm kullanıcı verileri:', usersWithClasses);
       setUsers(usersWithClasses);
+      setFilteredUsers(usersWithClasses);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kullanıcılar yüklenirken bir hata oluştu');
+      console.error('Hata detayı:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Kullanıcılar yüklenirken bir hata oluştu';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -372,143 +405,151 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
     }));
   };
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ width: '100%' }}>
+    <Box>
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <TextField
-          label="İsim Ara"
-          variant="outlined"
-          size="small"
-          value={filters.name}
-          onChange={(e) => setFilters((prev) => ({ ...prev, name: e.target.value }))}
-        />
-        <TextField
-          label="E-posta Ara"
-          variant="outlined"
-          size="small"
-          value={filters.email}
-          onChange={(e) => setFilters((prev) => ({ ...prev, email: e.target.value }))}
-        />
-        <TextField
-          label="Sınıf"
-          variant="outlined"
-          size="small"
-          type="number"
-          value={filters.grade}
-          onChange={(e) => setFilters((prev) => ({ ...prev, grade: e.target.value }))}
-        />
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2">Sadece VIP</Typography>
-          <Switch
-            checked={filters.showOnlyVip}
-            onChange={(e) => setFilters((prev) => ({ ...prev, showOnlyVip: e.target.checked }))}
-            size="small"
-          />
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2">Sadece Aktif</Typography>
-          <Switch
-            checked={filters.showOnlyActive}
-            onChange={(e) => setFilters((prev) => ({ ...prev, showOnlyActive: e.target.checked }))}
-            size="small"
-          />
-        </Box>
-      </Box>
+      {!loading && !error && users.length === 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Henüz hiç kullanıcı bulunmuyor.
+        </Alert>
+      )}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Ad Soyad</TableCell>
-              <TableCell>E-posta</TableCell>
-              <TableCell>Sınıf</TableCell>
-              <TableCell>Sınıflar</TableCell>
-              <TableCell align="right">Puan</TableCell>
-              <TableCell align="right">XP</TableCell>
-              <TableCell align="right">Sınıf Seviyesi</TableCell>
-              <TableCell align="center">VIP</TableCell>
-              <TableCell align="center">Aktif</TableCell>
-              <TableCell align="center">İşlemler</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredUsers
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.name || '-'}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.grade || '-'}</TableCell>
-                  <TableCell>
-                    {user.class_students?.map((cs: any) => (
-                      <Chip
-                        key={cs.classes.id}
-                        label={`${cs.classes.name} (${cs.classes.grade}. Sınıf)`}
-                        size="small"
-                        sx={{ m: 0.5 }}
-                      />
-                    )) || '-'}
-                  </TableCell>
-                  <TableCell align="right">{user.points}</TableCell>
-                  <TableCell align="right">{user.experience}</TableCell>
-                  <TableCell align="right">{user.grade || '-'}</TableCell>
-                  <TableCell align="center">
-                    <Switch
-                      checked={user.is_vip}
-                      onChange={() => handleToggleVip(user.id, user.is_vip)}
-                      color="primary"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Switch
-                      checked={user.is_active}
-                      onChange={() => handleToggleActive(user.id, user.is_active)}
-                      color="primary"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="Düzenle">
-                      <IconButton onClick={() => handleEdit(user)} size="small">
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Sil">
-                      <IconButton onClick={() => handleDeleteUser(user.id)} size="small">
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
+      {!loading && users.length > 0 && (
+        <Box sx={{ width: '100%' }}>
+          <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <TextField
+              label="İsim Ara"
+              variant="outlined"
+              size="small"
+              value={filters.name}
+              onChange={(e) => setFilters((prev) => ({ ...prev, name: e.target.value }))}
+            />
+            <TextField
+              label="E-posta Ara"
+              variant="outlined"
+              size="small"
+              value={filters.email}
+              onChange={(e) => setFilters((prev) => ({ ...prev, email: e.target.value }))}
+            />
+            <TextField
+              label="Sınıf"
+              variant="outlined"
+              size="small"
+              type="number"
+              value={filters.grade}
+              onChange={(e) => setFilters((prev) => ({ ...prev, grade: e.target.value }))}
+            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2">Sadece VIP</Typography>
+              <Switch
+                checked={filters.showOnlyVip}
+                onChange={(e) => setFilters((prev) => ({ ...prev, showOnlyVip: e.target.checked }))}
+                size="small"
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2">Sadece Aktif</Typography>
+              <Switch
+                checked={filters.showOnlyActive}
+                onChange={(e) => setFilters((prev) => ({ ...prev, showOnlyActive: e.target.checked }))}
+                size="small"
+              />
+            </Box>
+          </Box>
+
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Ad Soyad</TableCell>
+                  <TableCell>E-posta</TableCell>
+                  <TableCell>Sınıf</TableCell>
+                  <TableCell>Sınıflar</TableCell>
+                  <TableCell align="right">Puan</TableCell>
+                  <TableCell align="right">XP</TableCell>
+                  <TableCell align="right">Sınıf Seviyesi</TableCell>
+                  <TableCell align="center">VIP</TableCell>
+                  <TableCell align="center">Aktif</TableCell>
+                  <TableCell align="center">İşlemler</TableCell>
                 </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              </TableHead>
+              <TableBody>
+                {filteredUsers
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.name || '-'}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.grade || '-'}</TableCell>
+                      <TableCell>
+                        {user.class_students?.map((cs: any) => (
+                          <Chip
+                            key={cs.classes.id}
+                            label={`${cs.classes.name} (${cs.classes.grade}. Sınıf)`}
+                            size="small"
+                            sx={{ m: 0.5 }}
+                          />
+                        )) || '-'}
+                      </TableCell>
+                      <TableCell align="right">{user.points}</TableCell>
+                      <TableCell align="right">{user.experience}</TableCell>
+                      <TableCell align="right">{user.grade || '-'}</TableCell>
+                      <TableCell align="center">
+                        <Switch
+                          checked={user.is_vip}
+                          onChange={() => handleToggleVip(user.id, user.is_vip)}
+                          color="primary"
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Switch
+                          checked={user.is_active}
+                          onChange={() => handleToggleActive(user.id, user.is_active)}
+                          color="primary"
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Tooltip title="Düzenle">
+                          <IconButton onClick={() => handleEdit(user)} size="small">
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Sil">
+                          <IconButton onClick={() => handleDeleteUser(user.id)} size="small">
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-      <TablePagination
-        component="div"
-        count={filteredUsers.length}
-        page={page}
-        onPageChange={handleChangePage}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        labelRowsPerPage="Sayfa başına satır:"
-      />
+          <TablePagination
+            component="div"
+            count={filteredUsers.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Sayfa başına satır:"
+          />
+        </Box>
+      )}
 
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Kullanıcı Düzenle</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
