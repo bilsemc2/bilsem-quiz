@@ -42,6 +42,8 @@ import {
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
+  NavigateBefore as NavigateBeforeIcon,
+  NavigateNext as NavigateNextIcon,
 } from '@mui/icons-material';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -111,6 +113,7 @@ const QuizManagement: React.FC = () => {
   const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
   // Resim önbelleği için Map
   const imageCache = useMemo(() => new Map<string, string>(), []);
@@ -525,22 +528,22 @@ const QuizManagement: React.FC = () => {
 
   const handleNextQuestion = () => {
     if (!previewQuiz) return;
-    
-    if (currentQuestionIndex < previewQuiz.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      setCurrentQuestionIndex(0);
-    }
+    setSlideDirection('left');
+    setTimeout(() => {
+      setCurrentQuestionIndex((prev) => 
+        prev < previewQuiz.questions.length - 1 ? prev + 1 : prev
+      );
+      setSlideDirection('right');
+    }, 300);
   };
 
   const handlePrevQuestion = () => {
     if (!previewQuiz) return;
-    
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    } else {
-      setCurrentQuestionIndex(previewQuiz.questions.length - 1);
-    }
+    setSlideDirection('right');
+    setTimeout(() => {
+      setCurrentQuestionIndex((prev) => (prev > 0 ? prev - 1 : prev));
+      setSlideDirection('left');
+    }, 300);
   };
 
   const handleKeyPress = (event: KeyboardEvent) => {
@@ -955,12 +958,29 @@ const QuizManagement: React.FC = () => {
               </Box>
             </DialogTitle>
             <DialogContent>
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  gap: 2,
+                  opacity: loadingImages ? 0.5 : 1,
+                  transition: 'opacity 0.3s ease-in-out'
+                }}
+              >
                 {/* Sol taraf - Soru */}
-                <Box sx={{ flex: '0 0 300px' }}>
-                  <Typography variant="h6" gutterBottom>
-                    Soru
-                  </Typography>
+                <Box 
+                  sx={{ 
+                    flex: '0 0 300px',
+                    animation: `${slideDirection === 'left' ? 'slideLeft' : 'slideRight'} 0.3s ease-in-out`,
+                    '@keyframes slideLeft': {
+                      '0%': { transform: 'translateX(0)' },
+                      '100%': { transform: 'translateX(-100%)' }
+                    },
+                    '@keyframes slideRight': {
+                      '0%': { transform: 'translateX(-100%)' },
+                      '100%': { transform: 'translateX(0)' }
+                    }
+                  }}
+                >
                   {loadingImages ? (
                     <Skeleton variant="rectangular" width="100%" height={300} />
                   ) : (
@@ -979,7 +999,20 @@ const QuizManagement: React.FC = () => {
                 </Box>
 
                 {/* Sağ taraf - Seçenekler */}
-                <Box sx={{ flex: 1 }}>
+                <Box 
+                  sx={{ 
+                    flex: 1,
+                    animation: `${slideDirection === 'left' ? 'slideLeft' : 'slideRight'} 0.3s ease-in-out`,
+                    '@keyframes slideLeft': {
+                      '0%': { transform: 'translateX(0)' },
+                      '100%': { transform: 'translateX(-100%)' }
+                    },
+                    '@keyframes slideRight': {
+                      '0%': { transform: 'translateX(-100%)' },
+                      '100%': { transform: 'translateX(0)' }
+                    }
+                  }}
+                >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                     <Typography variant="h6">
                       Seçenekler
@@ -1054,10 +1087,30 @@ const QuizManagement: React.FC = () => {
               </Box>
             </DialogContent>
             <DialogActions>
-              <Button onClick={handlePrevQuestion} startIcon={<ArrowBackIcon />}>
+              <Button
+                onClick={handlePrevQuestion}
+                disabled={currentQuestionIndex === 0 || loadingImages}
+                startIcon={<NavigateBeforeIcon />}
+                sx={{ 
+                  transition: 'all 0.3s ease-in-out',
+                  '&:not(:disabled):hover': {
+                    transform: 'translateX(-5px)'
+                  }
+                }}
+              >
                 Önceki Soru
               </Button>
-              <Button onClick={handleNextQuestion} endIcon={<ArrowForwardIcon />}>
+              <Button
+                onClick={handleNextQuestion}
+                disabled={!previewQuiz || currentQuestionIndex === previewQuiz.questions.length - 1 || loadingImages}
+                endIcon={<NavigateNextIcon />}
+                sx={{ 
+                  transition: 'all 0.3s ease-in-out',
+                  '&:not(:disabled):hover': {
+                    transform: 'translateX(5px)'
+                  }
+                }}
+              >
                 Sonraki Soru
               </Button>
             </DialogActions>
