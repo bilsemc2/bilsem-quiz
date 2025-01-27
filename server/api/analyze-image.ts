@@ -2,6 +2,25 @@ import express from 'express';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 import cors from 'cors';
 
+interface BoundingBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+interface ProcessedObject {
+  name: string;
+  score: number;
+  boundingBox: BoundingBox;
+}
+
+interface ProcessedResult {
+  objects: ProcessedObject[];
+  text: string;
+  labels: string[];
+}
+
 const router = express.Router();
 router.use(cors());
 
@@ -29,29 +48,36 @@ router.post('/analyze-image', async (req, res) => {
     });
 
     // Sonuçları işle
-    const processedResult = {
-      objects: result.localizedObjectAnnotations?.map(obj => ({
-        name: obj.name,
-        score: obj.score,
-        boundingBox: obj.boundingPoly?.normalizedVertices?.reduce(
+    const processedResult: ProcessedResult = {
+      objects: result.localizedObjectAnnotations?.map(obj => {
+        // Varsayılan bounding box
+        const defaultBox: BoundingBox = { left: 0, top: 0, width: 0, height: 0 };
+        
+        // Vertex'leri işle
+        const boundingBox = obj.boundingPoly?.normalizedVertices?.reduce<BoundingBox>(
           (box, vertex) => {
-            if (!box.left || vertex.x < box.left) box.left = vertex.x;
-            if (!box.top || vertex.y < box.top) box.top = vertex.y;
-            if (!box.width || vertex.x > box.left + box.width) {
-              box.width = vertex.x - box.left;
-            }
-            if (!box.height || vertex.y > box.top + box.height) {
-              box.height = vertex.y - box.top;
-            }
-            return box;
+            const x = vertex.x ?? 0;
+            const y = vertex.y ?? 0;
+            
+            return {
+              left: !box.left || x < box.left ? x : box.left,
+              top: !box.top || y < box.top ? y : box.top,
+              width: Math.max(box.width, x - box.left),
+              height: Math.max(box.height, y - box.top)
+            };
           },
-          { left: 0, top: 0, width: 0, height: 0 }
-        ),
-      })) || [],
+          defaultBox
+        ) ?? defaultBox;
+
+        return {
+          name: obj.name ?? '',
+          score: obj.score ?? 0,
+          boundingBox
+        };
+      }) ?? [],
       
-      text: result.fullTextAnnotation?.text || '',
-      
-      labels: result.labelAnnotations?.map(label => label.description) || [],
+      text: result.fullTextAnnotation?.text ?? '',
+      labels: result.labelAnnotations?.map(label => label.description ?? '') ?? [],
     };
 
     res.status(200).json(processedResult);
