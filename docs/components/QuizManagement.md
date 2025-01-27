@@ -108,17 +108,6 @@ function App() {
 
 ## Veritabanı Yapısı
 
-### Quizzes Tablosu
-```sql
-CREATE TABLE quizzes (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT,
-  questions JSONB NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
 
 ## Notlar
 - Tüm resim dosyaları webp formatında olmalıdır
