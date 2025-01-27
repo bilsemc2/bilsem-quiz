@@ -26,14 +26,21 @@ import {
   Grid,
   Tab,
   Tabs,
+  Card,
+  CardMedia,
+  CardContent,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as ViewIcon,
+  VisibilityOff as VisibilityOffIcon,
   Assignment as AssignmentIcon,
   Check as CheckIcon,
+  Close as CloseIcon,
+  ArrowBack as ArrowBackIcon,
+  ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -78,6 +85,8 @@ interface QuizResult {
   };
 }
 
+const MAX_QUESTION_NUMBER = 100;
+
 const QuizManagement: React.FC = () => {
   const { user } = useAuth();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -97,6 +106,10 @@ const QuizManagement: React.FC = () => {
     status: 'pending' as 'pending' | 'completed',
     classIds: [] as string[],
   });
+  const [newQuestionNumber, setNewQuestionNumber] = useState('');
+  const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
 
   useEffect(() => {
     fetchQuizzes();
@@ -356,6 +369,146 @@ const QuizManagement: React.FC = () => {
     });
   };
 
+  const handleAddQuestion = async () => {
+    try {
+      setLoading(true);
+      const questionNumber = parseInt(newQuestionNumber);
+      
+      if (isNaN(questionNumber) || questionNumber < 1 || questionNumber > MAX_QUESTION_NUMBER) {
+        setError('Lütfen geçerli bir soru numarası girin');
+        return;
+      }
+
+      // Soru zaten seçili mi kontrol et
+      if (formData.questions.some(q => q.number === questionNumber)) {
+        setError('Bu soru zaten seçili');
+        return;
+      }
+
+      // Soru resminin varlığını kontrol et
+      const questionImagePath = `/images/questions/Matris/Soru-${questionNumber}.webp`;
+      const questionResponse = await fetch(questionImagePath);
+      
+      if (!questionResponse.ok) {
+        setError('Bu soru numarası bulunamadı');
+        return;
+      }
+
+      // Doğru cevabı bul
+      const correctAnswer = await findCorrectAnswer(questionNumber);
+      if (!correctAnswer) {
+        setError('Bu soru için doğru cevap bulunamadı');
+        return;
+      }
+
+      // Yeni soruyu ekle
+      const newQuestion = {
+        id: questionNumber.toString(),
+        text: `Soru ${questionNumber}`,
+        number: questionNumber,
+        options: ['A', 'B', 'C', 'D', 'E'],
+        correct_option: correctAnswer,
+        points: 10,
+        type: 'multiple_choice' as const,
+        difficulty: 2 as const,
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        questions: [...prev.questions, newQuestion]
+      }));
+      
+      setNewQuestionNumber('');
+      setError(null);
+    } catch (err) {
+      console.error('Soru eklenirken hata:', err);
+      setError('Soru eklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const findCorrectAnswer = async (questionNumber: number): Promise<string | null> => {
+    try {
+      const optionFiles = await Promise.all(['A', 'B', 'C', 'D', 'E'].map(async letter => {
+        const normalPath = `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${letter}.webp`;
+        const correctPath = `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${letter}.webp`;
+        
+        try {
+          const correctResponse = await fetch(correctPath);
+          if (correctResponse.ok) {
+            return { letter, isCorrect: true };
+          }
+          
+          const normalResponse = await fetch(normalPath);
+          if (normalResponse.ok) {
+            return { letter, isCorrect: false };
+          }
+          
+          return null;
+        } catch {
+          return null;
+        }
+      }));
+      
+      const correctOption = optionFiles.find(option => option?.isCorrect);
+      return correctOption ? correctOption.letter : null;
+    } catch (err) {
+      console.error(`Soru ${questionNumber} için hata:`, err);
+      return null;
+    }
+  };
+
+  const handlePreviewQuiz = (quiz: Quiz) => {
+    setPreviewQuiz(quiz);
+    setCurrentQuestionIndex(0);
+    setShowCorrectAnswer(false);
+  };
+
+  const handleNextQuestion = () => {
+    if (!previewQuiz) return;
+    
+    if (currentQuestionIndex < previewQuiz.questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      setCurrentQuestionIndex(0);
+    }
+  };
+
+  const handlePrevQuestion = () => {
+    if (!previewQuiz) return;
+    
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    } else {
+      setCurrentQuestionIndex(previewQuiz.questions.length - 1);
+    }
+  };
+
+  const handleKeyPress = (event: KeyboardEvent) => {
+    if (!previewQuiz) return;
+
+    if (event.key === 'ArrowRight' || event.key === ' ') {
+      handleNextQuestion();
+    } else if (event.key === 'ArrowLeft') {
+      handlePrevQuestion();
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyPress);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [previewQuiz, currentQuestionIndex]);
+
+  const getOptionImagePath = (questionNumber: number, option: string, isCorrect: boolean) => {
+    if (isCorrect) {
+      return `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${option}.webp`;
+    }
+    return `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${option}.webp`;
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -418,7 +571,7 @@ const QuizManagement: React.FC = () => {
               <TableCell align="center">
                 <Tooltip title="Görüntüle">
                   <IconButton
-                    onClick={() => {/* Quiz görüntüleme işlemi */}}
+                    onClick={() => handlePreviewQuiz(quiz)}
                     size="small"
                   >
                     <ViewIcon />
@@ -628,14 +781,87 @@ const QuizManagement: React.FC = () => {
               <Typography variant="subtitle1" gutterBottom>
                 Seçili Sorular ({formData.questions.length})
               </Typography>
+
+              <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+                <TextField
+                  label="Soru Numarası"
+                  type="number"
+                  size="small"
+                  value={newQuestionNumber}
+                  onChange={(e) => setNewQuestionNumber(e.target.value)}
+                  sx={{ width: 150 }}
+                  inputProps={{ min: 1, max: MAX_QUESTION_NUMBER }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleAddQuestion}
+                  disabled={!newQuestionNumber || loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
+                >
+                  Soru Ekle
+                </Button>
+              </Box>
+
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
               {formData.questions.length === 0 ? (
                 <Alert severity="info">
-                  Henüz soru seçilmedi. Soru seçmek için "Sorular" sekmesine geçin.
+                  Henüz soru seçilmedi. Yukarıdaki alandan soru numarası girerek veya "Sorular" sekmesine geçerek soru ekleyebilirsiniz.
                 </Alert>
               ) : (
-                <Alert severity="success">
-                  {formData.questions.length} soru seçildi
-                </Alert>
+                <Box>
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    {formData.questions.length} soru seçildi
+                  </Alert>
+                  <Grid container spacing={2}>
+                    {formData.questions.map((question) => (
+                      <Grid item xs={12} sm={6} md={4} key={question.id}>
+                        <Card sx={{ p: 2, position: 'relative' }}>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                questions: prev.questions.filter(q => q.id !== question.id)
+                              }));
+                            }}
+                            sx={{
+                              position: 'absolute',
+                              right: 8,
+                              top: 8,
+                              zIndex: 1,
+                              backgroundColor: 'white',
+                              '&:hover': {
+                                backgroundColor: '#ffebee'
+                              }
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                          <CardMedia
+                            component="img"
+                            image={`/images/questions/Matris/Soru-${question.number}.webp`}
+                            alt={`Soru ${question.number}`}
+                            sx={{ height: 150, objectFit: 'contain' }}
+                          />
+                          <CardContent>
+                            <Typography variant="subtitle2">
+                              {question.text}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Doğru Cevap: {question.correct_option}
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
               )}
             </Box>
           </Box>
@@ -650,6 +876,125 @@ const QuizManagement: React.FC = () => {
             {selectedQuiz ? 'Güncelle' : 'Oluştur'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!previewQuiz}
+        onClose={() => setPreviewQuiz(null)}
+        maxWidth="lg"
+        fullWidth
+      >
+        {previewQuiz && previewQuiz.questions.length > 0 && (
+          <>
+            <DialogTitle>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="h6">
+                  {previewQuiz.title} - Soru {currentQuestionIndex + 1}/{previewQuiz.questions.length}
+                </Typography>
+                <IconButton onClick={() => setPreviewQuiz(null)} size="small">
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+            </DialogTitle>
+            <DialogContent>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                {/* Sol taraf - Soru */}
+                <Box sx={{ flex: '0 0 300px' }}>
+                  <Typography variant="h6" gutterBottom>
+                    Soru
+                  </Typography>
+                  <img
+                    src={`/images/questions/Matris/Soru-${previewQuiz.questions[currentQuestionIndex].number}.webp`}
+                    alt={`Soru ${previewQuiz.questions[currentQuestionIndex].number}`}
+                    style={{ 
+                      width: '100%',
+                      height: 'auto',
+                      marginBottom: '1rem',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '4px'
+                    }}
+                  />
+                </Box>
+
+                {/* Sağ taraf - Seçenekler */}
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="h6">
+                      Seçenekler
+                    </Typography>
+                    <Button
+                      size="small"
+                      onClick={() => setShowCorrectAnswer(prev => !prev)}
+                      startIcon={showCorrectAnswer ? <VisibilityOffIcon /> : <ViewIcon />}
+                    >
+                      {showCorrectAnswer ? 'Cevabı Gizle' : 'Cevabı Göster'}
+                    </Button>
+                  </Box>
+                  <Grid container spacing={1}>
+                    {['A', 'B', 'C', 'D', 'E'].map((option) => {
+                      const isCorrect = option === previewQuiz.questions[currentQuestionIndex].correct_option;
+                      return (
+                        <Grid item xs={12} key={option}>
+                          <Card 
+                            sx={{ 
+                              p: 1,
+                              border: (showCorrectAnswer && isCorrect)
+                                ? '2px solid #4caf50' 
+                                : '1px solid #e0e0e0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                              height: '80px'
+                            }}
+                          >
+                            <Typography 
+                              variant="h6" 
+                              color={(showCorrectAnswer && isCorrect) ? 'success' : 'inherit'}
+                              sx={{ minWidth: '30px' }}
+                            >
+                              {option}
+                            </Typography>
+                            <CardMedia
+                              component="img"
+                              image={getOptionImagePath(
+                                previewQuiz.questions[currentQuestionIndex].number,
+                                option,
+                                isCorrect
+                              )}
+                              alt={`Seçenek ${option}`}
+                              sx={{ 
+                                height: '70px', 
+                                width: '200px',
+                                objectFit: 'contain'
+                              }}
+                            />
+                            {showCorrectAnswer && isCorrect && (
+                              <Typography 
+                                variant="subtitle2" 
+                                color="success"
+                                sx={{ ml: 'auto' }}
+                              >
+                                Doğru Cevap
+                              </Typography>
+                            )}
+                          </Card>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handlePrevQuestion} startIcon={<ArrowBackIcon />}>
+                Önceki Soru
+              </Button>
+              <Button onClick={handleNextQuestion} endIcon={<ArrowForwardIcon />}>
+                Sonraki Soru
+              </Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
     </Box>
   );
