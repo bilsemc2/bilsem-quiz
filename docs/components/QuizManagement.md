@@ -111,7 +111,8 @@ function App() {
 
 ## Notlar
 - Tüm resim dosyaları webp formatında olmalıdır
-- Soru görselleri `/images/questions/Matris/` dizininde bulunmalıdır
-- Seçenek görselleri `/images/options/Matris/` dizininde bulunmalıdır
+- Soru görselleri `/images/questions/Matris/Soru-[Soru Numarası].webp` dizininde bulunur.
+- Seçenek görselleri `/images/options/Matris/[Soru Numarası]/Soru-[Soru Numarası][Letter].webp` dizininde bulunmalıdır
+- Doğru cevap seçeneğinde Soru--cevap-[Soru Numarası][Letter].webp olarak bulunur.
 - Her quiz en az bir soru içermelidir
 - Quiz başlığı zorunludur

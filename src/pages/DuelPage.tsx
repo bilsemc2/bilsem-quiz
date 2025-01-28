@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
 import { useXPCheck } from '../hooks/useXPCheck';
 import { useUser } from '../hooks/useUser';
 import XPWarning from '../components/XPWarning';
 import DuelQuestion from '../components/DuelQuestion';
 import { generateQuiz } from '../utils/quizGenerator';
-import { Question } from '../types/question';
 
 interface User {
   id: string;
@@ -25,11 +23,9 @@ const DuelPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [duels, setDuels] = useState<any[]>([]);
   const [activeDuel, setActiveDuel] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
   const [selectedDuel, setSelectedDuel] = useState<any>(null);
   const [showDuelDetails, setShowDuelDetails] = useState(false);
-  const navigate = useNavigate();
 
   const { currentUser, loading: userLoading } = useUser();
   const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(
@@ -167,12 +163,11 @@ const DuelPage = () => {
           text: `Soru ${randomQuestion.id}`,
           questionImageUrl: randomQuestion.questionImageUrl,
           options: randomQuestion.options,
-          correctOptionId: randomQuestion.correctOptionId,
-          solutionVideo: randomQuestion.solutionVideo || ''
+          correctOptionId: randomQuestion.correctOptionId
         })
       };
 
-      const { data: newDuel, error } = await supabase
+      const { error } = await supabase
         .from('duels')
         .insert([duelData])
         .select()
@@ -307,7 +302,7 @@ const DuelPage = () => {
     }
   };
 
-  const getDuelResultText = (duel: any, isChallenger: boolean) => {
+  const getDuelResultText = (duel: any) => {
     if (!duel.result) return '';
     
     const challenger = duel.challenger?.name;
@@ -359,9 +354,6 @@ const DuelPage = () => {
   const renderDuelCard = (duel: any) => {
     const isChallenger = duel.challenger_id === currentUser?.id;
     const opponent = isChallenger ? duel.challenged : duel.challenger;
-    const myAnswer = isChallenger ? duel.challenger_answer : duel.challenged_answer;
-    const opponentAnswer = isChallenger ? duel.challenged_answer : duel.challenger_answer;
-    const questionData = duel.question_data ? JSON.parse(duel.question_data) : null;
 
     return (
       <div key={duel.id} className="bg-white border rounded-xl shadow-sm hover:shadow-md transition-shadow p-6">
@@ -391,7 +383,7 @@ const DuelPage = () => {
         {duel.status === 'completed' && (
           <div className="mt-4 space-y-3">
             <div className="text-center font-medium text-lg">
-              {getDuelResultText(duel, isChallenger)}
+              {getDuelResultText(duel)}
             </div>
             <button
               onClick={() => {
@@ -602,7 +594,7 @@ const DuelPage = () => {
               type="text"
               placeholder="İsim ile ara..."
               value=""
-              onChange={(e) => {}}
+              onChange={() => {}}
               className="w-full p-2 mb-4 border rounded"
             />
             {users.length === 0 ? (
