@@ -15,14 +15,15 @@ const QuizOptions: React.FC<QuizOptionsProps> = ({
     onOptionSelect
 }) => {
     return (
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {options.map((option, index) => (
                 <button
                     key={`${option.id}-${index}`}
                     onClick={() => onOptionSelect(option.id)}
                     disabled={isAnswered}
                     className={`
-                        relative p-2 rounded-lg transition-all duration-200
+                        h-[120px] p-3 rounded-xl transition-all duration-200
+                        shadow-sm hover:shadow-md flex items-center justify-center
                         ${isAnswered
                             ? option.isCorrect
                                 ? 'border-2 border-emerald-500 bg-emerald-50'
@@ -36,13 +37,15 @@ const QuizOptions: React.FC<QuizOptionsProps> = ({
                     `}
                 >
                     {option.imageUrl ? (
-                        <img 
-                            src={option.imageUrl} 
-                            alt={option.text} 
-                            className="w-full h-auto"
-                        />
+                        <div className="h-full w-full flex items-center justify-center">
+                            <img 
+                                src={option.imageUrl} 
+                                alt={option.text} 
+                                className="max-h-full max-w-full object-contain"
+                            />
+                        </div>
                     ) : (
-                        <span>{option.text}</span>
+                        <span className="text-base text-center px-2">{option.text}</span>
                     )}
                 </button>
             ))}

@@ -200,7 +200,6 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
             <div className="flex justify-center items-center h-64">
                 <CircularProgress 
                     timeLeft={60} 
-                    totalTime={60} 
                     progress={100}
                 />
             </div>
@@ -224,36 +223,42 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                     title="Quiz'e başlamak için gereken XP" 
                 />
                 
-                <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-4">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold">
-                            {quizState.currentQuestionIndex + 1}/{quizState.quiz.questions.length}
-                        </h2>
-                        <CircularProgress 
-                            timeLeft={timerState.timeLeft} 
-                            totalTime={60}
-                            progress={(timerState.timeLeft / 60) * 100}
+                <div className="max-w-6xl mx-auto">
+                    {/* Soru ve Timer */}
+                    <div className="bg-white rounded-lg shadow-md p-6 mb-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold">
+                                {quizState.currentQuestionIndex + 1}/{quizState.quiz.questions.length}
+                            </h2>
+                            <CircularProgress 
+                                timeLeft={timerState.timeLeft} 
+                                progress={(timerState.timeLeft / 60) * 100}
+                            />
+                        </div>
+
+                        <QuizQuestionComponent
+                            question={quizState.currentQuestion}
+                            questionNumber={quizState.currentQuestionIndex + 1}
                         />
                     </div>
 
-                    <QuizQuestionComponent
-                        question={quizState.currentQuestion}
-                        questionNumber={quizState.currentQuestionIndex + 1}
-                        totalQuestions={quizState.quiz.questions.length}
-                    />
+                    {/* Seçenekler ve Footer */}
+                    <div className="bg-white rounded-lg shadow-md p-6">
+                        <QuizOptions
+                            options={quizState.currentQuestion.options}
+                            selectedOption={quizState.selectedOption}
+                            isAnswered={quizState.isAnswered}
+                            onOptionSelect={handleOptionSelect}
+                        />
 
-                    <QuizOptions
-                        options={quizState.currentQuestion.options}
-                        selectedOption={quizState.selectedOption}
-                        isAnswered={quizState.isAnswered}
-                        onOptionSelect={handleOptionSelect}
-                    />
-
-                    <QuizFooter
-                        isLastQuestion={quizState.isLastQuestion}
-                        isAnswered={quizState.isAnswered}
-                        onFinishQuiz={handleFinishQuiz}
-                    />
+                        <div className="mt-6">
+                            <QuizFooter
+                                isLastQuestion={quizState.isLastQuestion}
+                                isAnswered={quizState.isAnswered}
+                                onFinishQuiz={handleFinishQuiz}
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 <Feedback
