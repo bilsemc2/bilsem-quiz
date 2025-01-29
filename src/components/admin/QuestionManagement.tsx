@@ -130,7 +130,7 @@ export const QuestionManagement = () => {
     return ['A', 'B', 'C', 'D', 'E'].map(letter => ({
       id: letter,
       text: '',
-      imageUrl: `/images/options/Matris/Soru-${questionNumber}${letter}.webp`
+      imageUrl: `images/options/Matris/Soru-${questionNumber}${letter}.webp`
     }));
   };
 
@@ -221,7 +221,7 @@ export const QuestionManagement = () => {
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <img 
-                      src={question.question_image_url} 
+                      src={`/${question.question_image_url}`} 
                       alt={`Soru ${getQuestionNumber(question.question_image_url)}`}
                       style={{ 
                         width: '100px', 

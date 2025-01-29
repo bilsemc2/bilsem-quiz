@@ -35,6 +35,7 @@ import UserManagement from '../components/admin/UserManagement';
 import ClassManagement from '../components/admin/ClassManagement';
 import QuizManagement from '../components/admin/QuizManagement';
 import AdminSettings from '../components/admin/AdminSettings';
+import QuestionManagement from '../components/admin/QuestionManagement';
 import { toast } from 'react-hot-toast';
 
 interface MenuItem {
@@ -77,6 +78,13 @@ const AdminPage: React.FC = () => {
       icon: <SchoolIcon />,
       component: <ClassManagement />,
       path: '/admin/classes',
+    },
+    {
+      id: 'questions',
+      title: 'Sorular',
+      icon: <QuizIcon />,
+      component: <QuestionManagement />,
+      path: '/admin/questions',
     },
     {
       id: 'quizzes',
