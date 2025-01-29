@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useSound } from '../contexts/SoundContext';
 import { supabase } from '../lib/supabase';
-import { calculateScore } from '../utils/scoreCalculator';
-import { CircularProgress } from '../components/CircularProgress';
+import CircularProgress from '../components/CircularProgress';
 import { Feedback } from '../components/Feedback';
 import YouTube from 'react-youtube';
 import { playSound } from '../utils/soundPlayer';
@@ -15,18 +13,35 @@ interface Quiz {
   description: string;
   grade: number;
   subject: string;
-  questions: any[];
+  questions: Question[];
   is_active: boolean;
   created_at: string;
 }
+
+interface Question {
+  id: string;
+  text: string;
+  options: Option[];
+  questionImageUrl?: string;
+  solutionVideo?: {
+    videoId: string;
+  };
+}
+
+interface Option {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+  imageUrl?: string;
+}
+
+type FeedbackType = 'success' | 'error' | 'info';
 
 export default function HomeworkPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userGrade, setUserGrade] = useState<number | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -35,11 +50,15 @@ export default function HomeworkPage() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [isTimeout, setIsTimeout] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
-  const [feedback, setFeedback] = useState({ message: '', type: 'info' as const, show: false });
+  const [feedback, setFeedback] = useState<{ message: string; type: FeedbackType; show: boolean }>({ 
+    message: '', 
+    type: 'info', 
+    show: false 
+  });
   const [userAnswers, setUserAnswers] = useState<Array<{questionId: string, selectedAnswer: string, isCorrect: boolean}>>([]);
   const [quizResults, setQuizResults] = useState<any[]>([]);
 
-  const showFeedback = (message: string, type: 'success' | 'error' | 'info') => {
+  const showFeedback = (message: string, type: FeedbackType) => {
     setFeedback({ message, type, show: true });
     setTimeout(() => setFeedback(prev => ({ ...prev, show: false })), 2000);
   };
@@ -65,12 +84,12 @@ export default function HomeworkPage() {
         }
         
         console.log('User profile:', profileData);
-        setUserGrade(profileData.grade);
-        setIsAdmin(profileData.is_admin);
+        // setUserGrade(profileData.grade);
+        // setIsAdmin(profileData.is_admin);
 
         // Load quizzes for user's grade
         const { data: quizData, error: quizError } = await supabase
-          .from('quizzes')
+          .from('assignments')
           .select('*');
 
         if (quizError) {
@@ -121,7 +140,7 @@ export default function HomeworkPage() {
         if (resultsData && resultsData.length > 0) {
           const quizIds = resultsData.map(result => result.quiz_id);
           const { data: quizzesData, error: quizzesError } = await supabase
-            .from('quizzes')
+            .from('assignments')
             .select('id, title, description, questions')
             .in('id', quizIds);
 
@@ -167,67 +186,45 @@ export default function HomeworkPage() {
     showFeedback('Süre doldu!', 'error');
   };
 
-  const startQuiz = (quiz: Quiz) => {
+  const startQuiz = async (quiz: Quiz) => {
     console.log('Starting quiz:', quiz);
     
     // Soruları doğru resim yollarıyla güncelle
-    const questionsWithImages = quiz.questions.map((question: any, index: number) => {
-      // Soru numarasını question.number'dan al, yoksa index + 1 kullan
-      const questionNumber = question.number?.toString() || (index + 1).toString();
-      console.log('Processing question:', { 
-        questionNumber, 
-        question,
-        originalNumber: question.number,
-        index
-      });
+    const questionsWithImages = quiz.questions.map((question: Question) => {
+      const questionNumber = question.id;
       
-      // Soru görseli
+      // Soru görselinin yolunu oluştur
       const questionImageUrl = `/src/images/questions/Matris/Soru-${questionNumber}.webp`;
       
       // Seçenekleri güncelle
-      const updatedOptions = ['A', 'B', 'C', 'D', 'E'].map((optionLetter) => {
+      const updatedOptions = question.options.map((option: Option) => {
         // Normal ve doğru cevap görsellerinin yollarını oluştur
-        const normalPath = `/src/images/options/Matris/${questionNumber}/Soru-${questionNumber}${optionLetter}.webp`;
-        const correctPath = `/src/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${optionLetter}.webp`;
+        const normalPath = `/src/images/options/Matris/${questionNumber}/Soru-${questionNumber}${option.id}.webp`;
+        const correctPath = `/src/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${option.id}.webp`;
         
-        // Doğru cevap kontrolü - question.correctAnswer ile karşılaştır
-        const isCorrectOption = optionLetter === question.correctAnswer;
+        // Doğru cevap kontrolü
+        const isCorrectOption = option.isCorrect;
         
         // Seçenek görseli - doğru cevap için correctPath, diğerleri için normalPath kullan
         const imageUrl = isCorrectOption ? correctPath : normalPath;
         
-        console.log('Option details:', { 
-          questionNumber,
-          optionLetter,
-          isCorrect: isCorrectOption,
-          normalPath,
-          correctPath,
-          imageUrl
-        });
-
         return {
-          id: optionLetter,
-          imageUrl,
-          isCorrect: isCorrectOption
+          ...option,
+          imageUrl
         };
       });
 
       return {
-        id: questionNumber,
+        ...question,
         questionImageUrl,
-        options: updatedOptions,
-        correctAnswer: question.correctAnswer
+        options: updatedOptions
       };
     });
 
-    const updatedQuiz = {
+    setActiveQuiz({
       ...quiz,
       questions: questionsWithImages
-    };
-    
-    console.log('Updated quiz with correct paths:', updatedQuiz);
-    
-    setActiveQuiz(updatedQuiz);
+    });
     setCurrentQuestionIndex(0);
     setTimeLeft(60);
     setIsAnswered(false);
@@ -239,10 +236,12 @@ export default function HomeworkPage() {
   };
 
   const handleOptionSelect = (optionId: string) => {
-    if (isAnswered) return;
+    if (isAnswered || !activeQuiz) return;
 
-    const currentQuestion = activeQuiz?.questions[currentQuestionIndex];
-    const selectedOption = currentQuestion.options.find(opt => opt.id === optionId);
+    const currentQuestion = activeQuiz.questions[currentQuestionIndex];
+    if (!currentQuestion) return;
+
+    const selectedOption = currentQuestion.options.find((opt: Option) => opt.id === optionId);
     const isCorrect = selectedOption?.isCorrect || false;
     
     if (isCorrect) {
@@ -251,7 +250,7 @@ export default function HomeworkPage() {
       showFeedback('Doğru! 🎉', 'success');
     } else {
       playSound('incorrect');
-      showFeedback('Yanlış cevap! 😔', 'error');
+      showFeedback('Yanlış cevap', 'error');
     }
 
     setSelectedOption(optionId);
@@ -297,14 +296,14 @@ export default function HomeworkPage() {
             xp: Math.round(finalScore / 10),
             isHomework: true,
             quizId: activeQuiz.id,
-            answers: activeQuiz.questions.map((question: any, index: number) => ({
+            answers: activeQuiz.questions.map((question: Question, index: number) => ({
               questionNumber: index + 1,
               isCorrect: userAnswers[index]?.isCorrect || false,
               selectedOption: userAnswers[index]?.selectedAnswer || null,
-              correctOption: question.correctAnswer,
+              correctOption: question.options.find(option => option.isCorrect)?.id,
               questionImage: question.questionImageUrl,
               isTimeout: false,
-              options: question.options.map((option: any) => ({
+              options: question.options.map((option: Option) => ({
                 id: option.id,
                 imageUrl: option.imageUrl,
                 isSelected: userAnswers[index]?.selectedAnswer === option.id,
@@ -331,99 +330,37 @@ export default function HomeworkPage() {
     }
   }, [activeQuiz, currentQuestionIndex, score, user?.id, navigate]);
 
-  const renderQuizList = () => {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {quizzes.map((quiz) => {
-          const quizAttempts = quizResults.filter(result => result.quiz_id === quiz.id);
-          const latestQuizResult = quizAttempts[quizAttempts.length - 1];
-          
-          return (
-          <div
-            key={quiz.id}
-            className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
-          >
-            <div className="p-6">
-              <h3 className="text-xl font-semibold mb-2">{quiz.title}</h3>
-              <p className="text-gray-600 mb-4">{quiz.description}</p>
-              
-              {latestQuizResult && (
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium text-gray-800">Son Quiz Sonucunuz:</h4>
-                    <span className="text-sm text-blue-600 font-medium">
-                      {quizAttempts.length} kez çözüldü
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-gray-600">Puan:</span>
-                      <span className="ml-2 font-medium">{latestQuizResult.score}%</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Doğru Cevap:</span>
-                      <span className="ml-2 font-medium">{latestQuizResult.correct_answers}/{latestQuizResult.questions_answered}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-gray-600">Tamamlanma:</span>
-                      <span className="ml-2 font-medium">
-                        {new Date(latestQuizResult.completed_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <h5 className="font-medium text-gray-800 mb-2">Soru Detayları:</h5>
-                    <div className="space-y-2">
-                      {quiz.questions.map((question: any, index: number) => {
-                        const userAnswer = latestQuizResult.user_answers?.[index];
-                        return (
-                          <div key={index} className="flex items-center space-x-2 text-sm">
-                            <span className="font-medium">Soru {index + 1}:</span>
-                            <span className={`${
-                              userAnswer?.isCorrect 
-                                ? 'text-green-600' 
-                                : 'text-red-600'
-                            }`}>
-                              {userAnswer?.isCorrect ? 'Doğru' : 'Yanlış'}
-                            </span>
-                            <span className="text-gray-600">
-                              (Cevabınız: {userAnswer?.selectedAnswer || '-'})
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => startQuiz(quiz)}
-                    className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                  >
-                    Tekrar Çöz
-                  </button>
-                </div>
-              )}
-              
-              {!latestQuizResult && (
-                <button
-                  onClick={() => startQuiz(quiz)}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                >
-                  Ödevi Başlat
-                </button>
-              )}
-            </div>
-          </div>
-        )})}
-      </div>
-    );
-  };
+  const currentQuestion = activeQuiz?.questions[currentQuestionIndex];
 
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <CircularProgress indeterminate size={48} />
+        <CircularProgress 
+          timeLeft={60} 
+          totalTime={60} 
+          progress={100}
+        />
+      </div>
+    );
+  }
+
+  // Quiz sonuçlarını kontrol et
+  if (quizResults.length > 0) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h2 className="text-2xl font-bold mb-6">Quiz Sonuçları</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {quizResults.map((result) => (
+            <div key={result.id} className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-semibold mb-2">{result.quiz?.title}</h3>
+              <div className="text-gray-600 mb-4">
+                <p>Puan: {result.score}%</p>
+                <p>Doğru Cevaplar: {result.correct_answers}/{result.questions_answered}</p>
+                <p>Tamamlanma: {new Date(result.completed_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -450,141 +387,142 @@ export default function HomeworkPage() {
     );
   }
 
-  const currentQuestion = activeQuiz?.questions[currentQuestionIndex];
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        {!activeQuiz ? (
-          <>
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Ödevler</h1>
-            {renderQuizList()}
-          </>
+    <div className="min-h-screen bg-gray-100 py-8">
+      <div className="container mx-auto px-4">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <CircularProgress 
+              timeLeft={60} 
+              totalTime={60} 
+              progress={100}
+            />
+          </div>
         ) : (
-          // Active quiz view
           <>
-            {/* Progress Bar */}
-            <div className="mb-4 sm:mb-8">
-              <div className="flex justify-between items-center mb-2">
-                <div className="text-base sm:text-lg font-semibold text-gray-700">
-                  Soru {currentQuestionIndex + 1}/{activeQuiz.questions.length}
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className={`
-                    relative w-12 h-12 sm:w-14 sm:h-14
-                    flex items-center justify-center
-                    rounded-full border-4
-                    ${timeLeft <= 10 ? 'border-red-500 text-red-500 animate-pulse' : 'border-gray-300 text-gray-700'}
-                    transition-colors duration-300
-                  `}>
-                    <span className="text-lg sm:text-xl font-bold">{timeLeft}</span>
-                  </div>
-                  <button
-                    onClick={() => setActiveQuiz(null)}
-                    className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+            {!activeQuiz ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {quizzes.map((quiz) => (
+                  <div
+                    key={quiz.id}
+                    className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200"
                   >
-                    <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-indigo-500 transition-all duration-300"
-                  style={{ width: `${((currentQuestionIndex + 1) / activeQuiz.questions.length) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {currentQuestion && (
-              <div className="w-full bg-white rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-6 mb-4 sm:mb-8">
-                {/* Soru */}
-                <div className="mb-4 sm:mb-8">
-                  <div className="bg-gray-50 rounded-lg p-3 sm:p-6">
-                    <div className="flex justify-center">
-                      <img
-                        src={currentQuestion.questionImageUrl}
-                        alt={`Soru ${currentQuestionIndex + 1}`}
-                        className="max-h-[200px] sm:max-h-[300px] w-full object-contain rounded-lg transition-transform duration-300 hover:scale-105"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Seçenekler */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
-                  {currentQuestion.options.map((option: any) => (
+                    <h3 className="text-xl font-semibold mb-2">{quiz.title}</h3>
+                    <p className="text-gray-600 mb-4">{quiz.description}</p>
                     <button
-                      key={option.id}
-                      onClick={() => handleOptionSelect(option.id)}
-                      disabled={isAnswered || isTimeout}
-                      className={`
-                        w-full p-2 sm:p-4 text-center rounded-lg transition-all duration-200 relative
-                        ${isAnswered && !isTimeout
-                          ? option.isCorrect
-                            ? 'border-4 border-emerald-500 bg-emerald-50 shadow-emerald-100 scale-105'
-                            : option.id === selectedOption
-                              ? 'border-4 border-red-500 bg-red-50 shadow-red-100'
-                              : 'border border-gray-200 bg-white'
-                          : selectedOption === option.id
-                            ? 'border-4 border-blue-500 bg-blue-50 shadow-blue-100'
-                            : 'border border-gray-200 bg-white hover:border-blue-500 hover:shadow-lg'
-                        }
-                        ${isAnswered || isTimeout ? 'cursor-default' : 'cursor-pointer hover:scale-105'}
-                      `}
+                      onClick={() => startQuiz(quiz)}
+                      className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                     >
-                      <img 
-                        src={option.imageUrl} 
-                        alt={`Seçenek ${option.id}`}
-                        className="w-full h-auto rounded-md"
-                      />
-                      <div className="mt-2 text-sm font-medium">
-                        {option.id}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Sonraki soru butonu */}
-                {(isAnswered || isTimeout) && (
-                  <div className="mt-6 flex justify-center">
-                    <button
-                      onClick={handleNext}
-                      className="
-                        px-8 py-3 rounded-lg
-                        bg-indigo-600 hover:bg-indigo-700
-                        text-white font-semibold text-lg
-                        transition-all duration-200
-                        hover:shadow-lg hover:scale-105
-                      "
-                    >
-                      {currentQuestionIndex < activeQuiz.questions.length - 1 ? 'Sonraki Soru' : 'Testi Bitir'}
+                      Başla
                     </button>
                   </div>
-                )}
-
-                {/* Video çözüm */}
-                {showSolution && currentQuestion.solutionVideo && (
-                  <div className="mt-8">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                      Video Çözüm
-                    </h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex justify-center">
-                        <YouTube
-                          videoId={currentQuestion.solutionVideo.videoId}
-                          opts={{
-                            height: '390',
-                            width: '640',
-                            playerVars: {
-                              autoplay: 0,
-                            },
-                          }}
-                        />
-                      </div>
+                ))}
+              </div>
+            ) : (
+              <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
+                {currentQuestion && (
+                  <>
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-2xl font-bold">
+                        Soru {currentQuestionIndex + 1}/{activeQuiz.questions.length}
+                      </h2>
+                      <CircularProgress 
+                        timeLeft={timeLeft} 
+                        totalTime={60}
+                        progress={(timeLeft / 60) * 100}
+                      />
                     </div>
-                  </div>
+
+                    <div className="w-full bg-white rounded-lg sm:rounded-2xl shadow-lg p-3 sm:p-6 mb-4 sm:mb-8">
+                      {/* Soru */}
+                      <div className="mb-4 sm:mb-8">
+                        <div className="bg-gray-50 rounded-lg p-3 sm:p-6">
+                          <div className="flex justify-center">
+                            <img
+                              src={currentQuestion.questionImageUrl}
+                              alt={`Soru ${currentQuestionIndex + 1}`}
+                              className="max-h-[200px] sm:max-h-[300px] w-full object-contain rounded-lg transition-transform duration-300 hover:scale-105"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Seçenekler */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
+                        {currentQuestion.options.map((option: Option) => (
+                          <button
+                            key={option.id}
+                            onClick={() => handleOptionSelect(option.id)}
+                            disabled={isAnswered || isTimeout}
+                            className={`
+                              w-full p-2 sm:p-4 text-center rounded-lg transition-all duration-200 relative
+                              ${isAnswered && !isTimeout
+                                ? option.isCorrect
+                                  ? 'border-4 border-emerald-500 bg-emerald-50 shadow-emerald-100 scale-105'
+                                  : option.id === selectedOption
+                                    ? 'border-4 border-red-500 bg-red-50 shadow-red-100'
+                                    : 'border border-gray-200 bg-white'
+                                : selectedOption === option.id
+                                  ? 'border-4 border-blue-500 bg-blue-50 shadow-blue-100'
+                                  : 'border border-gray-200 bg-white hover:border-blue-500 hover:shadow-lg'
+                              }
+                              ${isAnswered || isTimeout ? 'cursor-default' : 'cursor-pointer hover:scale-105'}
+                            `}
+                          >
+                            <img 
+                              src={option.imageUrl} 
+                              alt={`Seçenek ${option.id}`}
+                              className="w-full h-auto rounded-md"
+                            />
+                            <div className="mt-2 text-sm font-medium">
+                              {option.id}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Sonraki soru butonu */}
+                      {(isAnswered || isTimeout) && (
+                        <div className="mt-6 flex justify-center">
+                          <button
+                            onClick={handleNext}
+                            className="
+                              px-8 py-3 rounded-lg
+                              bg-indigo-600 hover:bg-indigo-700
+                              text-white font-semibold text-lg
+                              transition-all duration-200
+                              hover:shadow-lg hover:scale-105
+                            "
+                          >
+                            {currentQuestionIndex < activeQuiz.questions.length - 1 ? 'Sonraki Soru' : 'Testi Bitir'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Video çözüm */}
+                      {showSolution && currentQuestion.solutionVideo && (
+                        <div className="mt-8">
+                          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                            Video Çözüm
+                          </h3>
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <div className="flex justify-center">
+                              <YouTube
+                                videoId={currentQuestion.solutionVideo.videoId}
+                                opts={{
+                                  height: '390',
+                                  width: '640',
+                                  playerVars: {
+                                    autoplay: 0,
+                                  },
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             )}

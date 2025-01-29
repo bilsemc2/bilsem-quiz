@@ -1,34 +1,12 @@
 import { shuffleArray } from './arrayUtils';
 import { MAX_QUESTION_NUMBER } from '../config/constants';
+import { Quiz as BaseQuiz, Question as BaseQuestion, QuizOption } from '../types/quiz';
 
-export interface Quiz {
-    id: string;
-    title: string;
-    description: string;
-    grade: number;
-    subject: string;
-    questions: Question[];
-    status: 'pending' | 'completed';
-    created_by: string;
-    is_active: boolean;
-}
+export interface Quiz extends BaseQuiz {}
 
-export interface Question {
-    id: string;
-    questionImageUrl: string;
-    question: string;
-    options: Option[];
-    correctOptionId: string;
-    points: number;
-    type: 'multiple_choice' | 'true_false';
-    difficulty: 1 | 2 | 3;
-}
+export interface Question extends BaseQuestion {}
 
-interface Option {
-    id: string;
-    imageUrl: string;
-    text: string;
-}
+export interface Option extends QuizOption {}
 
 export function extractFilename(path: string): string {
     const parts = path.split('/');
@@ -113,7 +91,8 @@ export async function generateQuiz(questionCount: number = 10): Promise<Quiz> {
                     .map(option => ({
                         id: `${questionId}${option.letter}`,
                         text: '',
-                        imageUrl: `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${option.letter}.webp`
+                        imageUrl: `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${option.letter}.webp`,
+                        isCorrect: false
                     }));
 
                 if (normalOptions.length === 0) {
@@ -127,7 +106,8 @@ export async function generateQuiz(questionCount: number = 10): Promise<Quiz> {
                     {
                         id: `${questionId}${correctOption.letter}`,
                         text: '',
-                        imageUrl: `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${correctOption.letter}.webp`
+                        imageUrl: `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${correctOption.letter}.webp`,
+                        isCorrect: true
                     }
                 ];
 

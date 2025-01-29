@@ -4,7 +4,6 @@ import NavBar from './components/NavBar';
 import HomePage from './pages/HomePage';
 import QuizPage from './pages/QuizPage';
 import ProfilePage from './pages/ProfilePage';
-import ResultPage from './pages/ResultPage';
 import TeacherPage from './pages/TeacherPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
@@ -37,7 +36,6 @@ import MemoryGamePage2 from './pages/MemoryGamePage2';
 import InfiniteMathProblems from './pages/Math/M1/m1';
 import ClassroomPage from './pages/ClassroomPage';
 import BallGame from './pages/BallGame';
-import AssignmentQuizPage from './pages/AssignmentQuizPage';
 import AssignmentResults from './pages/AssignmentResults';
 import ServicesPage from './pages/ServicesPage';
 import HowItWorksPage from './pages/HowItWorksPage';
@@ -52,14 +50,14 @@ import ClassesPage from './pages/school/ClassesPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
-import { Toaster } from 'sonner';
+import { Toaster } from 'react-hot-toast';
 import AdminMessageNotification from './components/AdminMessageNotification';
 import toast from 'react-hot-toast';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import FilledEmptyPage from './pages/FilledEmptyPage';
 import FallingNumbersPage from './pages/FallingNumbersPage';
 import BubbleNumbersPage from './pages/BubbleNumbersPage';
+import { QuizProvider } from './contexts/QuizContext';
+import QuizResultPage from './pages/QuizResultPage';
 
 // Hata mesajını gösterecek bileşen
 const LocationAwareRouter: React.FC = () => {
@@ -103,30 +101,6 @@ const LocationAwareRouter: React.FC = () => {
             element={
               <RequireAuth>
                 <QuizPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/assignment-quiz/:assignmentId" 
-            element={
-              <RequireAuth>
-                <AssignmentQuizPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/assignments/:assignmentId/quiz" 
-            element={
-              <RequireAuth>
-                <AssignmentQuizPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/assignments/:assignmentId/results" 
-            element={
-              <RequireAuth>
-                <AssignmentResults />
               </RequireAuth>
             } 
           />
@@ -213,14 +187,6 @@ const LocationAwareRouter: React.FC = () => {
             element={
               <RequireAuth>
                 <HomeworkPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/result" 
-            element={
-              <RequireAuth>
-                <ResultPage />
               </RequireAuth>
             } 
           />
@@ -396,6 +362,43 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/falling-numbers" element={<FallingNumbersPage />} />
           <Route path="/cube" element={<CubePage />} />
           <Route path="/bubble-numbers" element={<BubbleNumbersPage />} />
+          <Route path="/quiz/:quizId/results" element={
+            <RequireAuth>
+              <QuizResultPage />
+            </RequireAuth>
+          } />
+          <Route 
+            path="/quiz/:quizId" 
+            element={
+              <RequireAuth>
+                <QuizPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/assignments/quiz/:quizId" 
+            element={
+              <RequireAuth>
+                <QuizPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/quiz/:quizId/result" 
+            element={
+              <RequireAuth>
+                <QuizResultPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/assignments/results/:assignmentId" 
+            element={
+              <RequireAuth>
+                <AssignmentResults />
+              </RequireAuth>
+            } 
+          />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
@@ -405,18 +408,17 @@ const LocationAwareRouter: React.FC = () => {
 
 function App() {
   return (
-    <>
-      <AuthProvider>
-        <SoundProvider>
-          <AdminMessageNotification />
-          <Toaster position="top-center" />
-          <Router>
+    <AuthProvider>
+      <SoundProvider>
+        <AdminMessageNotification />
+        <Toaster position="top-center" />
+        <Router>
+          <QuizProvider>
             <LocationAwareRouter />
-          </Router>
-        </SoundProvider>
-      </AuthProvider>
-      <ToastContainer position="bottom-right" />
-    </>
+          </QuizProvider>
+        </Router>
+      </SoundProvider>
+    </AuthProvider>
   );
 }
 
