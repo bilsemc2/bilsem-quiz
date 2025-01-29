@@ -1,18 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { CircularProgress } from '../components/CircularProgress';
-import { Feedback } from '../components/Feedback';
 import { useQuizState } from '../hooks/useQuizState';
-import { useQuizTimer } from '../hooks/useQuizTimer';
-import { useQuizFeedback } from '../hooks/useQuizFeedback';
-import { handleQuizEnd, handleQuestionNavigation, handleOptionSelection, handleQuizComplete } from '../utils/quizHandlers';
-import { supabase } from '../lib/supabase';
-import XPWarning from '../components/XPWarning';
-import QuizHeader from '../components/QuizHeader';
-import QuizQuestion from '../components/QuizQuestion';
+import { useTimer } from '../hooks/useTimer';
+import { useFeedback } from '../hooks/useFeedback';
+import QuizQuestionComponent from '../components/QuizQuestion';
 import QuizOptions from '../components/QuizOptions';
 import QuizFooter from '../components/QuizFooter';
+import CircularProgress from '../components/CircularProgress';
+import XPWarning from '../components/XPWarning';
+import { Feedback } from '../components/Feedback';
+import { handleOptionSelection, handleQuizEnd, handleQuizComplete as handleQuizCompleteUtil, handleQuestionNavigation } from '../utils/quizHandlers';
+import { supabase } from '../lib/supabase';
 
 interface QuizPageProps {
     onComplete?: (score: number, totalQuestions: number) => void;
@@ -20,16 +19,48 @@ interface QuizPageProps {
 
 export default function QuizPage({ onComplete }: QuizPageProps) {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
-    const [userXP, setUserXP] = useState<number>(0);
-    const [loading, setLoading] = useState(true);
-    const requiredXP = 10;
+    const [loading, setLoading] = React.useState(true);
+    const [userXP, setUserXP] = React.useState(0);
+    const [requiredXP, setRequiredXP] = React.useState(0);
 
-    const handleTimeout = () => {
-        if (!quizState.isAnswered && quizState.currentQuestion && quizState.quiz) {
+    const [quizState, quizActions] = useQuizState();
+    const [feedbackState, feedbackActions] = useFeedback();
+    const [timerState, timerActions] = useTimer(60);
+
+    // Quiz başladığında bildirim göster
+    React.useEffect(() => {
+        if (quizState.quiz && !loading) {
+            feedbackActions.showFeedback('Quiz başladı! Her soruyu dikkatlice okuyun.', 'info');
+        }
+    }, [quizState.quiz, loading]);
+
+    const handleNext = React.useCallback(() => {
+        if (quizState.isLastQuestion) {
+            handleQuestionNavigation(
+                quizState.currentQuestionIndex,
+                quizActions,
+                timerActions,
+                feedbackActions
+            );
+        } else {
+            handleQuestionNavigation(
+                quizState.currentQuestionIndex + 1,
+                quizActions,
+                timerActions,
+                feedbackActions
+            );
+        }
+    }, [quizState.isLastQuestion, quizState.currentQuestionIndex, quizActions, timerActions, feedbackActions]);
+
+    // Timer'ın timeout callback'ini güncelle
+    React.useEffect(() => {
+        const handleTimeout = (timeSpent: number) => {
+            if (!quizState.currentQuestion) return;
+
             handleQuizEnd(
                 'timeout',
-                quizState.quiz,
                 quizState.currentQuestion,
                 quizState.currentQuestionIndex,
                 quizState.isLastQuestion,
@@ -37,150 +68,193 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                 timerActions,
                 feedbackActions,
                 handleNext,
-                () => handleQuizComplete(
-                    quizState.quiz!,
-                    quizState.answers,
-                    user!.id,
-                    quizState.isSubmitting,
-                    quizActions,
-                    feedbackActions,
-                    onComplete,
-                    (path, state) => navigate(path, { state })
-                )
+                timeSpent
+            );
+        };
+
+        // Timer süresi bittiğinde handleTimeout çağrılsın
+        if (timerState.timeLeft === 0 && !quizState.isAnswered) {
+            handleTimeout(60 - timerState.timeLeft);
+        }
+    }, [quizState.currentQuestion, quizState.currentQuestionIndex, quizState.isLastQuestion, quizActions, timerActions, feedbackActions, handleNext, timerState.timeLeft, quizState.isAnswered]);
+
+    const handleFinishQuiz = React.useCallback(() => {
+        if (quizState.quiz) {
+            handleQuizCompleteUtil(
+                quizState.quiz,
+                quizState.answers,
+                user?.id || '',
+                quizActions,
+                feedbackActions,
+                (score, totalQuestions) => {
+                    if (onComplete) {
+                        onComplete(score, totalQuestions);
+                    }
+                    if (quizState.quiz) {
+                        const resultPath = `/quiz/${quizState.quiz.id}/results`;
+                        navigate(resultPath);
+                    }
+                }
             );
         }
-    };
+    }, [quizState.quiz, quizState.answers, user?.id, quizActions, feedbackActions, onComplete, navigate]);
 
-    const [quizState, quizActions] = useQuizState();
-    const [timerState, timerActions] = useQuizTimer(60, handleTimeout);
-    const [feedbackState, feedbackActions] = useQuizFeedback();
+    // Timer'ı soru değiştiğinde veya cevap verildiğinde yönet
+    React.useEffect(() => {
+        if (!quizState.isAnswered && quizState.currentQuestion) {
+            timerActions.resetTimer(60);
+            timerActions.startTimer();
+        }
+        // Cleanup: komponentin unmount olması veya soru değişmesi durumunda timer'ı durdur
+        return () => {
+            timerActions.stopTimer();
+        };
+    }, [quizState.currentQuestion?.id]);  // Sadece soru değiştiğinde çalışsın
 
-    const handleNext = () => {
-        handleQuestionNavigation(
-            'next',
+    const handleOptionSelect = React.useCallback((optionId: string) => {
+        if (!quizState.currentQuestion) return;
+
+        handleOptionSelection(
+            optionId,
+            quizState.currentQuestion,
             quizState.currentQuestionIndex,
+            quizState.isLastQuestion,
             quizActions,
             timerActions,
-            feedbackActions
+            feedbackActions,
+            handleNext
         );
-    };
+    }, [quizState.currentQuestion, quizState.currentQuestionIndex, quizState.isLastQuestion, quizActions, timerActions, feedbackActions, handleNext]);
 
-    useEffect(() => {
-        const checkXP = async () => {
-            if (!user?.id) return;
-
+    // XP gereksinimini kontrol et
+    React.useEffect(() => {
+        const checkXPRequirement = async () => {
             try {
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('experience')
-                    .eq('id', user.id)
+                // Ödev quizleri için XP kontrolü yapmıyoruz
+                if (location.pathname.includes('/assignments/')) {
+                    setLoading(false);
+                    return;
+                }
+
+                const { data: requirement, error } = await supabase
+                    .from('xp_requirements')
+                    .select('required_xp')
+                    .eq('page_path', location.pathname)
                     .single();
 
-                if (error) throw error;
-                setUserXP(profile.experience || 0);
+                if (error) {
+                    console.error('XP gereksinimi alınırken hata:', error);
+                    return;
+                }
+
+                if (requirement) {
+                    setRequiredXP(requirement.required_xp);
+                }
             } catch (error) {
-                console.error('XP kontrolü yapılırken hata:', error);
-            } finally {
-                setLoading(false);
+                console.error('XP gereksinimi kontrolünde hata:', error);
             }
         };
 
-        checkXP();
-    }, [user]);
+        checkXPRequirement();
+    }, [location.pathname]);
 
-    useEffect(() => {
-        if (!quizState.isAnswered && !timerState.isRunning) {
-            timerActions.startTimer();
-        }
-    }, [quizState.isAnswered, timerState.isRunning, timerActions]);
+    // Kullanıcı XP'sini kontrol et
+    React.useEffect(() => {
+        if (user?.id) {
+            const checkUserXP = async () => {
+                try {
+                    // Ödev quizleri için XP kontrolü yapmıyoruz
+                    if (location.pathname.includes('/assignments/')) {
+                        setLoading(false);
+                        return;
+                    }
 
-    const handleOptionSelect = async (optionId: string) => {
-        if (!quizState.isAnswered && quizState.currentQuestion) {
-            handleOptionSelection(
-                optionId,
-                quizState.currentQuestion,
-                quizState.currentQuestionIndex,
-                quizState.isLastQuestion,
-                quizActions,
-                timerActions,
-                feedbackActions,
-                handleNext
-            );
-        }
-    };
+                    const { data: profile, error } = await supabase
+                        .from('profiles')
+                        .select('experience')
+                        .eq('id', user.id)
+                        .single();
 
-    const onQuizComplete = () => {
-        if (quizState.quiz && user) {
-            handleQuizComplete(
-                quizState.quiz,
-                quizState.answers,
-                user.id,
-                quizState.isSubmitting,
-                quizActions,
-                feedbackActions,
-                onComplete,
-                (path, state) => navigate(path, { state })
-            );
+                    if (error) throw error;
+
+                    if (profile) {
+                        setUserXP(profile.experience || 0);
+                        if (profile.experience < requiredXP) {
+                            navigate('/');
+                        } else {
+                            setLoading(false);
+                        }
+                    }
+                } catch (error) {
+                    console.error('XP kontrolü sırasında hata:', error);
+                    navigate('/');
+                }
+            };
+
+            checkUserXP();
         }
-    };
+    }, [user?.id, navigate, requiredXP, location.pathname]);
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
-                <CircularProgress />
+            <div className="flex justify-center items-center h-64">
+                <CircularProgress 
+                    timeLeft={60} 
+                    totalTime={60} 
+                    progress={100}
+                />
             </div>
         );
     }
 
-    if (userXP < requiredXP) {
-        return (
-            <div className="flex justify-center items-center min-h-screen p-4">
-                <XPWarning
-                    requiredXP={requiredXP}
-                    currentXP={userXP}
-                    title="Quiz'e Başlamak İçin XP Gerekiyor"
-                />
-            </div>
-        );
+    if (!user) {
+        return <div>Giriş yapmanız gerekiyor</div>;
     }
 
     if (!quizState.quiz || !quizState.currentQuestion) {
-        return (
-            <div className="flex justify-center items-center min-h-screen">
-                <CircularProgress indeterminate size={48} />
-            </div>
-        );
+        return <div>Quiz yüklenemedi</div>;
     }
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] pt-16 sm:pt-20 pb-4 sm:pb-8">
-            <div className="max-w-7xl mx-auto px-3 sm:px-4">
-                <QuizHeader
-                    currentQuestionIndex={quizState.currentQuestionIndex}
-                    totalQuestions={quizState.quiz.questions.length}
-                    timeLeft={timerState.timeLeft}
+        <div className="min-h-screen bg-gray-100 py-4">
+            <div className="container mx-auto px-4">
+                <XPWarning 
+                    requiredXP={requiredXP} 
+                    currentXP={userXP} 
+                    title="Quiz'e başlamak için gereken XP" 
                 />
+                
+                <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold">
+                            {quizState.currentQuestionIndex + 1}/{quizState.quiz.questions.length}
+                        </h2>
+                        <CircularProgress 
+                            timeLeft={timerState.timeLeft} 
+                            totalTime={60}
+                            progress={(timerState.timeLeft / 60) * 100}
+                        />
+                    </div>
 
-                <QuizQuestion
-                    question={quizState.currentQuestion}
-                    isAnswered={quizState.isAnswered}
-                    isTimeout={quizState.isTimeout}
-                />
+                    <QuizQuestionComponent
+                        question={quizState.currentQuestion}
+                        questionNumber={quizState.currentQuestionIndex + 1}
+                        totalQuestions={quizState.quiz.questions.length}
+                    />
 
-                <QuizOptions
-                    options={quizState.currentQuestion.options}
-                    isAnswered={quizState.isAnswered}
-                    isTimeout={quizState.isTimeout}
-                    correctOptionId={quizState.currentQuestion.correctOptionId}
-                    selectedOption={quizState.selectedOption}
-                    onOptionSelect={handleOptionSelect}
-                />
+                    <QuizOptions
+                        options={quizState.currentQuestion.options}
+                        selectedOption={quizState.selectedOption}
+                        isAnswered={quizState.isAnswered}
+                        onOptionSelect={handleOptionSelect}
+                    />
 
-                <QuizFooter
-                    isAnswered={quizState.isAnswered}
-                    isLastQuestion={quizState.isLastQuestion}
-                    onComplete={onQuizComplete}
-                />
+                    <QuizFooter
+                        isLastQuestion={quizState.isLastQuestion}
+                        isAnswered={quizState.isAnswered}
+                        onFinishQuiz={handleFinishQuiz}
+                    />
+                </div>
 
                 <Feedback
                     message={feedbackState.message}

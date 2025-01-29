@@ -1,12 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import QuestionCount from '../components/QuestionCount';
-import { PuzzleData, getPuzzles } from '../lib/puzzleService';
-import { formatDistanceToNow } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import PuzzlePreview from '../components/PuzzlePreview';
 import QuizizzSurprise from '../components/QuizizzSurprise';
 
 interface LeaderUser {
@@ -26,8 +22,6 @@ const slides = [
 export default function HomePage() {
     const [leaders, setLeaders] = useState<LeaderUser[]>([]);
     const [currentSlide, setCurrentSlide] = useState(0);
-    const [currentPuzzleSlide, setCurrentPuzzleSlide] = useState(0);
-    const [recentPuzzles, setRecentPuzzles] = useState<PuzzleData[]>([]);
     const [activeStudentCount, setActiveStudentCount] = useState(0);
     const { user } = useAuth();
 
@@ -65,25 +59,7 @@ export default function HomePage() {
             setActiveStudentCount(count || 0);
         };
 
-        const fetchPuzzles = async () => {
-            try {
-                const puzzles = await getPuzzles();
-                setRecentPuzzles(puzzles.slice(0, 6));
-
-                // Eğer birden fazla bulmaca varsa slayt zamanlayıcısını başlat
-                if (puzzles.length > 1) {
-                    const interval = setInterval(() => {
-                        setCurrentPuzzleSlide(prev => (prev + 1) % Math.min(puzzles.length, 3));
-                    }, 3000);
-                    return () => clearInterval(interval);
-                }
-            } catch (err) {
-                console.error('Error loading puzzles:', err);
-            }
-        };
-
         fetchLeaders();
-        fetchPuzzles();
         const interval = setInterval(fetchLeaders, 30000);
         return () => clearInterval(interval);
     }, []);
@@ -98,10 +74,6 @@ export default function HomePage() {
 
     const goToSlide = (index: number) => {
         setCurrentSlide(index);
-    };
-
-    const goToPuzzleSlide = (index: number) => {
-        setCurrentPuzzleSlide(index);
     };
 
     return (

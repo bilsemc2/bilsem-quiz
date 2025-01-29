@@ -131,35 +131,27 @@ const CreatePdfPage: React.FC = () => {
   };
 
   const addWatermark = () => {
-    const content = contentRef.current;
-    if (!content) return;
-
-    // Önce varolan watermark'ları temizle
-    const existingWatermarks = content.getElementsByClassName('watermark');
-    while (existingWatermarks.length > 0) {
-      existingWatermarks[0].remove();
-    }
-
-    // Her sayfaya watermark ekle
-    const pages = content.querySelectorAll('.question-container');
-    Array.from(pages).forEach(page => {
+    const pages = document.querySelectorAll('.pdf-page');
+    pages.forEach(page => {
       const watermark = document.createElement('div');
-      watermark.className = 'watermark';
-      watermark.style.position = 'absolute';
-      watermark.style.top = '50%';
-      watermark.style.left = '50%';
-      watermark.style.transform = 'translate(-50%, -50%) rotate(-45deg)';
-      watermark.style.fontSize = '60px';
-      watermark.style.color = 'gray';
-      watermark.style.opacity = '0.05';
-      watermark.style.pointerEvents = 'none';
-      watermark.style.userSelect = 'none';
-      watermark.style.width = '100%';
-      watermark.style.textAlign = 'center';
-      watermark.style.fontWeight = 'bold';
-      watermark.textContent = 'BilsemC2';
-      page.style.position = 'relative';
-      page.appendChild(watermark);
+      const pageElement = page as HTMLElement;
+      const watermarkElement = watermark as HTMLElement;
+
+      watermarkElement.style.position = 'absolute';
+      watermarkElement.style.top = '50%';
+      watermarkElement.style.left = '50%';
+      watermarkElement.style.transform = 'translate(-50%, -50%) rotate(-45deg)';
+      watermarkElement.style.fontSize = '60px';
+      watermarkElement.style.color = 'gray';
+      watermarkElement.style.opacity = '0.05';
+      watermarkElement.style.pointerEvents = 'none';
+      watermarkElement.style.userSelect = 'none';
+      watermarkElement.style.width = '100%';
+      watermarkElement.style.textAlign = 'center';
+      watermarkElement.style.fontWeight = 'bold';
+      watermarkElement.textContent = 'BilsemC2';
+      pageElement.style.position = 'relative';
+      pageElement.appendChild(watermarkElement);
     });
   };
 

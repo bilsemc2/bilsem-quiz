@@ -1,21 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { PuzzleData, getRecentPuzzles, subscribeToNewPuzzles } from '@/lib/puzzleService';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import PuzzlePreview from '@/components/PuzzlePreview';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { MAX_QUESTION_NUMBER } from '@/config/constants';
+import { supabase } from '@/lib/supabase';
 
 const HomePage = () => {
   const [recentPuzzles, setRecentPuzzles] = useState<PuzzleData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
-    totalQuestions: 100,
-    activeUsers: 203,
-    highestScore: 11360
+    totalQuestions: MAX_QUESTION_NUMBER,
+    activeUsers: 0,
+    highestScore: 0
   });
 
   useEffect(() => {
@@ -31,6 +33,34 @@ const HomePage = () => {
       }
     };
 
+    const loadStats = async () => {
+      try {
+        // Aktif kullanıcı sayısını al (son 30 gün içinde giriş yapmış)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const { count: activeUsers } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .gte('last_seen', thirtyDaysAgo.toISOString());
+
+        // En yüksek skoru al
+        const { data: highestScoreData } = await supabase
+          .from('profiles')
+          .select('points')
+          .order('points', { ascending: false })
+          .limit(1);
+
+        setStats(prev => ({
+          ...prev,
+          activeUsers: activeUsers || 0,
+          highestScore: highestScoreData?.[0]?.points || 0
+        }));
+      } catch (err) {
+        console.error('Error loading stats:', err);
+      }
+    };
+
     // Initial load
     loadPuzzles();
 
@@ -43,9 +73,13 @@ const HomePage = () => {
       });
     });
 
+    loadStats();
+    const interval = setInterval(loadStats, 30000); // Her 30 saniyede bir güncelle
+
     // Cleanup subscription
     return () => {
       unsubscribe();
+      clearInterval(interval);
     };
   }, []);
 
@@ -73,12 +107,12 @@ const HomePage = () => {
           <h1 className="text-5xl font-bold text-gray-900">Bilsem Quiz</h1>
           <p className="text-xl text-gray-600">Öğrenmeyi Eğlenceli Hale Getirin</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/quiz">
+            <Link to="/quiz">
               <Button className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors">
                 Quiz'e Başla
               </Button>
             </Link>
-            <Link href="/duello">
+            <Link to="/duello">
               <Button className="w-full sm:w-auto bg-pink-600 hover:bg-pink-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors">
                 Düello Başlat
               </Button>
@@ -117,14 +151,14 @@ const HomePage = () => {
             </h2>
             <p className="mt-2 text-gray-600">En son eklenen bulmacaları keşfedin ve çözün</p>
           </div>
-          <Link href="/puzzles" className="text-purple-600 hover:text-purple-700 text-sm font-medium transition-colors">
+          <Link to="/puzzles" className="text-purple-600 hover:text-purple-700 text-sm font-medium transition-colors">
             Tümünü Gör →
           </Link>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {recentPuzzles.map((puzzle) => (
-            <Link key={puzzle.id} href={`/puzzle/${puzzle.id}`}>
+            <Link key={puzzle.id} to={`/puzzle/${puzzle.id}`}>
               <Card className="group overflow-hidden bg-white hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-purple-200">
                 <div className="relative">
                   <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-gray-600 font-medium">
@@ -157,7 +191,7 @@ const HomePage = () => {
             </Link>
           ))}
           
-          <Link href="/create">
+          <Link to="/create">
             <Card className="group h-full bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
               <div className="h-full relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>

@@ -2,85 +2,55 @@ import React from 'react';
 
 interface CircularProgressProps {
     timeLeft: number;
-    totalTime: number;
-    onTimeout: () => void;
-    size?: number;
-    strokeWidth?: number;
-    className?: string;
+    progress: number;
 }
 
-export const CircularProgress: React.FC<CircularProgressProps> = ({
-    timeLeft = 0,
-    totalTime = 60,
-    onTimeout,
-    size = 40,
-    strokeWidth = 4,
-    className = ''
-}) => {
-    // Geçerli değerler kontrolü
-    const validTimeLeft = Math.max(0, Math.min(timeLeft, totalTime));
-    const validTotalTime = Math.max(1, totalTime); // 0'a bölmeyi önlemek için minimum 1
-    
-    const radius = Math.max(0, (size - strokeWidth) / 2);
-    const circumference = radius * 2 * Math.PI;
-    const progress = (validTimeLeft / validTotalTime) * 100;
-    const offset = Number.isFinite(circumference) ? circumference - (progress / 100) * circumference : 0;
-
-    // Renk değişimi için sınıflar
-    const getColorClass = () => {
-        if (validTimeLeft <= 5) return 'text-red-500';
-        if (validTimeLeft <= 15) return 'text-yellow-500';
-        return 'text-blue-500';
-    };
-
-    // Zamanı formatla
-    const formatTime = (seconds: number) => {
-        const validSeconds = Math.max(0, Math.round(seconds));
-        const minutes = Math.floor(validSeconds / 60);
-        const remainingSeconds = validSeconds % 60;
-        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    };
-
-    // Geçersiz boyut kontrolü
-    if (size <= 0 || strokeWidth <= 0 || size <= strokeWidth) {
-        return null;
-    }
+export default function CircularProgress({
+    timeLeft,
+    progress
+}: CircularProgressProps) {
+    const radius = 20;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - (progress / 100) * circumference;
 
     return (
-        <div className="relative inline-flex items-center justify-center">
-            <svg
-                className={`transform -rotate-90 ${className}`}
-                style={{ width: size, height: size }}
-            >
+        <div className="relative inline-flex">
+            <svg className="w-16 h-16" viewBox="0 0 48 48">
                 {/* Arka plan dairesi */}
                 <circle
                     className="text-gray-200"
-                    strokeWidth={strokeWidth}
+                    strokeWidth="4"
                     stroke="currentColor"
                     fill="transparent"
                     r={radius}
-                    cx={size / 2}
-                    cy={size / 2}
+                    cx="24"
+                    cy="24"
                 />
                 {/* İlerleme dairesi */}
                 <circle
-                    className={`transition-all duration-300 ${getColorClass()}`}
-                    strokeWidth={strokeWidth}
+                    className={`
+                        transform -rotate-90 origin-center
+                        transition-all duration-300
+                        ${timeLeft <= 10 ? 'text-red-500' : 'text-blue-500'}
+                    `}
+                    strokeWidth="4"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
                     stroke="currentColor"
                     fill="transparent"
                     r={radius}
-                    cx={size / 2}
-                    cy={size / 2}
-                    style={{
-                        strokeDasharray: circumference,
-                        strokeDashoffset: offset,
-                        transition: 'stroke-dashoffset 0.3s ease'
-                    }}
+                    cx="24"
+                    cy="24"
                 />
             </svg>
-            <span className={`absolute font-medium text-sm ${getColorClass()}`}>
-                {formatTime(validTimeLeft)}
+            <span className={`
+                absolute inset-0 flex items-center justify-center
+                text-lg font-semibold
+                ${timeLeft <= 10 ? 'text-red-500' : 'text-gray-700'}
+            `}>
+                {timeLeft}
             </span>
         </div>
     );
-};
+}

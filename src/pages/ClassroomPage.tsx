@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Button, List, Avatar, Tabs, Modal, Card, Progress, Row, Col, Statistic, Image, Tag } from 'antd';
-import { UserOutlined, BarChartOutlined, EyeOutlined, CheckCircleOutlined, FieldTimeOutlined, TrophyOutlined, CheckCircleFilled, CloseCircleFilled, CrownOutlined } from '@ant-design/icons';
+import { Button, List, Modal, Card, Progress, Row, Col, Statistic, Image, Tag } from 'antd';
+import { EyeOutlined, CheckCircleOutlined, FieldTimeOutlined, TrophyOutlined, CheckCircleFilled, CloseCircleFilled, CrownOutlined } from '@ant-design/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface Announcement {
@@ -35,6 +35,31 @@ interface ClassMember {
     points: number;
 }
 
+interface ProfileData {
+    id: string;
+    name: string;
+    avatar_url: string;
+    points: number;
+}
+
+interface QuizData {
+    id: string;
+    title: string;
+    description: string;
+    questions: any[];
+}
+
+interface ClassStudentData {
+    class_id: string;
+    profiles: ProfileData;
+}
+
+interface QuizAssignmentData {
+    quiz_id: string;
+    assigned_at: string;
+    quiz: QuizData;
+}
+
 // Yardımcı fonksiyonlar
 const fetchClassData = async (classId: string) => {
     const { data, error } = await supabase
@@ -49,7 +74,7 @@ const fetchClassData = async (classId: string) => {
     return data;
 };
 
-const fetchClassMembers = async (classId: string) => {
+const fetchClassMembers = async (classId: string): Promise<ClassMember[]> => {
     const { data, error } = await supabase
         .from('class_students')
         .select(`
@@ -64,10 +89,22 @@ const fetchClassMembers = async (classId: string) => {
         .eq('class_id', classId);
     
     if (error) throw error;
-    return data?.map(item => item.profiles) || [];
+
+    // Veriyi doğru şekilde dönüştür
+    const typedData = data?.map(item => ({
+        class_id: item.class_id,
+        profiles: item.profiles as unknown as ProfileData
+    })) as ClassStudentData[];
+
+    return typedData?.map(item => ({
+        id: item.profiles.id,
+        name: item.profiles.name,
+        avatar_url: item.profiles.avatar_url,
+        points: item.profiles.points
+    })) || [];
 };
 
-const fetchAssignments = async (classId: string, userId: string) => {
+const fetchAssignments = async (classId: string, userId: string): Promise<Assignment[]> => {
     try {
         // 1. Sınıfa atanmış quizleri al
         const { data: assignmentsData, error: assignmentsError } = await supabase
@@ -89,8 +126,15 @@ const fetchAssignments = async (classId: string, userId: string) => {
 
         if (!assignmentsData?.length) return [];
 
+        // Veriyi doğru şekilde dönüştür
+        const typedAssignmentsData = assignmentsData?.map(item => ({
+            quiz_id: item.quiz_id,
+            assigned_at: item.assigned_at,
+            quiz: item.quiz as unknown as QuizData
+        })) as QuizAssignmentData[];
+
         // 2. Bu quizler için kullanıcının sonuçlarını al
-        const quizIds = assignmentsData.map(a => a.quiz.id);
+        const quizIds = typedAssignmentsData.map(a => a.quiz.id);
         const { data: resultsData, error: resultsError } = await supabase
             .from('assignment_results')
             .select('*')
@@ -100,7 +144,7 @@ const fetchAssignments = async (classId: string, userId: string) => {
         if (resultsError) throw resultsError;
 
         // 3. Verileri birleştir
-        return assignmentsData.map(assignment => {
+        return typedAssignmentsData.map(assignment => {
             const result = resultsData?.find(r => r.assignment_id === assignment.quiz.id);
             
             return {
@@ -109,7 +153,7 @@ const fetchAssignments = async (classId: string, userId: string) => {
                 description: assignment.quiz.description,
                 assigned_at: assignment.assigned_at,
                 questions: assignment.quiz.questions,
-                status: result ? 'completed' : 'pending',
+                status: result ? 'completed' as const : 'pending' as const,
                 score: result?.score || null,
                 total_questions: result?.total_questions || 0,
                 answers: result?.answers || [],
@@ -154,7 +198,7 @@ export const ClassroomPage: React.FC = () => {
     const { classId } = useParams<{ classId: string }>();
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [announcements] = useState<Announcement[]>([]);
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [classMembers, setClassMembers] = useState<ClassMember[]>([]);
     const [classData, setClassData] = useState<{ name: string; grade: number } | null>(null);
@@ -196,7 +240,7 @@ export const ClassroomPage: React.FC = () => {
     };
 
     const fetchClassroomData = async () => {
-        if (!hasClassAccess || !classId) return;
+        if (!hasClassAccess || !classId || !user) return;
 
         setLoading(true);
         console.log('Sınıf verileri yükleniyor...');
@@ -262,7 +306,7 @@ export const ClassroomPage: React.FC = () => {
                             type="primary"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/assignment-quiz/${assignment.id}`);
+                                navigate(`/assignments/quiz/${assignment.id}`);
                             }}
                         >
                             Tekrar Çöz
@@ -278,18 +322,13 @@ export const ClassroomPage: React.FC = () => {
                     type="primary"
                     onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/assignment-quiz/${assignment.id}`);
+                        navigate(`/assignments/quiz/${assignment.id}`);
                     }}
                 >
                     Başla
                 </Button>
             </div>
         );
-    };
-
-    // Sonuç modalını göster
-    const showResultModal = (assignment: Assignment) => {
-        setSelectedResult(assignment);
     };
 
     // Sonuç modalını kapat
