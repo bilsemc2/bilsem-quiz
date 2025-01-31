@@ -143,30 +143,41 @@ const QuizManagement: React.FC = () => {
   }, [imageCache]);
 
   // Resim yükleme durumunu takip et
-  const [loadingImages, setLoadingImages] = useState(false);
+const [loadingImages, setLoadingImages] = useState(false);
 
-  // Mevcut soru için resimleri yükle
-  useEffect(() => {
-    if (!previewQuiz) return;
+// Mevcut soru için resimleri yükle
+useEffect(() => {
+  if (!previewQuiz) return;
 
-    const loadImages = async () => {
-      setLoadingImages(true);
+  const loadImages = async () => {
+    setLoadingImages(true);
+    try {
       const currentQuestion = previewQuiz.questions[currentQuestionIndex];
       
-      // Soru resmini yükle
-      await getImageUrl(`/images/questions/Matris/Soru-${currentQuestion.number}.webp`);
+      // Paralel yükleme yapalım
+      const imagePromises = [
+        // Soru resmini yükle
+        getImageUrl(`/images/questions/Matris/Soru-${currentQuestion.number}.webp`),
+        // Seçenek resimlerini yükle
+        ...['A', 'B', 'C', 'D', 'E'].map(option => 
+          getImageUrl(getOptionImagePath(
+            currentQuestion.number, 
+            option, 
+            option === currentQuestion.correct_option
+          ))
+        )
+      ];
       
-      // Seçenek resimlerini yükle
-      for (const option of ['A', 'B', 'C', 'D', 'E']) {
-        const isCorrect = option === currentQuestion.correct_option;
-        await getImageUrl(getOptionImagePath(currentQuestion.number, option, isCorrect));
-      }
-      
+      await Promise.all(imagePromises);
+    } catch (error) {
+      console.error('Resimler yüklenirken hata:', error);
+    } finally {
       setLoadingImages(false);
-    };
+    }
+  };
 
-    loadImages();
-  }, [previewQuiz, currentQuestionIndex, getImageUrl]);
+  loadImages();
+}, [previewQuiz, currentQuestionIndex, getImageUrl]);
 
   useEffect(() => {
     fetchQuizzes();
@@ -191,11 +202,14 @@ const QuizManagement: React.FC = () => {
   const fetchQuizzes = async () => {
     try {
       setLoading(true);
+      // Sayfalama ekleyelim
+      const pageSize = 10;
       const { data: quizData, error: quizError } = await supabase
         .from('assignments')
         .select('*')
-        .order('created_at', { ascending: false });
-
+        .order('created_at', { ascending: false })
+        .range(0, pageSize - 1);  // Sayfalama
+  
       if (quizError) throw quizError;
 
       // Quiz sonuçlarını da çekelim
