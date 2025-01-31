@@ -32,3 +32,4 @@ yarn-error.log*
 # Misc
 .DS_Store
 **/.DS_Store
+*/backup/
