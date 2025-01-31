@@ -21,6 +21,7 @@ interface Settings {
   maxClassSize: number;
   maxQuizAttempts: number;
   quizTimeLimit: number;
+  pageXpRequirement: number;
 }
 
 const AdminSettings: React.FC = () => {
@@ -31,6 +32,7 @@ const AdminSettings: React.FC = () => {
     maxClassSize: 30,
     maxQuizAttempts: 3,
     quizTimeLimit: 60,
+    pageXpRequirement: 10,
   });
 
   const handleSave = async () => {
@@ -158,6 +160,20 @@ const AdminSettings: React.FC = () => {
                     }))
                   }
                   inputProps={{ min: 1 }}
+                />
+                <TextField
+                  label="Sayfa XP Gereksinimi"
+                  type="number"
+                  fullWidth
+                  value={settings.pageXpRequirement}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      pageXpRequirement: parseInt(e.target.value) || 0,
+                    }))
+                  }
+                  inputProps={{ min: 0 }}
+                  helperText="Bir sayfaya girmek için gereken minimum XP miktarı"
                 />
               </Box>
             </CardContent>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-
+import { useXPCheck } from '../hooks/useXPCheck';
+import XPWarning from '../components/XPWarning';
 interface Shape {
   id: number;
   name: string;
@@ -44,6 +45,7 @@ const shapes: Shape[] = [
 
 const RotationGamePage: React.FC = () => {
   const { user } = useAuth();
+  const { loading, userXP, requiredXP } = useXPCheck();
   const [currentShape, setCurrentShape] = useState<Shape | null>(null);
   const [options, setOptions] = useState<number[]>([]);
   const [score, setScore] = useState(0);
@@ -126,6 +128,26 @@ const RotationGamePage: React.FC = () => {
   useEffect(() => {
     handleNewGame();
   }, [difficulty]);
+
+  if (loading) {
+    return <div className="container mx-auto px-4 py-8">Yükleniyor...</div>;
+  }
+
+  if (!user) {
+    return <div className="container mx-auto px-4 py-8">Giriş yapmanız gerekiyor</div>;
+  }
+
+  if (userXP < requiredXP) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <XPWarning 
+          requiredXP={requiredXP} 
+          currentXP={userXP} 
+          title="Döndürme oyununa başlamak için gereken XP" 
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">

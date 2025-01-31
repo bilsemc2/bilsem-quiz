@@ -36,6 +36,7 @@ import ClassManagement from '../components/admin/ClassManagement';
 import QuizManagement from '../components/admin/QuizManagement';
 import AdminSettings from '../components/admin/AdminSettings';
 import QuestionManagement from '../components/admin/QuestionManagement';
+import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
 import { toast } from 'react-hot-toast';
 
 interface MenuItem {
@@ -99,6 +100,13 @@ const AdminPage: React.FC = () => {
       icon: <SettingsIcon />,
       component: <AdminSettings />,
       path: '/admin/settings',
+    },
+    {
+      id: 'xp-requirements',
+      title: 'XP Gereksinimleri',
+      icon: <SchoolIcon />,
+      component: <XPRequirementsManagement />,
+      path: '/admin/xp-requirements',
     },
   ]);
 

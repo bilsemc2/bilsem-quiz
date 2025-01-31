@@ -28,7 +28,6 @@ import {
   Tabs,
   Card,
   CardMedia,
-  CardContent,
   Skeleton,
 } from '@mui/material';
 import {

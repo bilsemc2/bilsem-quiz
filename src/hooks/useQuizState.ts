@@ -24,6 +24,7 @@ interface QuizState {
     isSubmitting: boolean;
     currentQuestion: Question | null;
     isLastQuestion: boolean;
+    quizStarted: boolean;
 }
 
 interface QuizActions {
@@ -38,9 +39,8 @@ interface QuizActions {
     addAnswer: (answer: Answer) => void;
     setIsSubmitting: (value: boolean) => void;
     resetQuizState: () => void;
+    setQuizStarted: (value: boolean) => void;
 }
-
-const XP_COST_PER_QUIZ = 10;
 
 export function useQuizState(): [QuizState, QuizActions] {
     const navigate = useNavigate();
@@ -49,6 +49,7 @@ export function useQuizState(): [QuizState, QuizActions] {
     const [state, setState] = useState<QuizState>({
         quiz: null,
         currentQuestionIndex: 0,
+        quizStarted: false,
         selectedOption: null,
         isAnswered: false,
         isTimeout: false,
@@ -72,8 +73,13 @@ export function useQuizState(): [QuizState, QuizActions] {
             answers: [],
             isSubmitting: false,
             currentQuestion: null,
-            isLastQuestion: false
+            isLastQuestion: false,
+            quizStarted: false
         });
+    }, []);
+
+    const setQuizStarted = useCallback((value: boolean) => {
+        setState(prev => ({ ...prev, quizStarted: value }));
     }, []);
 
     useEffect(() => {
@@ -190,7 +196,7 @@ export function useQuizState(): [QuizState, QuizActions] {
                     const quizData = await generateQuiz(10);
                     setState(prev => ({ ...prev, quiz: quizData }));
                 }
-                console.log(`Quiz başladı! ${XP_COST_PER_QUIZ} XP harcandı.`);
+                console.log('Quiz başladı!');
             }
         } catch (error) {
             console.error('Quiz yüklenirken hata:', error);
@@ -230,7 +236,8 @@ export function useQuizState(): [QuizState, QuizActions] {
         })),
         addAnswer: (answer) => setState(prev => ({ ...prev, answers: [...prev.answers, answer] })),
         setIsSubmitting: (value) => setState(prev => ({ ...prev, isSubmitting: value })),
-        resetQuizState
+        resetQuizState,
+        setQuizStarted
     };
 
     return [state, actions];
