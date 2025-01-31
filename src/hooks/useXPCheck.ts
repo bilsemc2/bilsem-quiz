@@ -1,136 +1,130 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
-export const useXPCheck = (userId: string | undefined, pagePath: string) => {
-    const [hasEnoughXP, setHasEnoughXP] = useState(false);
-    const [userXP, setUserXP] = useState<number | null>(null);
-    const [requiredXP, setRequiredXP] = useState<number | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+interface XPCheckResult {
+  hasEnoughXP: boolean;
+  userXP: number;
+  requiredXP: number;
+  error: string | null;
+  loading: boolean;
+}
 
-    useEffect(() => {
-        let isMounted = true;
+export const useXPCheck = (skipCheck: boolean = false) => {
+  const { user } = useAuth();
+  const location = useLocation();
+  
+  const [hasEnoughXP, setHasEnoughXP] = useState(false);
+  const [userXP, setUserXP] = useState<number | null>(null);
+  const [requiredXP, setRequiredXP] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [xpDeducted, setXPDeducted] = useState(false);
 
-        const checkXPRequirement = async () => {
-            try {
-                if (isMounted) setLoading(true);
-                if (isMounted) setError(null);
+  useEffect(() => {
+    const checkXP = async () => {
+      if (skipCheck) {
+        setLoading(false);
+        setHasEnoughXP(true);
+        return;
+      }
 
-                console.log('=== useXPCheck Debug Logs ===');
-                console.log('1. Başlangıç parametreleri:');
-                console.log('userId:', userId);
-                console.log('pagePath:', pagePath);
+      try {
+        setLoading(true);
+        setError(null);
 
-                if (!userId) {
-                    console.log('userId bekleniyor...');
-                    if (isMounted) {
-                        setUserXP(0);
-                        setRequiredXP(0);
-                        setHasEnoughXP(false);
-                        setLoading(false);
-                    }
-                    return;
-                }
+        // Ödev sayfaları için XP kontrolü yapmıyoruz
+        if (location.pathname.includes('/assignments/')) {
+          setLoading(false);
+          setHasEnoughXP(true);
+          return;
+        }
 
-                // Kullanıcı profilini al
-                console.log('2. Profil sorgusu yapılıyor...');
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', userId)
-                    .single();
+        // XP gereksinimini kontrol et
+        const { data: requirement, error: reqError } = await supabase
+          .from('xp_requirements')
+          .select('required_xp')
+          .eq('page_path', location.pathname)
+          .single();
 
-                console.log('3. Profil sorgu sonuçları:');
-                console.log('Profil:', profile);
-                console.log('Profil hatası:', profileError);
+        if (reqError) {
+          setLoading(false);
+          setHasEnoughXP(true);
+          return;
+        }
 
-                if (profileError) {
-                    console.error('Profil getirme hatası:', profileError);
-                    if (isMounted) {
-                        setError('Profil bilgileri alınamadı');
-                        setLoading(false);
-                    }
-                    return;
-                }
+        if (!requirement?.required_xp) {
+          setLoading(false);
+          setHasEnoughXP(true);
+          return;
+        }
 
-                if (!profile) {
-                    console.error('Profil bulunamadı');
-                    if (isMounted) {
-                        setError('Profil bulunamadı');
-                        setLoading(false);
-                    }
-                    return;
-                }
+        setRequiredXP(requirement.required_xp);
 
-                // XP gereksinimini al
-                console.log('4. XP gereksinimi sorgusu yapılıyor...');
-                const { data: xpRequirement, error: xpError } = await supabase
-                    .from('xp_requirements')
-                    .select('required_xp')
-                    .eq('page_path', pagePath)
-                    .single();
+        // Kullanıcı XP'sini kontrol et
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('experience')
+          .eq('id', user?.id)
+          .single();
 
-                console.log('5. XP gereksinimi sorgu sonuçları:');
-                console.log('XP gereksinimi:', xpRequirement);
-                console.log('XP hatası:', xpError);
+        if (profileError) {
+          setError('Kullanıcı profili yüklenemedi');
+          setLoading(false);
+          return;
+        }
 
-                if (xpError && xpError.code !== 'PGRST116') {
-                    console.error('XP gereksinimi hatası:', xpError);
-                    if (isMounted) {
-                        setError('XP gereksinimi alınamadı');
-                        setLoading(false);
-                    }
-                    return;
-                }
+        if (!profile) {
+          setError('Kullanıcı profili bulunamadı');
+          setLoading(false);
+          return;
+        }
 
-                const currentXP = profile.experience || 0;
-                const requiredAmount = xpRequirement?.required_xp || 0;
-                const hasEnough = currentXP >= requiredAmount;
+        setUserXP(profile.experience);
 
-                console.log('6. Hesaplanan değerler:');
-                console.log('Mevcut XP:', currentXP, 'typeof:', typeof currentXP);
-                console.log('Gereken XP:', requiredAmount, 'typeof:', typeof requiredAmount);
-                console.log('Yeterli XP?:', hasEnough);
+        // XP yeterli mi kontrol et
+        if (profile.experience < requirement.required_xp) {
+          setHasEnoughXP(false);
+          return;
+        }
 
-                if (isMounted) {
-                    setUserXP(currentXP);
-                    setRequiredXP(requiredAmount);
-                    setHasEnoughXP(hasEnough);
-                    setLoading(false);
-                }
+        setHasEnoughXP(true);
 
-                console.log('7. State güncellendi');
+        // XP azaltma işlemi
+        if (!xpDeducted) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ experience: profile.experience - requirement.required_xp })
+            .eq('id', user?.id);
 
-            } catch (error) {
-                console.error('XP kontrolü yapılırken hata:', error);
-                if (isMounted) {
-                    setError('XP kontrolü yapılırken bir hata oluştu');
-                    setLoading(false);
-                }
-            }
-        };
+          if (updateError) {
+            setError('XP azaltma işlemi başarısız oldu');
+            setLoading(false);
+            return;
+          }
 
-        checkXPRequirement();
+          setXPDeducted(true);
+        }
 
-        return () => {
-            isMounted = false;
-        };
-    }, [userId, pagePath]);
-
-    // Return değerlerini logla
-    console.log('8. Hook return değerleri:', {
-        hasEnoughXP,
-        userXP: userXP || 0,
-        requiredXP: requiredXP || 0,
-        error,
-        loading
-    });
-
-    return { 
-        hasEnoughXP, 
-        userXP: userXP || 0, 
-        requiredXP: requiredXP || 0, 
-        error, 
-        loading 
+        setLoading(false);
+      } catch (err) {
+        console.error('XP kontrol hatası:', err);
+        setError('XP kontrolü sırasında bir hata oluştu');
+        setLoading(false);
+      }
     };
+
+    if (user?.id) {
+      checkXP();
+    }
+  }, [user?.id, location.pathname, skipCheck, xpDeducted]);
+
+  return {
+    hasEnoughXP,
+    userXP: userXP || 0,
+    requiredXP: requiredXP || 0,
+    error,
+    loading
+  } as XPCheckResult;
 };

@@ -1,9 +1,10 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuizState } from '../hooks/useQuizState';
 import { useTimer } from '../hooks/useTimer';
 import { useFeedback } from '../hooks/useFeedback';
+import { useXPCheck } from '../hooks/useXPCheck';
 import QuizQuestionComponent from '../components/QuizQuestion';
 import QuizOptions from '../components/QuizOptions';
 import QuizFooter from '../components/QuizFooter';
@@ -11,7 +12,6 @@ import CircularProgress from '../components/CircularProgress';
 import XPWarning from '../components/XPWarning';
 import { Feedback } from '../components/Feedback';
 import { handleOptionSelection, handleQuizEnd, handleQuizComplete as handleQuizCompleteUtil, handleQuestionNavigation } from '../utils/quizHandlers';
-import { supabase } from '../lib/supabase';
 
 interface QuizPageProps {
     onComplete?: (score: number, totalQuestions: number) => void;
@@ -19,22 +19,21 @@ interface QuizPageProps {
 
 export default function QuizPage({ onComplete }: QuizPageProps) {
     const navigate = useNavigate();
-    const location = useLocation();
     const { user } = useAuth();
-    const [loading, setLoading] = React.useState(true);
-    const [userXP, setUserXP] = React.useState(0);
-    const [requiredXP, setRequiredXP] = React.useState(0);
-
     const [quizState, quizActions] = useQuizState();
     const [feedbackState, feedbackActions] = useFeedback();
     const [timerState, timerActions] = useTimer(60);
 
+    // XP kontrolü
+    const { loading, userXP, requiredXP } = useXPCheck();
+
     // Quiz başladığında bildirim göster
     React.useEffect(() => {
-        if (quizState.quiz && !loading) {
+        if (quizState.quiz && !loading && !quizState.quizStarted) {
             feedbackActions.showFeedback('Quiz başladı! Her soruyu dikkatlice okuyun.', 'info');
+            quizActions.setQuizStarted(true);
         }
-    }, [quizState.quiz, loading]);
+    }, [quizState.quiz, loading, quizState.quizStarted, feedbackActions, quizActions]);
 
     const handleNext = React.useCallback(() => {
         if (quizState.isLastQuestion) {
@@ -126,74 +125,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
         );
     }, [quizState.currentQuestion, quizState.currentQuestionIndex, quizState.isLastQuestion, quizActions, timerActions, feedbackActions, handleNext]);
 
-    // XP gereksinimini kontrol et
-    React.useEffect(() => {
-        const checkXPRequirement = async () => {
-            try {
-                // Ödev quizleri için XP kontrolü yapmıyoruz
-                if (location.pathname.includes('/assignments/')) {
-                    setLoading(false);
-                    return;
-                }
 
-                const { data: requirement, error } = await supabase
-                    .from('xp_requirements')
-                    .select('required_xp')
-                    .eq('page_path', location.pathname)
-                    .single();
-
-                if (error) {
-                    console.error('XP gereksinimi alınırken hata:', error);
-                    return;
-                }
-
-                if (requirement) {
-                    setRequiredXP(requirement.required_xp);
-                }
-            } catch (error) {
-                console.error('XP gereksinimi kontrolünde hata:', error);
-            }
-        };
-
-        checkXPRequirement();
-    }, [location.pathname]);
-
-    // Kullanıcı XP'sini kontrol et
-    React.useEffect(() => {
-        if (user?.id) {
-            const checkUserXP = async () => {
-                try {
-                    // Ödev quizleri için XP kontrolü yapmıyoruz
-                    if (location.pathname.includes('/assignments/')) {
-                        setLoading(false);
-                        return;
-                    }
-
-                    const { data: profile, error } = await supabase
-                        .from('profiles')
-                        .select('experience')
-                        .eq('id', user.id)
-                        .single();
-
-                    if (error) throw error;
-
-                    if (profile) {
-                        setUserXP(profile.experience || 0);
-                        if (profile.experience < requiredXP) {
-                            navigate('/');
-                        } else {
-                            setLoading(false);
-                        }
-                    }
-                } catch (error) {
-                    console.error('XP kontrolü sırasında hata:', error);
-                    navigate('/');
-                }
-            };
-
-            checkUserXP();
-        }
-    }, [user?.id, navigate, requiredXP, location.pathname]);
 
     if (loading) {
         return (

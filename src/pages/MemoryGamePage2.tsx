@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { Brain } from 'lucide-react';
-
+import { useXPCheck } from '../hooks/useXPCheck';
+import XPWarning from '../components/XPWarning';
 interface ImageCard {
   id: string;
   src: string;
@@ -18,7 +19,7 @@ interface ImageCard {
 }
 
 const MemoryGamePage2 = () => {
-  const [loading, setLoading] = useState(true);
+  const [gameLoading, setGameLoading] = useState(true);
   const [showQuestion, setShowQuestion] = useState(false);
   const [targetImages, setTargetImages] = useState<ImageCard[]>([]);
   const [questionImage, setQuestionImage] = useState<ImageCard | null>(null);
@@ -28,18 +29,17 @@ const MemoryGamePage2 = () => {
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const { playSound } = useSound();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { loading: xpLoading, userXP, requiredXP } = useXPCheck();
 
   const loadNewQuestion = async () => {
     try {
-      setLoading(true);
+      setGameLoading(true);
       setShowQuestion(false);
       setSelectedOption(null);
       setIsAnswered(false);
-      setIsCorrect(null);
 
       // Import all option images
       const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
@@ -90,7 +90,7 @@ const MemoryGamePage2 = () => {
       setTargetImages(targets);
       setQuestionImage(questionTarget);
       setOptions(allOptions);
-      setLoading(false);
+      setGameLoading(false);
 
       // 3 saniye sonra kartları çevir
       setTimeout(() => {
@@ -100,7 +100,7 @@ const MemoryGamePage2 = () => {
 
     } catch (error) {
       console.error('Soru yüklenirken hata:', error);
-      setLoading(false);
+      setGameLoading(false);
     }
   };
 
@@ -111,7 +111,6 @@ const MemoryGamePage2 = () => {
     setIsAnswered(true);
 
     const correct = selectedImage.src === questionImage.src;
-    setIsCorrect(correct);
 
     if (correct) {
       playSound('correct');
@@ -152,10 +151,48 @@ const MemoryGamePage2 = () => {
     loadNewQuestion();
   }, []);
 
-  if (loading) {
+  if (xpLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-8">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-lg text-gray-600">Yükleniyor...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-8">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-lg text-gray-600">Giriş yapmanız gerekiyor</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (userXP < requiredXP) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-8">
+        <div className="container mx-auto px-4">
+          <XPWarning 
+            requiredXP={requiredXP} 
+            currentXP={userXP} 
+            title="Hafıza oyununa başlamak için gereken XP" 
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (gameLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -170,9 +207,17 @@ const MemoryGamePage2 = () => {
               <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-3 rounded-xl">
                 <Brain className="w-8 h-8 text-white" />
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Hafıza Oyunu 2
-              </h1>
+              <div className="flex items-center gap-4">
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  Hafıza Oyunu 2
+                </h1>
+                <button
+                  onClick={() => navigate('/')}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Ana Menü
+                </button>
+              </div>
             </div>
             <div className="flex gap-4">
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl shadow-lg p-4 min-w-[100px]">
