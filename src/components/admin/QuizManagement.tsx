@@ -47,6 +47,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import QuestionSelector from './QuestionSelector';
+import { MAX_QUESTION_NUMBER } from '../../config/constants';
 
 export interface Question {
   id: string;
@@ -85,8 +86,6 @@ interface QuizResult {
     email: string;
   };
 }
-
-const MAX_QUESTION_NUMBER = 100;
 
 const QuizManagement: React.FC = () => {
   const { user } = useAuth();
@@ -762,160 +761,118 @@ const QuizManagement: React.FC = () => {
       {tabValue === 2 && renderResults()}
 
       {/* Quiz Ekleme/Düzenleme Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
         <DialogTitle>
           {selectedQuiz ? 'Quiz Düzenle' : 'Yeni Quiz Oluştur'}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Quiz Başlığı"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Açıklama"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              multiline
-              rows={3}
-              sx={{ mb: 2 }}
-            />
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Sınıf"
-                  type="number"
-                  value={formData.grade}
-                  onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Ders"
-                  value={formData.subject}
-                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                />
-              </Grid>
-            </Grid>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Sınıf Seçimi
-              </Typography>
-              <Select
-                fullWidth
-                multiple
-                value={formData.classIds}
-                onChange={(e) => setFormData({ ...formData, classIds: e.target.value as string[] })}
-              >
-                {classes.map((classItem) => (
-                  <MuiMenuItem key={classItem.id} value={classItem.id}>
-                    {classItem.name}
-                  </MuiMenuItem>
-                ))}
-              </Select>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {/* Sol taraf - Soru seçici */}
+            <Box sx={{ flex: '1 1 60%' }}>
+              <QuestionSelector
+                onQuestionsSelected={(questions) => {
+                  setFormData(prev => ({ ...prev, questions }));
+                }}
+                initialSelectedQuestions={formData.questions}
+              />
             </Box>
 
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Durum
-              </Typography>
-              <Select
+            {/* Sağ taraf - Quiz bilgileri */}
+            <Box sx={{ flex: '1 1 40%' }}>
+              <TextField
                 fullWidth
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'pending' | 'completed' })}
-              >
-                <MuiMenuItem value="pending">Beklemede</MuiMenuItem>
-                <MuiMenuItem value="completed">Tamamlandı</MuiMenuItem>
-              </Select>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Seçili Sorular ({formData.questions.length})
-              </Typography>
-
-              <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-                <TextField
-                  label="Soru Numarası"
-                  type="number"
-                  size="small"
-                  value={newQuestionNumber}
-                  onChange={(e) => setNewQuestionNumber(e.target.value)}
-                  sx={{ width: 150 }}
-                  inputProps={{ min: 1, max: MAX_QUESTION_NUMBER }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleAddQuestion}
-                  disabled={!newQuestionNumber || loading}
-                  startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
+                label="Quiz Başlığı"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                label="Açıklama"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                multiline
+                rows={4}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                label="Sınıf"
+                type="number"
+                value={formData.grade}
+                onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                label="Ders"
+                value={formData.subject}
+                onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                sx={{ mb: 2 }}
+              />
+              
+              {/* Sınıf seçimi */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Sınıf Seçimi
+                </Typography>
+                <Select
+                  fullWidth
+                  multiple
+                  value={formData.classIds}
+                  onChange={(e) => setFormData(prev => ({ ...prev, classIds: e.target.value as string[] }))}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const classItem = classes.find(c => c.id === value);
+                        return (
+                          <Chip 
+                            key={value} 
+                            label={classItem?.name || value}
+                            size="small"
+                          />
+                        );
+                      })}
+                    </Box>
+                  )}
                 >
-                  Soru Ekle
-                </Button>
+                  {classes.map((classItem) => (
+                    <MuiMenuItem key={classItem.id} value={classItem.id}>
+                      {classItem.name}
+                    </MuiMenuItem>
+                  ))}
+                </Select>
               </Box>
-
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
-
-              {formData.questions.length === 0 ? (
-                <Alert severity="info">
-                  Henüz soru seçilmedi. Yukarıdaki alandan soru numarası girerek veya "Sorular" sekmesine geçerek soru ekleyebilirsiniz.
-                </Alert>
-              ) : (
-                <Box>
-                  <Alert severity="success" sx={{ mb: 2 }}>
-                    {formData.questions.length} soru seçildi
-                  </Alert>
-                  <Grid container spacing={2}>
+              
+              {/* Seçili sorular listesi */}
+              {formData.questions.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Seçili Sorular ({formData.questions.length})
+                  </Typography>
+                  <Grid container spacing={1}>
                     {formData.questions.map((question) => (
-                      <Grid item xs={12} sm={6} md={4} key={question.id}>
-                        <Card sx={{ p: 2, position: 'relative' }}>
+                      <Grid item xs={6} key={question.id}>
+                        <Card sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
+                          <Typography variant="body2" sx={{ flex: 1 }}>
+                            Soru {question.number}
+                          </Typography>
                           <IconButton
                             size="small"
-                            color="error"
                             onClick={() => {
                               setFormData(prev => ({
                                 ...prev,
                                 questions: prev.questions.filter(q => q.id !== question.id)
                               }));
                             }}
-                            sx={{
-                              position: 'absolute',
-                              right: 8,
-                              top: 8,
-                              zIndex: 1,
-                              backgroundColor: 'white',
-                              '&:hover': {
-                                backgroundColor: '#ffebee'
-                              }
-                            }}
                           >
                             <DeleteIcon />
                           </IconButton>
-                          <CardMedia
-                            component="img"
-                            image={`/images/questions/Matris/Soru-${question.number}.webp`}
-                            alt={`Soru ${question.number}`}
-                            sx={{ height: 150, objectFit: 'contain' }}
-                          />
-                          <CardContent>
-                            <Typography variant="subtitle2">
-                              {question.text}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Doğru Cevap: {question.correct_option}
-                            </Typography>
-                          </CardContent>
                         </Card>
                       </Grid>
                     ))}
