@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -150,7 +150,7 @@ export const QuizManagement: React.FC = () => {
     }
 
     try {
-      const { data: quiz, error: quizError } = await supabase
+      const { error: quizError } = await supabase
         .from('assignments')
         .insert([
           {
@@ -204,7 +204,7 @@ export const QuizManagement: React.FC = () => {
               maxHeight: '400px',
               objectFit: 'contain'
             }}
-            onError={(e) => {
+            onError={() => {
               console.error(`Error loading question image: ${question.questionImage}`);
             }}
           />
@@ -281,6 +281,11 @@ export const QuizManagement: React.FC = () => {
             );
           })}
         </Grid>
+        <Box mt={2} display="flex" justifyContent="flex-end">
+          <Button onClick={onClose} color="primary">
+            Kapat
+          </Button>
+        </Box>
       </Box>
     );
   };
