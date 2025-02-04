@@ -1,5 +1,5 @@
 // QuizManagement.tsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -149,24 +149,7 @@ const QuizManagement: React.FC = () => {
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
   const [loadingImages, setLoadingImages] = useState(false);
-
-  // ------------------- IMAGE CACHE -------------------
-  const imageCache = useMemo(() => new Map<string, string>(), []);
-
-  const getImageUrl = useCallback(async (path: string): Promise<string> => {
-    if (imageCache.has(path)) return imageCache.get(path)!;
-    try {
-      const response = await fetch(path);
-      if (!response.ok) return '';
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      imageCache.set(path, url);
-      return url;
-    } catch (err) {
-      console.error('Error loading image:', err);
-      return '';
-    }
-  }, [imageCache]);
+  const imageCache = useRef(new Map<string, string>()).current;
 
   // Global cleanup: Blob URL'leri yalnızca bileşen unmount olduğunda temizler.
   useEffect(() => {
