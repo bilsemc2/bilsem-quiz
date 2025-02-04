@@ -1,5 +1,5 @@
 // QuizManagement.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -192,8 +192,22 @@ const QuizManagement: React.FC = () => {
         .order('completed_at', { ascending: false });
       if (resultError) throw resultError;
 
+      // Veriyi QuizResult tipine uygun şekilde dönüştür
+      const formattedResults = (resultData || []).map(result => ({
+        id: result.id,
+        quiz_id: result.quiz_id,
+        student_id: result.student_id,
+        score: result.score,
+        total_questions: result.total_questions,
+        completed_at: result.completed_at,
+        student: result.student ? {
+          name: result.student.name,
+          email: result.student.email
+        } : undefined
+      }));
+
       setQuizzes(quizData || []);
-      setResults(resultData || []);
+      setResults(formattedResults);
       setError(null);
     } catch (err) {
       handleError('Veriler çekilirken', err);
