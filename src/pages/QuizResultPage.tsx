@@ -41,7 +41,7 @@ interface QuestionData {
     solution_video: {
         embed_code: string;
     } | null;
-    question_image_url: string;
+    image_url: string;
 }
 
 export default function QuizResultPage() {
@@ -77,27 +77,23 @@ export default function QuizResultPage() {
                     setResult(quizData[0]);
                     
                     // Soru detaylarını yükle
-                    const questionNumbers = quizData[0].user_answers.map((answer: UserAnswer) => {
-                        const match = answer.questionImage.match(/Soru-(\d+)\.webp/);
-                        return match ? match[1] : null;
-                    }).filter(Boolean);
-
-                    console.log('Soru numaraları:', questionNumbers);
+                    const questionImages = quizData[0].user_answers.map((answer: UserAnswer) => answer.questionImage);
+                    console.log('Soru resimleri:', questionImages);
 
                     const { data: questionsData, error: questionsError } = await supabase
                         .from('questions')
-                        .select('text, solution_video, question_image_url')
-                        .in('question_image_url', questionNumbers.map((num: string) => `images/questions/Matris/Soru-${num}.webp`));
+                        .select('text, solution_video, image_url')
+                        .in('image_url', questionImages);
 
                     console.log('Veritabanından gelen soru detayları:', questionsData);
                     console.log('Veritabanı hatası:', questionsError);
 
                     if (!questionsError && questionsData) {
                         const details: Record<string, QuestionDetails> = {};
-                        questionsData.forEach(q => {
-                            console.log('Soru:', q.question_image_url);
+                        questionsData.forEach((q: QuestionData) => {
+                            console.log('Soru:', q.image_url);
                             console.log('Video:', q.solution_video);
-                            details[q.question_image_url] = {
+                            details[q.image_url] = {
                                 text: q.text,
                                 solution_video: q.solution_video
                             };
@@ -233,7 +229,7 @@ export default function QuizResultPage() {
 
                                 {/* Soru Resmi */}
                                 <div className="mb-4 relative">
-                                    {questionsData?.find((q: QuestionData) => q.question_image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`)?.solution_video && (
+                                    {questionsData?.find((q: QuestionData) => q.image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`)?.solution_video && (
                                         <div className="absolute -top-2 -right-2 z-10">
                                             <Tooltip title="Video Çözümü">
                                                 <IconButton
@@ -242,7 +238,7 @@ export default function QuizResultPage() {
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         const video = questionsData.find((q: QuestionData) => 
-                                                            q.question_image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`
+                                                            q.image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`
                                                         )?.solution_video;
                                                         console.log('Tıklanan video:', video);
                                                         setSelectedVideo(video?.embed_code || null);
@@ -269,10 +265,10 @@ export default function QuizResultPage() {
                                         </div>
                                     </div>
                                     {/* Soru Açıklaması */}
-                                    {questionsData?.find((q: QuestionData) => q.question_image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`)?.text && (
+                                    {questionsData?.find((q: QuestionData) => q.image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`)?.text && (
                                         <div className="mt-3 bg-blue-50 p-3 rounded-lg text-sm">
                                             <p className="text-blue-800">
-                                                {questionsData.find((q: QuestionData) => q.question_image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`)?.text}
+                                                {questionsData.find((q: QuestionData) => q.image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`)?.text}
                                             </p>
                                         </div>
                                     )}

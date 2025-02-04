@@ -90,6 +90,16 @@ export function useQuizState(): [QuizState, QuizActions] {
         }
     }, [state.quiz, state.currentQuestionIndex]);
 
+    // Diziyi karıştırmak için yardımcı fonksiyon
+    const shuffleArray = <T,>(array: T[]): T[] => {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    };
+
     const loadAssignmentQuiz = async () => {
         try {
             const pathParts = window.location.pathname.split('/');
@@ -118,13 +128,13 @@ export function useQuizState(): [QuizState, QuizActions] {
                 return;
             }
 
-            // Soruları doğru formata dönüştür
-            const formattedQuestions = (data.questions as any[]).map(q => {
+            // Soruları doğru formata dönüştür ve karıştır
+            const formattedQuestions = shuffleArray((data.questions as any[]).map(q => {
                 const questionId = q.id.toString();
                 const questionNumber = q.number;
                 
-                // Seçenekleri oluştur
-                const options = q.options.map((opt: string) => {
+                // Seçenekleri oluştur ve karıştır
+                const options = shuffleArray(q.options.map((opt: string) => {
                     const isCorrect = opt === q.correct_option;
                     const optionPath = isCorrect 
                         ? `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${opt}.webp`
@@ -136,7 +146,7 @@ export function useQuizState(): [QuizState, QuizActions] {
                         imageUrl: optionPath,
                         isCorrect
                     };
-                });
+                }));
 
                 return {
                     id: questionId,
@@ -148,7 +158,7 @@ export function useQuizState(): [QuizState, QuizActions] {
                     type: q.type,
                     difficulty: q.difficulty
                 };
-            });
+            }));
 
             const quizData = {
                 id: data.id,

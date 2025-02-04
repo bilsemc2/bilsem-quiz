@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useNavigate, useParams, Link } from 'react-router-dom';
@@ -11,16 +12,11 @@ import {
   CardContent, 
   Button,
   Box,
-  Avatar,
-  Chip,
   IconButton,
-  useTheme,
-  alpha,
   CircularProgress
 } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import PersonIcon from '@mui/icons-material/Person';
+
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShareIcon from '@mui/icons-material/Share';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
@@ -43,8 +39,6 @@ const BlogPage = () => {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
-  const theme = useTheme();
-
   useEffect(() => {
     fetchBlogPosts();
   }, []);
@@ -81,12 +75,26 @@ const BlogPage = () => {
         .select('*')
         .eq('slug', slug)
         .eq('published', true)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Blog yazısı yüklenirken hata:', error);
+        toast.error('Blog yazısı yüklenemedi');
+        navigate('/blog');
+        return;
+      }
+
+      if (!data) {
+        console.log('Blog yazısı bulunamadı:', slug);
+        toast.error('Blog yazısı bulunamadı');
+        navigate('/blog');
+        return;
+      }
+
       setSelectedPost(data);
     } catch (error) {
-      console.error('Error fetching blog post:', error);
+      console.error('Blog yazısı yüklenirken beklenmeyen hata:', error);
+      toast.error('Blog yazısı yüklenemedi');
       navigate('/blog');
     }
   };
@@ -99,25 +107,7 @@ const BlogPage = () => {
     return content.length > 150 ? content.substring(0, 150) + '...' : content;
   };
 
-  const getRandomColor = () => {
-    const colors = [
-      theme.palette.primary.main,
-      theme.palette.secondary.main,
-      theme.palette.error.main,
-      theme.palette.warning.main,
-      theme.palette.info.main,
-      theme.palette.success.main,
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase();
-  };
 
   if (loading) {
     return (
