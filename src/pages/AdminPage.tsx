@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Drawer,
@@ -16,8 +16,7 @@ import {
   Alert,
   Divider,
 } from '@mui/material';
-import { Link } from 'react-router-dom';
-import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import {
   Menu as MenuIcon,
   Settings as SettingsIcon,
@@ -37,7 +36,15 @@ import QuizManagement from '../components/admin/QuizManagement';
 import AdminSettings from '../components/admin/AdminSettings';
 import QuestionManagement from '../components/admin/QuestionManagement';
 import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
+import BlogManagement from '../components/admin/BlogManagement';
 import { toast } from 'react-hot-toast';
+
+interface Notification {
+  id: string;
+  type: string;
+  message: string;
+  created_at: string;
+}
 
 interface MenuItem {
   id: string;
@@ -95,6 +102,13 @@ const AdminPage: React.FC = () => {
       path: '/admin/quizzes',
     },
     {
+      id: 'blog',
+      title: 'Blog',
+      icon: <QuizIcon />,
+      component: <BlogManagement />,
+      path: '/admin/blog',
+    },
+    {
       id: 'settings',
       title: 'Ayarlar',
       icon: <SettingsIcon />,
@@ -147,9 +161,9 @@ const AdminPage: React.FC = () => {
 
       if (error) throw error;
 
-      const menuItemsWithNotifications = menuItems.map(item => ({
+      const menuItemsWithNotifications = menuItems.map((item: MenuItem) => ({
         ...item,
-        badge: notifications?.filter(n => n.type === item.id).length || 0,
+        badge: notifications?.filter((n: Notification) => n.type === item.id).length || 0,
       }));
 
       setMenuItems(menuItemsWithNotifications);
@@ -276,10 +290,10 @@ const AdminPage: React.FC = () => {
             <Route
               key={item.id}
               path={item.path.replace('/admin', '')}
-              element={item.component}
+              Component={() => item.component as JSX.Element}
             />
           ))}
-          <Route path="*" element={<Navigate to="/admin" replace />} />
+          <Route path="*" Component={() => <Navigate to="/admin" replace />} />
         </Routes>
       </Box>
     </Box>

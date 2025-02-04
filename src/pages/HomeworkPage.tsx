@@ -186,18 +186,28 @@ export default function HomeworkPage() {
     showFeedback('Süre doldu!', 'error');
   };
 
+  // Diziyi karıştırmak için yardımcı fonksiyon
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const startQuiz = async (quiz: Quiz) => {
     console.log('Starting quiz:', quiz);
     
-    // Soruları doğru resim yollarıyla güncelle
-    const questionsWithImages = quiz.questions.map((question: Question) => {
+    // Soruları doğru resim yollarıyla güncelle ve karıştır
+    const questionsWithImages = shuffleArray(quiz.questions.map((question: Question) => {
       const questionNumber = question.id;
       
       // Soru görselinin yolunu oluştur
       const questionImageUrl = `/src/images/questions/Matris/Soru-${questionNumber}.webp`;
       
-      // Seçenekleri güncelle
-      const updatedOptions = question.options.map((option: Option) => {
+      // Seçenekleri güncelle ve karıştır
+      const updatedOptions = shuffleArray(question.options.map((option: Option) => {
         // Normal ve doğru cevap görsellerinin yollarını oluştur
         const normalPath = `/src/images/options/Matris/${questionNumber}/Soru-${questionNumber}${option.id}.webp`;
         const correctPath = `/src/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${option.id}.webp`;
@@ -212,14 +222,14 @@ export default function HomeworkPage() {
           ...option,
           imageUrl
         };
-      });
+      }));
 
       return {
         ...question,
         questionImageUrl,
         options: updatedOptions
       };
-    });
+    }));
 
     setActiveQuiz({
       ...quiz,

@@ -5,11 +5,11 @@ import { useQuizState } from '../hooks/useQuizState';
 import { useTimer } from '../hooks/useTimer';
 import { useFeedback } from '../hooks/useFeedback';
 import { useXPCheck } from '../hooks/useXPCheck';
+import XPWarning from '../components/XPWarning';
 import QuizQuestionComponent from '../components/QuizQuestion';
 import QuizOptions from '../components/QuizOptions';
 import QuizFooter from '../components/QuizFooter';
 import CircularProgress from '../components/CircularProgress';
-import XPWarning from '../components/XPWarning';
 import { Feedback } from '../components/Feedback';
 import { handleOptionSelection, handleQuizEnd, handleQuizComplete as handleQuizCompleteUtil, handleQuestionNavigation } from '../utils/quizHandlers';
 

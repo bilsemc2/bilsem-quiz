@@ -60,12 +60,15 @@ const UserManagement: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [classes, setClasses] = useState<{id: string; name: string; grade: number}[]>([]);
   const [editFormData, setEditFormData] = useState({
     name: '',
     email: '',
     points: 0,
     experience: 0,
     grade: 0,
+    selectedClasses: [] as string[],
+    referred_by: '',
   });
   const [filters, setFilters] = useState({
     name: '',
@@ -77,7 +80,24 @@ const UserManagement: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
+    fetchClasses();
   }, []);
+
+  const fetchClasses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name, grade')
+        .order('grade', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setClasses(data || []);
+    } catch (err) {
+      console.error('Sınıflar yüklenirken hata:', err);
+      toast.error('Sınıflar yüklenirken bir hata oluştu');
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -179,6 +199,8 @@ const UserManagement: React.FC = () => {
       points: user.points || 0,
       experience: user.experience || 0,
       grade: user.grade || 0,
+      selectedClasses: user.class_students?.map(cs => cs.classes.id) || [],
+      referred_by: user.referred_by || '',
     });
     setEditDialogOpen(true);
   };
@@ -187,16 +209,46 @@ const UserManagement: React.FC = () => {
     if (!editingUser) return;
 
     try {
-      const { error } = await supabase
+      // Profil bilgilerini güncelle
+      const { error: profileError } = await supabase
         .from('profiles')
-        .update(editFormData)
+        .update({
+          name: editFormData.name,
+          email: editFormData.email,
+          points: editFormData.points,
+          experience: editFormData.experience,
+          grade: editFormData.grade,
+          referred_by: editFormData.referred_by,
+        })
         .eq('id', editingUser.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
-      setUsers(users.map((user) =>
-        user.id === editingUser.id ? { ...user, ...editFormData } : user
-      ));
+      // Mevcut sınıf atamalarını sil
+      const { error: deleteError } = await supabase
+        .from('class_students')
+        .delete()
+        .eq('student_id', editingUser.id);
+
+      if (deleteError) throw deleteError;
+
+      // Yeni sınıf atamalarını ekle
+      if (editFormData.selectedClasses.length > 0) {
+        const { error: insertError } = await supabase
+          .from('class_students')
+          .insert(
+            editFormData.selectedClasses.map(classId => ({
+              student_id: editingUser.id,
+              class_id: classId,
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
+
+      // Kullanıcı listesini güncelle
+      await fetchUsers(); // Tüm kullanıcıları yeniden çek
+      
       setEditDialogOpen(false);
       toast.success('Kullanıcı başarıyla güncellendi');
     } catch (err) {
@@ -404,11 +456,51 @@ const UserManagement: React.FC = () => {
               onChange={(e) => setEditFormData((prev) => ({ ...prev, experience: parseInt(e.target.value) || 0 }))}
             />
             <TextField
-              label="Sınıf"
+              label="Sınıf Seviyesi"
               type="number"
               fullWidth
               value={editFormData.grade}
               onChange={(e) => setEditFormData((prev) => ({ ...prev, grade: parseInt(e.target.value) || 0 }))}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Kayıtlı Olduğu Sınıflar</InputLabel>
+              <Select
+                multiple
+                value={editFormData.selectedClasses}
+                onChange={(e) => setEditFormData((prev) => ({ 
+                  ...prev, 
+                  selectedClasses: typeof e.target.value === 'string' 
+                    ? [e.target.value] 
+                    : e.target.value 
+                }))}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((classId) => {
+                      const classInfo = classes.find(c => c.id === classId);
+                      return (
+                        <Chip
+                          key={classId}
+                          label={classInfo ? `${classInfo.name} (${classInfo.grade}. Sınıf)` : classId}
+                          size="small"
+                        />
+                      );
+                    })}
+                  </Box>
+                )}
+              >
+                {classes.map((cls) => (
+                  <MenuItem key={cls.id} value={cls.id}>
+                    {cls.name} ({cls.grade}. Sınıf)
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Referans Kodu"
+              fullWidth
+              value={editFormData.referred_by}
+              onChange={(e) => setEditFormData((prev) => ({ ...prev, referred_by: e.target.value }))}
+              helperText="Kullanıcıyı davet eden kişinin referans kodu"
             />
           </Box>
         </DialogContent>
