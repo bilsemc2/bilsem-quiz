@@ -58,6 +58,7 @@ import FallingNumbersPage from './pages/FallingNumbersPage';
 import BubbleNumbersPage from './pages/BubbleNumbersPage';
 import { QuizProvider } from './contexts/QuizContext';
 import QuizResultPage from './pages/QuizResultPage';
+import DeyimlerPage from './pages/DeyimlerPage';
 
 // Hata mesajını gösterecek bileşen
 const LocationAwareRouter: React.FC = () => {
@@ -88,6 +89,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/deyimler" element={<DeyimlerPage />} />
           <Route 
             path="/create-pdf" 
             element={

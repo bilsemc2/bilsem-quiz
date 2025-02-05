@@ -23,7 +23,8 @@ const XPWarning = ({ requiredXP, currentXP, title }: XPWarningProps) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-4 mb-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
@@ -50,6 +51,7 @@ const XPWarning = ({ requiredXP, currentXP, title }: XPWarningProps) => {
           <span className="text-sm text-gray-600">{currentXP} / {requiredXP} XP</span>
         </div>
       </div>
+    </div>
     </div>
   );
 };
