@@ -1,8 +1,4 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
-import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Puzzle, 
   BoxIcon, 
@@ -13,17 +9,19 @@ import {
   KeyRound,
   FileText,
   Brain,
-  Calculator
+  Calculator,
+  BookOpen
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/components/ui/use-toast';
-import { Toaster } from '@/components/ui/toaster';
 
 const games = [
-
+  {
+    title: 'Deyimler Dünyası',
+    description: 'Türkçe deyimleri öğrenin, örneklerle pekiştirin ve eğlenceli oyunlarla bilginizi test edin!',
+    icon: <BookOpen className="w-12 h-12 text-amber-500" />,
+    path: '/deyimler',
+    color: 'bg-amber-100',
+    isNew: true
+  },
   {
     title: 'Dolu-Boş Şekiller',
     description: 'Şekillerin dolu ve boş hallerini analiz edin. Örüntüyü bulun ve eksik şekli tamamlayın!',
