@@ -353,8 +353,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
           updateData.referred_by = editFormData.referred_by;
         }
       } else {
-        // Boş referred_by değerini null olarak ayarla
-        updateData.referred_by = null;
+        // Eğer referred_by boşsa, bu alanı güncelleme objesinden çıkar
+        // Bu şekilde mevcut değer korunur
+        delete updateData.referred_by;
       }
 
       // Debug log ekle
