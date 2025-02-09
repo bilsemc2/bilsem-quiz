@@ -98,6 +98,13 @@ const DeyimlerPage = () => {
     fetchDeyimler();
   }, [currentPage, debouncedSearchTerm]);
 
+  // Oyun deyimleri yüklendiğinde yeni soru yükle
+  useEffect(() => {
+    if (mode === 'oyun' && gameDeyimler.length > 0) {
+      loadNewQuestion();
+    }
+  }, [gameDeyimler, mode]);
+
   // Kullanıcı kontrolü ve yönlendirme
   useEffect(() => {
     if (!user) {
@@ -149,7 +156,6 @@ const DeyimlerPage = () => {
       setGameDeyimler(shuffledDeyimler);
       setGameState(prev => ({ ...prev, score: 0 })); // Skoru sıfırla
       setMode('oyun');
-      loadNewQuestion();
     } catch (error) {
       console.error('Oyun başlatılırken hata:', error);
       toast.error('Oyun başlatılırken bir hata oluştu');
