@@ -127,20 +127,33 @@ const DeyimlerPage = () => {
   }, [user]);
 
   // Oyun modunu başlatma
-  const startGame = () => {
-    if (deyimler.length < 4) {
-      toast.error('Oyun için yeterli deyim bulunmuyor');
-      return;
+  const startGame = async () => {
+    try {
+      // Tüm deyimleri getir
+      const { data: allDeyimler, error } = await supabase
+        .from('deyimler')
+        .select('*');
+
+      if (error) throw error;
+
+      if (!allDeyimler || allDeyimler.length < 4) {
+        toast.error('Oyun için yeterli deyim bulunmuyor');
+        return;
+      }
+
+      // Deyimleri karıştır ve ilk 10 tanesini al
+      const shuffledDeyimler = [...allDeyimler]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, QUESTIONS_PER_GAME);
+      
+      setGameDeyimler(shuffledDeyimler);
+      setGameState(prev => ({ ...prev, score: 0 })); // Skoru sıfırla
+      setMode('oyun');
+      loadNewQuestion();
+    } catch (error) {
+      console.error('Oyun başlatılırken hata:', error);
+      toast.error('Oyun başlatılırken bir hata oluştu');
     }
-    // Deyimleri karıştır ve ilk 10 tanesini al
-    const shuffledDeyimler = [...deyimler]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, QUESTIONS_PER_GAME);
-    
-    setGameDeyimler(shuffledDeyimler);
-    setGameState(prev => ({ ...prev, score: 0 })); // Skoru sıfırla
-    setMode('oyun');
-    loadNewQuestion();
   };
 
   // Yeni bir soru yükleme
@@ -163,7 +176,7 @@ const DeyimlerPage = () => {
     }
 
     // Mevcut deyimi çıkarıp diğer deyimlerden yanlış şıkları oluştur
-    const otherDeyimler = deyimler.filter(d => d.id !== currentDeyim.id);
+    const otherDeyimler = gameDeyimler.filter(d => d.id !== currentDeyim.id);
     
     // En az 3 yanlış şık olduğundan emin ol
     if (otherDeyimler.length < 3) {
