@@ -20,11 +20,6 @@ interface QuizResult {
     user_answers: UserAnswer[];
 }
 
-interface QuestionDetails {
-    text: string | null;
-    solution_video: { embed_code: string } | null;
-}
-
 interface UserAnswer {
     questionImage: string;
     selectedOption: string;

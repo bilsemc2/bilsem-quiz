@@ -134,6 +134,14 @@ const QuizManagement: React.FC = () => {
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [tabValue, setTabValue] = useState(0);
   const [classes, setClasses] = useState<any[]>([]);
+  // Filtreleme state'leri
+  const [filters, setFilters] = useState({
+    grade: '',
+    subject: '',
+    status: 'all' as 'all' | 'pending' | 'completed',
+    searchText: ''
+  });
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -605,6 +613,22 @@ const QuizManagement: React.FC = () => {
   }, [previewQuiz?.id, currentQuestionIndex]);
 
   // ------------------- RENDER HELPERS -------------------
+  // Filtreleme fonksiyonu
+  const getFilteredQuizzes = () => {
+    return quizzes.filter(quiz => {
+      const matchesSearch = !filters.searchText || 
+        quiz.title.toLowerCase().includes(filters.searchText.toLowerCase()) ||
+        quiz.description.toLowerCase().includes(filters.searchText.toLowerCase());
+      
+      const matchesGrade = !filters.grade || quiz.grade.toString() === filters.grade;
+      const matchesSubject = !filters.subject || 
+        quiz.subject.toLowerCase().includes(filters.subject.toLowerCase());
+      const matchesStatus = filters.status === 'all' || quiz.status === filters.status;
+
+      return matchesSearch && matchesGrade && matchesSubject && matchesStatus;
+    });
+  };
+
   const renderQuizzes = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -621,7 +645,7 @@ const QuizManagement: React.FC = () => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {quizzes.map(quiz => (
+          {getFilteredQuizzes().map(quiz => (
             <TableRow key={quiz.id}>
               <TableCell>{quiz.title}</TableCell>
               <TableCell>{quiz.description}</TableCell>
@@ -768,7 +792,46 @@ const QuizManagement: React.FC = () => {
         {tabValue === 2 && <Typography variant="h5" sx={{ mb: 2 }}>Quiz Sonuçları</Typography>}
       </Box>
 
-      {tabValue === 0 && renderQuizzes()}
+      {tabValue === 0 && (
+        <>
+          {/* Filtreleme Alanı */}
+          <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+            <TextField
+              size="small"
+              label="Ara"
+              value={filters.searchText}
+              onChange={e => setFilters(prev => ({ ...prev, searchText: e.target.value }))}
+              sx={{ width: 200 }}
+            />
+            <TextField
+              size="small"
+              label="Sınıf"
+              type="number"
+              value={filters.grade}
+              onChange={e => setFilters(prev => ({ ...prev, grade: e.target.value }))}
+              sx={{ width: 100 }}
+            />
+            <TextField
+              size="small"
+              label="Ders"
+              value={filters.subject}
+              onChange={e => setFilters(prev => ({ ...prev, subject: e.target.value }))}
+              sx={{ width: 150 }}
+            />
+            <Select
+              size="small"
+              value={filters.status}
+              onChange={e => setFilters(prev => ({ ...prev, status: e.target.value as typeof filters.status }))}
+              sx={{ width: 150 }}
+            >
+              <MuiMenuItem value="all">Tüm Durumlar</MuiMenuItem>
+              <MuiMenuItem value="pending">Beklemede</MuiMenuItem>
+              <MuiMenuItem value="completed">Tamamlandı</MuiMenuItem>
+            </Select>
+          </Box>
+          {renderQuizzes()}
+        </>
+      )}
       {tabValue === 1 && (
         <QuestionSelector
           onQuestionsSelected={selectedQuestions =>

@@ -123,6 +123,14 @@ const games = [
     path: '/math/M1/m1',
     color: 'bg-orange-100',
     isNew: true
+  },
+  {
+    title: 'Matematik Dünyası',
+    description: 'Matematik sorularını çöz, PDF oluştur ve kendini geliştir!',
+    icon: <Calculator className="w-12 h-12 text-blue-500" />,
+    path: '/matematik-dunyasi',
+    color: 'bg-blue-100',
+    isNew: true
   }
 ];
 
