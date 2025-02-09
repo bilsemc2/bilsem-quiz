@@ -11,6 +11,7 @@ import AdminPage from './pages/AdminPage';
 import HomeworkPage from './pages/HomeworkPage';
 import DuelPage from './pages/DuelPage';
 import MirrorPage from './pages/MirrorPage';
+import MathWorld from './pages/MathWorld';
 import LogicPuzzleCreator from './pages/create';
 import PuzzleManagement from './pages/admin/PuzzleManagement';
 import XPRequirementsPage from './pages/admin/XPRequirementsPage';
@@ -90,6 +91,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/deyimler" element={<DeyimlerPage />} />
+          <Route path="/matematik-dunyasi" element={<MathWorld />} />
           <Route 
             path="/create-pdf" 
             element={
