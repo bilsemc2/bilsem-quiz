@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import DescriptionIcon from '@mui/icons-material/Description';
 import { IconButton, Tooltip } from '@mui/material';
 
 interface QuizResult {
@@ -50,16 +51,19 @@ export default function QuizResultPage() {
     const [loading, setLoading] = useState(true);
     const [result, setResult] = useState<QuizResult | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [questionDetails, setQuestionDetails] = useState<Record<string, QuestionDetails>>({});
     const [questionsData, setQuestionsData] = useState<QuestionData[] | null>(null);
     const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+    const [selectedQuestionForDescription, setSelectedQuestionForDescription] = useState<string | null>(null);
+
 
     useEffect(() => {
         const loadResult = async () => {
             if (!user || !quizId) return;
 
+            setLoading(true);
+
             try {
-                // Önce quiz_results'dan kontrol et
+                // Fetch quiz results
                 const { data: quizData, error: quizError } = await supabase
                     .from('quiz_results')
                     .select('*')
@@ -69,45 +73,17 @@ export default function QuizResultPage() {
                     .limit(1);
 
                 if (quizError) {
-                    console.error('Quiz sonucu yüklenirken hata:', quizError);
+                    console.error('Error fetching quiz result:', quizError);
                     return;
                 }
 
                 if (quizData && quizData.length > 0) {
                     setResult(quizData[0]);
-                    
-                    // Soru detaylarını yükle
-                    const questionImages = quizData[0].user_answers.map((answer: UserAnswer) => answer.questionImage);
-                    console.log('Soru resimleri:', questionImages);
-
-                    const { data: questionsData, error: questionsError } = await supabase
-                        .from('questions')
-                        .select('text, solution_video, image_url')
-                        .in('image_url', questionImages);
-
-                    console.log('Veritabanından gelen soru detayları:', questionsData);
-                    console.log('Veritabanı hatası:', questionsError);
-
-                    if (!questionsError && questionsData) {
-                        const details: Record<string, QuestionDetails> = {};
-                        questionsData.forEach((q: QuestionData) => {
-                            console.log('Soru:', q.image_url);
-                            console.log('Video:', q.solution_video);
-                            details[q.image_url] = {
-                                text: q.text,
-                                solution_video: q.solution_video
-                            };
-                        });
-                        console.log('Oluşturulan questionDetails:', details);
-                        setQuestionsData(questionsData);
-                        setQuestionDetails(details);
-                    }
-
-                    setLoading(false);
+                    await loadQuestionDetails(quizData[0].user_answers);
                     return;
                 }
 
-                // Quiz sonucu bulunamadıysa assignment_results'dan kontrol et
+                // If no quiz result, fetch assignment results
                 const { data: assignmentData, error: assignmentError } = await supabase
                     .from('assignment_results')
                     .select(`
@@ -130,7 +106,7 @@ export default function QuizResultPage() {
                     .limit(1);
 
                 if (assignmentError) {
-                    console.error('Ödev sonucu yüklenirken hata:', assignmentError);
+                    console.error('Error fetching assignment result:', assignmentError);
                     return;
                 }
 
@@ -148,16 +124,42 @@ export default function QuizResultPage() {
                         grade: 0,
                         user_answers: assignmentResult.answers
                     });
+                    await loadQuestionDetails(assignmentResult.answers);
                 }
             } catch (error) {
-                console.error('Sonuç yüklenirken hata:', error);
+                console.error('Error loading result:', error);
             } finally {
                 setLoading(false);
             }
         };
 
+        const loadQuestionDetails = async (userAnswers: UserAnswer[]) => {
+            const questionImages = userAnswers.map((answer: UserAnswer) => answer.questionImage);
+
+            const { data: questionsData, error: questionsError } = await supabase
+                .from('questions')
+                .select('text, solution_video, image_url')
+                .in('image_url', questionImages);
+
+            if (questionsError) {
+                console.error('Error fetching question details:', questionsError);
+                return;
+            }
+
+            if (questionsData) {
+                setQuestionsData(questionsData);
+            }
+        };
+
+
         loadResult();
     }, [user, quizId]);
+
+    const getQuestionDataByImageUrl = (imageUrl: string): QuestionData | undefined => {
+        const imageName = imageUrl.match(/Soru-(\d+)\.webp/)?.[0];
+        return questionsData?.find((q: QuestionData) => q.image_url.includes(imageName!));
+    };
+
 
     if (loading) {
         return <LoadingSpinner />;
@@ -198,7 +200,7 @@ export default function QuizResultPage() {
                             {result.completed_at ? new Date(result.completed_at).toLocaleString('tr-TR') : ''}
                         </p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         <div className="bg-blue-50 p-4 rounded-lg">
                             <p className="text-sm text-gray-600">Toplam Soru</p>
@@ -219,105 +221,101 @@ export default function QuizResultPage() {
                                         Soru {index + 1}
                                     </h3>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                        answer.isCorrect 
-                                            ? 'bg-green-100 text-green-800' 
+                                        answer.isCorrect
+                                            ? 'bg-green-100 text-green-800'
                                             : 'bg-red-100 text-red-800'
                                     }`}>
                                         {answer.isCorrect ? 'Doğru' : 'Yanlış'}
                                     </span>
                                 </div>
 
-                                {/* Soru Resmi */}
-                                <div className="mb-4 relative">
-                                    {questionsData?.find((q: QuestionData) => q.image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`)?.solution_video && (
-                                        <div className="absolute -top-2 -right-2 z-10">
-                                            <Tooltip title="Video Çözümü">
-                                                <IconButton
-                                                    size="small"
-                                                    className="bg-blue-100 hover:bg-blue-200 shadow-md"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const video = questionsData.find((q: QuestionData) => 
-                                                            q.image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`
-                                                        )?.solution_video;
-                                                        console.log('Tıklanan video:', video);
-                                                        setSelectedVideo(video?.embed_code || null);
-                                                    }}
-                                                >
-                                                    <VideoLibraryIcon className="text-blue-800" fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </div>
-                                    )}
-                                    <div 
+                                {/* Soru */}
+                                <div className="mb-4">
+                                    <div
                                         className="max-w-xs mx-auto bg-white rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative"
                                         onClick={() => setSelectedImage(answer.questionImage)}
                                     >
-                                        <img 
-                                            src={answer.questionImage} 
+                                        <img
+                                            src={answer.questionImage}
                                             alt={`Soru ${index + 1}`}
                                             className="object-contain w-full h-auto"
                                         />
-                                        <div className="absolute bottom-2 right-2">
-                                            <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                                                Soru {answer.questionImage.match(/Soru-(\d+)\.webp/)![1]}
+                                        <div className="absolute bottom-2 left-0 right-0 flex justify-between items-center px-2">
+                                            {/* Sol Alt: Soru Numarası ve Açıklama İkonu */}
+                                            <div className="flex items-center gap-2">
+                                                <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
+                                                    Soru {answer.questionImage.match(/Soru-(\d+)\.webp/)![1]}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    {/* Soru Açıklaması */}
-                                    {questionsData?.find((q: QuestionData) => q.image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`)?.text && (
-                                        <div className="mt-3 bg-blue-50 p-3 rounded-lg text-sm">
-                                            <p className="text-blue-800">
-                                                {questionsData.find((q: QuestionData) => q.image_url === `images/questions/Matris/Soru-${answer.questionImage.match(/Soru-(\d+)\.webp/)?.[1]}.webp`)?.text}
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* Seçenekler */}
-                                <div className="flex justify-center gap-4 overflow-x-auto pb-2">
-                                    {answer.options.map((option) => (
-                                        <div 
-                                            key={option.id}
-                                            className={`relative rounded-lg overflow-hidden border flex-shrink-0 ${
-                                                option.id === answer.selectedOption && option.isCorrect
-                                                    ? 'border-green-500 bg-green-50'
-                                                    : option.id === answer.selectedOption
-                                                    ? 'border-red-500 bg-red-50'
-                                                    : option.isCorrect
-                                                    ? 'border-green-500 bg-green-50'
-                                                    : 'border-gray-200'
-                                            }`}
-                                        >
-                                            <div className="w-24 h-24">
-                                                <img 
-                                                    src={option.imageUrl} 
-                                                    alt={`Seçenek ${option.id}`}
-                                                    className="object-contain w-full h-full p-2"
-                                                />
+                                <div className="mb-4">
+                                    <div className="flex justify-center gap-4 overflow-x-auto pb-2">
+                                        {answer.options.map((option) => (
+                                            <div
+                                                key={option.id}
+                                                className={`relative rounded-lg overflow-hidden border flex-shrink-0 ${
+                                                    option.id === answer.selectedOption && option.isCorrect
+                                                        ? 'border-green-500 bg-green-50'
+                                                        : option.id === answer.selectedOption
+                                                            ? 'border-red-500 bg-red-50'
+                                                            : option.isCorrect
+                                                                ? 'border-green-500 bg-green-50'
+                                                                : 'border-gray-200'
+                                                }`}
+                                            >
+                                                <div className="w-24 h-24">
+                                                    <img
+                                                        src={option.imageUrl}
+                                                        alt={`Seçenek ${option.id}`}
+                                                        className="object-contain w-full h-full p-2"
+                                                    />
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
 
-                                {/* Çözüm Videosu */}
-                                {questionDetails[answer.questionImage]?.solution_video && (
-                                    <div className="mt-4">
-                                        <h4 className="text-sm font-semibold text-gray-800 mb-2">
-                                            Çözüm Videosu
-                                        </h4>
-                                        <div className="aspect-w-16 aspect-h-9">
-                                            <iframe
-                                                src={`https://www.youtube.com/embed/${questionDetails[answer.questionImage]?.solution_video?.embed_code || ''}`}
-                                                title="Çözüm Videosu"
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
-                                                className="w-full rounded-lg shadow-lg"
-                                                style={{ aspectRatio: '16/9' }}
-                                            />
-                                        </div>
+                                {/* Description and Video */}
+                                <div className="flex items-center justify-between mt-2">
+                                    <div className="flex items-center space-x-2">
+                                        {/* Video */}
+                                        {getQuestionDataByImageUrl(answer.questionImage)?.solution_video && (
+                                            <Tooltip title="Video Çözümü">
+                                                <IconButton
+                                                    size="small"
+                                                    className="bg-blue-100 hover:bg-blue-200"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const video = getQuestionDataByImageUrl(answer.questionImage)?.solution_video;
+                                                        setSelectedVideo(video?.embed_code || null);
+                                                    }}
+                                                >
+                                                    <PlayCircleIcon className="text-blue-800" fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
                                     </div>
-                                )}
+
+                                    {/* Açıklama */}
+                                    {getQuestionDataByImageUrl(answer.questionImage)?.text && (
+                                        <Tooltip title="Açıklama">
+                                            <IconButton
+                                                size="small"
+                                                className="bg-green-100 hover:bg-green-200"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedQuestionForDescription(answer.questionImage);
+                                                }}
+                                            >
+                                                <DescriptionIcon className="text-green-800" fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -326,11 +324,11 @@ export default function QuizResultPage() {
 
             {/* Video Modalı */}
             {selectedVideo && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
                     onClick={() => setSelectedVideo(null)}
                 >
-                    <div 
+                    <div
                         className="max-w-4xl w-full bg-white rounded-lg p-4 shadow-xl"
                         onClick={e => e.stopPropagation()}
                     >
@@ -358,11 +356,11 @@ export default function QuizResultPage() {
 
             {/* Resim Modalı */}
             {selectedImage && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
                     onClick={() => setSelectedImage(null)}
                 >
-                    <div 
+                    <div
                         className="max-w-4xl w-full bg-white rounded-lg p-4 shadow-xl"
                         onClick={e => e.stopPropagation()}
                     >
@@ -373,8 +371,8 @@ export default function QuizResultPage() {
                             >
                                 ×
                             </button>
-                            <img 
-                                src={selectedImage || ''} 
+                            <img
+                                src={selectedImage || ''}
                                 alt="Büyük Soru Resmi"
                                 className="w-full h-auto object-contain rounded-lg"
                             />
@@ -383,6 +381,32 @@ export default function QuizResultPage() {
                                     Soru {selectedImage?.match(/Soru-(\d+)\.webp/)?.[1]}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Açıklama Modalı */}
+            {selectedQuestionForDescription && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+                    onClick={() => setSelectedQuestionForDescription(null)}
+                >
+                    <div
+                        className="max-w-4xl w-full bg-white rounded-lg p-4 shadow-xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="relative">
+                            <button
+                                className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                                onClick={() => setSelectedQuestionForDescription(null)}
+                            >
+                                ×
+                            </button>
+                            <h2 className="text-lg font-semibold mb-2">Soru Açıklaması</h2>
+                            <p>
+                                {getQuestionDataByImageUrl(selectedQuestionForDescription)?.text || 'Açıklama bulunamadı.'}
+                            </p>
                         </div>
                     </div>
                 </div>
