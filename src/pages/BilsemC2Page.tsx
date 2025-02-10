@@ -109,13 +109,7 @@ const games = [
     path: '/create-pdf',
     color: 'bg-orange-100'
   },
-  {
-    title: 'Kağıt Katlama',
-    description: 'Uzamsal düşünme becerilerini geliştir!',
-    icon: <Puzzle className="w-12 h-12 text-purple-500" />,
-    path: '/folding',
-    color: 'bg-purple-100'
-  },
+
   {
     title: 'Matematik M1',
     description: 'Matematik işlemlerini çöz, hızlı düşün ve doğru cevabı bul!',
