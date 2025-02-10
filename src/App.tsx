@@ -20,7 +20,6 @@ import PuzzlePage from './pages/PuzzlePage';
 import CreatePdfPage from './pages/CreatePdfPage';
 import GamePage from './pages/GamePage';
 import CubePage from './pages/CubePage';
-import ComingSoonPage from './pages/ComingSoonPage';
 import ClassEnvironmentPage from './pages/ClassEnvironmentPage';
 import BlogPage from './pages/BlogPage';
 import UnfoldedCubePage from './pages/UnfoldedCubePage';
@@ -234,14 +233,7 @@ const LocationAwareRouter: React.FC = () => {
               </RequireAuth>
             } 
           />
-          <Route 
-            path="/spatial/folding" 
-            element={
-              <RequireAuth>
-                <ComingSoonPage />
-              </RequireAuth>
-            } 
-          />
+
           <Route path="/unfolded-cube" element={<UnfoldedCubePage />} />
           <Route path="/missing-piece" element={<AdvancedMissingPieceGame />} />
           <Route path="/bilsemc2" element={<BilsemC2Page />} />
