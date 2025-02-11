@@ -3,7 +3,7 @@ import { useSound } from '../contexts/SoundContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import ModernProgress from '../components/ModernProgress';
-import MobileMenu from '../components/MobileMenu';
+
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
 import UserMessages from '@/components/UserMessages';
@@ -40,7 +40,7 @@ interface DailyStats {
 }
 
 export const ProfilePage: React.FC = () => {
-    const { volume, setVolume, isMuted, setIsMuted } = useSound();
+    const { } = useSound(); // Sound context'i ileride kullanılabilir
     const { user } = useAuth();
     const navigate = useNavigate();
     const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
@@ -228,12 +228,6 @@ export const ProfilePage: React.FC = () => {
         };
     }, []);
 
-    const calculateLevel = (experience: number) => {
-        // Her 1000 XP'de bir level atlama
-        const level = Math.floor(experience / 1000) + 1;
-        const progress = (experience % 1000) / 10; // 0-100 arası progress
-        return { level, progress };
-    };
 
     const fetchQuizStats = async () => {
         try {
@@ -313,32 +307,6 @@ export const ProfilePage: React.FC = () => {
         }
     };
 
-    const handleClassroomEntry = async () => {
-        try {
-            // Kullanıcının sınıf kaydını kontrol et
-            const { data: classData, error: classError } = await supabase
-                .from('class_students')
-                .select(`
-                    class:classes (
-                        id,
-                        grade
-                    )
-                `)
-                .eq('student_id', user?.id)
-                .single();
-
-            if (classError || !classData?.class) {
-                toast.error('Sınıf bilginiz bulunamadı. Lütfen profilinizi güncelleyin.');
-                return;
-            }
-
-            // Sınıf sayfasına yönlendir
-            navigate(`/classroom/${classData.class.grade}`);
-        } catch (error) {
-            console.error('Sınıf bilgisi alınırken hata:', error);
-            toast.error('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
-        }
-    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">

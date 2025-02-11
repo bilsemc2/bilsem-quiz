@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { useUser } from '../hooks/useUser';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useXPCheck } from '../hooks/useXPCheck';
 import XPWarning from '../components/XPWarning';
-import LoadingSpinner from '../components/LoadingSpinner';
 import {
     Shape,
     generateShapes,
@@ -13,21 +13,23 @@ import {
 
 const FilledEmptyPage: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const { currentUser, loading: userLoading } = useUser();
-    const { hasEnoughXP, userXP, requiredXP, error: xpError, loading: xpLoading } = useXPCheck(currentUser?.id, '/filled-empty');
+    const navigate = useNavigate();
+    const { user, loading: userLoading } = useAuth();
+    const { hasEnoughXP, userXP, requiredXP, error: xpError, loading: xpLoading } = useXPCheck(false);
     
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [showAnswer, setShowAnswer] = useState(false);
-    const [correctAnswer, setCorrectAnswer] = useState<string>('');
     const [shapes] = useState<Shape[]>(() => generateShapes());
     const [puzzle, setPuzzle] = useState<{
         grid: Shape[];
         options: Shape[];
         questionIndex: number;
+        correctIndex: number;
     }>({
         grid: [],
         options: [],
-        questionIndex: 0
+        questionIndex: 0,
+        correctIndex: -1 // Başlangıçta geçersiz bir index
     });
     const [feedback, setFeedback] = useState<{
         message: string;
@@ -61,18 +63,25 @@ const FilledEmptyPage: React.FC = () => {
             const options = [answerShape, ...getRandomShapes(shapes, answerShape, 4)]
                 .sort(() => Math.random() - 0.5);
 
-            // State'i güncelle
-            setPuzzle({
+            // State'i geçici olarak güncelle
+            const updatedPuzzle = {
                 grid: puzzleShapes,
                 options,
-                questionIndex
-            });
+                questionIndex,
+                correctIndex: -1 // Geçici olarak -1 atıyoruz, hemen sonra doğru değer güncellenecek
+            };
+            setPuzzle(updatedPuzzle);
 
-            // Doğru cevabı kaydet
+            // Doğru cevabın indexini puzzle state'ine ekle
             const correctIndex = options.findIndex(s => 
                 s.type === answerShape.type && s.filled === answerShape.filled
             );
-            setCorrectAnswer(String.fromCharCode(65 + correctIndex));
+            setPuzzle({
+                grid: puzzleShapes,
+                options,
+                questionIndex,
+                correctIndex // Doğru cevabın indexini saklayacağız
+            });
 
             // Seçimi ve geribildirimi sıfırla
             setSelectedOption(null);
@@ -92,7 +101,7 @@ const FilledEmptyPage: React.FC = () => {
         const optionIndex = option.charCodeAt(0) - 65;
         setSelectedOption(optionIndex);
         
-        const isCorrect = puzzle.options[optionIndex].svg === puzzle.grid[puzzle.questionIndex].svg;
+        const isCorrect = optionIndex === puzzle.correctIndex;
         setFeedback({
             type: isCorrect ? 'correct' : 'incorrect',
             message: isCorrect ? 'Doğru!' : 'Yanlış!'
@@ -120,20 +129,22 @@ const FilledEmptyPage: React.FC = () => {
         }
     }, [xpError]);
 
-    // Yükleniyor durumu
-    if (userLoading || xpLoading) {
-        return <LoadingSpinner />;
+    // Kullanıcı giriş yapmamış
+    useEffect(() => {
+        if (!userLoading && !user) {
+            navigate('/login');
+        }
+    }, [user, userLoading, navigate]);
+
+    if (!user) {
+        return null; // Yönlendirme yapılırken boş ekran göster
     }
 
-    // Kullanıcı giriş yapmamış
-    if (!currentUser) {
+    // Yükleniyor durumu
+    if (userLoading || xpLoading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white py-12 px-4 flex items-center justify-center">
-                <XPWarning 
-                    requiredXP={0} 
-                    currentXP={0} 
-                    title="Bu sayfayı görmek için giriş yapmalısınız" 
-                />
+                <div className="text-2xl font-semibold">Yükleniyor...</div>
             </div>
         );
     }
