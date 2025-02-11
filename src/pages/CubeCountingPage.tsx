@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { useAuth } from '../contexts/AuthContext';
+// import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useXPCheck } from '../hooks/useXPCheck';
 import XPWarning from '../components/XPWarning';
@@ -64,7 +65,7 @@ const generateRandomStructure = (difficulty: 'Kolay' | 'Orta' | 'Zor'): CubeStru
   const usedPositions = new Set<string>();
 
   // İlk küpü merkeze yerleştir
-  cubes.push([0, 0, 0]);
+  cubes.push([0, 0, 0] as [number, number, number]);
   usedPositions.add('0,0,0');
 
   // Kalan küpleri rastgele ekle
@@ -73,21 +74,28 @@ const generateRandomStructure = (difficulty: 'Kolay' | 'Orta' | 'Zor'): CubeStru
   while (cubes.length < numCubes) {
     // Mevcut bir küpü seç
     const baseIndex = Math.floor(Math.random() * cubes.length);
-    const [bx, by, bz] = cubes[baseIndex];
+    const [bx, by, bz]: [number, number, number] = cubes[baseIndex];
 
     // Yeni küp için yön seç
-    const directions: [number, number, number][] = [
+    const baseDirections = [
       [1, 0, 0], [-1, 0, 0],   // x ekseni
-      [0, 1, 0], [0, -1, 0],   // y ekseni
-      ...(use3D ? [[0, 0, 1], [0, 0, -1]] : [])  // z ekseni (sadece orta ve zor seviyede)
-    ];
+      [0, 1, 0], [0, -1, 0]    // y ekseni
+    ] as const;
 
-    const dir = directions[Math.floor(Math.random() * directions.length)];
-    const newPos: [number, number, number] = [
+    const zDirections = [[0, 0, 1], [0, 0, -1]] as const;  // z ekseni
+
+    const directions = [
+      ...baseDirections,
+      ...(use3D ? zDirections : [])
+    ].map(d => d as [number, number, number]);
+
+    const dirIndex = Math.floor(Math.random() * directions.length);
+    const dir: [number, number, number] = directions[dirIndex];
+    const newPos = [
       bx + dir[0],
       by + dir[1],
       bz + dir[2]
-    ];
+    ] as [number, number, number];
 
     // Pozisyon kontrolü
     if (
@@ -96,7 +104,7 @@ const generateRandomStructure = (difficulty: 'Kolay' | 'Orta' | 'Zor'): CubeStru
       Math.abs(newPos[2]) <= maxSize &&
       !usedPositions.has(newPos.join(','))
     ) {
-      cubes.push(newPos);
+      cubes.push(newPos as [number, number, number]);
       usedPositions.add(newPos.join(','));
     }
   }
@@ -110,22 +118,45 @@ const generateRandomStructure = (difficulty: 'Kolay' | 'Orta' | 'Zor'): CubeStru
 
 const CubeCountingPage: React.FC = () => {
   // Tüm hook'ları en üste taşıyalım
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const { currentUser, loading: userLoading } = useUser();
-  const { hasEnoughXP, userXP, requiredXP, error: xpError, loading: xpLoading } = useXPCheck(
-    userLoading ? undefined : currentUser?.id,
-    '/cube-counting'
-  );
-  const [currentStructure, setCurrentStructure] = useState<CubeStructure>({ cubes: [[0, 0, 0]], answer: 1, difficulty: 'Kolay' });
+  const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(false);
+  const [currentStructure, setCurrentStructure] = useState<CubeStructure>({ 
+    cubes: [[0, 0, 0] as [number, number, number]], 
+    answer: 1, 
+    difficulty: 'Kolay' 
+  });
   const [userAnswer, setUserAnswer] = useState<string>('');
   const [showResult, setShowResult] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
   const [message, setMessage] = useState<string>('');
   const [difficulty, setDifficulty] = useState<'Kolay' | 'Orta' | 'Zor'>('Kolay');
 
+  // Tüm useEffect'leri en üste taşıyalım
   useEffect(() => {
-    handleNewGame();
-  }, [difficulty]);
+    if (!userLoading && !currentUser) {
+      navigate('/login');
+    }
+  }, [currentUser, userLoading, navigate]);
+
+  useEffect(() => {
+    if (!userLoading && !xpLoading && currentUser) {
+      handleNewGame();
+    }
+  }, [difficulty, userLoading, xpLoading, currentUser]);
+
+  if (!currentUser) {
+    return null; // Yönlendirme yapılırken boş ekran göster
+  }
+
+  // Yükleniyor durumu
+  if (userLoading || xpLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white py-12 px-4 flex items-center justify-center">
+        <div className="text-2xl font-semibold">Yükleniyor...</div>
+      </div>
+    );
+  }
 
   const handleNewGame = () => {
     setCurrentStructure(generateRandomStructure(difficulty));
@@ -154,11 +185,11 @@ const CubeCountingPage: React.FC = () => {
       setScore(prev => prev + points);
       setMessage(`Doğru! ${points} puan kazandınız.`);
 
-      if (user) {
+      if (currentUser) {
         const { data: userData } = await supabase
           .from('profiles')
           .select('points, xp')
-          .eq('id', user.id)
+          .eq('id', currentUser.id)
           .single();
 
         if (userData) {
@@ -168,7 +199,7 @@ const CubeCountingPage: React.FC = () => {
               points: userData.points + points,
               xp: userData.xp + Math.floor(points * 0.1)
             })
-            .eq('id', user.id);
+            .eq('id', currentUser.id);
         }
       }
     } else {

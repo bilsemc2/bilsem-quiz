@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useXPCheck } from '../../../hooks/useXPCheck';
 import XPWarning from '../../../components/XPWarning';
 import { useUser } from '../../../hooks/useUser';
+
+type Operator = '+' | '-';
+type FeedbackType = { message: string; isCorrect: boolean } | null;
 
 // Rastgele sayı üretme fonksiyonu (min ve max dahil)
 const getRandomInt = (min: number, max: number): number => {
@@ -9,20 +13,28 @@ const getRandomInt = (min: number, max: number): number => {
 };
 
 // Operatörler
-const operators = ['+', '-'];
+const operators: Operator[] = ['+', '-'];
 
 export default function MathProblem() {
   const [numbers, setNumbers] = useState<number[]>([]);
   const [choices, setChoices] = useState<number[]>([]);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackType>(null);
   const [showHint, setShowHint] = useState(false);
 
-  // XP kontrolü için
+  const navigate = useNavigate();
   const { currentUser, loading: userLoading } = useUser();
-  const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(
-    userLoading ? undefined : currentUser?.id,
-    '/Math/M1'
-  );
+  const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(false);
+
+  // Kullanıcı giriş yapmamışsa login sayfasına yönlendir
+  useEffect(() => {
+    if (!userLoading && !currentUser) {
+      navigate('/login');
+    }
+  }, [currentUser, userLoading, navigate]);
+
+  if (!currentUser) {
+    return null; // Yönlendirme yapılırken boş ekran göster
+  }
 
   // İşlem sonucunu hesaplama
   const calculateResult = (nums: number[]): number => {
@@ -90,9 +102,15 @@ export default function MathProblem() {
     const isCorrect = choice === result;
 
     if (isCorrect) {
-      setFeedback(`✅ Doğru! ${numbers[0]}+${numbers[2]}-${numbers[1]}=${result} işleminin sonucu ${result} eder.`);
+      setFeedback({
+        message: `✅ Doğru! ${numbers[0]}+${numbers[2]}-${numbers[1]}=${result} işleminin sonucu ${result} eder.`,
+        isCorrect: true
+      });
     } else {
-      setFeedback(`❌ Yanlış! ${numbers[0]}+${numbers[2]}-${numbers[1]}=${result} işleminin sonucu ${result} eder.`);
+      setFeedback({
+        message: `❌ Yanlış! ${numbers[0]}+${numbers[2]}-${numbers[1]}=${result} işleminin sonucu ${result} eder.`,
+        isCorrect: false
+      });
     }
 
     // 2 saniye sonra yeni soru
@@ -104,7 +122,11 @@ export default function MathProblem() {
   };
 
   if (userLoading || xpLoading) {
-    return <div>Yükleniyor...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white py-12 px-4 flex items-center justify-center">
+        <div className="text-2xl font-semibold">Yükleniyor...</div>
+      </div>
+    );
   }
 
   if (!hasEnoughXP) {
@@ -177,8 +199,8 @@ export default function MathProblem() {
       </div>
 
       {feedback && (
-        <div className="mt-6 text-2xl font-bold text-center">
-          {feedback}
+        <div className={`mt-6 text-2xl font-bold text-center ${feedback.isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+          {feedback.message}
         </div>
       )}
     </div>

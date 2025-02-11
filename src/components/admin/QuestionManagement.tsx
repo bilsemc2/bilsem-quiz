@@ -19,6 +19,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  CircularProgress,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
@@ -28,10 +29,21 @@ import EditIcon from '@mui/icons-material/Edit';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
+type MessageType = {
+  type: 'success' | 'error' | 'warning' | 'info';
+  text: string;
+};
+
+type OptionLetter = 'A' | 'B' | 'C' | 'D' | 'E';
+
 interface Option {
-  id: string;
+  id: OptionLetter;
   text: string;
   imageUrl: string;
+}
+
+interface SolutionVideo {
+  embed_code: string;
 }
 
 interface Question {
@@ -39,10 +51,10 @@ interface Question {
   text: string | null;
   image_url: string | null;
   options: Option[];
-  correct_option_id: string;
+  correct_option_id: OptionLetter;
   created_at: string;
   created_by: string | null;
-  solution_video: { embed_code: string } | null;
+  solution_video: SolutionVideo | null;
 }
 
 const QuestionManagement: React.FC = () => {
@@ -51,7 +63,7 @@ const QuestionManagement: React.FC = () => {
   const [questionNumber, setQuestionNumber] = useState('');
   const [solutionVideo, setSolutionVideo] = useState('');
   const [questionText, setQuestionText] = useState('');
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<MessageType | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
@@ -65,7 +77,17 @@ const QuestionManagement: React.FC = () => {
 
   // Sayfalama ve filtreleme için state'ler
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Sayfalama işlemleri
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
   const [filterNumber, setFilterNumber] = useState('');
   const [filterText, setFilterText] = useState('');
 
@@ -75,31 +97,60 @@ const QuestionManagement: React.FC = () => {
 
   // Supabase'den soruları çek
   const fetchQuestions = async () => {
+    setMessage(null); // Önceki mesajları temizle
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('questions')
-        .select('*')
-        .order('image_url', { ascending: true });
-      if (error) {
-        throw error;
+      console.log('Sorular çekiliyor...');
+
+      let allQuestions: any[] = [];
+      let start = 0;
+      const pageSize = 1000; // Supabase'in maksimum limit değeri
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from('questions')
+          .select('*')
+          .range(start, start + pageSize - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+
+        allQuestions = [...allQuestions, ...data];
+        console.log(`${start}-${start + data.length} arası sorular yüklendi`);
+
+        if (data.length < pageSize) break;
+        start += pageSize;
       }
-      setQuestions(data || []);
+
+      console.log('Toplam soru sayısı:', allQuestions.length);
+      
+      // Soru numaralarına göre sırala (büyükten küçüğe)
+      allQuestions.sort((a, b) => {
+        const numA = getNumericQuestionNumber(a.image_url);
+        const numB = getNumericQuestionNumber(b.image_url);
+        return numB - numA; // Büyükten küçüğe sıralama için b-a kullanıyoruz
+      });
+
+      setQuestions(allQuestions);
     } catch (error) {
       console.error('Error fetching questions:', error);
-      setMessage({ type: 'error', text: 'Sorular yüklenirken bir hata oluştu.' });
+      setMessage({ 
+        type: 'error', 
+        text: `Sorular yüklenirken bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}` 
+      });
     } finally {
       setLoading(false);
     }
   };
 
   // Soru numarasına göre option nesnelerini oluştur
-  const generateOptions = (qNumber: string) => {
-    return ['A', 'B', 'C', 'D', 'E'].map((letter) => {
+  const generateOptions = (qNumber: string): Option[] => {
+    return ['A', 'B', 'C', 'D', 'E'].map((letter): Option => {
+      const optionLetter = letter as OptionLetter; // Bu harfler zaten OptionLetter tipine uygun
       // Soru numarasını 5 haneli olacak şekilde dolduruyoruz
       const padded = qNumber.padStart(5, '0');
       return {
-        id: letter,
+        id: optionLetter,
         text: '',
         imageUrl: `/images/options/Matris/Soru-${padded}${letter}.webp`,
       };
@@ -107,10 +158,18 @@ const QuestionManagement: React.FC = () => {
   };
 
   // image_url içinden soru numarasını çıkartır
-  const getQuestionNumber = (url: string | null) => {
+  const getQuestionNumber = (url: string | null): string => {
     if (!url) return 'N/A';
     const match = url.match(/Soru-(\d+)\.webp/);
-    return match ? match[1] : 'N/A';
+    if (!match) return 'N/A';
+    // Sayıyı 4 basamaklı yap (sıralama için)
+    return match[1].padStart(4, '0');
+  };
+
+  // Soru numarasını sayısal değere çevir
+  const getNumericQuestionNumber = (url: string | null): number => {
+    const strNum = getQuestionNumber(url);
+    return strNum === 'N/A' ? -1 : parseInt(strNum, 10);
   };
 
   // Yeni soru oluşturma işlemi
@@ -143,7 +202,10 @@ const QuestionManagement: React.FC = () => {
       fetchQuestions();
     } catch (error) {
       console.error('Error creating question:', error);
-      setMessage({ type: 'error', text: 'Soru eklenirken bir hata oluştu.' });
+      setMessage({ 
+        type: 'error', 
+        text: `Soru eklenirken bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}` 
+      });
     }
   };
 
@@ -156,7 +218,10 @@ const QuestionManagement: React.FC = () => {
       fetchQuestions();
     } catch (error) {
       console.error('Error deleting question:', error);
-      setMessage({ type: 'error', text: 'Soru silinirken bir hata oluştu.' });
+      setMessage({ 
+        type: 'error', 
+        text: `Soru silinirken bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}` 
+      });
     }
   };
 
@@ -203,9 +268,21 @@ const QuestionManagement: React.FC = () => {
       fetchQuestions();
     } catch (error) {
       console.error('Error updating question:', error);
-      setMessage({ type: 'error', text: 'Soru güncellenirken bir hata oluştu.' });
+      setMessage({ 
+        type: 'error', 
+        text: `Soru güncellenirken bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}` 
+      });
     }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <Typography variant="h6" sx={{ mr: 2 }}>Yükleniyor</Typography>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Paper sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
@@ -288,6 +365,13 @@ const QuestionManagement: React.FC = () => {
         />
       </Box>
       <TableContainer>
+        {questions.length === 0 ? (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Typography color="text.secondary">
+              {loading ? 'Yükleniyor...' : 'Hiç soru bulunamadı.'}
+            </Typography>
+          </Box>
+        ) : null}
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -310,23 +394,24 @@ const QuestionManagement: React.FC = () => {
                   if (qNum === 'N/A') {
                     numberMatch = false;
                   } else {
-                    const questionNumber = qNum.padStart(4, '0'); // 4 basamaklı string yap
-                    const searchNumber = filterNumber.padStart(4, '0'); // Arama numarasını da 4 basamaklı yap
-                    numberMatch = questionNumber === searchNumber; // String olarak karşılaştır
+                    // Soru numarasının içinde arama metni geçiyor mu diye bak
+                    numberMatch = qNum.includes(filterNumber);
                   }
                 }
 
-                // Metin kontrolü
-                const textMatch = !filterText || 
-                  (question.text?.toLowerCase() || '').includes(filterText.toLowerCase());
+                // Metin kontrolü - hem açıklamada hem soru numarasında ara
+                const searchText = filterText.toLowerCase();
+                const textMatch = !searchText || 
+                  (question.text?.toLowerCase() || '').includes(searchText) ||
+                  getQuestionNumber(question.image_url).toLowerCase().includes(searchText);
 
                 return numberMatch && textMatch;
               })
-              // Sonra sırala
+              // Sonra sırala (büyükten küçüğe)
               .sort((a, b) => {
-                const numA = parseInt(getQuestionNumber(a.image_url)) || 0;
-                const numB = parseInt(getQuestionNumber(b.image_url)) || 0;
-                return numA - numB; // Küçükten büyüğe sıralama
+                const numA = getNumericQuestionNumber(a.image_url);
+                const numB = getNumericQuestionNumber(b.image_url);
+                return numB - numA; // Büyükten küçüğe sıralama
               })
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((question) => (
@@ -424,17 +509,14 @@ const QuestionManagement: React.FC = () => {
         component="div"
         count={questions.length}
         page={page}
-        onPageChange={(_event, newPage) => setPage(newPage)}
+        onPageChange={handleChangePage}
         rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(event) => {
-          setRowsPerPage(parseInt(event.target.value, 10));
-          setPage(0);
-        }}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={[5, 10, 25, 50]}
         labelRowsPerPage="Sayfa başına soru"
-        labelDisplayedRows={({ from, to, count }) =>
+        labelDisplayedRows={({ from, to, count }: { from: number; to: number; count: number }) => (
           `${from}-${to} / ${count}`
-        }
-        rowsPerPageOptions={[5, 10, 25]}
+        )}
       />
 
       {/* Video Çözüm Dialog'u */}

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Square, Triangle, Circle, Star, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -60,11 +61,9 @@ const unfoldedLayouts = [
 ];
 
 const UnfoldedCubePage = () => {
+  const navigate = useNavigate();
   const { currentUser, loading: userLoading } = useUser();
-  const { hasEnoughXP, userXP, requiredXP, error: xpError, loading: xpLoading } = useXPCheck(
-    userLoading ? undefined : currentUser?.id,
-    '/unfolded-cube'
-  );
+  const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(false);
 
   const [selectedShape, setSelectedShape] = useState(shapes[0]);
   const [selectedColor, setSelectedColor] = useState(colors[0]);
@@ -83,20 +82,19 @@ const UnfoldedCubePage = () => {
   const [rotation, setRotation] = useState({ x: -20, y: 45 });
 
   // Döndürme olayları
-  const handleDragStart = (e) => {
+  const handleDragStart = (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>) => {
     if (isClosed) {
       setIsDragging(true);
-      setStartPosition({
-        x: e.clientX || e.touches?.[0].clientX,
-        y: e.clientY || e.touches?.[0].clientY
-      });
+      const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      setStartPosition({ x, y });
     }
   };
 
-  const handleDragMove = (e) => {
+  const handleDragMove = (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>) => {
     if (isDragging && isClosed) {
-      const clientX = e.clientX || e.touches?.[0].clientX;
-      const clientY = e.clientY || e.touches?.[0].clientY;
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       
       const deltaX = clientX - startPosition.x;
       const deltaY = clientY - startPosition.y;
@@ -118,7 +116,7 @@ const UnfoldedCubePage = () => {
   };
 
   // Yüzeye şekil ekleme
-  const assignShape = (face) => {
+  const assignShape = (face: keyof typeof faces) => {
     if (!isClosed) {
       setFaces(prev => ({
         ...prev,
@@ -139,7 +137,13 @@ const UnfoldedCubePage = () => {
   }, [faces]);
 
   // Küp yüzü bileşeni
-  const CubeFace = ({ face, data, onClick }) => (
+  interface CubeFaceProps {
+    face: string;
+    data: { shape: typeof shapes[0]; color: string } | null;
+    onClick: () => void;
+  }
+
+  const CubeFace = ({ face, data, onClick }: CubeFaceProps) => (
     <div 
       className={`
         w-32 h-32 border-4 border-gray-300 rounded-lg
@@ -170,8 +174,8 @@ const UnfoldedCubePage = () => {
               {face && (
                 <CubeFace
                   face={face.charAt(0).toUpperCase() + face.slice(1)}
-                  data={faces[face]}
-                  onClick={() => assignShape(face)}
+                  data={faces[face as keyof typeof faces]}
+                  onClick={() => assignShape(face as keyof typeof faces)}
                 />
               )}
             </div>
@@ -228,11 +232,22 @@ const UnfoldedCubePage = () => {
     setRotation({ x: -20, y: 45 });
   };
 
+  // Kullanıcı giriş yapmamış
+  useEffect(() => {
+    if (!userLoading && !currentUser) {
+      navigate('/login');
+    }
+  }, [currentUser, userLoading, navigate]);
+
+  if (!currentUser) {
+    return null; // Yönlendirme yapılırken boş ekran göster
+  }
+
   // Loading durumunda bekle
   if (userLoading || xpLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white py-12 px-4 flex items-center justify-center">
+        <div className="text-2xl font-semibold">Yükleniyor...</div>
       </div>
     );
   }
@@ -324,13 +339,13 @@ const UnfoldedCubePage = () => {
               relative h-[600px] bg-gray-100 rounded-xl p-8
               ${isClosed ? 'cursor-move' : ''}
             `}
-            onMouseDown={handleDragStart}
-            onMouseMove={handleDragMove}
-            onMouseUp={handleDragEnd}
-            onMouseLeave={handleDragEnd}
-            onTouchStart={handleDragStart}
-            onTouchMove={handleDragMove}
-            onTouchEnd={handleDragEnd}
+            onMouseDown={(e) => handleDragStart(e)}
+            onMouseMove={(e) => handleDragMove(e)}
+            onMouseUp={() => handleDragEnd()}
+            onMouseLeave={() => handleDragEnd()}
+            onTouchStart={(e) => handleDragStart(e)}
+            onTouchMove={(e) => handleDragMove(e)}
+            onTouchEnd={() => handleDragEnd()}
           >
             <div className="absolute inset-0 flex items-center justify-center" style={{ perspective: '1200px' }}>
               {isClosed ? renderClosedCube() : renderUnfoldedCube()}

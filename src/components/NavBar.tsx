@@ -91,7 +91,7 @@ const NavBar: React.FC = () => {
     { name: "Ana Sayfa", path: "/" },
     { name: "Bilsem", path: "/bilsemc2" },
     { name: "Hizmetler", path: "/services", showWhenNotAuth: true },
-    { name: "Nasıl Çalışır?", path: "/how-it-works", showWhenNotAuth: true },
+    { name: "Nasıl?", path: "/how-it-works", showWhenNotAuth: true },
     { name: "SSS", path: "/faq", showWhenNotAuth: true },
     { name: "İletişim", path: "/contact", showWhenNotAuth: true },
     { name: "Quizeka", path: "/quiz", showWhenAuth: true },

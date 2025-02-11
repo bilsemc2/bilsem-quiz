@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useXPCheck } from '../hooks/useXPCheck';
 import XPWarning from '../components/XPWarning';
+import { useUser } from '../hooks/useUser';
 interface Shape {
   id: number;
   name: string;
@@ -43,9 +44,11 @@ const shapes: Shape[] = [
   }
 ];
 
-const RotationGamePage: React.FC = () => {
-  const { user } = useAuth();
-  const { loading, userXP, requiredXP } = useXPCheck();
+const RotationGamePage = () => {
+  const navigate = useNavigate();
+  const { currentUser, loading: userLoading } = useUser();
+  const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(false);
+  
   const [currentShape, setCurrentShape] = useState<Shape | null>(null);
   const [options, setOptions] = useState<number[]>([]);
   const [score, setScore] = useState(0);
@@ -103,11 +106,11 @@ const RotationGamePage: React.FC = () => {
       setScore(prev => prev + points);
       setMessage(`Doğru! ${points} puan kazandınız.`);
 
-      if (user) {
+      if (currentUser) {
         const { data: userData } = await supabase
           .from('profiles')
           .select('points, xp')
-          .eq('id', user.id)
+          .eq('id', currentUser.id)
           .single();
 
         if (userData) {
@@ -117,7 +120,7 @@ const RotationGamePage: React.FC = () => {
               points: userData.points + points,
               xp: userData.xp + Math.floor(points * 0.1)
             })
-            .eq('id', user.id);
+            .eq('id', currentUser.id);
         }
       }
     } else {
@@ -125,25 +128,40 @@ const RotationGamePage: React.FC = () => {
     }
   };
 
+  // Tüm useEffect'leri en üste taşıyalım
   useEffect(() => {
-    handleNewGame();
-  }, [difficulty]);
+    if (!userLoading && !currentUser) {
+      navigate('/login');
+    }
+  }, [currentUser, userLoading, navigate]);
 
-  if (loading) {
-    return <div className="container mx-auto px-4 py-8">Yükleniyor...</div>;
+  useEffect(() => {
+    if (!userLoading && !xpLoading && currentUser) {
+      handleNewGame();
+    }
+  }, [difficulty, userLoading, xpLoading, currentUser]);
+
+  if (!currentUser) {
+    return null; // Yönlendirme yapılırken boş ekran göster
   }
 
-  if (!user) {
-    return <div className="container mx-auto px-4 py-8">Giriş yapmanız gerekiyor</div>;
-  }
-
-  if (userXP < requiredXP) {
+  // Yükleniyor durumu
+  if (userLoading || xpLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <XPWarning 
-          requiredXP={requiredXP} 
-          currentXP={userXP} 
-          title="Döndürme oyununa başlamak için gereken XP" 
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white py-12 px-4 flex items-center justify-center">
+        <div className="text-2xl font-semibold">Yükleniyor...</div>
+      </div>
+    );
+  }
+
+  // XP kontrolü
+  if (!hasEnoughXP) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <XPWarning
+          requiredXP={requiredXP}
+          currentXP={userXP}
+          title="Döndürme oyununa erişim için yeterli XP'niz yok"
         />
       </div>
     );

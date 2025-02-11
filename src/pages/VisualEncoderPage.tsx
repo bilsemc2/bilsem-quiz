@@ -1,12 +1,60 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRightLeft } from 'lucide-react';
+import { useUser } from '../hooks/useUser';
+import { useXPCheck } from '../hooks/useXPCheck';
+import XPWarning from '../components/XPWarning';
+
+interface CharMapping {
+  [key: string]: {
+    color: string;
+    symbol: string;
+  };
+}
 
 const VisualEncoderPage = () => {
+  const navigate = useNavigate();
+  const { currentUser, loading: userLoading } = useUser();
+  const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(false);
+
   const [inputText, setInputText] = useState('');
-  const [mode, setMode] = useState('encode'); // 'encode' veya 'decode'
+  const [mode, setMode] = useState<'encode' | 'decode'>('encode');
+
+  // Kullanıcı giriş yapmamışsa login sayfasına yönlendir
+  useEffect(() => {
+    if (!userLoading && !currentUser) {
+      navigate('/login');
+    }
+  }, [currentUser, userLoading, navigate]);
+
+  if (!currentUser) {
+    return null; // Yönlendirme yapılırken boş ekran göster
+  }
+
+  // Yükleniyor durumu
+  if (userLoading || xpLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white py-12 px-4 flex items-center justify-center">
+        <div className="text-2xl font-semibold">Yükleniyor...</div>
+      </div>
+    );
+  }
+
+  // XP kontrolü
+  if (!hasEnoughXP) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <XPWarning
+          requiredXP={requiredXP}
+          currentXP={userXP}
+          title="Görsel Şifreci'ye erişim için yeterli XP'niz yok"
+        />
+      </div>
+    );
+  }
 
   // Her harf için renk ve sembol eşleştirmesi
-  const charMapping = {
+  const charMapping: CharMapping = {
     'A': { color: '#FF6B6B', symbol: '🐱' },  // Kedi
     'B': { color: '#4ECDC4', symbol: '🐶' },  // Köpek
     'C': { color: '#45B7D1', symbol: '🐰' },  // Tavşan
@@ -49,13 +97,13 @@ const VisualEncoderPage = () => {
   };
 
   // Ters mapping oluştur (sembolden harfe)
-  const reverseMapping = {};
+  const reverseMapping: Record<string, string> = {};
   Object.entries(charMapping).forEach(([char, { symbol }]) => {
     reverseMapping[symbol] = char;
   });
 
-  const encodeText = (text) => {
-    return text.toUpperCase().split('').map((char, index) => {
+  const encodeText = (text: string) => {
+    return text.toUpperCase().split('').map((char: string, index: number) => {
       const mapping = charMapping[char];
       if (!mapping) return char; // Eşleşme yoksa karakteri aynen bırak
 
@@ -71,10 +119,10 @@ const VisualEncoderPage = () => {
     });
   };
 
-  const decodeText = (text) => {
+  const decodeText = (text: string) => {
     // Metindeki her emojiyi ayrı ayrı tanımla
     const emojiRegex = /(\p{Emoji})/gu;
-    const symbols = text.match(emojiRegex) || [];
+    const symbols: string[] = text.match(emojiRegex) || [];
     
     // Her emojiyi karşılık gelen harfe çevir
     return symbols.map(symbol => {
