@@ -234,6 +234,33 @@ export const ClassroomPage: React.FC = () => {
     const [stats, setStats] = useState<any>(null);
     const [showAllBadges, setShowAllBadges] = useState(false);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    const [userBadges, setUserBadges] = useState<any[]>([]);
+
+
+    // Kullanıcının rozetlerini çek
+    const fetchUserBadges = async () => {
+        if (!user?.id) return;
+        
+        const { data, error } = await supabase
+            .from('user_badges')
+            .select(`
+                badge_id,
+                earned_at,
+                badges:badges(
+                    name,
+                    description,
+                    icon
+                )
+            `)
+            .eq('user_id', user.id);
+
+        if (error) {
+            console.error('Rozetler çekilirken hata:', error);
+            return;
+        }
+
+        setUserBadges(data || []);
+    };
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
 
@@ -247,6 +274,7 @@ export const ClassroomPage: React.FC = () => {
         if (hasClassAccess && classId) {
             fetchClassroomData();
             fetchAnnouncements();
+            fetchUserBadges();
         }
     }, [hasClassAccess, classId]);
 
@@ -668,22 +696,55 @@ export const ClassroomPage: React.FC = () => {
                         {/* Ödevler */}
                         <div className="bg-white rounded-xl shadow-lg p-6">
                             <h2 className="text-2xl font-semibold mb-4">Ödevler</h2>
-                            {assignments.length > 0 ? (
-                                <List
-                                    itemLayout="horizontal"
-                                    dataSource={assignments}
-                                    renderItem={(assignment) => (
-                                        <List.Item>
-                                            <List.Item.Meta
-                                                title={renderAssignmentTitle(assignment)}
-                                                description={assignment.description}
-                                            />
-                                        </List.Item>
-                                    )}
-                                />
-                            ) : (
-                                <p className="text-gray-500 text-center py-4">Aktif ödev bulunmuyor.</p>
-                            )}
+                            
+                            {/* Yeni Ödevler */}
+                            <div className="mb-8">
+                                <h3 className="text-lg font-semibold mb-4 text-blue-600">Yeni Ödevler</h3>
+                                {assignments.filter(a => a.status === 'pending').length > 0 ? (
+                                    <List
+                                        itemLayout="horizontal"
+                                        dataSource={assignments.filter(a => a.status === 'pending')}
+                                        renderItem={(assignment) => (
+                                            <List.Item>
+                                                <List.Item.Meta
+                                                    title={renderAssignmentTitle(assignment)}
+                                                    description={assignment.description}
+                                                />
+                                            </List.Item>
+                                        )}
+                                    />
+                                ) : (
+                                    <p className="text-gray-500 text-center py-4">Yeni ödev bulunmuyor.</p>
+                                )}
+                            </div>
+
+                            {/* Tamamlanan Ödevler */}
+                            <div>
+                                <h3 className="text-lg font-semibold mb-4 text-green-600">Tamamlanan Ödevler</h3>
+                                {assignments.filter(a => a.status === 'completed').length > 0 ? (
+                                    <List
+                                        itemLayout="horizontal"
+                                        dataSource={assignments.filter(a => a.status === 'completed')}
+                                        renderItem={(assignment) => (
+                                            <List.Item>
+                                                <List.Item.Meta
+                                                    title={renderAssignmentTitle(assignment)}
+                                                    description={
+                                                        <div>
+                                                            <p>{assignment.description}</p>
+                                                            <p className="text-green-600 mt-2">
+                                                                Puan: {assignment.score}/{assignment.total_questions}
+                                                            </p>
+                                                        </div>
+                                                    }
+                                                />
+                                            </List.Item>
+                                        )}
+                                    />
+                                ) : (
+                                    <p className="text-gray-500 text-center py-4">Henüz tamamlanan ödev yok.</p>
+                                )}
+                            </div>
                         </div>
 
                         {/* İstatistikler */}
@@ -794,35 +855,19 @@ export const ClassroomPage: React.FC = () => {
 
                             {/* Rozetler */}
                             <div className="mt-4 mb-8">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-semibold">Rozetlerin</h3>
-                                    <Button 
-                                        type="text" 
-                                        onClick={() => setShowAllBadges(true)}
-                                        className="text-indigo-600 hover:text-indigo-800"
-                                    >
-                                        Tüm Rozetler
-                                    </Button>
-                                </div>
+                                <h3 className="text-lg font-semibold mb-4">Rozetlerin</h3>
 
                                 <BadgeList
-                                    badges={[
-                                        {
-                                            id: '1',
-                                            name: 'İlk Ödev',
-                                            description: 'İlk ödevini tamamladın!',
-                                            icon: '🎥',
-                                            earnedAt: '2025-02-01'
-                                        },
-                                        {
-                                            id: '3',
-                                            name: 'Mükemmel',
-                                            description: 'Bir ödevden tam puan aldın!',
-                                            icon: '⭐',
-                                            earnedAt: '2025-02-10'
-                                        }
-                                    ]}
+                                    badges={userBadges.map(badge => ({
+                                        id: badge.badge_id,
+                                        name: badge.badges.name,
+                                        description: badge.badges.description,
+                                        icon: badge.badges.icon,
+                                        earnedAt: badge.earned_at
+                                    }))}
                                 />
+
+
 
                                 {/* Duyuru Ekleme Modal */}
                                 <Modal
