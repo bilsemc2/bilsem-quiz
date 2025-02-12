@@ -4,15 +4,20 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Button, List, Modal, Card, Progress, Row, Col, Statistic, Image, Tag } from 'antd';
-import { EyeOutlined, CheckCircleOutlined, FieldTimeOutlined, TrophyOutlined, CheckCircleFilled, CloseCircleFilled, CrownOutlined } from '@ant-design/icons';
+import { Button, List, Modal, Card, Progress, Row, Col, Statistic, Image, Tag, Form, Input, Select, DatePicker } from 'antd';
+import { EyeOutlined, CheckCircleOutlined, FieldTimeOutlined, TrophyOutlined, CheckCircleFilled, CloseCircleFilled, PlusOutlined, UserAddOutlined, SettingOutlined } from '@ant-design/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import BadgeList from '../components/Badge/BadgeList';
 
 interface Announcement {
     id: number;
     title: string;
     content: string;
     created_at: string;
+    expires_at?: string;
+    priority: 'low' | 'normal' | 'high';
+    created_by: string;
+    class_id: string;
 }
 
 interface Assignment {
@@ -96,6 +101,7 @@ const fetchClassMembers = async (classId: string): Promise<ClassMember[]> => {
         profiles: item.profiles as unknown as ProfileData
     })) as ClassStudentData[];
 
+    // Sadece temel bilgileri döndür
     return typedData?.map(item => ({
         id: item.profiles.id,
         name: item.profiles.name,
@@ -198,7 +204,27 @@ export const ClassroomPage: React.FC = () => {
     const { classId } = useParams<{ classId: string }>();
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [announcements] = useState<Announcement[]>([]);
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+
+    const fetchAnnouncements = async () => {
+        if (!classId) return;
+
+        const { data, error } = await supabase
+            .from('announcements')
+            .select('*')
+            .eq('class_id', classId)
+            .gte('expires_at', new Date().toISOString())
+            .order('priority', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Duyurular alınırken hata:', error);
+            toast.error('Duyurular yüklenirken bir hata oluştu');
+            return;
+        }
+
+        setAnnouncements(data || []);
+    };
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [classMembers, setClassMembers] = useState<ClassMember[]>([]);
     const [classData, setClassData] = useState<{ name: string; grade: number } | null>(null);
@@ -206,6 +232,10 @@ export const ClassroomPage: React.FC = () => {
     const [hasClassAccess, setHasClassAccess] = useState(false);
     const [selectedResult, setSelectedResult] = useState<Assignment | null>(null);
     const [stats, setStats] = useState<any>(null);
+    const [showAllBadges, setShowAllBadges] = useState(false);
+    const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -216,6 +246,7 @@ export const ClassroomPage: React.FC = () => {
     useEffect(() => {
         if (hasClassAccess && classId) {
             fetchClassroomData();
+            fetchAnnouncements();
         }
     }, [hasClassAccess, classId]);
 
@@ -395,9 +426,10 @@ export const ClassroomPage: React.FC = () => {
         const { data: classStudents } = await supabase
             .from('class_students')
             .select(`
-                student:profiles!class_students_student_id_fkey (
+                profiles!inner (
                     id,
-                    full_name
+                    name,
+                    avatar_url
                 )
             `)
             .eq('class_id', classId);
@@ -405,45 +437,94 @@ export const ClassroomPage: React.FC = () => {
         // Her öğrenci için ödev sonuçlarını al
         const studentResults = await Promise.all(
             (classStudents || []).map(async (member: any) => {
+                // Öğrencinin tamamlanmış ödevlerini al
                 const { data: assignments } = await supabase
                     .from('assignment_results')
-                    .select('score, total_questions')
-                    .eq('student_id', member.student.id);
+                    .select('score, total_questions, status')
+                    .eq('student_id', member.profiles.id)
+                    .eq('status', 'completed');  // Sadece tamamlanmış ödevler
                 
                 return {
-                    studentId: member.student.id,
-                    name: member.student.full_name,
+                    studentId: member.profiles.id,
+                    name: member.profiles.name || 'İsimsiz Öğrenci',
                     assignments: assignments || []
                 };
             })
         );
 
         // Her öğrenci için ortalama başarı puanını hesapla
-        const studentAverages = studentResults.map(student => {
+        console.log('Öğrenci sonuçları:', studentResults);
+
+        // Öğrenci puanlarını hesapla ve profilleri güncelle
+        const studentAverages = await Promise.all(studentResults.map(async (student) => {
             const studentAssignments = student.assignments || [];
             let studentTotalScore = 0;
             let studentTotalQuestions = 0;
 
+            console.log(`${student.name} için tamamlanmış ödev sonuçları:`, {
+                ödevSayısı: studentAssignments.length,
+                detaylar: studentAssignments
+            });
+
             studentAssignments.forEach((assignment: any) => {
                 studentTotalScore += assignment.score || 0;
                 studentTotalQuestions += assignment.total_questions || 0;
+
+                console.log(`- Ödev (${assignment.status}): ${assignment.score || 0}/${assignment.total_questions || 0} doğru`);
             });
 
             const studentAverage = studentTotalQuestions 
                 ? (studentTotalScore / studentTotalQuestions) * 100 
                 : 0;
 
-            return {
+            // Profil puanını güncelle
+            const profilePoints = Math.round(studentAverage);
+            await supabase
+                .from('profiles')
+                .update({ points: profilePoints })
+                .eq('id', student.studentId);
+
+            const result = {
                 studentId: student.studentId,
                 name: student.name,
-                averageScore: Math.round(studentAverage)
+                averageScore: Math.round(studentAverage),
+                points: profilePoints
             };
-        }).filter(student => student.averageScore > 0);
 
-        // Sıralamayı hesapla
-        studentAverages.sort((a, b) => b.averageScore - a.averageScore);
+            console.log(`Öğrenci ${student.name} güncellendi:`, {
+                ortalama: result.averageScore,
+                profilPuanı: result.points
+            });
+            return result;
+        })); // Sıfır puanlı öğrencileri de dahil ediyoruz
+
+        console.log('Filtrelenmiş öğrenci ortalamaları:', studentAverages);
+
+        // Sıralamayı profil puanına göre hesapla
+        studentAverages.sort((a, b) => {
+            // Önce profil puanına göre sırala
+            const pointsDiff = b.points - a.points;
+            if (pointsDiff !== 0) return pointsDiff;
+            
+            // Puanlar eşitse isme göre sırala
+            return (a.name || '').localeCompare(b.name || '', 'tr');
+        });
+
+        console.log('Sıralanmış öğrenciler:', studentAverages.map(s => ({
+            name: s.name,
+            ödevPuanı: s.averageScore,
+            profilPuanı: s.points,
+            id: s.studentId
+        })));
+
         const currentStudentRank = studentAverages.findIndex(student => student.studentId === user.id) + 1;
         const totalStudents = studentAverages.length;
+
+        console.log('Mevcut öğrenci:', {
+            id: user.id,
+            sıra: currentStudentRank,
+            toplamKişi: totalStudents
+        });
 
         return {
             completedCount: completedAssignments.length,
@@ -460,7 +541,16 @@ export const ClassroomPage: React.FC = () => {
 
     useEffect(() => {
         if (assignments.length && user?.id && classId) {
-            calculateStats().then(stats => setStats(stats));
+            calculateStats().then(stats => {
+                if (stats) {
+                    console.log('Sıralama bilgileri:', {
+                        rank: stats.rank,
+                        totalStudents: stats.totalStudents,
+                        userId: user.id
+                    });
+                    setStats(stats);
+                }
+            });
         }
     }, [assignments, user, classId]);
 
@@ -491,28 +581,83 @@ export const ClassroomPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                        {classData?.name || 'Sınıf Yükleniyor...'}
-                    </h1>
-                    <p className="text-lg text-gray-600">Hoş geldin! Burada sınıfınla ilgili her şeyi bulabilirsin.</p>
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                            {classData?.name || 'Sınıf Yükleniyor...'}
+                        </h1>
+                        <p className="text-lg text-gray-600">Hoş geldin! Burada sınıfınla ilgili her şeyi bulabilirsin.</p>
+                    </div>
+                    {user?.role === 'teacher' && (
+                        <div className="space-x-4">
+                            <Button 
+                                type="primary"
+                                icon={<UserAddOutlined />}
+                                onClick={() => setShowInviteModal(true)}
+                            >
+                                Öğrenci Ekle
+                            </Button>
+                            <Button 
+                                onClick={() => setShowSettingsModal(true)}
+                                icon={<SettingOutlined />}
+                            >
+                                Sınıf Ayarları
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Sol Kolon - Duyurular */}
                     <div className="lg:col-span-2">
                         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                            <h2 className="text-2xl font-semibold mb-4">Duyurular</h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-2xl font-semibold">Duyurular</h2>
+                                {user?.role === 'teacher' && (
+                                    <Button
+                                        type="primary"
+                                        onClick={() => setShowAnnouncementModal(true)}
+                                        icon={<PlusOutlined />}
+                                    >
+                                        Yeni Duyuru
+                                    </Button>
+                                )}
+                            </div>
+
                             {announcements.length > 0 ? (
                                 <div className="space-y-4">
                                     {announcements.map((announcement) => (
-                                        <div key={announcement.id} className="border-l-4 border-blue-500 pl-4 py-3">
-                                            <h3 className="font-semibold text-lg">{announcement.title}</h3>
-                                            <p className="text-gray-600 mt-1">{announcement.content}</p>
-                                            <span className="text-sm text-gray-500 mt-2 block">
-                                                {new Date(announcement.created_at).toLocaleDateString('tr-TR')}
-                                            </span>
-                                        </div>
+                                        <Card 
+                                            key={announcement.id}
+                                            className={`
+                                                ${announcement.priority === 'high' ? 'border-red-400 bg-red-50' :
+                                                  announcement.priority === 'normal' ? 'border-blue-400 bg-blue-50' :
+                                                  'border-gray-400 bg-gray-50'}
+                                                border-2
+                                            `}
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <h3 className="text-lg font-semibold mb-2">{announcement.title}</h3>
+                                                    <p className="text-gray-600 whitespace-pre-wrap">{announcement.content}</p>
+                                                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                                                        <span>{new Date(announcement.created_at).toLocaleDateString('tr-TR')}</span>
+                                                        {announcement.expires_at && (
+                                                            <span>• Son tarih: {new Date(announcement.expires_at).toLocaleDateString('tr-TR')}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <Tag color={
+                                                    announcement.priority === 'high' ? 'red' :
+                                                    announcement.priority === 'normal' ? 'blue' :
+                                                    'default'
+                                                }>
+                                                    {announcement.priority === 'high' ? 'Önemli' :
+                                                     announcement.priority === 'normal' ? 'Normal' :
+                                                     'Düşük'}
+                                                </Tag>
+                                            </div>
+                                        </Card>
                                     ))}
                                 </div>
                             ) : (
@@ -548,7 +693,7 @@ export const ClassroomPage: React.FC = () => {
                                 
                                 {/* İstatistik Kartları */}
                                 <Row gutter={16} className="mb-8">
-                                    <Col span={6}>
+                                    <Col span={8}>
                                         <Card>
                                             <Statistic
                                                 title="Tamamlanan Ödevler"
@@ -565,7 +710,7 @@ export const ClassroomPage: React.FC = () => {
                                             />
                                         </Card>
                                     </Col>
-                                    <Col span={6}>
+                                    <Col span={8}>
                                         <Card>
                                             <Statistic
                                                 title="Ortalama Başarı"
@@ -584,7 +729,7 @@ export const ClassroomPage: React.FC = () => {
                                             />
                                         </Card>
                                     </Col>
-                                    <Col span={6}>
+                                    <Col span={8}>
                                         <Card>
                                             <Statistic
                                                 title="Ortalama Süre"
@@ -597,22 +742,7 @@ export const ClassroomPage: React.FC = () => {
                                             </div>
                                         </Card>
                                     </Col>
-                                    <Col span={6}>
-                                        <Card>
-                                            <Statistic
-                                                title="Sınıf Sıralaması"
-                                                value={stats.rank}
-                                                prefix={<CrownOutlined />}
-                                                suffix={`/${stats.totalStudents}`}
-                                            />
-                                            <div className="text-xs text-gray-500 mt-2">
-                                                {stats.rank === 1 ? '🏆 Sınıf Birincisi!' : 
-                                                 stats.rank === 2 ? '🥈 İkinci' :
-                                                 stats.rank === 3 ? '🥉 Üçüncü' :
-                                                 `İlk %${Math.round((stats.rank || 0) / (stats.totalStudents || 1) * 100)}`}
-                                            </div>
-                                        </Card>
-                                    </Col>
+
                                 </Row>
 
                                 {/* İlerleme Grafiği */}
@@ -645,10 +775,303 @@ export const ClassroomPage: React.FC = () => {
                     {/* Sağ Kolon - Sınıf Arkadaşları */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-xl shadow-lg p-6">
+                            {/* Öğrencinin kendi kartı */}
+                            {classMembers.find(member => member.id === user?.id) && (
+                                <div className="flex items-center space-x-4 p-4 mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                                    <img 
+                                        src={classMembers.find(member => member.id === user?.id)?.avatar_url || '/default-avatar.png'} 
+                                        alt="Profil" 
+                                        className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-lg"
+                                    />
+                                    <div>
+                                        <div className="text-sm text-blue-600 font-medium">Hoş geldin</div>
+                                        <div className="text-xl font-semibold text-gray-800">
+                                            {classMembers.find(member => member.id === user?.id)?.name}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Rozetler */}
+                            <div className="mt-4 mb-8">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-semibold">Rozetlerin</h3>
+                                    <Button 
+                                        type="text" 
+                                        onClick={() => setShowAllBadges(true)}
+                                        className="text-indigo-600 hover:text-indigo-800"
+                                    >
+                                        Tüm Rozetler
+                                    </Button>
+                                </div>
+
+                                <BadgeList
+                                    badges={[
+                                        {
+                                            id: '1',
+                                            name: 'İlk Ödev',
+                                            description: 'İlk ödevini tamamladın!',
+                                            icon: '🎥',
+                                            earnedAt: '2025-02-01'
+                                        },
+                                        {
+                                            id: '3',
+                                            name: 'Mükemmel',
+                                            description: 'Bir ödevden tam puan aldın!',
+                                            icon: '⭐',
+                                            earnedAt: '2025-02-10'
+                                        }
+                                    ]}
+                                />
+
+                                {/* Duyuru Ekleme Modal */}
+                                <Modal
+                                    title="Yeni Duyuru"
+                                    open={showAnnouncementModal}
+                                    onCancel={() => setShowAnnouncementModal(false)}
+                                    footer={null}
+                                >
+                                    <Form
+                                        onFinish={async (values) => {
+                                            const { error } = await supabase
+                                                .from('announcements')
+                                                .insert([
+                                                    {
+                                                        class_id: classId,
+                                                        title: values.title,
+                                                        content: values.content,
+                                                        priority: values.priority,
+                                                        expires_at: values.expires_at?.toISOString(),
+                                                        created_by: user?.id
+                                                    }
+                                                ]);
+
+                                            if (error) {
+                                                console.error('Duyuru eklenirken hata:', error);
+                                                toast.error('Duyuru eklenirken bir hata oluştu');
+                                                return;
+                                            }
+
+                                            toast.success('Duyuru başarıyla eklendi');
+                                            setShowAnnouncementModal(false);
+                                            fetchAnnouncements();
+                                        }}
+                                        layout="vertical"
+                                    >
+                                        <Form.Item
+                                            name="title"
+                                            label="Başlık"
+                                            rules={[{ required: true, message: 'Lütfen başlık girin' }]}
+                                        >
+                                            <Input />
+                                        </Form.Item>
+
+                                        <Form.Item
+                                            name="content"
+                                            label="İçerik"
+                                            rules={[{ required: true, message: 'Lütfen içerik girin' }]}
+                                        >
+                                            <Input.TextArea rows={4} />
+                                        </Form.Item>
+
+                                        <Form.Item
+                                            name="priority"
+                                            label="Öncelik"
+                                            initialValue="normal"
+                                        >
+                                            <Select>
+                                                <Select.Option value="low">Düşük</Select.Option>
+                                                <Select.Option value="normal">Normal</Select.Option>
+                                                <Select.Option value="high">Önemli</Select.Option>
+                                            </Select>
+                                        </Form.Item>
+
+                                        <Form.Item
+                                            name="expires_at"
+                                            label="Son Geçerlilik Tarihi"
+                                        >
+                                            <DatePicker 
+                                                showTime 
+                                                format="DD.MM.YYYY HH:mm"
+                                                placeholder="Seçmek için tıklayın"
+                                            />
+                                        </Form.Item>
+
+                                        <Form.Item>
+                                            <Button type="primary" htmlType="submit" block>
+                                                Duyuru Ekle
+                                            </Button>
+                                        </Form.Item>
+                                    </Form>
+                                </Modal>
+
+                                {/* Öğrenci Davet Modalı */}
+                                <Modal
+                                    title="Öğrenci Ekle"
+                                    open={showInviteModal}
+                                    onCancel={() => setShowInviteModal(false)}
+                                    footer={null}
+                                >
+                                    <Form
+                                        onFinish={async (values) => {
+                                            const { error } = await supabase
+                                                .from('class_students')
+                                                .insert([
+                                                    {
+                                                        class_id: classId,
+                                                        student_id: values.student_id,
+                                                        role: 'student'
+                                                    }
+                                                ]);
+
+                                            if (error) {
+                                                console.error('Öğrenci eklenirken hata:', error);
+                                                toast.error('Öğrenci eklenirken bir hata oluştu');
+                                                return;
+                                            }
+
+                                            toast.success('Öğrenci başarıyla eklendi');
+                                            setShowInviteModal(false);
+                                            if (classId) fetchClassMembers(classId);
+                                        }}
+                                        layout="vertical"
+                                    >
+                                        <Form.Item
+                                            name="student_id"
+                                            label="Öğrenci ID"
+                                            rules={[{ required: true, message: 'Lütfen öğrenci ID girin' }]}
+                                        >
+                                            <Input placeholder="Örn: 123e4567-e89b-12d3-a456-426614174000" />
+                                        </Form.Item>
+
+                                        <Form.Item>
+                                            <Button type="primary" htmlType="submit" block>
+                                                Öğrenci Ekle
+                                            </Button>
+                                        </Form.Item>
+                                    </Form>
+                                </Modal>
+                            </div>
+
+                            {/* Sınıf Ayarları Modalı */}
+                            <Modal
+                                title="Sınıf Ayarları"
+                                open={showSettingsModal}
+                                onCancel={() => setShowSettingsModal(false)}
+                                footer={null}
+                            >
+                                <Form
+                                    onFinish={async (values) => {
+                                        const { error } = await supabase
+                                            .from('classes')
+                                            .update({
+                                                name: values.name,
+                                                grade: values.grade
+                                            })
+                                            .eq('id', classId);
+
+                                        if (error) {
+                                            console.error('Sınıf güncellenirken hata:', error);
+                                            toast.error('Sınıf güncellenirken bir hata oluştu');
+                                            return;
+                                        }
+
+                                        toast.success('Sınıf başarıyla güncellendi');
+                                        setShowSettingsModal(false);
+                                        if (classId) fetchClassData(classId);
+                                    }}
+                                    layout="vertical"
+                                    initialValues={{
+                                        name: classData?.name,
+                                        grade: classData?.grade
+                                    }}
+                                >
+                                    <Form.Item
+                                        name="name"
+                                        label="Sınıf Adı"
+                                        rules={[{ required: true, message: 'Lütfen sınıf adı girin' }]}
+                                    >
+                                        <Input />
+                                    </Form.Item>
+
+                                    <Form.Item
+                                        name="grade"
+                                        label="Sınıf Seviyesi"
+                                        rules={[{ required: true, message: 'Lütfen sınıf seviyesi seçin' }]}
+                                    >
+                                        <Select>
+                                            {[5, 6, 7, 8, 9, 10, 11, 12].map(grade => (
+                                                <Select.Option key={grade} value={grade}>
+                                                    {grade}. Sınıf
+                                                </Select.Option>
+                                            ))}
+                                        </Select>
+                                    </Form.Item>
+
+                                    <Form.Item>
+                                        <Button type="primary" htmlType="submit" block>
+                                            Değişiklikleri Kaydet
+                                        </Button>
+                                    </Form.Item>
+                                </Form>
+                            </Modal>
+
+                            {/* Tüm Rozetler Modal */}
+                            <Modal
+                                title="Tüm Rozetler"
+                                open={showAllBadges}
+                                onCancel={() => setShowAllBadges(false)}
+                                footer={null}
+                                width={800}
+                            >
+                                <BadgeList
+                                    badges={[
+                                        {
+                                            id: '1',
+                                            name: 'İlk Ödev',
+                                            description: 'İlk ödevini tamamladın!',
+                                            icon: '🎥',
+                                            earnedAt: '2025-02-01'
+                                        },
+                                        {
+                                            id: '2',
+                                            name: 'Hızlı Çözücü',
+                                            description: 'Bu rozeti kazanmak için: Herhangi bir ödevi 5 dakikadan kısa sürede %100 doğru cevaplamalısın.',
+                                            icon: '⚡',
+                                            isLocked: true
+                                        },
+                                        {
+                                            id: '3',
+                                            name: 'Mükemmel',
+                                            description: 'Bir ödevden tam puan aldın!',
+                                            icon: '⭐',
+                                            earnedAt: '2025-02-10'
+                                        },
+                                        {
+                                            id: '4',
+                                            name: 'Şampiyon',
+                                            description: 'Bu rozeti kazanmak için: 10 farklı ödevden tam puan almalısın. Şu ana kadar 2/10 ödevi tamamladın.',
+                                            icon: '🏆',
+                                            isLocked: true
+                                        },
+                                        {
+                                            id: '5',
+                                            name: 'Çalışkan',
+                                            description: 'Bu rozeti kazanmak için: 30 gün üst üste en az 1 ödev yapmalısın. Şu ana kadar en uzun serien: 3 gün.',
+                                            icon: '📚',
+                                            isLocked: true
+                                        }
+                                    ]}
+                                />
+                            </Modal>
+
                             <h2 className="text-2xl font-semibold mb-4">Sınıf Arkadaşların</h2>
                             <div className="space-y-4">
-                                {classMembers.map((member) => (
-                                    <div key={member.id} className="flex items-center space-x-4 p-2 hover:bg-gray-50 rounded-lg">
+                                {classMembers.filter(member => member.id !== user?.id).map((member) => (
+                                    <div 
+                                        key={member.id} 
+                                        className="flex items-center space-x-4 p-2 hover:bg-gray-50 rounded-lg"
+                                    >
                                         <img 
                                             src={member.avatar_url || '/default-avatar.png'} 
                                             alt={member.name} 
@@ -656,7 +1079,6 @@ export const ClassroomPage: React.FC = () => {
                                         />
                                         <div className="flex-1">
                                             <h3 className="font-medium">{member.name}</h3>
-                                            <p className="text-sm text-gray-500">{member.points} puan</p>
                                         </div>
                                     </div>
                                 ))}

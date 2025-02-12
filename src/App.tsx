@@ -41,12 +41,6 @@ import ServicesPage from './pages/ServicesPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import FAQPage from './pages/FAQPage';
 import ContactPage from './pages/ContactPage';
-import SchoolPage from './pages/school/SchoolPage';
-import AssignmentsPage from './pages/school/AssignmentsPage';
-import QuizzesPage from './pages/school/QuizzesPage';
-import StatsPage from './pages/school/StatsPage';
-import StudentsPage from './pages/school/StudentsPage';
-import ClassesPage from './pages/school/ClassesPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -282,78 +276,7 @@ const LocationAwareRouter: React.FC = () => {
               </RequireAuth>
             } 
           />
-          <Route 
-            path="/school" 
-            element={
-              <RequireAuth>
-                <SchoolPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/school/students" 
-            element={
-              <RequireAuth>
-                <StudentsPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/school/classes" 
-            element={
-              <RequireAuth>
-                <ClassesPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/school/assignments" 
-            element={
-              <RequireAuth>
-                <AssignmentsPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/school/quizzes" 
-            element={
-              <RequireAuth>
-                <QuizzesPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/school/stats" 
-            element={
-              <RequireAuth>
-                <StatsPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/school/assignments/:studentId" 
-            element={
-              <RequireAuth>
-                <AssignmentsPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/school/quizzes/:studentId" 
-            element={
-              <RequireAuth>
-                <QuizzesPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/school/stats/:studentId" 
-            element={
-              <RequireAuth>
-                <StatsPage />
-              </RequireAuth>
-            } 
-          />
+
           <Route path="/games" element={<GamePage />} />
           <Route path="/falling-numbers" element={<FallingNumbersPage />} />
           <Route path="/cube" element={<CubePage />} />
