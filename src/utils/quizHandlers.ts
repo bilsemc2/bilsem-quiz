@@ -1,5 +1,6 @@
 import { Question, Quiz, Answer } from '../types/quiz';
 import { supabase } from '../lib/supabase';
+import { playSound } from './soundPlayer';
 
 interface QuizActions {
     setIsAnswered: (value: boolean) => void;
@@ -74,12 +75,14 @@ export async function handleOptionSelection(
 
         quizActions.addAnswer(answer);
 
-        // Doğru/yanlış geri bildirimi
+        // Doğru/yanlış geri bildirimi ve ses efekti
         if (selectedOption.isCorrect) {
             quizActions.setScore(prev => prev + currentQuestion.points);
             feedbackActions.showFeedback('Doğru cevap!', 'success');
+            playSound('correct');
         } else {
             feedbackActions.showFeedback('Yanlış cevap.', 'error');
+            playSound('incorrect');
         }
 
         // Son soru değilse 2 saniye sonra diğer soruya geç
@@ -146,6 +149,7 @@ export const handleQuizEnd = async (
 
             quizActions.addAnswer(answer);
             feedbackActions.showFeedback('Süre doldu!', 'error');
+            playSound('timeout');
         }
 
         timerActions.stopTimer();
