@@ -1,5 +1,5 @@
 // Soru Limitleri
-export const MAX_QUESTION_NUMBER = 1184;
+export const MAX_QUESTION_NUMBER = 1213;
 // Quiz Limitleri
 export const MIN_QUESTIONS_PER_QUIZ = 1;
 export const MAX_QUESTIONS_PER_QUIZ = 20;

@@ -186,12 +186,10 @@ const QuizManagement: React.FC = () => {
   const fetchQuizzes = async () => {
     try {
       setLoading(true);
-      const pageSize = 10;
       const { data: quizData, error: quizError } = await supabase
         .from('assignments')
         .select('*')
-        .order('created_at', { ascending: false })
-        .range(0, pageSize - 1);
+        .order('created_at', { ascending: false });
       if (quizError) throw quizError;
 
       const { data: resultData, error: resultError } = await supabase

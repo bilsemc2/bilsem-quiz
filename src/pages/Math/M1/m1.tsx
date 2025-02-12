@@ -32,10 +32,6 @@ export default function MathProblem() {
     }
   }, [currentUser, userLoading, navigate]);
 
-  if (!currentUser) {
-    return null; // Yönlendirme yapılırken boş ekran göster
-  }
-
   // İşlem sonucunu hesaplama
   const calculateResult = (nums: number[]): number => {
     // Farklı kombinasyonlardan en büyük sonucu seç
@@ -92,10 +88,12 @@ export default function MathProblem() {
     setShowHint(false);
   };
 
-  // Sayfa yüklendiğinde yeni problem oluştur
+  // Sayfa yüklendiğinde ve kullanıcı varsa yeni problem oluştur
   useEffect(() => {
-    generateNewProblem();
-  }, []);
+    if (currentUser) {
+      generateNewProblem();
+    }
+  }, [currentUser]);
 
   const handleChoiceSelected = (choice: number) => {
     const result = calculateResult(numbers);
@@ -120,6 +118,10 @@ export default function MathProblem() {
   const toggleHint = () => {
     setShowHint(!showHint);
   };
+
+  if (!currentUser) {
+    return null; // Yönlendirme yapılırken boş ekran göster
+  }
 
   if (userLoading || xpLoading) {
     return (
