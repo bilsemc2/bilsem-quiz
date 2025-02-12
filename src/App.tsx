@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import NavBar from './components/NavBar';
+import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import QuizPage from './pages/QuizPage';
 import ProfilePage from './pages/ProfilePage';
@@ -41,6 +42,7 @@ import ServicesPage from './pages/ServicesPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import FAQPage from './pages/FAQPage';
 import ContactPage from './pages/ContactPage';
+import PricingPage from './pages/PricingPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -65,9 +67,10 @@ const LocationAwareRouter: React.FC = () => {
   }, [location]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <NavBar />
       <main className="flex-1 pt-16">
+
         <Routes>
           <Route 
             path="/" 
@@ -238,6 +241,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/visual-encoder" element={<VisualEncoderPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route 
             path="/memory-game-2" 
             element={
@@ -321,6 +325,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
+      <Footer />
     </div>
   );
 };

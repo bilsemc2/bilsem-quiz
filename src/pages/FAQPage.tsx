@@ -14,6 +14,11 @@ const FAQPage = () => {
 
     const faqItems: FAQItem[] = [
         {
+            category: 'XP Sistemi',
+            question: 'XP sistemi nasıl çalışır?',
+            answer: 'BilsemC2\'de her etkinlik ve sayfa için belirli bir XP puanı gereklidir. Etkinliklere katıldıkça XP harcanır, bu yüzden başlangıçta yüksek XP ile başlamak önemlidir. Temel plan ile 5000 XP kazanır ve tüm temel özelliklere erişim sağlarsınız. XP\'niz bittiğinde yeni XP satın alabilir veya etkinliklerden XP kazanabilirsiniz.'
+        },
+        {
             category: 'Genel',
             question: 'BilsemC2 nedir?',
             answer: 'BilsemC2, Bilim ve Sanat Merkezleri (BİLSEM) sınavlarına hazırlanan öğrenciler için özel olarak tasarlanmış bir online eğitim platformudur. Görsel-uzamsal zeka, mantıksal düşünme ve problem çözme becerilerini geliştirmeye yönelik interaktif alıştırmalar sunar.'

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import QuestionCount from '../components/QuestionCount';
 import QuizizzSurprise from '../components/QuizizzSurprise';
 
+
 interface LeaderUser {
     id: string;
     name: string;
