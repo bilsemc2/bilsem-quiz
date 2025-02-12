@@ -1,4 +1,4 @@
-import { Package, Puzzle, BoxIcon, FlipHorizontal2, Shapes, RotateCw, KeyRound, FileText, Brain } from 'lucide-react';
+import { Package, Puzzle, BoxIcon, FlipHorizontal2, Shapes, RotateCw, KeyRound, Brain, Video, Users, GraduationCap, MessageSquare } from 'lucide-react';
 
 const ServicesPage = () => {
     const services = [
@@ -38,14 +38,29 @@ const ServicesPage = () => {
             description: "Mantıksal düşünme ve problem çözme becerilerini geliştiren şifreleme aktiviteleri."
         },
         {
-            icon: <FileText className="w-12 h-12 text-orange-500" />,
-            title: "PDF Oluşturma",
-            description: "Kendi soru ve alıştırma setlerinizi oluşturup PDF formatında kaydedin."
-        },
-        {
             icon: <Brain className="w-12 h-12 text-teal-500" />,
             title: "Hafıza Oyunları",
             description: "Görsel hafıza ve dikkat becerilerini geliştiren eğlenceli oyunlar."
+        },
+        {
+            icon: <Video className="w-12 h-12 text-rose-500" />,
+            title: "Canlı Dersler",
+            description: "Profesyonel Planımızla haftada 2 gün canlı derslerle sınava hazırlanın."
+        },
+        {
+            icon: <Users className="w-12 h-12 text-sky-500" />,
+            title: "WhatsApp Grupları",
+            description: "Sınavınıza özel WhatsApp gruplarımızda deneyimli öğretmenlerimizle etkileşimli çalışın."
+        },
+        {
+            icon: <GraduationCap className="w-12 h-12 text-amber-500" />,
+            title: "Günlük Denemeler",
+            description: "Hafta içi her gün 2 deneme sınavıyla kendinizi test edin ve gelişiminizi takip edin."
+        },
+        {
+            icon: <MessageSquare className="w-12 h-12 text-lime-500" />,
+            title: "Uzman Desteği",
+            description: "Sınav gününüze kadar deneyimli eğitmenlerimizden sürekli destek alın."
         }
     ];
 

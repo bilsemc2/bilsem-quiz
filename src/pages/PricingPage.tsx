@@ -48,7 +48,6 @@ export default function PricingPage() {
                             description="Daha fazla destek ve özel içeriklerle sınava hazırlanın. Özel Whatsapp grubu ve canlı denemelerle başarıya ulaşın."
                             features={[
                                 'Tüm Temel özellikleri',
-                                '+5000 XP',
                                 ' Özel Whatsapp grubu',
                                 'Canlı/cansız denemeler',
                                 'Zor soruların çözümlü Videoları/Açıklamaları',
@@ -67,7 +66,7 @@ export default function PricingPage() {
                             description="En kapsamlı hazırlık planı! Canlı dersler, günlük denemeler ve özel ödevlerle tam donanımlı bir hazırlık deneyimi."
                             features={[
                                 'Tüm Standart özellikleri',
-                                '+10000 XP',
+                                '+5000 XP',
                                 'Sınıfa Atama',
                                 'Ödevler',
                                 'Hafta içi hergün 2 deneme',

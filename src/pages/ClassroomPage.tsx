@@ -5,9 +5,10 @@ import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Button, List, Modal, Card, Progress, Row, Col, Statistic, Image, Tag, Form, Input, Select, DatePicker } from 'antd';
-import { EyeOutlined, CheckCircleOutlined, FieldTimeOutlined, TrophyOutlined, CheckCircleFilled, CloseCircleFilled, PlusOutlined, UserAddOutlined, SettingOutlined } from '@ant-design/icons';
+import { EyeOutlined, CheckCircleOutlined, FieldTimeOutlined, TrophyOutlined, CheckCircleFilled, CloseCircleFilled, PlusOutlined, UserAddOutlined, SettingOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import BadgeList from '../components/Badge/BadgeList';
+import { MEET_CODES } from '../constants/meetCodes';
 
 interface Announcement {
     id: number;
@@ -296,6 +297,41 @@ export const ClassroomPage: React.FC = () => {
 
         setHasClassAccess(!!result);
         setLoading(false);
+    };
+
+    const renderMeetSection = () => {
+        const meetCode = MEET_CODES[classId as keyof typeof MEET_CODES];
+        
+        if (!meetCode) return null;
+
+        return (
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-8 mb-8 text-white">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-6">
+                        <div className="bg-white/10 p-4 rounded-full">
+                            <VideoCameraOutlined className="text-3xl" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold">
+                                Canlı Ders Başlıyor!
+                            </h2>
+                            <p className="text-blue-100 mt-2 text-lg">
+                                Google Meet ile derse hemen katıl
+                            </p>
+                        </div>
+                    </div>
+                    <Button 
+                        type="default"
+                        size="large"
+                        icon={<VideoCameraOutlined />}
+                        onClick={() => window.open(`https://meet.google.com/${meetCode}`, '_blank')}
+                        className="bg-white hover:bg-blue-50 text-blue-600 font-medium px-6 h-12 flex items-center"
+                    >
+                        Derse Katıl
+                    </Button>
+                </div>
+            </div>
+        );
     };
 
     const fetchClassroomData = async () => {
@@ -635,6 +671,8 @@ export const ClassroomPage: React.FC = () => {
                     )}
                 </div>
 
+                {renderMeetSection()}
+                
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Sol Kolon - Duyurular */}
                     <div className="lg:col-span-2">
