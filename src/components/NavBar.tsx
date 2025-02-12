@@ -90,14 +90,11 @@ const NavBar: React.FC = () => {
   const menuItems = [
     { name: "Ana Sayfa", path: "/" },
     { name: "Bilsem", path: "/bilsemc2" },
-    { name: "Hizmetler", path: "/services", showWhenNotAuth: true },
-    { name: "Nasıl?", path: "/how-it-works", showWhenNotAuth: true },
-    { name: "SSS", path: "/faq", showWhenNotAuth: true },
     { name: "İletişim", path: "/contact", showWhenNotAuth: true },
     { name: "Quizeka", path: "/quiz", showWhenAuth: true },
     { name: "Düello", path: "/duel", showWhenAuth: true },
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
-    { name: "Blog", path: "/blog" },
+    { name: "Fiyatlandırma", path: "/pricing" },
   ];
 
   // Desktop veya mobil menüde kullanılacak menü öğelerini render eden fonksiyon
