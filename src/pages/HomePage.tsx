@@ -119,7 +119,7 @@ export default function HomePage() {
                         </div>
                     )}
                     <p className="text-sm text-gray-500 italic mt-3 max-w-md mx-auto">
-                        Her girişte karışık 10 soru gelmektedir. Ve her girişte 10 xp'niz azalmaktadır. Soru sayısı arttıkça benzer soruların gelme olasılığı düşecektir.
+                        Her girişte karışık 10 soru gelmektedir.
                     </p>
                 </div>
 
