@@ -19,6 +19,11 @@ const FAQPage = () => {
             answer: 'BilsemC2\'de her etkinlik ve sayfa için belirli bir XP puanı gereklidir. Etkinliklere katıldıkça XP harcanır, bu yüzden başlangıçta yüksek XP ile başlamak önemlidir. Temel plan ile 5000 XP kazanır ve tüm temel özelliklere erişim sağlarsınız. XP\'niz bittiğinde yeni XP satın alabilir veya etkinliklerden XP kazanabilirsiniz.'
         },
         {
+            category: 'XP Sistemi',
+            question: 'Hangi sayfalarda ne kadar XP harcanır?',
+            answer: 'Sayfaların XP maliyetleri şöyledir:\n\n- Quizeka: Her quizeka girişinde 10 XP\n- Düello: Her düello girişinde 10 XP\n- Hızlı Okuma: Her egzersiz için 0 XP\n- Hafıza Oyunu: Her Hafıza oyun girişinde 10 XP\n- Eksik Parça: Her sayfaya girişte 10 XP\n- Açık Küp: Her girişte 10 XP\n- Şekil Oyunu: Her giriş için 10 XP\n- Küp Sayma: Her giriş için 10 XP\n- Ayna Simetrisi: Her giriş için 10 XP\n- Döndürme: Her giriş için 10 XP\n\n'
+        },
+        {
             category: 'Genel',
             question: 'BilsemC2 nedir?',
             answer: 'BilsemC2, Bilim ve Sanat Merkezleri (BİLSEM) sınavlarına hazırlanan öğrenciler için özel olarak tasarlanmış bir online eğitim platformudur. Görsel-uzamsal zeka, mantıksal düşünme ve problem çözme becerilerini geliştirmeye yönelik interaktif alıştırmalar sunar.'

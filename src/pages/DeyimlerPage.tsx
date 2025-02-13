@@ -22,6 +22,9 @@ interface GameState {
   score: number;
   answered: boolean;
   selectedAnswer: string;
+  missingWord?: string;
+  deyimWords?: string[];
+  missingWordIndex?: number;
 }
 
 const DeyimlerPage = () => {
@@ -33,7 +36,7 @@ const DeyimlerPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [mode, setMode] = useState<'liste' | 'oyun' | 'pdf'>('liste');
+  const [mode, setMode] = useState<'liste' | 'oyun' | 'pdf' | 'tamamlama'>('liste');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const ITEMS_PER_PAGE = 12;
@@ -134,6 +137,59 @@ const DeyimlerPage = () => {
   }, [user]);
 
   // Oyun modunu başlatma
+  const startTamamlamaGame = async () => {
+    try {
+      const { data: allDeyimler, error } = await supabase
+        .from('deyimler')
+        .select('*');
+
+      if (error) throw error;
+
+      if (!allDeyimler || allDeyimler.length < 4) {
+        toast.error('Oyun için yeterli deyim bulunmuyor');
+        return;
+      }
+
+      // Rastgele bir deyim seç
+      const randomDeyim = allDeyimler[Math.floor(Math.random() * allDeyimler.length)];
+      
+      // Deyimi kelimelere ayır
+      const words = randomDeyim.deyim.split(' ');
+      
+      // Rastgele bir kelime seç
+      const randomIndex = Math.floor(Math.random() * words.length);
+      const missingWord = words[randomIndex];
+      
+      // Diğer deyimlerden rastgele 3 kelime seç
+      const otherWords = allDeyimler
+        .filter(d => d.id !== randomDeyim.id)
+        .map(d => d.deyim.split(' '))
+        .flat()
+        .filter(word => word.length > 2) // Çok kısa kelimeleri filtrele
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+      
+      // Tüm seçenekleri karıştır
+      const options = [...otherWords, missingWord].sort(() => Math.random() - 0.5);
+      
+      setGameState({
+        currentDeyim: randomDeyim,
+        options,
+        score: 0,
+        answered: false,
+        selectedAnswer: '',
+        missingWord,
+        deyimWords: words,
+        missingWordIndex: randomIndex
+      });
+      
+      setMode('tamamlama');
+    } catch (error) {
+      console.error('Oyun başlatılırken hata:', error);
+      toast.error('Oyun başlatılırken bir hata oluştu');
+    }
+  };
+
   const startGame = async () => {
     try {
       // Tüm deyimleri getir
@@ -245,7 +301,13 @@ const DeyimlerPage = () => {
   const handleAnswer = async (answer: string) => {
     if (gameState.answered) return;
 
-    const isCorrect = answer === gameState.currentDeyim?.aciklama;
+    let isCorrect;
+    if (mode === 'tamamlama') {
+      isCorrect = answer === gameState.missingWord;
+    } else {
+      isCorrect = answer === gameState.currentDeyim?.aciklama;
+    }
+
     setGameState(prev => ({
       ...prev,
       answered: true,
@@ -260,8 +322,11 @@ const DeyimlerPage = () => {
       toast.error('Yanlış cevap. Tekrar deneyin!');
     }
 
-    // 2 saniye sonra yeni soruya geç
-    setTimeout(loadNewQuestion, 2000);
+    // Tamamlama modunda yeni soruya otomatik geçme yok
+    if (mode !== 'tamamlama') {
+      // 2 saniye sonra yeni soruya geç
+      setTimeout(loadNewQuestion, 2000);
+    }
   };
 
   // Arama yapıldığında ilk sayfaya dön
@@ -345,6 +410,16 @@ const DeyimlerPage = () => {
                   PDF Oluştur
                 </div>
               </button>
+              <button
+                onClick={startTamamlamaGame}
+                className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                  mode === 'tamamlama'
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Kelime Bul
+              </button>
             </div>
           </div>
         </header>
@@ -424,6 +499,67 @@ const DeyimlerPage = () => {
         ) : mode === 'pdf' ? (
           <div className="bg-white rounded-2xl shadow-xl p-8 max-w-7xl mx-auto">
             <DeyimlerPDF deyimler={deyimler} />
+          </div>
+        ) : mode === 'tamamlama' ? (
+          // Kelime Bulma Oyunu
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
+            <div className="mb-8 p-4 bg-purple-50 rounded-xl border border-purple-200">
+              <h3 className="text-lg font-semibold text-purple-800 mb-2">
+                Eksik Kelimeyi Bul
+              </h3>
+              <p className="text-purple-700">
+                Deyimdeki eksik kelimeyi bulun ve doğru seçeneği işaretleyin.
+              </p>
+            </div>
+
+            <div className="text-center mb-8">
+              <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-6 mb-4">
+                <h2 className="text-2xl font-bold text-purple-800 mb-4">
+                  {gameState.deyimWords?.map((word, index) => (
+                    <span key={index} className={index === gameState.missingWordIndex ? 'bg-yellow-200 px-2 py-1 rounded mx-1' : 'mx-1'}>
+                      {index === gameState.missingWordIndex ? '____' : word}
+                    </span>
+                  ))}
+                </h2>
+                <p className="text-lg text-purple-700 italic">
+                  "{gameState.currentDeyim?.aciklama}"
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {gameState.options.map((option, index) => (
+                <motion.button
+                  key={index}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleAnswer(option)}
+                  disabled={gameState.answered}
+                  className={`p-4 rounded-xl text-center transition-all ${
+                    gameState.answered
+                      ? option === gameState.missingWord
+                        ? 'bg-green-100 border-2 border-green-500'
+                        : option === gameState.selectedAnswer
+                        ? 'bg-red-100 border-2 border-red-500'
+                        : 'bg-gray-100'
+                      : 'bg-gray-100 hover:bg-purple-100'
+                  }`}
+                >
+                  {option}
+                </motion.button>
+              ))}
+            </div>
+
+            {gameState.answered && (
+              <div className="mt-6 text-center">
+                <button
+                  onClick={startTamamlamaGame}
+                  className="px-6 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-colors"
+                >
+                  Yeni Soru
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           // Oyun Modu
