@@ -25,6 +25,7 @@ interface GameState {
   missingWord?: string;
   deyimWords?: string[];
   missingWordIndex?: number;
+  targetWord?: string;
 }
 
 const DeyimlerPage = () => {
@@ -36,7 +37,9 @@ const DeyimlerPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [mode, setMode] = useState<'liste' | 'oyun' | 'pdf' | 'tamamlama'>('liste');
+  const [mode, setMode] = useState<'liste' | 'oyun' | 'pdf' | 'tamamlama' | 'hafiza'>('liste');
+  const [showingDeyim, setShowingDeyim] = useState(true);
+  const [timer, setTimer] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const ITEMS_PER_PAGE = 12;
@@ -137,6 +140,70 @@ const DeyimlerPage = () => {
   }, [user]);
 
   // Oyun modunu başlatma
+  const startHafizaGame = async () => {
+    try {
+      // Mevcut timer'ı temizle
+      if (timer) {
+        clearTimeout(timer);
+        setTimer(null);
+      }
+
+      const { data: allDeyimler, error } = await supabase
+        .from('deyimler')
+        .select('*');
+
+      if (error) throw error;
+
+      if (!allDeyimler || allDeyimler.length < 4) {
+        toast.error('Oyun için yeterli deyim bulunmuyor');
+        return;
+      }
+
+      // Rastgele bir deyim seç
+      const randomDeyim = allDeyimler[Math.floor(Math.random() * allDeyimler.length)];
+      
+      // Deyimi kelimelere ayır
+      const words = randomDeyim.deyim.split(' ');
+      
+      // Rastgele bir kelime seç
+      const randomIndex = Math.floor(Math.random() * words.length);
+      const targetWord = words[randomIndex];
+
+      // Diğer deyimlerden rastgele 3 kelime seç
+      const otherWords = allDeyimler
+        .filter(d => d.id !== randomDeyim.id)
+        .map(d => d.deyim.split(' '))
+        .flat()
+        .filter(word => word.length > 2)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+      
+      const options = [...otherWords, targetWord].sort(() => Math.random() - 0.5);
+      
+      setGameState({
+        currentDeyim: randomDeyim,
+        options,
+        score: 0,
+        answered: false,
+        selectedAnswer: '',
+        targetWord
+      });
+
+      setShowingDeyim(true);
+      setMode('hafiza');
+
+      // 5 saniye sonra deyimi gizle ve soruyu göster
+      const newTimer = window.setTimeout(() => {
+        setShowingDeyim(false);
+      }, 5000);
+      setTimer(newTimer);
+
+    } catch (error) {
+      console.error('Oyun başlatılırken hata:', error);
+      toast.error('Oyun başlatılırken bir hata oluştu');
+    }
+  };
+
   const startTamamlamaGame = async () => {
     try {
       const { data: allDeyimler, error } = await supabase
@@ -304,6 +371,8 @@ const DeyimlerPage = () => {
     let isCorrect;
     if (mode === 'tamamlama') {
       isCorrect = answer === gameState.missingWord;
+    } else if (mode === 'hafiza') {
+      isCorrect = answer === gameState.targetWord;
     } else {
       isCorrect = answer === gameState.currentDeyim?.aciklama;
     }
@@ -322,8 +391,8 @@ const DeyimlerPage = () => {
       toast.error('Yanlış cevap. Tekrar deneyin!');
     }
 
-    // Tamamlama modunda yeni soruya otomatik geçme yok
-    if (mode !== 'tamamlama') {
+    // Sadece normal oyun modunda otomatik geçiş var
+    if (mode === 'oyun') {
       // 2 saniye sonra yeni soruya geç
       setTimeout(loadNewQuestion, 2000);
     }
@@ -420,6 +489,16 @@ const DeyimlerPage = () => {
               >
                 Kelime Bul
               </button>
+              <button
+                onClick={startHafizaGame}
+                className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                  mode === 'hafiza'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Hafıza Oyunu
+              </button>
             </div>
           </div>
         </header>
@@ -499,6 +578,72 @@ const DeyimlerPage = () => {
         ) : mode === 'pdf' ? (
           <div className="bg-white rounded-2xl shadow-xl p-8 max-w-7xl mx-auto">
             <DeyimlerPDF deyimler={deyimler} />
+          </div>
+        ) : mode === 'hafiza' ? (
+          // Hafıza Oyunu
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
+            <div className="mb-8 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+              <h3 className="text-lg font-semibold text-emerald-800 mb-2">
+                Hafıza Oyunu
+              </h3>
+              <p className="text-emerald-700">
+                {showingDeyim 
+                  ? 'Deyimi ezberleyin, 5 saniye sonra bir kelimesi sorulacak!'
+                  : 'Deyimde geçen kelimeyi bulun!'}
+              </p>
+            </div>
+
+            <div className="text-center mb-8">
+              {showingDeyim ? (
+                <div className="bg-gradient-to-r from-emerald-100 to-teal-100 rounded-xl p-6 mb-4">
+                  <h2 className="text-2xl font-bold text-emerald-800 mb-4">
+                    {gameState.currentDeyim?.deyim}
+                  </h2>
+                  <p className="text-lg text-emerald-700 italic">
+                    "{gameState.currentDeyim?.aciklama}"
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-semibold text-emerald-800">
+                    Deyimde geçen hangi kelime doğru?
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {gameState.options.map((option, index) => (
+                      <motion.button
+                        key={index}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleAnswer(option)}
+                        disabled={gameState.answered}
+                        className={`p-4 rounded-xl text-center transition-all ${
+                          gameState.answered
+                            ? option === gameState.targetWord
+                              ? 'bg-green-100 border-2 border-green-500'
+                              : option === gameState.selectedAnswer
+                              ? 'bg-red-100 border-2 border-red-500'
+                              : 'bg-gray-100'
+                            : 'bg-gray-100 hover:bg-emerald-100'
+                        }`}
+                      >
+                        {option}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {gameState.answered && (
+              <div className="mt-6 text-center">
+                <button
+                  onClick={startHafizaGame}
+                  className="px-6 py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors"
+                >
+                  Yeni Soru
+                </button>
+              </div>
+            )}
           </div>
         ) : mode === 'tamamlama' ? (
           // Kelime Bulma Oyunu
