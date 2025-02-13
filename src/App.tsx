@@ -39,6 +39,7 @@ import ClassroomPage from './pages/ClassroomPage';
 import BallGame from './pages/BallGame';
 import AssignmentResults from './pages/AssignmentResults';
 import ServicesPage from './pages/ServicesPage';
+import SpeedReadingPage from './pages/SpeedReadingPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import FAQPage from './pages/FAQPage';
 import ContactPage from './pages/ContactPage';
@@ -242,6 +243,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPage />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/speed-reading" element={<SpeedReadingPage />} />
           <Route 
             path="/memory-game-2" 
             element={

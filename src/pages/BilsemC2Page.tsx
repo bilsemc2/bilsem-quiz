@@ -15,6 +15,14 @@ import {
 
 const games = [
   {
+    title: 'Hızlı Okuma',
+    description: 'Göz egzersizleri, kelime tanıma ve okuma hızınızı geliştirin!',
+    icon: <BookOpen className="w-12 h-12 text-rose-500" />,
+    path: '/speed-reading',
+    color: 'bg-rose-100',
+    isNew: true
+  },
+  {
     title: 'Deyimler Dünyası',
     description: 'Türkçe deyimleri öğrenin, örneklerle pekiştirin ve eğlenceli oyunlarla bilginizi test edin!',
     icon: <BookOpen className="w-12 h-12 text-amber-500" />,
