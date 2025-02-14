@@ -3,6 +3,8 @@ import { useSound } from '../contexts/SoundContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import ModernProgress from '../components/ModernProgress';
+import EditProfileModal from '../components/EditProfileModal';
+import EditIcon from '@mui/icons-material/Edit';
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
@@ -18,6 +20,24 @@ interface QuizStats {
     averageScore: number;
     levelProgress: number;
     currentLevel: number;
+    nextLevelXP: number;
+    currentXP: number;
+}
+
+interface ClassData {
+    id: string;
+    name: string;
+    grade: string;
+}
+
+interface ClassStudent {
+    classes: ClassData;
+}
+
+interface ClassInfo {
+    id: string;
+    name: string;
+    grade: string;
 }
 
 interface UserProfile {
@@ -30,7 +50,7 @@ interface UserProfile {
     experience: number;
     referral_code?: string;
     referral_count?: number;
-    class_id?: string;
+    classes?: ClassInfo[];
 }
 
 interface DailyStats {
@@ -44,6 +64,7 @@ export const ProfilePage: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [userData, setUserData] = useState<UserProfile>({
         name: "",
         email: user?.email || "",
@@ -62,7 +83,9 @@ export const ProfilePage: React.FC = () => {
         totalWrong: 0,
         averageScore: 0,
         levelProgress: 0,
-        currentLevel: 1
+        currentLevel: 1,
+        nextLevelXP: 100,
+        currentXP: 0
     });
 
     const [copySuccess, setCopySuccess] = useState(false);
@@ -131,8 +154,7 @@ export const ProfilePage: React.FC = () => {
                 .select(`
                     *,
                     class_students!left (
-                        class_id,
-                        classes!inner (
+                        classes:class_id (
                             id,
                             name,
                             grade
@@ -151,14 +173,20 @@ export const ProfilePage: React.FC = () => {
                 // Avatar URL'sini kontrol et ve gerekirse güncelle
                 const avatar_url = profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || '')}`;
                 
-                // Sınıf bilgisini çıkart
-                const class_id = profileData.class_students?.[0]?.class_id;
+                // Sınıf bilgilerini düzenle
+                const classes = (profileData.class_students as ClassStudent[] | null)
+                    ?.filter((cs: ClassStudent) => cs.classes) // null olmayan sınıfları filtrele
+                    .map((cs: ClassStudent) => ({
+                        id: cs.classes.id,
+                        name: cs.classes.name,
+                        grade: cs.classes.grade
+                    }));
                 
                 // State'i tek seferde güncelle
                 setUserData({
                     ...profileData,
                     avatar_url,
-                    class_id
+                    classes
                 });
 
                 // Avatar URL güncellenmesi gerekiyorsa güncelle
@@ -324,6 +352,13 @@ export const ProfilePage: React.FC = () => {
                                 alt={userData.name}
                                 className="w-32 h-32 rounded-full object-cover border-4 border-indigo-100"
                             />
+                            <button
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-2 hover:bg-blue-600 transition-colors"
+                                title="Profili Düzenle"
+                            >
+                                <EditIcon />
+                            </button>
                             {unreadCount > 0 && (
                                 <div className="absolute -top-2 -right-2">
                                     <Badge 
@@ -350,17 +385,26 @@ export const ProfilePage: React.FC = () => {
                                 </span>
                             </div>
                         </div>
-                        <div className="mb-8 flex justify-center">
-                    {userData.class_id ? (
-                        <button
-                            onClick={() => navigate(`/classroom/${userData.class_id}`)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center space-x-2"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                            <span>Sınıfıma Git</span>
-                        </button>
+                        <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4">Sınıflarım</h3>
+                    {userData.classes && userData.classes.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {userData.classes.map((classInfo) => (
+                                <button
+                                    key={classInfo.id}
+                                    onClick={() => navigate(`/classroom/${classInfo.id}`)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center justify-between w-full"
+                                >
+                                    <div className="flex flex-col items-start">
+                                        <span className="text-lg">{classInfo.name}</span>
+                                        <span className="text-sm opacity-75">{classInfo.grade}. Sınıf</span>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            ))}
+                        </div>
                     ) : (
                         <p className="text-sm text-gray-500">Henüz bir sınıfa atanmadınız.</p>
                     )}
@@ -533,6 +577,17 @@ export const ProfilePage: React.FC = () => {
                 </div>
                 
             </div>
+
+            {/* Profil Düzenleme Modal */}
+            <EditProfileModal
+                open={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                userData={userData}
+                onUpdate={() => {
+                    fetchUserProfile();
+                    setIsEditModalOpen(false);
+                }}
+            />
         </div>
     );
 };

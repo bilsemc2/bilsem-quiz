@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Button, List, Modal, Card, Progress, Row, Col, Statistic, Image, Tag, Form, Input, Select, DatePicker } from 'antd';
 import { EyeOutlined, CheckCircleOutlined, FieldTimeOutlined, TrophyOutlined, CheckCircleFilled, CloseCircleFilled, PlusOutlined, UserAddOutlined, SettingOutlined, VideoCameraOutlined } from '@ant-design/icons';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import BadgeList from '../components/Badge/BadgeList';
 import { MEET_CODES } from '../constants/meetCodes';
 
@@ -447,7 +447,9 @@ export const ClassroomPage: React.FC = () => {
     const calculateStats = async () => {
         if (!assignments.length || !user?.id || !classId) return null;
 
-        const completedAssignments = assignments.filter(a => a.status === 'completed')
+        // Tamamlanmış ödevleri tarihe göre sırala
+        const completedAssignments = assignments
+            .filter(a => a.status === 'completed')
             .sort((a, b) => new Date(a.assigned_at || '').getTime() - new Date(b.assigned_at || '').getTime());
             
         const totalAssignments = assignments.length;
@@ -456,31 +458,52 @@ export const ClassroomPage: React.FC = () => {
         let totalScore = 0;
         let totalQuestions = 0;
         let totalTime = 0;
-        let progressData: any[] = [];
-        let cumulativeCorrect = 0;
-        let cumulativeWrong = 0;
+
+        // Ödevleri tarihe göre grupla
+        const assignmentsByDate = completedAssignments.reduce((acc: any, assignment) => {
+            const date = new Date(assignment.assigned_at || '').toLocaleDateString('tr-TR');
+            if (!acc[date]) {
+                acc[date] = {
+                    assignments: [],
+                    totalCorrect: 0,
+                    totalQuestions: 0
+                };
+            }
+            acc[date].assignments.push(assignment);
+            acc[date].totalCorrect += assignment.score || 0;
+            acc[date].totalQuestions += assignment.total_questions || 0;
+            return acc;
+        }, {});
+
+        // Her tarih için ortalama başarıyı ve doğru/yanlış dağılımını hesapla
+        let progressData = Object.entries(assignmentsByDate)
+            .map(([date, data]: [string, any]) => {
+                const successRate = data.totalQuestions > 0 
+                    ? (data.totalCorrect / data.totalQuestions) * 100 
+                    : 0;
+
+                // Toplam istatistiklere ekle
+                totalScore += data.totalCorrect;
+                totalQuestions += data.totalQuestions;
+
+                return {
+                    date,
+                    title: `${data.assignments.length} Ödev`,
+                    başarı: Math.round(successRate),
+                    doğru: data.totalCorrect,
+                    yanlış: data.totalQuestions - data.totalCorrect,
+                    toplam: data.totalQuestions,
+                    ödevler: data.assignments.map((a: any) => a.title).join('\n')
+                };
+            })
+            .sort((a, b) => {
+                const dateA = new Date(a.date.split('.').reverse().join('-'));
+                const dateB = new Date(b.date.split('.').reverse().join('-'));
+                return dateA.getTime() - dateB.getTime();
+            });
 
         completedAssignments.forEach(assignment => {
-            totalScore += assignment.score || 0;
-            totalQuestions += assignment.total_questions || 0;
             totalTime += assignment.duration_minutes || 0;
-
-            // Her ödev için doğru ve yanlış sayılarını hesapla
-            const correctCount = assignment.score || 0;
-            const wrongCount = (assignment.total_questions || 0) - correctCount;
-            cumulativeCorrect += correctCount;
-            cumulativeWrong += wrongCount;
-
-            progressData.push({
-                date: new Date(assignment.assigned_at || '').toLocaleDateString('tr-TR'),
-                type: 'Doğru',
-                value: cumulativeCorrect
-            });
-            progressData.push({
-                date: new Date(assignment.assigned_at || '').toLocaleDateString('tr-TR'),
-                type: 'Yanlış',
-                value: cumulativeWrong
-            });
         });
 
         const averageScore = totalQuestions ? Math.round((totalScore / totalQuestions) * 100) : 0;
@@ -844,28 +867,102 @@ export const ClassroomPage: React.FC = () => {
 
                                 </Row>
 
-                                {/* İlerleme Grafiği */}
+                                {/* İlerleme Grafikleri */}
                                 {stats.progressData && stats.progressData.length > 0 && (
-                                    <Card title="Doğru/Yanlış İlerlemesi" className="mt-4">
-                                        <ResponsiveContainer width="100%" height={300}>
-                                            <LineChart
-                                                data={stats.progressData}
-                                                margin={{
-                                                    top: 5,
-                                                    right: 30,
-                                                    left: 20,
-                                                    bottom: 5,
-                                                }}
-                                            >
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis dataKey="date" />
-                                                <YAxis />
-                                                <Tooltip />
-                                                <Legend />
-                                                <Line type="monotone" dataKey="value" stroke="#8884d8" activeDot={{ r: 8 }} />
-                                            </LineChart>
-                                        </ResponsiveContainer>
-                                    </Card>
+                                    <div className="space-y-8">
+                                        {/* Başarı Grafiği */}
+                                        <Card title="Ödev Başarı Grafiği" className="mt-4">
+                                            <ResponsiveContainer width="100%" height={300}>
+                                                <LineChart
+                                                    data={stats.progressData}
+                                                    margin={{
+                                                        top: 5,
+                                                        right: 30,
+                                                        left: 20,
+                                                        bottom: 5,
+                                                    }}
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis dataKey="date" />
+                                                    <YAxis
+                                                        domain={[0, 100]}
+                                                        tickFormatter={(value) => `%${value}`}
+                                                    />
+                                                    <Tooltip
+                                                        formatter={(value, name) => {
+                                                            if (name === 'başarı') return [`%${value}`, 'Başarı Oranı'];
+                                                            return [value, name];
+                                                        }}
+                                                        labelFormatter={(label, payload) => {
+                                                            if (payload && payload[0]) {
+                                                                const data = payload[0].payload;
+                                                                return `${data.date}\n${data.title}\n${data.doğru}/${data.toplam} doğru\n\nÖdevler:\n${data.ödevler}`;
+                                                            }
+                                                            return label;
+                                                        }}
+                                                    />
+                                                    <Legend />
+                                                    <Line 
+                                                        type="monotone" 
+                                                        dataKey="başarı" 
+                                                        stroke="#52c41a"
+                                                        strokeWidth={2}
+                                                        name="Başarı Oranı"
+                                                        activeDot={{
+                                                            r: 8,
+                                                            fill: '#52c41a',
+                                                            stroke: '#fff',
+                                                            strokeWidth: 2
+                                                        }}
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        </Card>
+
+                                        {/* Doğru/Yanlış Dağılımı */}
+                                        <Card title="Doğru/Yanlış Dağılımı" className="mt-4">
+                                            <ResponsiveContainer width="100%" height={300}>
+                                                <BarChart
+                                                    data={stats.progressData}
+                                                    margin={{
+                                                        top: 5,
+                                                        right: 30,
+                                                        left: 20,
+                                                        bottom: 5,
+                                                    }}
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis dataKey="date" />
+                                                    <YAxis />
+                                                    <Tooltip
+                                                        formatter={(value, name) => {
+                                                            if (name === 'doğru') return [value, 'Doğru Sayısı'];
+                                                            if (name === 'yanlış') return [value, 'Yanlış Sayısı'];
+                                                            return [value, name];
+                                                        }}
+                                                        labelFormatter={(label, payload) => {
+                                                            if (payload && payload[0]) {
+                                                                const data = payload[0].payload;
+                                                                return `${data.date}\n${data.title}\n\nÖdevler:\n${data.ödevler}`;
+                                                            }
+                                                            return label;
+                                                        }}
+                                                    />
+                                                    <Legend />
+                                                    <Bar 
+                                                        dataKey="doğru" 
+                                                        fill="#52c41a"
+                                                        name="Doğru Sayısı"
+                                                    />
+                                                    <Bar 
+                                                        dataKey="yanlış" 
+                                                        fill="#ff4d4f"
+                                                        name="Yanlış Sayısı"
+                                                    />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </Card>
+                                    </div>
                                 )}
                             </div>
                         )}

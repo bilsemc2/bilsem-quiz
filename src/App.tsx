@@ -5,7 +5,6 @@ import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import QuizPage from './pages/QuizPage';
 import ProfilePage from './pages/ProfilePage';
-import TeacherPage from './pages/TeacherPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import AdminPage from './pages/AdminPage';
@@ -56,7 +55,9 @@ import BubbleNumbersPage from './pages/BubbleNumbersPage';
 import { QuizProvider } from './contexts/QuizContext';
 import QuizResultPage from './pages/QuizResultPage';
 import DeyimlerPage from './pages/DeyimlerPage';
-
+import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import AssignmentQuestions from './pages/teacher/AssignmentQuestions';
+import AssignmentStudents from './pages/teacher/AssignmentStudents';
 // Hata mesajını gösterecek bileşen
 const LocationAwareRouter: React.FC = () => {
   const location = useLocation();
@@ -191,21 +192,38 @@ const LocationAwareRouter: React.FC = () => {
               </RequireAuth>
             } 
           />
-          <Route 
-            path="/ogretmenim" 
-            element={
-              <RequireAuth>
-                <TeacherPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
+
+          <Route
             path="/puzzle-ranking" 
             element={
               <RequireAuth>
                 <PuzzleRankingPage />
               </RequireAuth>
-            } 
+            }
+          />
+          <Route
+            path="/teacher"
+            element={
+              <RequireAuth requireAdmin>
+                <TeacherDashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/teacher/assignments/:id/questions"
+            element={
+              <RequireAuth requireAdmin>
+                <AssignmentQuestions />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/teacher/assignments/:id/students"
+            element={
+              <RequireAuth requireAdmin>
+                <AssignmentStudents />
+              </RequireAuth>
+            }
           />
           <Route 
             path="/puzzle/:id" 
