@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import QuestionSelector from './QuestionSelector';
-
+import QuestionSelector from './QuestionSelector'; 
 interface QuestionStats {
   total_questions: number;
   available_questions: number;
@@ -39,23 +38,28 @@ const AssignmentManagement: React.FC = () => {
   const [questionStats, setQuestionStats] = React.useState<QuestionStats | null>(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'list' | 'create' | 'stats'>('list');
-
   const fetchUserProfile = async () => {
     if (!user) return;
-
+  
+    // Hem is_admin hem de role bilgisini çekiyoruz
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('is_admin')
+      .select('is_admin, role')
       .eq('id', user.id)
       .single();
-
+  
     if (error) {
       console.error('Error fetching profile:', error);
       return;
     }
-
-    setIsAdmin(profile?.is_admin || false);
+  
+    // Eğer kullanıcı admin veya role "teacher" ise erişime izin ver (isAdmin true olacak)
+    setIsAdmin(profile?.is_admin || profile?.role === 'teacher');
   };
+
+useEffect(() => {
+  fetchUserProfile();
+}, [user]);
 
   const fetchQuestionStats = async () => {
     if (!user) return;
