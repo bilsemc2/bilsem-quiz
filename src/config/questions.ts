@@ -1,8 +1,8 @@
 export const QUESTIONS_CONFIG = {
-  totalQuestions: 1223, // Toplam soru sayısı
+  totalQuestions: 1233, // Toplam soru sayısı
   categories: {
     Matris: {
-      totalQuestions: 1223,
+      totalQuestions: 1233,
       path: '/images/questions/Matris'
     }
   }
