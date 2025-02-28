@@ -55,6 +55,7 @@ interface Question {
   created_at: string;
   created_by: string | null;
   solution_video: SolutionVideo | null;
+  question_number: number; // Eksik alan eklendi
 }
 
 const QuestionManagement: React.FC = () => {
@@ -63,6 +64,7 @@ const QuestionManagement: React.FC = () => {
   const [questionNumber, setQuestionNumber] = useState('');
   const [solutionVideo, setSolutionVideo] = useState('');
   const [questionText, setQuestionText] = useState('');
+  const [correctOption, setCorrectOption] = useState<OptionLetter>('A'); // Doğru cevap için yeni state
   const [message, setMessage] = useState<MessageType | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,7 @@ const QuestionManagement: React.FC = () => {
   const [editQuestionNumber, setEditQuestionNumber] = useState('');
   const [editVideoId, setEditVideoId] = useState('');
   const [editText, setEditText] = useState('');
+  const [editCorrectOption, setEditCorrectOption] = useState<OptionLetter>('A'); // Düzenleme için doğru cevap state'i
 
   // Sayfalama ve filtreleme için state'ler
   const [page, setPage] = useState(0);
@@ -101,6 +104,45 @@ const QuestionManagement: React.FC = () => {
     try {
       setLoading(true);
       console.log('Sorular çekiliyor...');
+
+      // Önce kullanıcının rolünü kontrol et
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user!.id)
+        .single();
+      
+      if (userError) {
+        console.error('Kullanıcı rolü alınamadı:', userError);
+        setMessage({ 
+          type: 'error', 
+          text: 'Kullanıcı bilgileri yüklenirken bir hata oluştu. Lütfen tekrar oturum açın.' 
+        });
+        setLoading(false);
+        return;
+      }
+
+      console.log('Kullanıcı rolü:', userData?.role);
+      
+      if (userData?.role !== 'admin' && userData?.role !== 'teacher') {
+        setMessage({ 
+          type: 'error', 
+          text: 'Bu sayfaya erişim yetkiniz bulunmamaktadır. Sadece öğretmenler ve yöneticiler erişebilir.' 
+        });
+        setLoading(false);
+        return;
+      }
+
+      // RLS politikalarını test et
+      const { data: testRLS, error: testRLSError } = await supabase
+        .rpc('get_user_role')
+        .select();
+
+      if (testRLSError) {
+        console.error('RLS test hatası:', testRLSError);
+      } else {
+        console.log('RLS test sonucu:', testRLS);
+      }
 
       let allQuestions: any[] = [];
       let start = 0;
@@ -180,25 +222,62 @@ const QuestionManagement: React.FC = () => {
       return;
     }
 
+    // Önce kullanıcının rolünü kontrol et
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user!.id)
+      .single();
+    
+    if (userError) {
+      console.error('Kullanıcı rolü alınamadı:', userError);
+      setMessage({ 
+        type: 'error', 
+        text: 'Kullanıcı bilgileri yüklenirken bir hata oluştu. Lütfen tekrar oturum açın.' 
+      });
+      return;
+    }
+
+    console.log('Kullanıcı rolü:', userData?.role);
+    
+    if (userData?.role !== 'admin' && userData?.role !== 'teacher') {
+      setMessage({ 
+        type: 'error', 
+        text: 'Soru ekleme yetkisine sahip değilsiniz. Sadece öğretmenler ve yöneticiler soru ekleyebilir.' 
+      });
+      return;
+    }
+
     const newQuestion = {
       image_url: `/images/questions/Matris/Soru-${questionNumber}.webp`,
       options: generateOptions(questionNumber),
-      correct_option_id: 'A', // Varsayılan doğru seçenek
+      correct_option_id: correctOption,
       solution_video: solutionVideo ? { embed_code: solutionVideo } : null,
       text: questionText ? questionText : null,
       created_by: user?.id,
+      question_number: parseInt(questionNumber, 10)
     };
 
     try {
-      const { error } = await supabase.from('questions').insert([newQuestion]);
+      console.log('Yeni soru ekleniyor:', newQuestion);
+      
+      const { data: insertResult, error } = await supabase
+        .from('questions')
+        .insert([newQuestion])
+        .select();
+      
       if (error) {
+        console.error('Error details:', error);
         throw error;
       }
+      
+      console.log('Eklenen soru:', insertResult);
       setMessage({ type: 'success', text: 'Soru başarıyla eklendi!' });
       // Formu sıfırla
       setQuestionNumber('');
       setSolutionVideo('');
       setQuestionText('');
+      setCorrectOption('A');
       fetchQuestions();
     } catch (error) {
       console.error('Error creating question:', error);
@@ -232,6 +311,7 @@ const QuestionManagement: React.FC = () => {
     setEditQuestionNumber(qNum);
     setEditVideoId(question.solution_video?.embed_code || '');
     setEditText(question.text || '');
+    setEditCorrectOption(question.correct_option_id); // Düzenleme için doğru cevabı al
     setEditDialogOpen(true);
   };
 
@@ -247,12 +327,14 @@ const QuestionManagement: React.FC = () => {
     let updateData: Partial<Question> = {
       text: editText ? editText : null,
       solution_video: editVideoId ? { embed_code: editVideoId } : null,
+      correct_option_id: editCorrectOption, // Güncelleme için doğru cevabı da güncelle
     };
 
     // Eğer soru numarası değiştiyse, image_url ve options alanlarını da güncelle
     if (editQuestionNumber !== currentNumber) {
       updateData.image_url = `/images/questions/Matris/Soru-${editQuestionNumber}.webp`;
       updateData.options = generateOptions(editQuestionNumber);
+      updateData.question_number = parseInt(editQuestionNumber, 10); // Eksik alan eklendi
     }
 
     try {
@@ -324,6 +406,22 @@ const QuestionManagement: React.FC = () => {
               rows={3}
               helperText="İsteğe bağlı soru açıklaması ekleyin."
             />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Doğru Cevap"
+              value={correctOption}
+              onChange={(e) => setCorrectOption(e.target.value as OptionLetter)}
+              select
+              SelectProps={{ native: true }}
+            >
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+              <option value="E">E</option>
+            </TextField>
           </Grid>
           {message && (
             <Grid item xs={12}>
@@ -590,6 +688,20 @@ const QuestionManagement: React.FC = () => {
               multiline
               rows={3}
             />
+            <TextField
+              fullWidth
+              label="Doğru Cevap"
+              value={editCorrectOption}
+              onChange={(e) => setEditCorrectOption(e.target.value as OptionLetter)}
+              select
+              SelectProps={{ native: true }}
+            >
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+              <option value="E">E</option>
+            </TextField>
             <Button variant="contained" color="primary" onClick={handleUpdate} fullWidth>
               Güncelle
             </Button>

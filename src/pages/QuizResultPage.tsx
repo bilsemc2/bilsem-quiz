@@ -241,29 +241,36 @@ export default function QuizResultPage() {
                                     {/* Sağ: Seçenekler */}
                                     <div>
                                         <div className="grid grid-cols-2 gap-2">
-                                            {answer.options.map((option) => (
-                                                <div
-                                                    key={option.id}
-                                                    className={`relative rounded-lg overflow-hidden border ${
-                                                        option.id === answer.selectedOption && option.isCorrect
-                                                            ? 'border-green-500 bg-green-50'
-                                                            : option.id === answer.selectedOption
-                                                                ? 'border-red-500 bg-red-50'
-                                                                : option.isCorrect
-                                                                    ? 'border-green-500 bg-green-50'
-                                                                    : 'border-gray-200'
-                                                    }`}
-                                                >
-                                                    <div className="p-2">
-                                                        <img
-                                                            src={option.imageUrl}
-                                                            alt={`Seçenek ${option.id}`}
-                                                            className="object-contain w-full h-28"
-                                                        />
-                                                        <div className="text-center font-bold mt-1">{option.id}</div>
+                                            {answer.options.map((option) => {
+                                                // UUID formatından sadece son karakteri (A, B, C, D, E) al
+                                                const displayId = option.id.charAt(option.id.length - 1);
+                                                
+                                                return (
+                                                    <div
+                                                        key={option.id}
+                                                        className={`relative rounded-lg overflow-hidden border ${
+                                                            option.id === answer.selectedOption && option.isCorrect
+                                                                ? 'border-green-500 bg-green-50'
+                                                                : option.id === answer.selectedOption
+                                                                    ? 'border-red-500 bg-red-50'
+                                                                    : option.isCorrect
+                                                                        ? 'border-green-500 bg-green-50'
+                                                                        : 'border-gray-200'
+                                                        }`}
+                                                    >
+                                                        <div className="p-2">
+                                                            <img
+                                                                src={option.imageUrl}
+                                                                alt={`Seçenek ${displayId}`}
+                                                                className="object-contain w-full h-28"
+                                                            />
+                                                            <div className="text-center font-bold mt-1">
+                                                                {displayId}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                         
                                         {/* Doğru/Yanlış Sonucu */}
@@ -274,7 +281,11 @@ export default function QuizResultPage() {
                                             }`}>
                                             {answer.isCorrect 
                                                 ? 'Doğru cevap verdiniz!' 
-                                                : `Yanlış cevap verdiniz. Doğru cevap: ${answer.options.find(opt => opt.isCorrect)?.id || ''}`
+                                                : (() => {
+                                                    const correctOption = answer.options.find(opt => opt.isCorrect);
+                                                    const correctLetter = correctOption ? correctOption.id.charAt(correctOption.id.length - 1) : '';
+                                                    return `Yanlış cevap verdiniz. Doğru cevap: ${correctLetter}`;
+                                                })()
                                             }
                                         </div>
                                     </div>

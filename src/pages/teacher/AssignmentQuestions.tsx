@@ -132,50 +132,56 @@ const AssignmentQuestions: React.FC = () => {
           <h2 className="text-lg font-medium">Ödev Soruları</h2>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           {questions.map((question) => (
             <div
               key={question.id}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded"
+              className="flex items-center justify-between p-3 bg-gray-50 rounded"
             >
               <div className="w-full">
-                <h3 className="font-medium">Soru {question.order_number}</h3>
+                <h3 className="font-medium text-sm">Soru {question.order_number}</h3>
                 {question.question?.image_url && (
-                  <div className="mt-2 space-y-2">
-                    <img 
-                      src={question.question.image_url} 
-                      alt={`Soru ${question.order_number}`}
-                      className="max-w-full h-auto rounded-lg shadow-sm"
-                    />
-                    <div className="grid grid-cols-5 gap-2 mt-4">
-                      {['A', 'B', 'C', 'D', 'E'].map((option) => {
-                        const questionNumber = question.question?.image_url?.match(/Soru-(\d+)\.webp/)?.[1];
-                        const optionImageUrl = questionNumber
-                          ? `/images/options/Matris/${questionNumber}/Soru-${option === question.question?.correct_option_id ? 'cevap-' : ''}${questionNumber}${option}.webp`
-                          : '';
-                        
-                        return (
-                          <div 
-                            key={option} 
-                            className={`relative ${option === question.question?.correct_option_id ? 'ring-2 ring-green-500' : ''}`}
-                          >
-                            <img
-                              src={optionImageUrl}
-                              alt={`Seçenek ${option}`}
-                              className="w-full h-auto rounded"
-                            />
-                            <span className={`
-                              absolute top-2 left-2 
-                              px-2 py-1 rounded-full text-xs font-medium
-                              ${option === question.question?.correct_option_id 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'}
-                            `}>
-                              {option}
-                            </span>
-                          </div>
-                        );
-                      })}
+                  <div className="mt-1 space-y-1">
+                    <div className="flex flex-col md:flex-row md:space-x-4">
+                      <div className="md:w-1/3 mb-2 md:mb-0">
+                        <img 
+                          src={question.question.image_url} 
+                          alt={`Soru ${question.order_number}`}
+                          className="max-w-full h-auto rounded-lg shadow-sm"
+                        />
+                      </div>
+                      <div className="md:w-2/3">
+                        <div className="grid grid-cols-5 gap-1">
+                          {['A', 'B', 'C', 'D', 'E'].map((option) => {
+                            const questionNumber = question.question?.image_url?.match(/Soru-(\d+)\.webp/)?.[1];
+                            const optionImageUrl = questionNumber
+                              ? `/images/options/Matris/${questionNumber}/Soru-${option === question.question?.correct_option_id ? 'cevap-' : ''}${questionNumber}${option}.webp`
+                              : '';
+                            
+                            return (
+                              <div 
+                                key={option} 
+                                className={`relative ${option === question.question?.correct_option_id ? 'ring-1 ring-green-500' : ''}`}
+                              >
+                                <img
+                                  src={optionImageUrl}
+                                  alt={`Seçenek ${option}`}
+                                  className="w-full h-auto rounded"
+                                />
+                                <span className={`
+                                  absolute top-1 left-1 
+                                  px-1.5 py-0.5 rounded-full text-xs font-medium
+                                  ${option === question.question?.correct_option_id 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-gray-100 text-gray-800'}
+                                `}>
+                                  {option}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

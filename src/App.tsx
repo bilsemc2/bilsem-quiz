@@ -204,7 +204,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route
             path="/teacher"
             element={
-              <RequireAuth requireAdmin>
+              <RequireAuth requireTeacher>
                 <TeacherDashboard />
               </RequireAuth>
             }
@@ -212,7 +212,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route
             path="/teacher/assignments/:id/questions"
             element={
-              <RequireAuth requireAdmin>
+              <RequireAuth requireTeacher>
                 <AssignmentQuestions />
               </RequireAuth>
             }
@@ -220,7 +220,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route
             path="/teacher/assignments/:id/students"
             element={
-              <RequireAuth requireAdmin>
+              <RequireAuth requireTeacher>
                 <AssignmentStudents />
               </RequireAuth>
             }

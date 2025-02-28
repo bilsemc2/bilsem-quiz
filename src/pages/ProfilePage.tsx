@@ -4,65 +4,25 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import ModernProgress from '../components/ModernProgress';
 import EditProfileModal from '../components/EditProfileModal';
-import EditIcon from '@mui/icons-material/Edit';
-
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { toast } from 'sonner';
 import UserMessages from '@/components/UserMessages';
-import { Badge } from '@mui/material';
-import MailIcon from '@mui/icons-material/Mail';
-import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
-interface QuizStats {
-    totalQuizzes: number;
-    totalCorrect: number;
-    totalWrong: number;
-    averageScore: number;
-    levelProgress: number;
-    currentLevel: number;
-    nextLevelXP: number;
-    currentXP: number;
-}
+// Profilden yeni tip importları
+import { UserProfile, QuizStats, DailyStats, ClassStudent } from '@/types/profile';
 
-interface ClassData {
-    id: string;
-    name: string;
-    grade: string;
-}
+// Seviye hesaplama fonksiyonlarını import et
+import { calculateLevelInfo, getLevelBadge, getLevelTitle } from '@/utils/levelCalculator';
 
-interface ClassStudent {
-    classes: ClassData;
-}
-
-interface ClassInfo {
-    id: string;
-    name: string;
-    grade: string;
-}
-
-interface UserProfile {
-    name: string;
-    email: string;
-    school: string;
-    grade: string;
-    avatar_url: string;
-    points: number;
-    experience: number;
-    referral_code?: string;
-    referral_count?: number;
-    classes?: ClassInfo[];
-}
-
-interface DailyStats {
-    date: string;
-    correct: number;
-    wrong: number;
-}
+// Yeni komponentler
+import ProfileHeader from '@/components/profile/ProfileHeader';
+import ClassList from '@/components/profile/ClassList';
+import StatsSummary from '@/components/profile/StatsSummary';
+import WeeklyChart from '@/components/profile/WeeklyChart';
+import ReferralSystem from '@/components/profile/ReferralSystem';
 
 export const ProfilePage: React.FC = () => {
     const { } = useSound(); // Sound context'i ileride kullanılabilir
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [userData, setUserData] = useState<UserProfile>({
@@ -74,7 +34,8 @@ export const ProfilePage: React.FC = () => {
         points: 0,
         experience: 0,
         referral_code: "",
-        referral_count: 0
+        referral_count: 0,
+        classes: []
     });
 
     const [quizStats, setQuizStats] = useState<QuizStats>({
@@ -85,29 +46,22 @@ export const ProfilePage: React.FC = () => {
         levelProgress: 0,
         currentLevel: 1,
         nextLevelXP: 100,
-        currentXP: 0
+        currentXP: 0,
+        levelBadge: "",
+        levelTitle: ""
     });
 
-    const [copySuccess, setCopySuccess] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
 
-    const fetchWeeklyStats = async () => {
-        if (!user) return;
-
+    // Haftalık istatistikleri işleyen yardımcı fonksiyon
+    const processWeeklyStats = (quizData: any[]) => {
+        // Son 7 gün içindeki verileri filtrele
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-        const { data, error } = await supabase
-            .from('quiz_results')
-            .select('correct_answers, questions_answered, completed_at')
-            .eq('user_id', user.id)
-            .gte('completed_at', oneWeekAgo.toISOString())
-            .order('completed_at', { ascending: true });
-
-        if (error) {
-            console.error('Error fetching weekly stats:', error);
-            return;
-        }
+        
+        const weeklyData = quizData.filter(
+            result => new Date(result.completed_at) >= oneWeekAgo
+        );
 
         // Group results by date
         const dailyStats = new Map<string, DailyStats>();
@@ -125,7 +79,7 @@ export const ProfilePage: React.FC = () => {
         }
 
         // Aggregate results by date
-        data?.forEach(result => {
+        weeklyData.forEach(result => {
             const dateStr = new Date(result.completed_at).toISOString().split('T')[0];
             const existing = dailyStats.get(dateStr) || { date: dateStr, correct: 0, wrong: 0 };
             const wrongAnswers = result.questions_answered - result.correct_answers;
@@ -144,51 +98,78 @@ export const ProfilePage: React.FC = () => {
         setWeeklyStats(statsArray);
     };
 
-    const fetchUserProfile = async () => {
+    // Tüm kullanıcı verilerini çeken birleştirilmiş fonksiyon
+    const fetchUserData = async () => {
         if (!user) return;
-
+        
         try {
-            // Profil ve sınıf bilgilerini tek sorguda alalım
-            const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
-                .select(`
-                    *,
-                    class_students!left (
-                        classes:class_id (
-                            id,
-                            name,
-                            grade
+            // Profil, sınıf ve quiz sonuçlarını paralel olarak çekelim
+            const [profileResponse, quizResultsResponse] = await Promise.all([
+                supabase
+                    .from('profiles')
+                    .select(`
+                        *,
+                        class_students!left (
+                            classes:class_id (
+                                id,
+                                name,
+                                grade
+                            )
                         )
-                    )
-                `)
-                .eq('id', user.id)
-                .single();
-
+                    `)
+                    .eq('id', user.id)
+                    .single(),
+                    
+                supabase
+                    .from('quiz_results')
+                    .select('correct_answers, questions_answered, completed_at')
+                    .eq('user_id', user.id)
+            ]);
+            
+            // Profil verilerini işle
+            const { data: profileData, error: profileError } = profileResponse;
             if (profileError) {
                 console.error('Error fetching profile:', profileError);
                 return;
             }
-
+            
             if (profileData) {
-                // Avatar URL'sini kontrol et ve gerekirse güncelle
-                const avatar_url = profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || '')}`;
+                // Avatar URL kontrolü
+                const avatar_url = profileData.avatar_url || 
+                    `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || '')}`;
                 
                 // Sınıf bilgilerini düzenle
                 const classes = (profileData.class_students as ClassStudent[] | null)
-                    ?.filter((cs: ClassStudent) => cs.classes) // null olmayan sınıfları filtrele
+                    ?.filter((cs: ClassStudent) => cs.classes)
                     .map((cs: ClassStudent) => ({
                         id: cs.classes.id,
                         name: cs.classes.name,
                         grade: cs.classes.grade
                     }));
+
+                // Seviye bilgilerini hesapla
+                const levelInfo = calculateLevelInfo(profileData.experience || 0);
+                const levelBadge = getLevelBadge(levelInfo.currentLevel);
+                const levelTitle = getLevelTitle(levelInfo.currentLevel);
                 
-                // State'i tek seferde güncelle
+                // State'i güncelle
                 setUserData({
                     ...profileData,
                     avatar_url,
                     classes
                 });
 
+                // Seviye bilgilerini güncelle
+                setQuizStats(prev => ({
+                    ...prev,
+                    currentLevel: levelInfo.currentLevel,
+                    levelProgress: levelInfo.levelProgress,
+                    currentXP: levelInfo.currentXP,
+                    nextLevelXP: levelInfo.nextLevelXP,
+                    levelBadge,
+                    levelTitle
+                }));
+                
                 // Avatar URL güncellenmesi gerekiyorsa güncelle
                 if (avatar_url !== profileData.avatar_url) {
                     const { error: updateError } = await supabase
@@ -201,81 +182,21 @@ export const ProfilePage: React.FC = () => {
                     }
                 }
             }
-        } catch (err) {
-            console.error('Exception in fetchUserProfile:', err);
-        }
-    };
-
-    useEffect(() => {
-        console.log('useEffect triggered with user:', user);
-        if (user) {
-            fetchUserProfile();
-            fetchQuizStats();
-            fetchWeeklyStats();
-        }
-    }, [user]);
-
-    useEffect(() => {
-        console.log('Current userData:', userData);
-    }, [userData]);
-
-    useEffect(() => {
-        const fetchUnreadCount = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const { data } = await supabase
-                .from('admin_messages')
-                .select('id', { count: 'exact' })
-                .eq('receiver_id', user.id)
-                .eq('read', false);
-
-            setUnreadCount(data?.length || 0);
-        };
-
-        fetchUnreadCount();
-
-        // Realtime subscription for new messages
-        const channel = supabase
-            .channel('messages-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'admin_messages'
-                },
-                () => {
-                    fetchUnreadCount();
-                }
-            )
-            .subscribe();
-
-        return () => {
-            channel.unsubscribe();
-        };
-    }, []);
-
-
-    const fetchQuizStats = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('quiz_results')
-                .select('correct_answers, questions_answered')
-                .eq('user_id', user?.id);
-
-            if (error) {
-                console.error('Error fetching quiz stats:', error);
+            
+            // Quiz verilerini işle
+            const { data: quizData, error: quizError } = quizResultsResponse;
+            if (quizError) {
+                console.error('Error fetching quiz stats:', quizError);
                 return;
             }
-
-            if (data && data.length > 0) {
-                const totalQuizzes = data.length;
-                const totalCorrect = data.reduce((sum, quiz) => sum + quiz.correct_answers, 0);
-                const totalQuestions = data.reduce((sum, quiz) => sum + quiz.questions_answered, 0);
+            
+            if (quizData && quizData.length > 0) {
+                const totalQuizzes = quizData.length;
+                const totalCorrect = quizData.reduce((sum, quiz) => sum + quiz.correct_answers, 0);
+                const totalQuestions = quizData.reduce((sum, quiz) => sum + quiz.questions_answered, 0);
                 const totalWrong = totalQuestions - totalCorrect;
                 const averageScore = (totalCorrect / totalQuestions) * 100;
-
+                
                 setQuizStats(prev => ({
                     ...prev,
                     totalQuizzes,
@@ -283,12 +204,16 @@ export const ProfilePage: React.FC = () => {
                     totalWrong,
                     averageScore
                 }));
+                
+                // Haftalık istatistikleri işle
+                processWeeklyStats(quizData);
             }
-        } catch (error) {
-            console.error('Error:', error);
+        } catch (err) {
+            console.error('Exception in fetchUserData:', err);
         }
     };
 
+    // Referans kodu oluşturma işlemi
     const generateReferralCode = () => {
         return Math.random().toString(36).substring(2, 8).toUpperCase();
     };
@@ -317,277 +242,127 @@ export const ProfilePage: React.FC = () => {
         }
     };
 
-    const copyReferralLink = async () => {
-        if (!userData.referral_code) {
-            toast.error('Önce referans kodu oluşturmanız gerekiyor.');
-            return;
+    // Ana veri çekme işlemi için useEffect
+    useEffect(() => {
+        if (user) {
+            fetchUserData();
         }
+    }, [user]);
 
-        const referralLink = `${window.location.origin}/signup?ref=${userData.referral_code}`;
-        try {
-            await navigator.clipboard.writeText(referralLink);
-            setCopySuccess(true);
-            toast.success('Davet linki kopyalandı!');
-            setTimeout(() => setCopySuccess(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy text: ', err);
-            toast.error('Kopyalama başarısız oldu. Lütfen tekrar deneyin.');
-        }
-    };
+    // Debug amaçlı useEffect
+    useEffect(() => {
+        console.log('Current userData:', userData);
+    }, [userData]);
 
+    // Okunmamış mesajlar için ayrı useEffect
+    useEffect(() => {
+        if (!user) return;
+        
+        const fetchUnreadCount = async () => {
+            try {
+                const { data } = await supabase
+                    .from('admin_messages')
+                    .select('id', { count: 'exact' })
+                    .eq('receiver_id', user.id)
+                    .eq('read', false);
+                
+                setUnreadCount(data?.length || 0);
+            } catch (error) {
+                console.error('Error fetching unread messages:', error);
+            }
+        };
+        
+        fetchUnreadCount();
+        
+        // Realtime subscription for new messages
+        const channel = supabase
+            .channel('messages-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'admin_messages'
+                },
+                () => {
+                    fetchUnreadCount();
+                }
+            )
+            .subscribe();
+        
+        return () => {
+            channel.unsubscribe();
+        };
+    }, [user]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Header */}
-               
+        <div className="container mx-auto px-4 py-8">
+            {isEditModalOpen && (
+                <EditProfileModal
+                    onClose={() => setIsEditModalOpen(false)}
+                    onSave={fetchUserData}
+                    userData={{
+                        name: userData.name,
+                        grade: userData.grade,
+                        school: userData.school,
+                    }}
+                />
+            )}
 
-                {/* Profile Card */}
+            <div className="max-w-5xl mx-auto">
+                {/* Profil Bilgileri ve Avatar */}
+                <ProfileHeader 
+                    userData={userData} 
+                    unreadCount={unreadCount} 
+                    onEditClick={() => setIsEditModalOpen(true)} 
+                />
+
+                {/* Sınıflarım */}
+                <ClassList classes={userData.classes} />
+
+                {/* İstatistikler */}
+                <StatsSummary userData={userData} quizStats={quizStats} />
+
+                {/* Haftalık Performans */}
+                <WeeklyChart weeklyStats={weeklyStats} />
+
+                {/* Arkadaşlarını Davet Et Bölümü */}
+                <ReferralSystem 
+                    referralCode={userData.referral_code} 
+                    referralCount={userData.referral_count} 
+                    onGenerateCode={updateReferralCode} 
+                />
+
+                {/* Kullanıcı Mesajları */}
+                <div className="my-8">
+                    <UserMessages userId={user?.id} />
+                </div>
+
+                {/* Gelişim İzleme */}
                 <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-                    <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
-                        {/* Avatar */}
-                        <div className="relative">
-                            <img
-                                src={userData.avatar_url}
-                                alt={userData.name}
-                                className="w-32 h-32 rounded-full object-cover border-4 border-indigo-100"
-                            />
-                            <button
-                                onClick={() => setIsEditModalOpen(true)}
-                                className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-2 hover:bg-blue-600 transition-colors"
-                                title="Profili Düzenle"
-                            >
-                                <EditIcon />
-                            </button>
-                            {unreadCount > 0 && (
-                                <div className="absolute -top-2 -right-2">
-                                    <Badge 
-                                        badgeContent={unreadCount} 
-                                        color="error"
-                                        overlap="circular"
-                                    >
-                                        <MailIcon color="action" />
-                                    </Badge>
-                                </div>
-                            )}
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold">Seviye İlerlemesi</h2>
+                        <div className="text-lg flex items-center gap-2">
+                            <span className="text-2xl" title="Seviye Rozeti">{quizStats.levelBadge}</span>
+                            <span className="text-purple-600 font-bold">Seviye {quizStats.currentLevel}</span>
+                            <span className="text-gray-500 text-sm">({quizStats.levelTitle})</span>
                         </div>
-
-                        {/* User Info */}
-                        <div className="flex-1 text-center md:text-left">
-                            <h2 className="text-2xl font-bold text-gray-900">{userData.name}</h2>
-                            <p className="text-gray-600">{userData.email}</p>
-                            <p className="text-gray-600">{userData.school}</p>
-                            <p className="text-gray-600">{userData.grade}. Sınıf</p>
-                            <div className="mt-2">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
-                                    <span className="mr-1">⭐</span>
-                                    {userData.points} Puan
-                                </span>
-                            </div>
-                        </div>
-                        <div className="mb-8">
-                    <h3 className="text-lg font-semibold mb-4">Sınıflarım</h3>
-                    {userData.classes && userData.classes.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {userData.classes.map((classInfo) => (
-                                <button
-                                    key={classInfo.id}
-                                    onClick={() => navigate(`/classroom/${classInfo.id}`)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center justify-between w-full"
-                                >
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-lg">{classInfo.name}</span>
-                                        <span className="text-sm opacity-75">{classInfo.grade}. Sınıf</span>
-                                    </div>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-gray-500">Henüz bir sınıfa atanmadınız.</p>
-                    )}
-                </div>
+                    </div>
+                    
+                    <ModernProgress 
+                        value={quizStats.levelProgress} 
+                        label="Seviye İlerlemesi"
+                        color="#8B5CF6"
+                        icon="⭐"
+                        description={`${quizStats.currentXP} / ${quizStats.nextLevelXP} XP`}
+                    />
+                    
+                    <div className="flex justify-between text-sm text-gray-600 mt-2">
+                        <span>{quizStats.currentXP} XP</span>
+                        <span>{quizStats.nextLevelXP} XP</span>
                     </div>
                 </div>
-
-          
-
-                {/* Points and XP */}
-                <div className="grid grid-cols-2 gap-6 mb-8">
-                    <div className="bg-indigo-50 p-6 rounded-lg text-center">
-                        <h3 className="text-lg font-semibold text-indigo-900 mb-2">Toplam Puan</h3>
-                        <p className="text-3xl font-bold text-indigo-600">{userData.points}</p>
-                    </div>
-                    <div className="bg-purple-50 p-6 rounded-lg text-center">
-                        <h3 className="text-lg font-semibold text-purple-900 mb-2">Seviye {quizStats.currentLevel}</h3>
-                        <p className="text-3xl font-bold text-purple-600">{userData.experience} XP</p>
-                    </div>
-                </div>
-
-                {/* Quiz Statistics */}
-                <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Quiz İstatistikleri</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-blue-50 p-4 rounded-lg text-center">
-                            <h3 className="text-sm font-semibold text-blue-900 mb-1">Toplam Quiz</h3>
-                            <p className="text-2xl font-bold text-blue-600">{quizStats.totalQuizzes}</p>
-                        </div>
-                        <div className="bg-green-50 p-4 rounded-lg text-center">
-                            <h3 className="text-sm font-semibold text-green-900 mb-1">Doğru</h3>
-                            <p className="text-2xl font-bold text-green-600">{quizStats.totalCorrect}</p>
-                        </div>
-                        <div className="bg-red-50 p-4 rounded-lg text-center">
-                            <h3 className="text-sm font-semibold text-red-900 mb-1">Yanlış</h3>
-                            <p className="text-2xl font-bold text-red-600">{quizStats.totalWrong}</p>
-                        </div>
-                        <div className="bg-yellow-50 p-4 rounded-lg text-center">
-                            <h3 className="text-sm font-semibold text-yellow-900 mb-1">Başarı</h3>
-                            <p className="text-2xl font-bold text-yellow-600">%{quizStats.averageScore.toFixed(1)}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Weekly Performance Chart */}
-                <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
-                    <h2 className="text-2xl font-bold mb-4">Son 7 Gün Performansı</h2>
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={weeklyStats}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis 
-                                    dataKey="date" 
-                                    tickFormatter={(date) => {
-                                        const d = new Date(date);
-                                        return `${d.getDate()}/${d.getMonth() + 1}`;
-                                    }}
-                                />
-                                <YAxis />
-                                <Tooltip 
-                                    labelFormatter={(date) => {
-                                        const d = new Date(date);
-                                        return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-                                    }}
-                                />
-                                <Legend />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="correct" 
-                                    stroke="#4CAF50" 
-                                    name="Doğru"
-                                    strokeWidth={2}
-                                />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="wrong" 
-                                    stroke="#f44336" 
-                                    name="Yanlış"
-                                    strokeWidth={2}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* İlerleme Grafikleri */}
-                <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-                    <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-xl font-bold text-gray-900">İlerleme Grafikleri</h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <ModernProgress
-                            value={quizStats.averageScore}
-                            color="#4F46E5"
-                            label="Başarı Oranı"
-                            icon="🎯"
-                            description="Tüm quizlerdeki başarı yüzdeniz"
-                        />
-                        <ModernProgress
-                            value={(quizStats.totalCorrect / (quizStats.totalCorrect + quizStats.totalWrong)) * 100 || 0}
-                            color="#10B981"
-                            label="Doğru Oranı"
-                            icon="✅"
-                            description="Doğru cevaplarınızın oranı"
-                        />
-                        <ModernProgress
-                            value={quizStats.levelProgress}
-                            color="#8B5CF6"
-                            label={`Seviye ${quizStats.currentLevel}`}
-                            icon="⭐"
-                            description={`${userData.experience} XP / ${quizStats.currentLevel * 1000} XP`}
-                        />
-                    </div>
-                </div>
-
-                {/* Mesajlar Bölümü */}
-                <div>
-                    <h2 className="text-2xl font-bold mb-4">Mesajlarım</h2>
-                    <UserMessages />
-                </div>
-
-                {/* Arkadaş Davet Bölümü */}
-                <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-900">Arkadaşlarını Davet Et</h2>
-                            <p className="text-gray-600 mt-1">
-                                Her başarılı davet için 50 XP kazanın!
-                            </p>
-                        </div>
-                        <div className="bg-purple-100 rounded-full px-4 py-2">
-                            <span className="text-purple-600 font-medium">
-                                {userData.referral_count || 0} Davet
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
-                        <div className="flex-1 mr-4">
-                            <p className="text-sm text-gray-600 mb-1">Davet Kodunuz</p>
-                            <div className="flex">
-                                <input
-                                    type="text"
-                                    readOnly
-                                    value={userData.referral_code || ''}
-                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50"
-                                />
-                                {userData.referral_code ? (
-                                    <button
-                                        onClick={copyReferralLink}
-                                        className="px-4 py-2 bg-purple-600 text-white rounded-r-lg hover:bg-purple-700 transition duration-200"
-                                    >
-                                        {copySuccess ? 'Kopyalandı!' : 'Kopyala'}
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={updateReferralCode}
-                                        className="px-4 py-2 bg-purple-600 text-white rounded-r-lg hover:bg-purple-700 transition duration-200"
-                                    >
-                                        Oluştur
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between text-gray-600">
-                        <span>Toplam Davet: {userData.referral_count || 0}</span>
-                        <span>Kazanılan XP: {(userData.referral_count || 0) * 50}</span>
-                    </div>
-                </div>
-                
             </div>
-
-            {/* Profil Düzenleme Modal */}
-            <EditProfileModal
-                open={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                userData={userData}
-                onUpdate={() => {
-                    fetchUserProfile();
-                    setIsEditModalOpen(false);
-                }}
-            />
         </div>
     );
 };

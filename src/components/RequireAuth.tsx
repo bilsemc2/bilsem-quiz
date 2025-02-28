@@ -7,10 +7,11 @@ import XPWarning from './XPWarning';
 interface RequireAuthProps {
     children: React.ReactNode;
     requireAdmin?: boolean;
+    requireTeacher?: boolean;
     skipXPCheck?: boolean;
 }
 
-export default function RequireAuth({ children, requireAdmin = false, skipXPCheck = false }: RequireAuthProps) {
+export default function RequireAuth({ children, requireAdmin = false, requireTeacher = false, skipXPCheck = false }: RequireAuthProps) {
     const { user, loading: authLoading } = useAuth();
     const location = useLocation();
     const [loading, setLoading] = useState(true);
@@ -28,10 +29,10 @@ export default function RequireAuth({ children, requireAdmin = false, skipXPChec
             }
 
             try {
-                // Kullanıcının XP'sini al
+                // Kullanıcının XP'sini ve rolünü al
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
-                    .select('experience, is_admin')
+                    .select('experience, is_admin, role')
                     .eq('id', user.id)
                     .maybeSingle();
 
@@ -49,15 +50,22 @@ export default function RequireAuth({ children, requireAdmin = false, skipXPChec
 
                 setUserXP(profile.experience || 0);
 
-                // Admin kontrolü
-                if (requireAdmin && !profile.is_admin) {
+                // Admin veya öğretmen kontrolü
+                if (requireAdmin && !profile.is_admin && profile.role !== 'teacher') {
+                    setHasAccess(false);
+                    setLoading(false);
+                    return;
+                }
+
+                // Sadece öğretmen gerektiren sayfalar için kontrol
+                if (requireTeacher && !profile.is_admin && profile.role !== 'teacher') {
                     setHasAccess(false);
                     setLoading(false);
                     return;
                 }
 
                 // Admin ise veya XP kontrolü atlanacaksa direkt erişim ver
-                if (profile.is_admin || skipXPCheck) {
+                if (profile.is_admin || profile.role === 'teacher' || skipXPCheck) {
                     setHasAccess(true);
                     setLoading(false);
                     return;
@@ -92,7 +100,7 @@ export default function RequireAuth({ children, requireAdmin = false, skipXPChec
         };
 
         checkAccess();
-    }, [user, location.pathname, requireAdmin, skipXPCheck, authLoading]);
+    }, [user, location.pathname, requireAdmin, requireTeacher, skipXPCheck, authLoading]);
 
     // Auth yükleniyorsa bekle
     if (authLoading || loading) {
