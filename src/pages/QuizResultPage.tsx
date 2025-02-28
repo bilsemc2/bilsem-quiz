@@ -4,8 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
-import DescriptionIcon from '@mui/icons-material/Description';
-import { IconButton, Tooltip } from '@mui/material';
 
 interface QuizResult {
     id: string;
@@ -224,92 +222,91 @@ export default function QuizResultPage() {
                                     </span>
                                 </div>
 
-                                {/* Soru */}
-                                <div className="mb-4">
-                                    <div
-                                        className="max-w-xs mx-auto bg-white rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative"
-                                        onClick={() => setSelectedImage(answer.questionImage)}
-                                    >
-                                        <img
-                                            src={answer.questionImage}
-                                            alt={`Soru ${index + 1}`}
-                                            className="object-contain w-full h-auto"
-                                        />
-                                        <div className="absolute bottom-2 left-0 right-0 flex justify-between items-center px-2">
-                                            {/* Sol Alt: Soru Numarası ve Açıklama İkonu */}
-                                            <div className="flex items-center gap-2">
-                                                <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                                                    Soru {answer.questionImage.match(/Soru-(\d+)\.webp/)![1]}
+                                {/* Soru Resmi ve Cevaplar */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    {/* Sol: Soru Resmi */}
+                                    <div>
+                                        <div 
+                                            className="bg-white rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative border"
+                                            onClick={() => setSelectedImage(answer.questionImage)}
+                                        >
+                                            <img
+                                                src={answer.questionImage}
+                                                alt={`Soru ${index + 1}`}
+                                                className="object-contain w-full h-auto"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Sağ: Seçenekler */}
+                                    <div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {answer.options.map((option) => (
+                                                <div
+                                                    key={option.id}
+                                                    className={`relative rounded-lg overflow-hidden border ${
+                                                        option.id === answer.selectedOption && option.isCorrect
+                                                            ? 'border-green-500 bg-green-50'
+                                                            : option.id === answer.selectedOption
+                                                                ? 'border-red-500 bg-red-50'
+                                                                : option.isCorrect
+                                                                    ? 'border-green-500 bg-green-50'
+                                                                    : 'border-gray-200'
+                                                    }`}
+                                                >
+                                                    <div className="p-2">
+                                                        <img
+                                                            src={option.imageUrl}
+                                                            alt={`Seçenek ${option.id}`}
+                                                            className="object-contain w-full h-28"
+                                                        />
+                                                        <div className="text-center font-bold mt-1">{option.id}</div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            ))}
+                                        </div>
+                                        
+                                        {/* Doğru/Yanlış Sonucu */}
+                                        <div className={`mt-3 p-3 rounded-lg ${
+                                            answer.isCorrect 
+                                                ? 'bg-green-50 text-green-800 border border-green-200' 
+                                                : 'bg-red-50 text-red-800 border border-red-200'
+                                            }`}>
+                                            {answer.isCorrect 
+                                                ? 'Doğru cevap verdiniz!' 
+                                                : `Yanlış cevap verdiniz. Doğru cevap: ${answer.options.find(opt => opt.isCorrect)?.id || ''}`
+                                            }
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Seçenekler */}
-                                <div className="mb-4">
-                                    <div className="flex justify-center gap-4 overflow-x-auto pb-2">
-                                        {answer.options.map((option) => (
-                                            <div
-                                                key={option.id}
-                                                className={`relative rounded-lg overflow-hidden border flex-shrink-0 ${
-                                                    option.id === answer.selectedOption && option.isCorrect
-                                                        ? 'border-green-500 bg-green-50'
-                                                        : option.id === answer.selectedOption
-                                                            ? 'border-red-500 bg-red-50'
-                                                            : option.isCorrect
-                                                                ? 'border-green-500 bg-green-50'
-                                                                : 'border-gray-200'
-                                                }`}
-                                            >
-                                                <div className="w-24 h-24">
-                                                    <img
-                                                        src={option.imageUrl}
-                                                        alt={`Seçenek ${option.id}`}
-                                                        className="object-contain w-full h-full p-2"
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Description and Video */}
-                                <div className="flex items-center justify-between mt-2">
-                                    <div className="flex items-center space-x-2">
-                                        {/* Video */}
-                                        {getQuestionDataByImageUrl(answer.questionImage)?.solution_video && (
-                                            <Tooltip title="Video Çözümü">
-                                                <IconButton
-                                                    size="small"
-                                                    className="bg-blue-100 hover:bg-blue-200"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const video = getQuestionDataByImageUrl(answer.questionImage)?.solution_video;
-                                                        setSelectedVideo(video?.embed_code || null);
-                                                    }}
-                                                >
-                                                    <PlayCircleIcon className="text-blue-800" fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        )}
-                                    </div>
-
-                                    {/* Açıklama */}
+                                {/* Soru Açıklaması ve Video Butonları için ayrı bölüm */}
+                                <div className="mt-4 pt-3 border-t border-gray-200">
+                                    {/* Açıklama Bölümü */}
                                     {getQuestionDataByImageUrl(answer.questionImage)?.text && (
-                                        <Tooltip title="Açıklama">
-                                            <IconButton
-                                                size="small"
-                                                className="bg-green-100 hover:bg-green-200"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedQuestionForDescription(answer.questionImage);
+                                        <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+                                            <h4 className="font-semibold text-gray-800 mb-1">Açıklama:</h4>
+                                            <p className="text-sm text-gray-700">
+                                                {getQuestionDataByImageUrl(answer.questionImage)?.text}
+                                            </p>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Video ve Seçenekler Butonları */}
+                                    <div className="flex justify-start items-center gap-2">
+                                        {getQuestionDataByImageUrl(answer.questionImage)?.solution_video && (
+                                            <button
+                                                className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md text-sm"
+                                                onClick={() => {
+                                                    const video = getQuestionDataByImageUrl(answer.questionImage)?.solution_video;
+                                                    setSelectedVideo(video?.embed_code || null);
                                                 }}
                                             >
-                                                <DescriptionIcon className="text-green-800" fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
-                                    )}
+                                                <PlayCircleIcon fontSize="small" />
+                                                Video Çözümünü İzle
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -371,11 +368,6 @@ export default function QuizResultPage() {
                                 alt="Büyük Soru Resmi"
                                 className="w-full h-auto object-contain rounded-lg"
                             />
-                            {selectedImage?.match(/Soru-(\d+)\.webp/)?.[1] && (
-                                <div className="absolute bottom-4 right-4 bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-lg">
-                                    Soru {selectedImage?.match(/Soru-(\d+)\.webp/)?.[1]}
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
