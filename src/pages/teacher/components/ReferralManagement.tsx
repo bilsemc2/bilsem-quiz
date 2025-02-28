@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 
 interface ReferredStudent {
   id: string;
-  full_name: string;
+  name: string;
   email: string;
   joined_at: string;
 }
@@ -36,7 +36,7 @@ const ReferralManagement: React.FC = () => {
 
     const { data: students, error: studentsError } = await supabase
       .from('profiles')
-      .select('id, full_name, email, created_at')
+      .select('id, name, email, created_at')
       .eq('referred_by', profile.referral_code)
       .order('created_at', { ascending: false });
 
@@ -113,7 +113,7 @@ const ReferralManagement: React.FC = () => {
               className="border p-3 rounded flex justify-between items-center"
             >
               <div>
-                <p className="font-medium">{student.full_name}</p>
+                <p className="font-medium">{student.name}</p>
                 <p className="text-sm text-gray-500">{student.email}</p>
                 <p className="text-xs text-gray-400">
                   Katılım: {new Date(student.joined_at).toLocaleDateString()}
