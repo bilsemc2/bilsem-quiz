@@ -51,44 +51,45 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const UserMessages = () => {
+const UserMessages: React.FC<{ userId?: string }> = ({ userId }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [tabValue, setTabValue] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    fetchMessages();
-    
-    const channel = supabase
-      .channel('user-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'admin_messages'
-        },
-        () => {
-          fetchMessages();
-        }
-      )
-      .subscribe();
+    if (userId) {
+      fetchMessages();
+      
+      const channel = supabase
+        .channel('user-messages')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'admin_messages'
+          },
+          () => {
+            fetchMessages();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      channel.unsubscribe();
-    };
-  }, []);
+      return () => {
+        channel.unsubscribe();
+      };
+    }
+  }, [userId]);
 
   const fetchMessages = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.log('No user found');
+    if (!userId) {
+      console.log('No user ID provided');
       return;
     }
-    console.log('Current user:', user);
+    console.log('Current user ID:', userId);
 
     // Önce basit bir sorgu deneyelim
-    const { data: simpleData, error: simpleError } = await supabase
+    const { data: simpleData } = await supabase
       .from('admin_messages')
       .select('*');
     
@@ -106,7 +107,7 @@ const UserMessages = () => {
         read,
         sender:profiles!admin_messages_sender_id_fkey(name)
       `)
-      .eq('receiver_id', user.id)
+      .eq('receiver_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -115,7 +116,7 @@ const UserMessages = () => {
     }
 
     console.log('Filtered messages for user:', data);
-    console.log('User ID we are filtering for:', user.id);
+    console.log('User ID we are filtering for:', userId);
 
     if (data) {
       const formattedMessages = data.map(msg => ({
@@ -124,7 +125,7 @@ const UserMessages = () => {
         sender_id: msg.sender_id,
         created_at: msg.created_at,
         read: msg.read,
-        sender_name: msg.sender?.name || 'Admin'
+        sender_name: Array.isArray(msg.sender) && msg.sender[0] ? msg.sender[0].name : 'Admin'
       }));
       console.log('Formatted messages:', formattedMessages);
       setMessages(formattedMessages);
@@ -183,7 +184,7 @@ const UserMessages = () => {
               </Badge>
             } 
           />
-          <Tab label="Tüm Mesajlar" />
+          <Tab label="Okunmuş Mesajlar" />
         </Tabs>
       </Box>
 
@@ -253,7 +254,7 @@ const UserMessages = () => {
           </Typography>
         ) : (
           <List>
-            {messages.map((message, index) => (
+            {readMessages.map((message, index) => (
               <React.Fragment key={message.id}>
                 <ListItem
                   sx={{

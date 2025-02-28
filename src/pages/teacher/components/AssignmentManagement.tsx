@@ -7,7 +7,7 @@ import QuestionSelector from './QuestionSelector';
 interface QuestionStats {
   total_questions: number;
   available_questions: number;
-  question_limit: number;
+  question_limit?: number;
 }
 
 interface Assignment {
@@ -37,6 +37,7 @@ const AssignmentManagement: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
   const [questionStats, setQuestionStats] = React.useState<QuestionStats | null>(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [isTeacher, setIsTeacher] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'list' | 'create' | 'stats'>('list');
   const fetchUserProfile = async () => {
     if (!user) return;
@@ -53,8 +54,9 @@ const AssignmentManagement: React.FC = () => {
       return;
     }
   
-    // Eğer kullanıcı admin veya role "teacher" ise erişime izin ver (isAdmin true olacak)
-    setIsAdmin(profile?.is_admin || profile?.role === 'teacher');
+    // is_admin ve isTeacher rollerini ayrı değişkenlerde tut
+    setIsAdmin(profile?.is_admin === true);
+    setIsTeacher(profile?.role === 'teacher');
   };
 
 useEffect(() => {
@@ -265,9 +267,8 @@ useEffect(() => {
       {activeTab === 'create' && (
         <div className="space-y-6">
           <div className="bg-blue-50 p-4 rounded">
-            {!isAdmin && questionStats && (
+            {questionStats && !isAdmin && (
               <div className="text-sm text-blue-800">
-                <p>Toplam Soru: {questionStats.total_questions}</p>
                 <p>Görüntüleyebildiğiniz: {questionStats.available_questions}</p>
                 <p className="text-xs mt-1">
                   Not: Sınıfınızdaki her öğrenci için +50 soru görüntüleyebilirsiniz
@@ -277,6 +278,18 @@ useEffect(() => {
             {isAdmin && (
               <div className="text-sm text-blue-800">
                 <p className="font-medium">Admin: Tüm sorulara erişebilirsiniz</p>
+              </div>
+            )}
+            {!isAdmin && isTeacher && (
+              <div className="text-sm text-green-700">
+                <p className="font-medium">
+                  Öğretmen: {questionStats 
+                    ? `${questionStats.available_questions}/${questionStats.total_questions} soruya erişebilirsiniz (Limitiniz: ${questionStats.question_limit})` 
+                    : 'Aktif sorulara erişebilirsiniz'}
+                </p>
+                <p className="text-xs mt-1">
+                  Not: Temel limit 100 soru + sınıfınızdaki her öğrenci için +50 soru
+                </p>
               </div>
             )}
           </div>
@@ -339,7 +352,13 @@ useEffect(() => {
                   onQuestionsSelected={(questions) =>
                     setNewAssignment((prev) => ({ ...prev, questions }))
                   }
-                  availableQuestionCount={isAdmin ? 999999 : (questionStats?.available_questions || 0)}
+                  availableQuestionCount={
+                    isAdmin 
+                      ? 999999 
+                      : (isTeacher && questionStats?.question_limit 
+                          ? questionStats.question_limit 
+                          : (questionStats?.available_questions || 0))
+                  }
                 />
               </div>
             )}

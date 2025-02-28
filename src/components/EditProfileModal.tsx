@@ -15,23 +15,25 @@ import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
 interface EditProfileModalProps {
-  open: boolean;
+  open?: boolean;
   onClose: () => void;
   userData: {
     name: string;
-    email: string;
-    school: string;
-    grade: string;
-    avatar_url: string;
+    grade?: string;
+    school?: string;
+    email?: string;
+    avatar_url?: string;
   };
-  onUpdate: () => void;
+  onUpdate?: () => void;
+  onSave?: () => void;
 }
 
 const EditProfileModal: React.FC<EditProfileModalProps> = ({
-  open,
+  open = true,
   onClose,
   userData,
   onUpdate,
+  onSave,
 }) => {
   const [formData, setFormData] = useState({
     name: userData.name || '',
@@ -92,7 +94,8 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
       if (error) throw error;
 
       toast.success('Profil başarıyla güncellendi');
-      onUpdate();
+      onUpdate?.();
+      onSave?.();
       onClose();
     } catch (error) {
       console.error('Error updating profile:', error);
