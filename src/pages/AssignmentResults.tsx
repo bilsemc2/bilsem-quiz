@@ -18,7 +18,7 @@ import {
   IconButton,
   CircularProgress,
   Divider,
-  useTheme,
+  Chip
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -102,54 +102,42 @@ interface AnswerCardProps {
 }
 
 function AnswerCard({ answer, index, questionDetail }: AnswerCardProps) {
-  const theme = useTheme();
   const correctOptionIndex = answer.options.findIndex(opt => opt.isCorrect) + 1;
 
   return (
     <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
+      {/* Soru numarası bilgisi */}
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Chip 
+          label={`Soru ${index + 1}`} 
+          color="primary" 
+          size="small" 
+          sx={{ fontWeight: 'bold' }} 
+        />
+        <Chip 
+          label={`#${answer.questionNumber}`} 
+          color="default" 
+          size="small" 
+          variant="outlined"
+        />
+      </Box>
+
       <Grid container spacing={2}>
         {/* Sol: Soru Resmi */}
-        <Grid item xs={12} sm={4} sx={{ position: 'relative' }}>
-          <Box
-            sx={{
-              position: 'absolute',
-              top: theme.spacing(1),
-              left: theme.spacing(1),
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              px: 1,
-              py: 0.5,
-              borderRadius: '16px',
-              fontSize: '0.75rem',
-            }}
-          >
-            Soru {index + 1}
-          </Box>
+        <Grid item xs={12} sm={4}>
           <Box
             component="img"
             src={answer.questionImage}
             alt={`Soru ${answer.questionNumber}`}
             sx={{
               width: '100%',
+              height: 'auto',
+              maxHeight: '300px',
+              objectFit: 'contain',
               borderRadius: 1,
               boxShadow: 1,
             }}
           />
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: theme.spacing(1),
-              right: theme.spacing(1),
-              bgcolor: 'grey.800',
-              color: 'common.white',
-              px: 1,
-              py: 0.5,
-              borderRadius: '16px',
-              fontSize: '0.75rem',
-            }}
-          >
-            #{answer.questionNumber}
-          </Box>
         </Grid>
 
         {/* Sağ: Cevap Detayları */}
@@ -202,33 +190,41 @@ function AnswerCard({ answer, index, questionDetail }: AnswerCardProps) {
                 : `Yanlış cevap. Doğru cevap: ${correctOptionIndex}. seçenek`}
             </Typography>
           </Box>
-
-          {questionDetail?.text && (
-            <Box sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: 'info.light' }}>
-              <Typography variant="body2" sx={{ color: 'info.dark' }}>
-                {questionDetail.text}
-              </Typography>
-            </Box>
-          )}
-
-          {questionDetail?.solution_video && (
-            <Box sx={{ mt: 2 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<PlayArrowIcon />}
-                onClick={() =>
-                  // Video embed code'yu ana bileşene iletir (VideoModal için)
-                  // Bu buton, dışarıdan selectedVideo state'ini güncellemek için kullanılabilir.
-                  window.dispatchEvent(new CustomEvent('openVideo', { detail: questionDetail.solution_video?.embed_code || '' }))
-                }
-              >
-                Video Çözümünü İzle
-              </Button>
-            </Box>
-          )}
         </Grid>
       </Grid>
+
+      {/* Soru açıklaması ve video çözümü için ayrı bir div */}
+      <Box sx={{ mt: 3, borderTop: '1px solid #eee', pt: 2 }}>
+        {/* Açıklama */}
+        {questionDetail?.text && (
+          <Box sx={{ mb: 2, p: 2, borderRadius: 2, bgcolor: 'info.light' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+              Açıklama:
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'info.dark' }}>
+              {questionDetail.text}
+            </Typography>
+          </Box>
+        )}
+        
+        {/* Video çözümü */}
+        {questionDetail?.solution_video && (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="medium"
+              startIcon={<PlayArrowIcon />}
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent('openVideo', { detail: questionDetail.solution_video?.embed_code || '' }))
+              }
+              sx={{ borderRadius: '8px' }}
+            >
+              Video Çözümünü İzle
+            </Button>
+          </Box>
+        )}
+      </Box>
     </Paper>
   );
 }
