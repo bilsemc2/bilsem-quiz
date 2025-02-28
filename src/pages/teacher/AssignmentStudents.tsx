@@ -80,7 +80,7 @@ const AssignmentStudents: React.FC = () => {
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Veriler yüklenirken bir hata oluştu');
-      navigate('/teacher/dashboard');
+      navigate('/teacher');
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ const AssignmentStudents: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => navigate('/teacher/dashboard')}
+          onClick={() => navigate('/teacher')}
           className="text-gray-600 hover:text-gray-800"
         >
           ← Geri Dön

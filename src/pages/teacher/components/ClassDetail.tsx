@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 
 interface Student {
   id: string;
-  full_name: string;
+  name: string;
   email: string;
 }
 
@@ -44,7 +44,7 @@ const ClassDetail: React.FC<Props> = ({ classId, onClose }) => {
         class_students (
           profiles (
             id,
-            full_name,
+            name,
             email
           )
         )
@@ -130,7 +130,7 @@ const ClassDetail: React.FC<Props> = ({ classId, onClose }) => {
     // Önce öğrenciyi bul
     const { data: student, error: studentError } = await supabase
       .from('profiles')
-      .select('id, full_name, email')
+      .select('id, name, email')
       .eq('email', newStudentEmail)
       .single();
 
@@ -302,7 +302,7 @@ const ClassDetail: React.FC<Props> = ({ classId, onClose }) => {
                 className="flex justify-between items-center border p-2 rounded"
               >
                 <div>
-                  <p className="font-medium">{student.full_name}</p>
+                  <p className="font-medium">{student.name}</p>
                   <p className="text-sm text-gray-500">{student.email}</p>
                 </div>
                 <button

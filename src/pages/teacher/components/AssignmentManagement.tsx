@@ -39,6 +39,14 @@ const AssignmentManagement: React.FC = () => {
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [isTeacher, setIsTeacher] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'list' | 'create' | 'stats'>('list');
+  
+  // Sayfalama için state'ler
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [totalAssignments, setTotalAssignments] = React.useState(0);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const pageSize = 10; // Sabit sayfa boyutu
+  const [searchTerm, setSearchTerm] = React.useState('');
+
   const fetchUserProfile = async () => {
     if (!user) return;
   
@@ -59,9 +67,9 @@ const AssignmentManagement: React.FC = () => {
     setIsTeacher(profile?.role === 'teacher');
   };
 
-useEffect(() => {
-  fetchUserProfile();
-}, [user]);
+  useEffect(() => {
+    fetchUserProfile();
+  }, [user]);
 
   const fetchQuestionStats = async () => {
     if (!user) return;
@@ -81,6 +89,24 @@ useEffect(() => {
     if (!user) return;
 
     try {
+      setLoading(true);
+      
+      // Toplam ödev sayısını al
+      const { count, error: countError } = await supabase
+        .from('assignments')
+        .select('id', { count: 'exact' })
+        .eq('created_by', user.id)
+        .ilike('title', `%${searchTerm}%`);
+      
+      if (countError) throw countError;
+      
+      setTotalAssignments(count || 0);
+      setTotalPages(Math.ceil((count || 0) / pageSize));
+      
+      // Sayfa için başlangıç ve bitiş indekslerini hesapla
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize - 1;
+
       // Ödevleri ve ilişkili bilgileri al
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('assignments')
@@ -91,7 +117,9 @@ useEffect(() => {
           quiz_class_assignments (class_id)
         `)
         .eq('created_by', user.id)
-        .order('created_at', { ascending: false });
+        .ilike('title', `%${searchTerm}%`)
+        .order('created_at', { ascending: false })
+        .range(startIndex, endIndex);
 
       if (assignmentsError) throw assignmentsError;
 
@@ -135,6 +163,8 @@ useEffect(() => {
     } catch (error) {
       console.error('Error fetching assignments:', error);
       toast.error('Ödevler yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -159,7 +189,7 @@ useEffect(() => {
     fetchClasses();
     fetchQuestionStats();
     fetchUserProfile();
-  }, [user]);
+  }, [user, currentPage, searchTerm]);
 
   const handleCreateAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,6 +266,126 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Sayfalama kontrollerini oluştur
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    
+    const pages = [];
+    const maxVisiblePages = 5; // Maksimum görünür sayfa sayısı
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    // Sayfa sayısını ayarla
+    if (endPage - startPage + 1 < maxVisiblePages && startPage > 1) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    // Önceki sayfa butonu
+    pages.push(
+      <button
+        key="prev"
+        className={`px-3 py-1 rounded-md mx-1 ${
+          currentPage === 1
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+        }`}
+        onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+        disabled={currentPage === 1}
+      >
+        &laquo;
+      </button>
+    );
+    
+    // İlk sayfa butonu (gerekirse)
+    if (startPage > 1) {
+      pages.push(
+        <button
+          key="first"
+          className="px-3 py-1 rounded-md mx-1 bg-gray-200 hover:bg-gray-300 text-gray-700"
+          onClick={() => setCurrentPage(1)}
+        >
+          1
+        </button>
+      );
+      
+      // Ellipsis (...)
+      if (startPage > 2) {
+        pages.push(
+          <span key="ellipsis1" className="px-3 py-1">
+            ...
+          </span>
+        );
+      }
+    }
+    
+    // Sayfa numaraları
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <button
+          key={i}
+          className={`px-3 py-1 rounded-md mx-1 ${
+            currentPage === i
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+          }`}
+          onClick={() => setCurrentPage(i)}
+        >
+          {i}
+        </button>
+      );
+    }
+    
+    // Son sayfa butonu (gerekirse)
+    if (endPage < totalPages) {
+      // Ellipsis (...)
+      if (endPage < totalPages - 1) {
+        pages.push(
+          <span key="ellipsis2" className="px-3 py-1">
+            ...
+          </span>
+        );
+      }
+      
+      pages.push(
+        <button
+          key="last"
+          className="px-3 py-1 rounded-md mx-1 bg-gray-200 hover:bg-gray-300 text-gray-700"
+          onClick={() => setCurrentPage(totalPages)}
+        >
+          {totalPages}
+        </button>
+      );
+    }
+    
+    // Sonraki sayfa butonu
+    pages.push(
+      <button
+        key="next"
+        className={`px-3 py-1 rounded-md mx-1 ${
+          currentPage === totalPages
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+        }`}
+        onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+        disabled={currentPage === totalPages}
+      >
+        &raquo;
+      </button>
+    );
+    
+    return (
+      <div className="flex justify-center my-4">
+        <div className="flex flex-wrap">{pages}</div>
+      </div>
+    );
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(1); // Aramada ilk sayfaya dön
   };
 
   return (
@@ -376,6 +526,28 @@ useEffect(() => {
 
       {activeTab === 'list' && (
         <div className="space-y-4">
+          {/* Arama formu */}
+          <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Ödev ara..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border rounded-md px-3 py-2 flex-grow"
+            />
+            <button
+              type="submit"
+              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+            >
+              Ara
+            </button>
+          </form>
+          
+          {/* Toplam sonuç bilgisi */}
+          <div className="text-sm text-gray-600 mb-2">
+            Toplam {totalAssignments} ödev bulundu
+          </div>
+          
           {assignments.map((assignment) => (
             <div key={assignment.id} className="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors">
               <div className="flex justify-between items-start">
@@ -416,19 +588,30 @@ useEffect(() => {
                     <div
                       className="h-2 bg-blue-500 rounded-full"
                       style={{
-                        width: `${(assignment.completion_count / assignment.total_students) * 100}%`
+                        width: `${Math.min((assignment.completion_count / Math.max(1, assignment.total_students)) * 100, 100)}%`
                       }}
                     />
                   </div>
                   <span className="text-sm text-gray-600">
-                    {Math.round((assignment.completion_count / assignment.total_students) * 100)}%
+                    {Math.min(Math.round((assignment.completion_count / Math.max(1, assignment.total_students)) * 100), 100)}%
                   </span>
                 </div>
               </div>
             </div>
           ))}
           
-          {assignments.length === 0 && (
+          {/* Sayfalama kontrolleri */}
+          {renderPagination()}
+          
+          {/* Yükleniyor göstergesi */}
+          {loading && (
+            <div className="py-2 text-center text-gray-600">
+              <div className="inline-block w-4 h-4 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin mr-2"></div>
+              Veriler yükleniyor...
+            </div>
+          )}
+          
+          {!loading && assignments.length === 0 && (
             <div className="text-center py-12 bg-gray-50 rounded-lg">
               <p className="text-gray-500 text-lg">Henüz ödev oluşturmadınız</p>
               <button
@@ -455,12 +638,15 @@ useEffect(() => {
               <p className="text-3xl font-bold text-green-900">
                 {assignments.length > 0
                   ? `${(
-                      (assignments.reduce(
-                        (acc, curr) => acc + (curr.completion_count / curr.total_students) * 100,
-                        0
-                      ) /
-                        assignments.length) ||
-                      0
+                      Math.min(
+                        (assignments.reduce(
+                          (acc, curr) => acc + Math.min((curr.completion_count / Math.max(1, curr.total_students)) * 100, 100),
+                          0
+                        ) /
+                          assignments.length) ||
+                        0,
+                        100
+                      )
                     ).toFixed(1)}%`
                   : '0%'}
               </p>
@@ -488,7 +674,7 @@ useEffect(() => {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">
-                        {Math.round((assignment.completion_count / assignment.total_students) * 100)}% Tamamlandı
+                        {Math.min(Math.round((assignment.completion_count / Math.max(1, assignment.total_students)) * 100), 100)}% Tamamlandı
                       </p>
                       <p className="text-xs text-gray-500">{assignment.created_at}</p>
                     </div>
