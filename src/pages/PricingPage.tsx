@@ -13,7 +13,7 @@ export default function PricingPage() {
                         </p>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
                         <PricingCard
                             title="Başlangıç"
                             price="Ücretsiz"
@@ -33,7 +33,7 @@ export default function PricingPage() {
                             description="Bilsemc2'ye ilk adımınızı atın ve temel özelliklere erişim kazanın. Başlangıç seviyesi için ideal plan."
                             features={[
                                 'Tüm Başlangıç özellikleri',
-                                '+5000 XP (Tüm etkinliklere katılım için)',
+                                '+5000 XP',
                                 'XP kazanım fırsatları',
                                 'Temel etkinliklere erişim',
                                 'Puan tablosunda yer alma'
@@ -76,9 +76,21 @@ export default function PricingPage() {
                             buttonText="Profesyonel Plana Geç"
                             onClick={() => {}}
                         />
+                        
+
 
                     </div>
 
+                    <div className="text-center mt-12">
+                        <Link
+                            to="/teacher-pricing"
+                            className="inline-block px-8 py-4 mb-10 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 transform hover:scale-105"
+                        >
+                            Öğretmen ve VIP Üyelik Planlarını Görüntüle
+                            <span className="ml-2">→</span>
+                        </Link>
+                    </div>
+                    
                     <div className="text-center mt-16">
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
                             Aklınıza takılan sorular mı var?
