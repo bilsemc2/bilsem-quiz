@@ -9,12 +9,13 @@ interface Class {
   name: string;
   grade: number;
   student_count: number;
+  meeting_link?: string;
 }
 
 const ClassManagement: React.FC = () => {
   const { user } = useAuth();
   const [classes, setClasses] = React.useState<Class[]>([]);
-  const [newClass, setNewClass] = React.useState({ name: '', grade: '' });
+  const [newClass, setNewClass] = React.useState({ name: '', grade: '', meeting_link: '' });
   const [loading, setLoading] = React.useState(false);
   const [selectedClassId, setSelectedClassId] = React.useState<string | null>(null);
 
@@ -27,6 +28,7 @@ const ClassManagement: React.FC = () => {
         id,
         name,
         grade,
+        meeting_link,
         class_students (count)
       `)
       .eq('teacher_id', user.id);
@@ -56,6 +58,7 @@ const ClassManagement: React.FC = () => {
     const { error } = await supabase.from('classes').insert({
       name: newClass.name,
       grade: parseInt(newClass.grade),
+      meeting_link: newClass.meeting_link,
       teacher_id: user.id,
     });
 
@@ -67,7 +70,7 @@ const ClassManagement: React.FC = () => {
     }
 
     toast.success('Sınıf başarıyla oluşturuldu');
-    setNewClass({ name: '', grade: '' });
+    setNewClass({ name: '', grade: '', meeting_link: '' });
     fetchClasses();
   };
 
@@ -95,6 +98,15 @@ const ClassManagement: React.FC = () => {
             min="1"
             max="12"
           />
+          <div className="md:col-span-2">
+            <input
+              type="url"
+              placeholder="Google Meet veya Zoom Bağlantısı (isteğe bağlı)"
+              value={newClass.meeting_link}
+              onChange={(e) => setNewClass(prev => ({ ...prev, meeting_link: e.target.value }))}
+              className="border p-2 rounded w-full"
+            />
+          </div>
           <button
             type="submit"
             disabled={loading}
@@ -116,6 +128,19 @@ const ClassManagement: React.FC = () => {
               <p className="text-sm text-gray-500">
                 {cls.grade}. Sınıf • {cls.student_count} Öğrenci
               </p>
+              {cls.meeting_link && (
+                <a 
+                  href={cls.meeting_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1 mt-1"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Toplantı Bağlantısı
+                </a>
+              )}
             </div>
             <button
               onClick={() => setSelectedClassId(cls.id)}
