@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { getStories } from '../services/stories';
 import { Story, Question, themeTranslations } from './types';
-import { ChevronRight, Download, GamepadIcon, X, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronRight, Download, GamepadIcon, X } from 'lucide-react';
 import { PDFPreview } from './PDFPreview';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { WordGamesPDF } from './WordGamesPDF';
 import { WordGames } from './WordGames';
-import toast from 'react-hot-toast';
 
 export function StoriesList() {
   const [stories, setStories] = useState<Story[]>([]);
@@ -15,9 +14,6 @@ export function StoriesList() {
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [showGames, setShowGames] = useState(false);
-  const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
-  const [showResults, setShowResults] = useState(false);
-  const [score, setScore] = useState<{correct: number, total: number}>({correct: 0, total: 0});
 
   useEffect(() => {
     loadStories();
@@ -100,149 +96,29 @@ export function StoriesList() {
           </div>
 
           <div className="space-y-4 mt-8">
-            <div className="flex justify-between items-center">
-              <h4 className="text-xl font-semibold text-purple-900">Sorular</h4>
-              {!showResults && selectedStory.questions && selectedStory.questions.length > 0 && (
-                <button
-                  onClick={() => {
-                    // Tüm sorulara cevap verilip verilmediğini kontrol et
-                    const answeredQuestions = Object.keys(userAnswers).length;
-                    if (answeredQuestions < selectedStory.questions.length) {
-                      toast.error(`Lütfen tüm soruları cevaplayın! (${answeredQuestions}/${selectedStory.questions.length})`);
-                      return;
-                    }
-                    
-                    // Skoru hesapla
-                    let correctCount = 0;
-                    selectedStory.questions.forEach((question: Question, index: number) => {
-                      const questionId = `${selectedStory.id}-${index}`;
-                      if (userAnswers[questionId] === question.correctAnswer) {
-                        correctCount++;
-                      }
-                    });
-                    
-                    setScore({
-                      correct: correctCount,
-                      total: selectedStory.questions.length
-                    });
-                    
-                    setShowResults(true);
-                    
-                    // Başarı durumuna göre bildirim göster
-                    const percentage = (correctCount / selectedStory.questions.length) * 100;
-                    if (percentage === 100) {
-                      toast.success('Harika! Tüm soruları doğru cevapladınız! 🏆');
-                    } else if (percentage >= 70) {
-                      toast.success(`Tebrikler! ${correctCount}/${selectedStory.questions.length} soruyu doğru cevapladınız! 👏`);
-                    } else if (percentage >= 50) {
-                      toast('İyi iş! Biraz daha çalışmayla mükemmel olacaksınız. 💪', {
-                        icon: '👍',
-                      });
-                    } else {
-                      toast('Daha fazla çalışmaya ne dersiniz? Hikayeyi tekrar okuyup deneyebilirsiniz. 📚', {
-                        icon: '🤔',
-                      });
-                    }
-                  }}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  Cevapları Kontrol Et
-                </button>
-              )}
-              
-              {showResults && (
-                <div className="flex items-center gap-2">
-                  <div className="text-lg font-medium">
-                    Skor: <span className="text-purple-600">{score.correct}/{score.total}</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowResults(false);
-                      setUserAnswers({});
-                    }}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Tekrar Dene
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            {(selectedStory.questions || []).map((question: Question, index: number) => {
-              const questionId = `${selectedStory.id}-${index}`;
-              const userAnswer = userAnswers[questionId];
-              const isCorrect = showResults && userAnswer === question.correctAnswer;
-              const isWrong = showResults && userAnswer !== undefined && userAnswer !== question.correctAnswer;
-              
-              return (
-                <div key={`question-${questionId}`} className="bg-purple-50 rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between">
-                    <p className="font-medium">{question.text}</p>
-                    {showResults && (
-                      <div className="flex items-center gap-1">
-                        {isCorrect ? (
-                          <>
-                            <CheckCircle className="text-green-500" size={18} />
-                            <span className="text-green-500 text-sm">Doğru</span>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="text-red-500" size={18} />
-                            <span className="text-red-500 text-sm">Yanlış</span>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    {question.options.map((option: string, optionIndex: number) => (
-                      <button
-                        key={`option-${questionId}-${optionIndex}`}
-                        onClick={() => {
-                          if (!showResults) {
-                            setUserAnswers(prev => ({
-                              ...prev,
-                              [questionId]: optionIndex
-                            }));
-                          }
-                        }}
-                        disabled={showResults}
-                        className={`p-3 rounded-lg text-left transition-colors ${
-                          showResults
-                            ? optionIndex === question.correctAnswer
-                              ? 'bg-green-100 text-green-800'
-                              : userAnswer === optionIndex
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100'
-                            : userAnswer === optionIndex
-                              ? 'bg-purple-100 border border-purple-300'
-                              : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span>{option}</span>
-                          {showResults && optionIndex === question.correctAnswer && (
-                            <CheckCircle className="text-green-500" size={16} />
-                          )}
-                          {showResults && userAnswer === optionIndex && optionIndex !== question.correctAnswer && (
-                            <XCircle className="text-red-500" size={16} />
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {showResults && question.feedback && (
-                    <div className={`mt-2 p-3 rounded-lg ${isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                      <p className="text-sm font-medium">
-                        {isCorrect ? question.feedback.correct : question.feedback.incorrect}
-                      </p>
+            <h4 className="text-xl font-semibold text-purple-900">Sorular</h4>
+            {(selectedStory.questions || []).map((question: Question, index: number) => (
+              <div key={`question-${selectedStory.id}-${index}`} className="bg-purple-50 rounded-lg p-4 space-y-3">
+                <p className="font-medium">{question.text}</p>
+                <div className="grid gap-2">
+                  {question.options.map((option: string, optionIndex: number) => (
+                    <div
+                      key={`option-${selectedStory.id}-${index}-${optionIndex}`}
+                      className={`p-3 rounded-lg ${
+                        optionIndex === question.correctAnswer
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100'
+                      }`}
+                    >
+                      {option}
+                      {optionIndex === question.correctAnswer && (
+                        <span className="ml-2 text-green-600">✓</span>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       ) : (

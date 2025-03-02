@@ -11,36 +11,17 @@ export default defineConfig({
   ],
   server: {
     headers: {
-      'Content-Security-Policy': `
-        default-src 'self' data: blob:;
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' 
-          https://pagead2.googlesyndication.com
-          https://*.adtrafficquality.google
-          https://*.doubleclick.net
-          blob:;
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        font-src 'self' https://fonts.gstatic.com data: blob:;
-        img-src 'self' data: blob: https:;
-        connect-src 'self' 
-          https://*.supabase.co 
-          wss://*.supabase.co 
-          https://*.elevenlabs.io 
-          https://evmos-evm.publicnode.com/
-          https://*.google.com
-          https://*.googlesyndication.com
-          https://*.adtrafficquality.google/
-          https://*.openai.com
-          data:;
-        frame-src 'self' 
-          https://www.google.com 
-          https://pagead2.googlesyndication.com
-          https://*.doubleclick.net
-          https://*.adtrafficquality.google
-          https://www.youtube.com
-          https://youtube.com;
-        worker-src 'self' blob: data:;
-        child-src 'self' blob: data:;
-      `.replace(/\s+/g, ' ').trim()
+      'Content-Security-Policy': [
+        "default-src 'self' data: blob:;",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://*.doubleclick.net blob:;",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+        "font-src 'self' https://fonts.gstatic.com data: blob:;",
+        "img-src 'self' data: blob: https:;",
+        "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.elevenlabs.io https://evmos-evm.publicnode.com/ https://*.google.com https://*.googlesyndication.com https://*.adtrafficquality.google/ https://*.openai.com data:;",
+        "frame-src 'self' https://www.google.com https://pagead2.googlesyndication.com https://*.doubleclick.net https://*.adtrafficquality.google https://www.youtube.com https://youtube.com;",
+        "worker-src 'self' blob: data:;",
+        "child-src 'self' blob: data:;"
+      ].join(' ')
     },
     hmr: {
       overlay: false
