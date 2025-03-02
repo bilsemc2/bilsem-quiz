@@ -228,7 +228,7 @@ export const ClassroomPage: React.FC = () => {
     };
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [classMembers, setClassMembers] = useState<ClassMember[]>([]);
-    const [classData, setClassData] = useState<{ name: string; grade: number } | null>(null);
+    const [classData, setClassData] = useState<{ name: string; grade: number; meeting_link?: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [hasClassAccess, setHasClassAccess] = useState(false);
     const [selectedResult, setSelectedResult] = useState<Assignment | null>(null);
@@ -300,6 +300,56 @@ export const ClassroomPage: React.FC = () => {
     };
 
     const renderMeetSection = () => {
+        // Öncelikle veritabanından alınan meeting_link'i kontrol et
+        if (classData?.meeting_link) {
+            return (
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-8 mb-8 text-white">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-6">
+                            <div className="bg-white/10 p-4 rounded-full">
+                                <VideoCameraOutlined className="text-3xl" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold">
+                                    Canlı Ders Başlıyor!
+                                </h2>
+                                <p className="text-blue-100 mt-2 text-lg">
+                                    Toplantıya hemen katıl
+                                </p>
+                            </div>
+                        </div>
+                        <Button 
+                            type="default"
+                            size="large"
+                            icon={<VideoCameraOutlined />}
+                            onClick={() => {
+                                // Toplantı bağlantısını analiz et
+                                const meetingLink = classData.meeting_link || '';
+                                
+                                if (meetingLink.startsWith('http')) {
+                                    // Tam URL verilmiş, olduğu gibi kullan
+                                    window.open(meetingLink, '_blank');
+                                } else if (meetingLink.match(/^\d{9,11}$/)) {
+                                    // Sadece rakamlardan oluşan 9-11 haneli kod -> Zoom toplantı ID'si
+                                    window.open(`https://zoom.us/j/${meetingLink}`, '_blank');
+                                } else if (meetingLink.match(/^[a-z]{3}-[a-z]{4}-[a-z]{3}$/)) {
+                                    // xxx-xxxx-xxx formunda kod -> Google Meet kodu
+                                    window.open(`https://meet.google.com/${meetingLink}`, '_blank');
+                                } else {
+                                    // Format belli değilse Google Meet varsay
+                                    window.open(`https://meet.google.com/${meetingLink}`, '_blank');
+                                }
+                            }}
+                            className="bg-white hover:bg-blue-50 text-blue-600 font-medium px-6 h-12 flex items-center"
+                        >
+                            Derse Katıl
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+        
+        // Geri uyumluluk için: Eğer meeting_link yoksa, eski MEET_CODES'u kullan
         const meetCode = MEET_CODES[classId as keyof typeof MEET_CODES];
         
         if (!meetCode) return null;

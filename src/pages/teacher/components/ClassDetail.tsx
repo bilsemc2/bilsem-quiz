@@ -14,6 +14,7 @@ interface ClassDetails {
   name: string;
   grade: number;
   students: Student[];
+  meeting_link?: string;
 }
 
 interface Props {
@@ -28,6 +29,7 @@ const ClassDetail: React.FC<Props> = ({ classId, onClose }) => {
   const [editing, setEditing] = React.useState(false);
   const [editedName, setEditedName] = React.useState('');
   const [editedGrade, setEditedGrade] = React.useState('');
+  const [editedMeetingLink, setEditedMeetingLink] = React.useState('');
   const [newStudentEmail, setNewStudentEmail] = React.useState('');
   const [addingStudent, setAddingStudent] = React.useState(false);
 
@@ -41,6 +43,7 @@ const ClassDetail: React.FC<Props> = ({ classId, onClose }) => {
         id,
         name,
         grade,
+        meeting_link,
         class_students (
           profiles (
             id,
@@ -65,11 +68,13 @@ const ClassDetail: React.FC<Props> = ({ classId, onClose }) => {
       id: classData.id,
       name: classData.name,
       grade: classData.grade,
+      meeting_link: classData.meeting_link,
       students,
     });
 
     setEditedName(classData.name);
     setEditedGrade(classData.grade.toString());
+    setEditedMeetingLink(classData.meeting_link || '');
     setLoading(false);
   };
 
@@ -85,6 +90,7 @@ const ClassDetail: React.FC<Props> = ({ classId, onClose }) => {
       .update({
         name: editedName,
         grade: parseInt(editedGrade),
+        meeting_link: editedMeetingLink,
       })
       .eq('id', classId)
       .eq('teacher_id', user.id);
@@ -236,6 +242,13 @@ const ClassDetail: React.FC<Props> = ({ classId, onClose }) => {
               min="1"
               max="12"
             />
+            <input
+              type="url"
+              value={editedMeetingLink}
+              onChange={(e) => setEditedMeetingLink(e.target.value)}
+              className="border p-2 rounded w-full"
+              placeholder="Google Meet veya Zoom Bağlantısı (isteğe bağlı)"
+            />
             <div className="flex gap-2">
               <button
                 onClick={handleUpdateClass}
@@ -255,6 +268,21 @@ const ClassDetail: React.FC<Props> = ({ classId, onClose }) => {
           <div className="mb-6">
             <h3 className="font-semibold text-lg">{classDetails.name}</h3>
             <p className="text-gray-500">{classDetails.grade}. Sınıf</p>
+            {classDetails.meeting_link && (
+              <div className="mt-2">
+                <a 
+                  href={classDetails.meeting_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:text-blue-700 flex items-center gap-1 text-sm"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Toplantı Bağlantısı Aç
+                </a>
+              </div>
+            )}
             <div className="mt-2 flex gap-2">
               <button
                 onClick={() => setEditing(true)}
