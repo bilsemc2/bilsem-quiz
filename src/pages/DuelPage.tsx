@@ -5,6 +5,17 @@ import { useUser } from '../hooks/useUser';
 import XPWarning from '../components/XPWarning';
 import DuelQuestion from '../components/DuelQuestion';
 import { generateQuiz } from '../utils/quizGenerator';
+import toast from 'react-hot-toast';
+
+// Window tipine lastAction özelliğini ekle
+declare global {
+  interface Window {
+    lastAction: string;
+  }
+}
+
+// Global lastAction değişkenini tanımla
+window.lastAction = window.lastAction || '';
 
 interface User {
   id: string;
@@ -29,8 +40,7 @@ const DuelPage = () => {
 
   const { currentUser, loading: userLoading } = useUser();
   const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(
-    userLoading ? undefined : String(currentUser?.id),
-    '/duel');
+    userLoading || !currentUser?.id);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -57,6 +67,7 @@ const DuelPage = () => {
         throw profileError;
       }
 
+      // Kullanıcının davet ettiği kişiler
       const { data: invitedByMe, error: invitedError } = await supabase
         .from('profiles')
         .select('*')
@@ -68,6 +79,7 @@ const DuelPage = () => {
         throw invitedError;
       }
 
+      // Kullanıcıyı davet eden kişi
       const { data: invitedByOthers, error: referrerError } = await supabase
         .from('profiles')
         .select('*')
@@ -79,8 +91,26 @@ const DuelPage = () => {
         throw referrerError;
       }
 
-      const allRelatedUsers = [...(invitedByMe || []), ...(invitedByOthers || [])];
+      // YENİ: Aynı kişi tarafından davet edilmiş kullanıcılar (sınıf arkadaşları)
+      const { data: classmates, error: classmatesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('referred_by', currentUserProfile.referred_by) // Aynı kişi tarafından davet edilenler
+        .neq('id', currentUser.id); // Kendisi hariç
+
+      if (classmatesError) {
+        console.error('Sınıf arkadaşları alınamadı:', classmatesError);
+        throw classmatesError;
+      }
+
+      // Tüm ilişkili kullanıcıları birleştir
+      const allRelatedUsers = [
+        ...(invitedByMe || []), 
+        ...(invitedByOthers || []),
+        ...(classmates || [])
+      ];
       
+      // Tekrarlı kullanıcıları çıkar (aynı kişi birden fazla kategoride olabilir)
       const uniqueUsers = allRelatedUsers.filter((user, index, self) =>
         index === self.findIndex((u) => u.id === user.id)
       );
@@ -175,20 +205,43 @@ const DuelPage = () => {
 
       if (!error) {
         await fetchDuels();
-        alert(`${user.name} kullanıcısına düello daveti gönderildi! Karşı tarafın kabul etmesini bekleyin.`);
+        toast.success(`${user.name} kullanıcısına düello daveti gönderildi! Karşı tarafın kabul etmesini bekleyin.`, {
+          duration: 4000,
+          style: {
+            border: '1px solid #4CAF50',
+            padding: '16px',
+            color: '#1e3a8a',
+          },
+          iconTheme: {
+            primary: '#4CAF50',
+            secondary: '#FFFAEE',
+          },
+        });
       } else {
         console.error('Error creating duel:', error);
-        alert('Düello daveti gönderilirken bir hata oluştu.');
+        toast.error('Düello daveti gönderilirken bir hata oluştu.', {
+          duration: 4000,
+          style: {
+            border: '1px solid #E53E3E',
+            padding: '16px',
+            color: '#E53E3E',
+          },
+        });
       }
     } catch (error) {
       console.error('Error in handleChallenge:', error);
     }
   };
 
+
+
   const acceptDuel = async (duelId: string) => {
     if (!currentUser) return;
     
     try {
+      // Kabul etme işlemini kaydet
+      window.lastAction = 'accept_duel';
+      
       const { error: updateError } = await supabase
         .from('duels')
         .update({ status: 'in_progress' })
@@ -200,7 +253,18 @@ const DuelPage = () => {
       }
 
       await checkActiveDuel();
-      alert('Düello başladı! Soruyu cevaplayabilirsiniz.');
+      toast.success('Düello başladı! Soruyu cevaplayabilirsiniz.', {
+        duration: 4000,
+        style: {
+          border: '1px solid #4CAF50',
+          padding: '16px',
+          color: '#1e3a8a',
+        },
+        iconTheme: {
+          primary: '#4CAF50',
+          secondary: '#FFFAEE',
+        },
+      });
     } catch (error) {
       console.error('Error in acceptDuel:', error);
     }
@@ -234,12 +298,31 @@ const DuelPage = () => {
 
       const activeDuel = duels?.[0];
       if (activeDuel) {
+        // Yeni düelloyu state'e kayıt edelim
         setActiveDuel(activeDuel);
         
-        const questionData = activeDuel.question_data ? JSON.parse(activeDuel.question_data) : null;
-        
-        if (questionData) {
-          setShowQuestion(true);
+        // Düello kabul edildiğinde veya aktif bir düello varsa soru ekranını göster
+        if (window.lastAction === 'accept_duel' || activeDuel.status === 'in_progress') {
+          const questionData = activeDuel.question_data ? JSON.parse(activeDuel.question_data) : null;
+          
+          // Kullanıcı düelloyu gönderen mi yoksa kabul eden mi?
+          const isChallenger = activeDuel.challenger_id === currentUser?.id;
+          const isChallenged = activeDuel.challenged_id === currentUser?.id;
+          
+          // Eğer kullanıcı düelloya dahilse ve henüz cevap vermediyse
+          const challengerAnswered = activeDuel.challenger_answer;
+          const challengedAnswered = activeDuel.challenged_answer;
+          
+          // Gönderen henüz cevaplamarruşsa ve gönderen ise veya
+          // Kabul eden henüz cevaplamamışsa ve kabul eden ise
+          if ((isChallenger && !challengerAnswered) || (isChallenged && !challengedAnswered)) {
+            if (questionData) {
+              setShowQuestion(true);
+            }
+          }
+          
+          // İşlem tamamlandı, son işlemi sıfırla
+          window.lastAction = '';
         }
       } else {
         setActiveDuel(null);
@@ -295,7 +378,11 @@ const DuelPage = () => {
         await fetchDuels();
       }
 
+      // Önce aktif düelloru kapatıyoruz, sonra checkActiveDuel çağrılıyor
+      setActiveDuel(null);
       setShowQuestion(false);
+      
+      // Son olarak aktiveDuel'i güncelleyelim
       await checkActiveDuel();
     } catch (error) {
       console.error('Error in handleSubmitAnswer:', error);
@@ -446,25 +533,67 @@ const DuelPage = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h4 className="font-medium mb-2">Sizin Cevabınız</h4>
-                  <p className={`${myAnswer === undefined || myAnswer === null ? 'text-gray-600' : (myAnswer === questionData.correctOptionId ? 'text-green-600' : 'text-red-600')}`}>
-                    {selectedDuel.status === 'completed' 
-                      ? questionData.options.find((opt: any) => opt.id === myAnswer)?.text || 'Cevap'
-                      : questionData.options.find((opt: any) => opt.id === myAnswer)?.text || 'Cevaplanmadı'
-                    }
+              <div className="grid grid-cols-1 gap-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-medium mb-2">Doğru Cevap</h4>
+                  <p className="text-green-700 font-medium">
+                    {questionData.options.find((opt: any) => opt.id === questionData.correctOptionId)?.text || '-'}
                   </p>
+                  {questionData.options.find((opt: any) => opt.id === questionData.correctOptionId)?.imageUrl && (
+                    <img 
+                      src={questionData.options.find((opt: any) => opt.id === questionData.correctOptionId)?.imageUrl} 
+                      alt="Doğru cevap" 
+                      className="mt-2 max-h-32 mx-auto rounded-md"
+                    />
+                  )}
                 </div>
 
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <h4 className="font-medium mb-2">Rakip Cevabı</h4>
-                  <p className={`${opponentAnswer === undefined || opponentAnswer === null ? 'text-gray-600' : (opponentAnswer === questionData.correctOptionId ? 'text-green-600' : 'text-red-600')}`}>
-                    {selectedDuel.status === 'completed'
-                      ? questionData.options.find((opt: any) => opt.id === opponentAnswer)?.text || 'Cevap'
-                      : questionData.options.find((opt: any) => opt.id === opponentAnswer)?.text || 'Cevaplanmadı'
-                    }
-                  </p>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h4 className="font-medium mb-2">Sizin Cevabınız</h4>
+                    <div className={`${!myAnswer ? 'text-gray-600' : (myAnswer === questionData.correctOptionId ? 'text-green-600 font-medium' : 'text-red-600 font-medium')}`}>
+                      <p>
+                        {selectedDuel.status === 'completed' 
+                          ? (!myAnswer
+                              ? 'Süre doldu / Yanıtlamadı'
+                              : questionData.options.find((opt: any) => opt.id === myAnswer)?.text)
+                          : (!myAnswer
+                              ? 'Henüz cevaplanmadı'
+                              : questionData.options.find((opt: any) => opt.id === myAnswer)?.text)
+                        }
+                      </p>
+                      {myAnswer && questionData.options.find((opt: any) => opt.id === myAnswer)?.imageUrl && (
+                        <img 
+                          src={questionData.options.find((opt: any) => opt.id === myAnswer)?.imageUrl} 
+                          alt="Sizin cevabınız" 
+                          className="mt-2 max-h-24 mx-auto rounded-md"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <h4 className="font-medium mb-2">Rakip Cevabı</h4>
+                    <div className={`${!opponentAnswer ? 'text-gray-600' : (opponentAnswer === questionData.correctOptionId ? 'text-green-600 font-medium' : 'text-red-600 font-medium')}`}>
+                      <p>
+                        {selectedDuel.status === 'completed'
+                          ? (!opponentAnswer
+                              ? 'Süre doldu / Yanıtlamadı'
+                              : questionData.options.find((opt: any) => opt.id === opponentAnswer)?.text)
+                          : (!opponentAnswer
+                              ? 'Henüz cevaplanmadı'
+                              : questionData.options.find((opt: any) => opt.id === opponentAnswer)?.text)
+                        }
+                      </p>
+                      {opponentAnswer && questionData.options.find((opt: any) => opt.id === opponentAnswer)?.imageUrl && (
+                        <img 
+                          src={questionData.options.find((opt: any) => opt.id === opponentAnswer)?.imageUrl} 
+                          alt="Rakip cevabı" 
+                          className="mt-2 max-h-24 mx-auto rounded-md"
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -588,6 +717,37 @@ const DuelPage = () => {
             </div>
           </div>
 
+          {duels.length > 0 && (
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Düellolarım</h2>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setDuels(duels.filter(d => d.status === 'pending'))}
+                    className="px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                  >
+                    Bekleyenler
+                  </button>
+                  <button
+                    onClick={() => setDuels(duels.filter(d => d.status === 'in_progress'))}
+                    className="px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 hover:bg-blue-200"
+                  >
+                    Devam Edenler
+                  </button>
+                  <button
+                    onClick={() => setDuels(duels.filter(d => d.status === 'completed'))}
+                    className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 hover:bg-green-200"
+                  >
+                    Tamamlananlar
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {duels.map(duel => renderDuelCard(duel))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
             <h2 className="text-xl font-bold mb-4">Düello Başlat</h2>
             <input
@@ -630,37 +790,6 @@ const DuelPage = () => {
               </div>
             )}
           </div>
-
-          {duels.length > 0 && (
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Düellolarım</h2>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setDuels(duels.filter(d => d.status === 'pending'))}
-                    className="px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                  >
-                    Bekleyenler
-                  </button>
-                  <button
-                    onClick={() => setDuels(duels.filter(d => d.status === 'in_progress'))}
-                    className="px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 hover:bg-blue-200"
-                  >
-                    Devam Edenler
-                  </button>
-                  <button
-                    onClick={() => setDuels(duels.filter(d => d.status === 'completed'))}
-                    className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 hover:bg-green-200"
-                  >
-                    Tamamlananlar
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {duels.map(duel => renderDuelCard(duel))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
       {renderDuelDetails()}
