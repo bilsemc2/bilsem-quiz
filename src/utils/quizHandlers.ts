@@ -22,7 +22,18 @@ interface TimerActions {
 }
 
 interface FeedbackActions {
-    showFeedback: (message: string, type: 'success' | 'error' | 'info') => void;
+    showFeedback: (message: string, type: 'success' | 'error' | 'info', permanent?: boolean) => void;
+}
+
+// Ortak tip tanımları - kodun daha modüler olması için parametreleri bir araya topluyoruz
+export interface QuizHandlerParams {
+    currentQuestion: Question;
+    currentQuestionIndex: number;
+    isLastQuestion: boolean;
+    quizActions: QuizActions;
+    timerActions: TimerActions;
+    feedbackActions: FeedbackActions;
+    handleNext: () => void;
 }
 
 export async function handleOptionSelection(
@@ -110,6 +121,71 @@ export async function handleOptionSelection(
     }
 };
 
+// Ortak QuizEnd parametresi tanımı - parametreleri bir arada tutar
+export interface QuizEndParams {
+    type: 'timeout' | 'complete';
+    currentQuestion: Question;
+    currentQuestionIndex: number;
+    isLastQuestion: boolean;
+    quizActions: QuizActions;
+    timerActions: TimerActions;
+    feedbackActions: FeedbackActions;
+    handleNext: () => void;
+    timeSpent: number;
+}
+
+// Süre aşımı için cevap oluşturma yardımcı fonksiyonu
+const createTimeoutAnswer = (params: QuizEndParams): Answer => {
+    const { currentQuestion, currentQuestionIndex, timeSpent, type } = params;
+    
+    return {
+        questionId: currentQuestion.id,
+        questionNumber: currentQuestionIndex + 1,
+        selectedOption: '',
+        correctOption: currentQuestion.correctOptionId || '',
+        questionImage: currentQuestion.questionImageUrl || '',
+        isCorrect: false,
+        isTimeout: type === 'timeout',
+        timeSpent: timeSpent,
+        solutionVideo: null,
+        timestamp: new Date().toISOString(),
+        options: currentQuestion.options.map(option => ({
+            id: option.id,
+            text: option.text,
+            imageUrl: option.imageUrl || '',
+            isCorrect: option.isCorrect
+        }))
+    };
+};
+
+// Son soruyu işleme - tekrarlanan kodu modülerleştirdik
+const handleLastQuestion = (params: QuizEndParams) => {
+    const { timerActions, feedbackActions, handleNext } = params;
+    
+    timerActions.stopTimer();
+    timerActions.resetTimer(60);
+    feedbackActions.showFeedback('Süre doldu! Quiz tamamlanıyor...', 'error', true);
+    
+    // Quiz tamamlama işlemi için gecikme
+    setTimeout(() => {
+        handleNext(); // Bu, QuizPage'deki onQuizComplete'i çağıracak
+    }, 2000);
+};
+
+// Normal soruları işleme - tekrarlanan kodu modülerleştirdik
+const handleNonLastQuestion = (params: QuizEndParams) => {
+    const { quizActions, timerActions, handleNext } = params;
+    
+    setTimeout(() => {
+        quizActions.setSelectedOption(null);
+        quizActions.setIsAnswered(false);
+        quizActions.setIsTimeout(false);
+        quizActions.setShowSolution(false);
+        timerActions.resetTimer();
+        handleNext();
+    }, 2000);
+};
+
 export const handleQuizEnd = async (
     type: 'timeout' | 'complete',
     currentQuestion: Question,
@@ -122,55 +198,60 @@ export const handleQuizEnd = async (
     timeSpent: number
 ): Promise<void> => {
     try {
+        // Tüm parametreleri tek bir nesne olarak organize ediyoruz
+        const params: QuizEndParams = {
+            type,
+            currentQuestion,
+            currentQuestionIndex,
+            isLastQuestion,
+            quizActions,
+            timerActions,
+            feedbackActions,
+            handleNext,
+            timeSpent
+        };
+        
         quizActions.setIsAnswered(true);
 
         if (type === 'timeout') {
             quizActions.setIsTimeout(true);
 
-            // Zaman aşımı durumunda cevabı kaydet
-            const answer: Answer = {
-                questionId: currentQuestion.id,
-                questionNumber: currentQuestionIndex + 1,
-                selectedOption: '',
-                correctOption: currentQuestion.correctOptionId || '',
-                questionImage: currentQuestion.questionImageUrl || '',
-                isCorrect: false,
-                isTimeout: type === 'timeout',
-                timeSpent: timeSpent,
-                solutionVideo: null,
-                timestamp: new Date().toISOString(),
-                options: currentQuestion.options.map(option => ({
-                    id: option.id,
-                    text: option.text,
-                    imageUrl: option.imageUrl || '',
-                    isCorrect: option.isCorrect
-                }))
-            };
-
+            // Modüler yardımcı fonksiyon kullanarak cevap oluşturuyoruz
+            const answer = createTimeoutAnswer(params);
             quizActions.addAnswer(answer);
+            
+            // Bildirim ve ses oynatma
             feedbackActions.showFeedback('Süre doldu!', 'error');
             playSound('timeout');
         }
 
         timerActions.stopTimer();
 
-        // Sonraki soruya geç veya quiz'i bitir
+        // Son soru veya normal sorular için modüler yardımcı fonksiyonları kullanıyoruz
         if (isLastQuestion) {
-            timerActions.stopTimer();
-            timerActions.resetTimer(60);
-            feedbackActions.showFeedback('Süre doldu! Quiz tamamlanıyor...', 'error');
-            setTimeout(() => {
-                handleNext(); // Bu, QuizPage'deki onQuizComplete'i çağıracak
-            }, 2000);
+            handleLastQuestion({
+                type,
+                currentQuestion,
+                currentQuestionIndex,
+                isLastQuestion,
+                quizActions,
+                timerActions,
+                feedbackActions,
+                handleNext,
+                timeSpent
+            });
         } else {
-            setTimeout(() => {
-                quizActions.setSelectedOption(null);
-                quizActions.setIsAnswered(false);
-                quizActions.setIsTimeout(false);
-                quizActions.setShowSolution(false);
-                timerActions.resetTimer();
-                handleNext();
-            }, 2000);
+            handleNonLastQuestion({
+                type,
+                currentQuestion,
+                currentQuestionIndex,
+                isLastQuestion,
+                quizActions,
+                timerActions,
+                feedbackActions,
+                handleNext,
+                timeSpent
+            });
         }
     } catch (error) {
         console.error('Quiz sonlandırma hatası:', error);
@@ -243,7 +324,7 @@ export const handleQuizComplete = async (
                 return;
             }
 
-            feedbackActions.showFeedback('Quiz başarıyla tamamlandı!', 'success');
+            feedbackActions.showFeedback('Quiz başarıyla tamamlandı!', 'success', true);
         } else {
             // Normal quiz sonuçlarını quiz_results tablosuna kaydet
             const { error } = await supabase.from('quiz_results').insert({
@@ -269,10 +350,10 @@ export const handleQuizComplete = async (
         }
 
         quizActions.resetQuizState();
-        feedbackActions.showFeedback('Quiz tamamlandı!', 'success');
+        feedbackActions.showFeedback('Quiz tamamlandı!', 'success', true);
     } catch (error) {
         console.error('Quiz tamamlanırken hata:', error);
-        feedbackActions.showFeedback('Quiz tamamlanırken bir hata oluştu', 'error');
+        feedbackActions.showFeedback('Quiz tamamlanırken bir hata oluştu', 'error', true);
     }
 };
 
