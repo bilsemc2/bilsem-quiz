@@ -95,23 +95,10 @@ export function PDFPreview({ story, onClose }: PDFPreviewProps) {
             fileName={`${story.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`}
             className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
-            {({ loading, error }) => (
-              <>
-                {error ? (
-                  <span>PDF oluşturulurken hata oluştu</span>
-                ) : loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>PDF Hazırlanıyor...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download size={20} />
-                    <span>PDF İndir</span>
-                  </>
-                )}
-              </>
-            )}
+            <div className="flex items-center gap-2">
+              <Download size={20} />
+              <span>PDF İndir</span>
+            </div>
           </PDFDownloadLink>
         </div>
       </div>

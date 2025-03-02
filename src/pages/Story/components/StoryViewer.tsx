@@ -22,8 +22,10 @@ export function StoryViewer({ story, onNext }: StoryViewerProps) {
           fileName={`${story.title}.pdf`}
           className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
         >
-          <Download size={20} />
-          <span>PDF İndir</span>
+          <div className="flex items-center gap-2">
+            <Download size={20} />
+            <span>PDF İndir</span>
+          </div>
         </PDFDownloadLink>
       </div>
       

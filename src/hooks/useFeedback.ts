@@ -4,10 +4,11 @@ export interface FeedbackState {
     message: string;
     type: 'success' | 'error' | 'info';
     show: boolean;
+    permanent: boolean;
 }
 
 export interface FeedbackActions {
-    showFeedback: (message: string, type: 'success' | 'error' | 'info') => void;
+    showFeedback: (message: string, type: 'success' | 'error' | 'info', permanent?: boolean) => void;
     hideFeedback: () => void;
 }
 
@@ -15,7 +16,8 @@ export function useFeedback(): [FeedbackState, FeedbackActions] {
     const [state, setState] = useState<FeedbackState>({
         message: '',
         type: 'info',
-        show: false
+        show: false,
+        permanent: false
     });
 
     const timeoutRef = useRef<NodeJS.Timeout>();
@@ -28,16 +30,19 @@ export function useFeedback(): [FeedbackState, FeedbackActions] {
         };
     }, []);
 
-    const showFeedback = useCallback((message: string, type: 'success' | 'error' | 'info') => {
+    const showFeedback = useCallback((message: string, type: 'success' | 'error' | 'info', permanent: boolean = false) => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
 
-        setState({ message, type, show: true });
+        setState({ message, type, show: true, permanent });
         
-        timeoutRef.current = setTimeout(() => {
-            setState(prev => ({ ...prev, show: false }));
-        }, 3000);
+        // Yalnızca kalıcı olmayan bildirimler için otomatik olarak kaldır
+        if (!permanent) {
+            timeoutRef.current = setTimeout(() => {
+                setState(prev => ({ ...prev, show: false }));
+            }, 3000);
+        }
     }, []);
 
     const hideFeedback = useCallback(() => {

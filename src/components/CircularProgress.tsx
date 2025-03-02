@@ -1,14 +1,13 @@
-import React from 'react';
+// React import'unu kaldırdık çünkü kullanılmıyor
 
 interface CircularProgressProps {
     timeLeft: number;
-    totalTime: number;
     progress: number;
+    totalTime?: number; // İsteğe bağlı olarak değiştirdim, kullanılmadığı için
 }
 
 export default function CircularProgress({
     timeLeft,
-    totalTime,
     progress
 }: CircularProgressProps) {
     const radius = 20;
