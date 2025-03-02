@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-background text-gray-800 antialiased font-sans min-h-full;
+  }
+
+  #root {
+    @apply min-h-full flex flex-col;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight text-gray-900;
+  }
+
+  main {
+    @apply flex-grow;
+  }
+}
+
+@layer components {
+  .page-container {
+    @apply container mx-auto px-4 py-6;
+  }
+
+  .quiz-option {
+    @apply cursor-pointer border-2 border-gray-200 rounded-xl p-4 
+           transition-all duration-300 hover:scale-102 hover:shadow-lg
+           bg-white/80 backdrop-blur-sm;
+  }
+
+  .quiz-option-selected {
+    @apply border-primary-500 ring-2 ring-primary-500/50;
+  }
+
+  .quiz-option-correct {
+    @apply border-secondary-500 bg-secondary-50/50;
+  }
+
+  .quiz-option-incorrect {
+    @apply border-red-500 bg-red-50/50;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold
+           shadow-md hover:shadow-lg hover:bg-primary-700
+           transition-all duration-200 transform hover:-translate-y-0.5
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  .card {
+    @apply bg-white/90 rounded-2xl shadow-md hover:shadow-xl transition-shadow
+           p-6 backdrop-blur-sm;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2 rounded-lg border border-gray-300
+           focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+           transition-all duration-200;
+  }
+
+  .nav-link {
+    @apply text-gray-600 hover:text-primary-600 transition-colors duration-200
+           font-medium px-4 py-2 rounded-lg hover:bg-primary-50;
+  }
+
+  .section-title {
+    @apply text-3xl font-bold text-gray-900 mb-6;
+  }
+
+  .fade-in {
+    @apply animate-fadeIn;
+  }
+
+  .slide-up {
+    @apply animate-slideUp;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+  }
+}
+
+/* Custom Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
