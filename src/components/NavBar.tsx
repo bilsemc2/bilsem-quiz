@@ -88,7 +88,6 @@ const NavBar: React.FC = () => {
 
   // Menü öğelerinin tanımı (ortak kullanım için)
   const menuItems = [
-    { name: "Ana Sayfa", path: "/" },
     { name: "Bilsem", path: "/bilsemc2" },
     { name: "İletişim", path: "/contact", showWhenNotAuth: true },
     { name: "Quizeka", path: "/quiz", showWhenAuth: true },
