@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="40" viewBox="0 0 40 40" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1">
+        <animate attributeName="stop-color" 
+          values="#6366f1; #a855f7; #6366f1"
+          dur="3s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#a855f7">
+        <animate attributeName="stop-color" 
+          values="#a855f7; #6366f1; #a855f7"
+          dur="3s" repeatCount="indefinite"/>
+      </stop>
+    </linearGradient>
+  </defs>
+  
+  <!-- Pulsing circle -->
+  <circle cx="20" cy="20" r="18" fill="url(#gradient)">
+    <animate attributeName="r"
+      values="18;19;18"
+      dur="2s"
+      repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Rotating text -->
+  <g>
+    <text x="20" y="25" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white" text-anchor="middle">
+      E=mc²
+      <animate attributeName="opacity"
+        values="0.8;1;0.8"
+        dur="2s"
+        repeatCount="indefinite"/>
+    </text>
+  </g>
+</svg>
