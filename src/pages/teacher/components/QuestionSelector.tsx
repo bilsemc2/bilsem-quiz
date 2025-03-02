@@ -30,7 +30,14 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   const [searchTerm, setSearchTerm] = React.useState('');
   const [totalPages, setTotalPages] = React.useState(1);
   
-  const pageSize = availableQuestionCount > 100 ? 100 : availableQuestionCount;
+  // VIP veya admin kullanıcılar için soru görüntüleme sınırı yok
+  const [isVip, setIsVip] = React.useState(false);
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [teacherQuestionLimit, setTeacherQuestionLimit] = React.useState(100); // Varsayılan değer olarak 100
+  
+  // Tüm kullanıcılar için sayfa başına makul sayıda soru gösteriyoruz
+  // Limit sadece seçebilecekleri soru sayısı için geçerli
+  const pageSize = 50; // Sabit bir değer kullanıyoruz, performans için
 
   const fetchQuestionCount = async (searchTerm: string = '') => {
     try {
@@ -38,20 +45,21 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('is_admin, role')
+        .select('is_admin, role, is_vip')
         .eq('id', user.id)
         .single();
       
       const isAdmin = profileData?.is_admin;
       const isTeacher = profileData?.role === 'teacher';
+      const isVip = profileData?.is_vip;
       
       let query = supabase
         .from('questions')
         .select('id', { count: 'exact' });
       
-      if (isTeacher && !isAdmin) {
+      if (isTeacher && !isAdmin && !isVip) {
         query = query.eq('is_active', true);
-      } else if (!isAdmin) {
+      } else if (!isAdmin && !isVip) {
         query = query.eq('created_by', user.id);
       }
 
@@ -79,40 +87,79 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
         return;
       }
 
-      const count = await fetchQuestionCount(searchTerm);
-      setTotalQuestions(count);
-      
-      const calculatedTotalPages = Math.ceil(count / pageSize);
-      setTotalPages(calculatedTotalPages);
-
+      // Profil bilgisini önce çekelim
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('is_admin, role')
+        .select('is_admin, role, is_vip')
         .eq('id', user.id)
         .single();
       
       const isAdmin = profileData?.is_admin;
       const isTeacher = profileData?.role === 'teacher';
+      const isVip = profileData?.is_vip;
       
+      // State'i güncelle
+      setIsAdmin(isAdmin || false);
+      setIsVip(isVip || false);
+      
+      // Öğretmen için görüntüleyebileceği soru limitini hesapla
+      if (isTeacher && !isAdmin && !isVip) {
+        try {
+          const { data: limitData, error: limitError } = await supabase
+            .rpc('calculate_teacher_question_limit', { 
+              teacher_id: user.id 
+            });
+          
+          if (limitError) throw limitError;
+          
+          setTeacherQuestionLimit(limitData || 100);
+          console.log('Hesaplanan soru görüntüleme limiti:', limitData);
+        } catch (limitError) {
+          console.error('Soru limiti hesaplanırken hata oluştu:', limitError);
+          // Hata durumunda varsayılan 100 limitini kullan
+          setTeacherQuestionLimit(100);
+        }
+      }
+      
+      // Soru sayısını hesapla - tüm aktif soruları sayalım
+      const count = await fetchQuestionCount(searchTerm);
+      setTotalQuestions(count);
+      
+      const calculatedTotalPages = Math.ceil(count / pageSize);
+      setTotalPages(calculatedTotalPages);
+      
+      // Sayfalama için başlangıç ve bitiş indeksleri
       const start = (page - 1) * pageSize;
       const end = start + pageSize - 1;
       
+      // ÖNEMLİ: Tüm sorular görüntülenebilir, ancak seçim sınırı farklı uygulanır
+      // 1. Admin veya VIP kullanıcılar: Tüm sorulara erişebilir ve sınırsız seçebilir
+      // 2. Öğretmenler: Tüm aktif soruları görebilir ama sadece 10 soru seçebilir (availableQuestionCount)
+      // 3. Diğer kullanıcılar: Sadece kendi sorularını görebilir
       let query = supabase
         .from('questions')
         .select('*')
-        .order('question_number', { ascending: true })
-        .range(start, end);
+        .order('question_number', { ascending: true });
       
-      if (isTeacher && !isAdmin) {
+      // Normal öğretmenler için filtreleme - sadece aktif soruları göster
+      if (isTeacher && !isAdmin && !isVip) {
         query = query.eq('is_active', true);
-      } else if (!isAdmin) {
+      } 
+      // Admin/VIP olmayan diğer kullanıcılar - sadece kendi sorularını göster
+      else if (!isAdmin && !isVip) {
         query = query.eq('created_by', user.id);
       }
+      // Admin ve VIP kullanıcılar - tüm soruları göster
+      
+      // Sayfalama uygula
+      query = query.range(start, end);
 
+      // Arama filtresi uygula
       if (searchTerm) {
         query = query.ilike('image_url', `%${searchTerm}%`);
       }
       
+      // Sorguyu çalıştır
       const { data, error } = await query;
       
       if (error) throw error;
@@ -132,21 +179,57 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
     }
   }, [user, currentPage, searchTerm]);
 
+  // Her öğretmen için görüntüleyebileceği maksimum soru sayısını hesapla
+  // Backend'den gelen calculate_teacher_question_limit fonksiyonu kullanılıyor
+  // Bu fonksiyon temel 100 + (öğrenci sayısı * 50) şeklinde hesaplıyor
+  const maxViewableQuestions = isAdmin || isVip ? totalQuestions : teacherQuestionLimit;
+  
+  // Geçerli sayfadaki soruların seçilebilir olup olmadığını kontrol et
+  const isCurrentPageSelectable = () => {
+    // Admin veya VIP kullanıcılar her sayfadan seçim yapabilir
+    if (isAdmin || isVip) return true;
+    
+    // Diğer kullanıcılar için sınır kontrolü
+    // Sayfa boyutu 50 ise ve maksimum 150 soru görüntülenebiliyorsa, ilk 3 sayfa (1, 2, 3) seçilebilir
+    const maxSelectablePage = Math.ceil(maxViewableQuestions / pageSize);
+    return currentPage <= maxSelectablePage;
+  };
+  
   const handleQuestionToggle = (questionId: string) => {
-    const newSelected = selectedQuestions.includes(questionId)
-      ? selectedQuestions.filter(id => id !== questionId)
-      : [...selectedQuestions, questionId];
-    onQuestionsSelected(newSelected);
+    // Eğer soru zaten seçiliyse, seçimi kaldırmaya her zaman izin ver
+    if (selectedQuestions.includes(questionId)) {
+      const newSelected = selectedQuestions.filter(id => id !== questionId);
+      onQuestionsSelected(newSelected);
+      return;
+    }
+    
+    // Görüntüleme sınırı kontrolü
+    if (!isCurrentPageSelectable() && !isAdmin && !isVip) {
+      toast.error(`Sadece ilk ${Math.ceil(maxViewableQuestions / pageSize)} sayfadaki soruları seçebilirsiniz!`);
+      return;
+    }
+    
+    // Seçim sınırı kontrolü
+    if (selectedQuestions.length < availableQuestionCount) {
+      const newSelected = [...selectedQuestions, questionId];
+      onQuestionsSelected(newSelected);
+    } else {
+      toast.error(`En fazla ${availableQuestionCount} soru seçebilirsiniz!`);
+    }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = () => {
     setCurrentPage(1); 
     fetchQuestions(1, searchTerm);
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+    
+    // Sayfa değiştiğinde, eğer sınırı geçen bir sayfaya geçildiyse kullanıcıyı bilgilendir
+    if (page > Math.ceil(maxViewableQuestions / pageSize) && !isAdmin && !isVip) {
+      toast(`Bu sayfadaki soruları görüntüleyebilirsiniz, ancak seçemezsiniz. Görüntüleyebildiğiniz ${maxViewableQuestions} sorunun dışına çıktınız.`);
+    }
   };
 
   if (loading && questions.length === 0) {
@@ -270,36 +353,85 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
   return (
     <div className="space-y-4">
-      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4">
         <input
           type="text"
           placeholder="Soru ara..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border rounded-md px-3 py-2 flex-grow"
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleSearch();
+            }
+          }}
         />
         <button
-          type="submit"
+          type="button"
+          onClick={handleSearch}
           className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
         >
           Ara
         </button>
-      </form>
+      </div>
       
       <div className="text-sm text-gray-600 mb-2">
-        Toplam {totalQuestions} soru bulundu ({selectedQuestions.length} seçili)
+        Toplam {totalQuestions} soru bulundu
+        {(isAdmin || isVip) ? (
+          <span className="text-blue-600 font-medium">({selectedQuestions.length} seçili, sınırsız erişim)</span>
+        ) : (
+          <span>({selectedQuestions.length}/{availableQuestionCount} seçili)</span>
+        )}
+        
+        {/* Görüntüleme ve seçim sınırlamaları için notlar */}
+        {!isAdmin && !isVip && (
+          <div className="text-xs text-gray-500 mt-1">
+            Not: Tüm aktif soruları görüntüleyebilirsiniz, ancak sadece ilk {Math.ceil(maxViewableQuestions / pageSize)} sayfadaki soruları ({maxViewableQuestions} soru) seçebilirsiniz.
+            <br />
+            <span className="font-medium text-blue-600">Seçim sınırı: {availableQuestionCount} soru/ödev</span>
+            <br />
+            <span className="text-orange-500">
+              {currentPage > Math.ceil(maxViewableQuestions / pageSize) && 
+                `Şu an ${currentPage}. sayfadasınız ve bu sayfadaki soruları seçemezsiniz.`
+              }
+            </span>
+          </div>
+        )}
+        
+        {selectedQuestions.length > 0 && availableQuestionCount > 0 && !(isAdmin || isVip) && (
+          <div className="h-1 bg-gray-200 rounded-full w-full mt-1">
+            <div 
+              className={`h-1 rounded-full ${selectedQuestions.length >= availableQuestionCount ? 'bg-red-500' : 'bg-green-500'}`}
+              style={{ width: `${Math.min((selectedQuestions.length / availableQuestionCount) * 100, 100)}%` }}
+            ></div>
+          </div>
+        )}
+        
+        {(isAdmin || isVip) && selectedQuestions.length > 0 && (
+          <div className="h-1 bg-gray-200 rounded-full w-full mt-1">
+            <div 
+              className="h-1 rounded-full bg-blue-500"
+              style={{ width: '100%' }}
+            ></div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[500px] overflow-y-auto p-2">
-        {questions.map((question) => (
+        {questions.map((question) => {
+          // Geçerli sorunun seçilebilir olup olmadığını kontrol et
+          const isQuestionSelectable = isAdmin || isVip || isCurrentPageSelectable();
+          
+          return (
           <div
             key={question.id}
-            className={`border rounded-lg p-1 cursor-pointer transition-colors ${
+            className={`border rounded-lg p-1 ${isQuestionSelectable ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'} transition-colors ${
               selectedQuestions.includes(question.id)
                 ? 'bg-blue-50 border-blue-300'
-                : 'hover:bg-gray-50'
+                : isQuestionSelectable ? 'hover:bg-gray-50' : 'bg-gray-100'
             }`}
-            onClick={() => handleQuestionToggle(question.id)}
+            onClick={() => isQuestionSelectable && handleQuestionToggle(question.id)}
           >
             <div className="h-16 bg-gray-100 rounded-md mb-1 overflow-hidden">
               {question.image_url && (
@@ -320,14 +452,15 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                 <input
                   type="checkbox"
                   checked={selectedQuestions.includes(question.id)}
-                  onChange={() => handleQuestionToggle(question.id)}
-                  className="w-3 h-3 text-blue-600"
+                  onChange={() => isAdmin || isVip || isCurrentPageSelectable() ? handleQuestionToggle(question.id) : null}
+                  disabled={!(isAdmin || isVip || isCurrentPageSelectable())}
+                  className={`w-3 h-3 ${isAdmin || isVip || isCurrentPageSelectable() ? 'text-blue-600' : 'text-gray-400'}`}
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
             </div>
           </div>
-        ))}
+        )})}
       </div>
       
       {totalPages > 1 && renderPagination()}

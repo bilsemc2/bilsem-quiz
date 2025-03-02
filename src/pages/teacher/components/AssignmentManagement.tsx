@@ -8,6 +8,7 @@ interface QuestionStats {
   total_questions: number;
   available_questions: number;
   question_limit?: number;
+  student_count?: number;
 }
 
 interface Assignment {
@@ -38,6 +39,7 @@ const AssignmentManagement: React.FC = () => {
   const [questionStats, setQuestionStats] = React.useState<QuestionStats | null>(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [isTeacher, setIsTeacher] = React.useState(false);
+  const [isVip, setIsVip] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'list' | 'create' | 'stats'>('list');
   
   // Sayfalama için state'ler
@@ -50,10 +52,10 @@ const AssignmentManagement: React.FC = () => {
   const fetchUserProfile = async () => {
     if (!user) return;
   
-    // Hem is_admin hem de role bilgisini çekiyoruz
+    // is_admin, role ve is_vip bilgilerini çekiyoruz
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('is_admin, role')
+      .select('is_admin, role, is_vip')
       .eq('id', user.id)
       .single();
   
@@ -62,9 +64,10 @@ const AssignmentManagement: React.FC = () => {
       return;
     }
   
-    // is_admin ve isTeacher rollerini ayrı değişkenlerde tut
+    // is_admin, isTeacher ve isVip durumlarını ayrı değişkenlerde tut
     setIsAdmin(profile?.is_admin === true);
     setIsTeacher(profile?.role === 'teacher');
+    setIsVip(profile?.is_vip === true);
   };
 
   useEffect(() => {
@@ -417,11 +420,11 @@ const AssignmentManagement: React.FC = () => {
       {activeTab === 'create' && (
         <div className="space-y-6">
           <div className="bg-blue-50 p-4 rounded">
-            {questionStats && !isAdmin && (
+            {questionStats && !isAdmin && !isVip && (
               <div className="text-sm text-blue-800">
-                <p>Görüntüleyebildiğiniz: {questionStats.available_questions}</p>
-                <p className="text-xs mt-1">
-                  Not: Sınıfınızdaki her öğrenci için +50 soru görüntüleyebilirsiniz
+                <p>Seçebildiğiniz: {questionStats.available_questions} soru</p>
+                <p className="text-xs font-bold text-blue-700">
+                  Her ödevde en fazla 10 soru seçebilirsiniz.
                 </p>
               </div>
             )}
@@ -430,15 +433,18 @@ const AssignmentManagement: React.FC = () => {
                 <p className="font-medium">Admin: Tüm sorulara erişebilirsiniz</p>
               </div>
             )}
-            {!isAdmin && isTeacher && (
+            {!isAdmin && isVip && (
+              <div className="text-sm text-purple-800">
+                <p className="font-medium">VIP Kullanıcı: Tüm sorulara erişebilirsiniz</p>
+                <p className="text-xs mt-1">Seçebileceğiniz soru sayısı: Sınırsız</p>
+              </div>
+            )}
+            {!isAdmin && !isVip && isTeacher && (
               <div className="text-sm text-green-700">
                 <p className="font-medium">
                   Öğretmen: {questionStats 
-                    ? `${questionStats.available_questions}/${questionStats.total_questions} soruya erişebilirsiniz (Limitiniz: ${questionStats.question_limit})` 
+                    ? `${questionStats.available_questions}/${questionStats.total_questions} soruya erişebilirsiniz` 
                     : 'Aktif sorulara erişebilirsiniz'}
-                </p>
-                <p className="text-xs mt-1">
-                  Not: Temel limit 100 soru + sınıfınızdaki her öğrenci için +50 soru
                 </p>
               </div>
             )}
@@ -503,11 +509,9 @@ const AssignmentManagement: React.FC = () => {
                     setNewAssignment((prev) => ({ ...prev, questions }))
                   }
                   availableQuestionCount={
-                    isAdmin 
+                    isAdmin || isVip 
                       ? 999999 
-                      : (isTeacher && questionStats?.question_limit 
-                          ? questionStats.question_limit 
-                          : (questionStats?.available_questions || 0))
+                      : 10 // Normal öğretmenler için sabit 10 soru seçebilirler
                   }
                 />
               </div>

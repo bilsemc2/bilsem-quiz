@@ -37,12 +37,24 @@ const AssignmentStudents: React.FC = () => {
           )
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) {
+        toast.error('Ödev bulunamadı veya erişim izniniz yok');
+        console.error('Assignment not found:', id);
+        navigate('/teacher');
+        return;
+      }
       setAssignment(data);
 
       // Sınıftaki öğrencileri getir
+      if (!data.quiz_class_assignments || data.quiz_class_assignments.length === 0) {
+        toast.error('Bu ödev herhangi bir sınıfa atanmamış');
+        console.error('No class assignments found for assignment:', id);
+        navigate('/teacher');
+        return;
+      }
       const classId = data.quiz_class_assignments[0].class_id;
       const { data: studentsData, error: studentsError } = await supabase
         .from('class_students')
@@ -55,6 +67,13 @@ const AssignmentStudents: React.FC = () => {
         .eq('class_id', classId);
 
       if (studentsError) throw studentsError;
+      
+      if (!studentsData || studentsData.length === 0) {
+        toast.success('Bu sınıfta kayıtlı öğrenci bulunmuyor');
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
 
       // Öğrenci sonuçlarını getir
       const { data: resultsData, error: resultsError } = await supabase
@@ -63,10 +82,13 @@ const AssignmentStudents: React.FC = () => {
         .eq('assignment_id', id);
 
       if (resultsError) throw resultsError;
+      
+      // Öğrenci sonuçları bulunamasa bile devam edebiliriz, sadece sonuç 0 gösterilir
+      const safeResultsData = resultsData || [];
 
       // Öğrenci listesini hazırla
       const studentList = studentsData.map((s: any) => {
-        const result = resultsData?.find((r: any) => r.student_id === s.student.id);
+        const result = safeResultsData.find((r: any) => r.student_id === s.student.id);
         return {
           id: s.student.id,
           name: s.student.name,
