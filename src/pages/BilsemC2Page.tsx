@@ -11,19 +11,17 @@ import {
   Brain,
   Calculator,
   BookOpen,
-  Library,
-  PenTool
+  BookText
 } from 'lucide-react';
 
 const games = [
   {
-    title: 'Hikaye Dünyası',
-    description: 'AI ile oluşturulan hikayeler okuyun veya kendi hikayelerinizi oluşturun. Yaratıcılığınızı keşfedin!',
-    icon: <PenTool className="w-12 h-12 text-teal-500" />,
+    title: 'Hikayeler',
+    description: 'Yapay zeka ile oluşturulan hikayeler koleksiyonunu keşfedin ve kendi hikayelerinizi oluşturun!',
+    icon: <BookText className="w-12 h-12 text-purple-500" />,
     path: '/stories',
-    color: 'bg-teal-100',
-    isNew: true,
-    badge: 'AI'    
+    color: 'bg-purple-100',
+    isNew: true
   },
   {
     title: 'Hızlı Okuma',
@@ -163,14 +161,9 @@ const BilsemC2Page = () => {
               <div className={`${game.color} p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-shrink-0">{game.icon}</div>
-                  <div className="flex gap-2">
-                    {game.badge && (
-                      <span className="bg-purple-500 text-white text-xs px-2 py-1 rounded-full">{game.badge}</span>
-                    )}
-                    {game.isNew && (
-                      <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">Yeni!</span>
-                    )}
-                  </div>
+                  {game.isNew && (
+                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">Yeni!</span>
+                  )}
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mt-4">{game.title}</h3>
                 <p className="text-gray-600 mt-2">{game.description}</p>
