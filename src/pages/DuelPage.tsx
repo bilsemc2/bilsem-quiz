@@ -30,13 +30,28 @@ interface User {
   email: string;
 }
 
+// Liderlik tablosu için kullanıcı tipi
+interface LeaderboardUser {
+  id: string;
+  name: string;
+  avatar_url: string;
+  email: string;
+  wins: number;
+  total: number;
+  winRate: number;
+}
+
 const DuelPage = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [duels, setDuels] = useState<any[]>([]);
   const [activeDuel, setActiveDuel] = useState<any>(null);
   const [showQuestion, setShowQuestion] = useState(false);
   const [selectedDuel, setSelectedDuel] = useState<any>(null);
   const [showDuelDetails, setShowDuelDetails] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   const { currentUser, loading: userLoading } = useUser();
   const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(
@@ -46,6 +61,7 @@ const DuelPage = () => {
     if (currentUser?.id) {
       fetchInvitedUsers();
       fetchDuels();
+      fetchLeaderboard();
     }
   }, [currentUser]);
 
@@ -129,12 +145,14 @@ const DuelPage = () => {
       }));
 
       setUsers(formattedUsers);
+      setFilteredUsers(formattedUsers);
     } catch (error) {
       console.error('Error fetching related users:', error);
       setUsers([]);
     }
   };
 
+  // Düello verilerini getir
   const fetchDuels = async () => {
     try {
       const { data: duels, error } = await supabase
@@ -166,6 +184,130 @@ const DuelPage = () => {
       }
     } catch (error) {
       console.error('Error in fetchDuels:', error);
+    }
+  };
+  
+  // Liderlik tablosu verilerini getir
+  const fetchLeaderboard = async () => {
+    try {
+      // Tüm tamamlanan düellolar
+      const { data: completedDuels, error } = await supabase
+        .from('duels')
+        .select(`
+          challenger_id,
+          challenged_id,
+          result,
+          challenger:profiles!challenger_id(id, name, email, avatar_url),
+          challenged:profiles!challenged_id(id, name, email, avatar_url)
+        `)
+        .eq('status', 'completed');
+      
+      // TypeScript için tipleri düzeltme
+      type ChallengeType = {
+        challenger_id: string;
+        challenged_id: string;
+        result: string;
+        challenger: {
+          id: string;
+          name: string;
+          email: string;
+          avatar_url: string;
+        } | {
+          id: string;
+          name: string;
+          email: string;
+          avatar_url: string;
+        }[];
+        challenged: {
+          id: string;
+          name: string;
+          email: string;
+          avatar_url: string;
+        } | {
+          id: string;
+          name: string;
+          email: string;
+          avatar_url: string;
+        }[];
+      };
+      
+      // Tip düzenlemesi
+      const typedCompletedDuels = completedDuels as unknown as ChallengeType[];
+        
+      if (error) {
+        console.error('Error fetching leaderboard data:', error);
+        return;
+      }
+      
+      if (!typedCompletedDuels || typedCompletedDuels.length === 0) {
+        return;
+      }
+      
+      // Kullanıcı bazında düello istatistiklerini hesapla
+      const userStats: Record<string, { 
+        id: string, 
+        name: string, 
+        avatar_url: string, 
+        email: string,
+        wins: number, 
+        total: number 
+      }> = {};
+      
+      typedCompletedDuels.forEach(duel => {
+        // Challenger kullanıcı istatistikleri
+        const challengerId = duel.challenger_id;
+        // Challenger bir dizi olarak geliyor, ilk elemanı alalım
+        const challenger = Array.isArray(duel.challenger) ? duel.challenger[0] : duel.challenger;
+        
+        if (!userStats[challengerId]) {
+          userStats[challengerId] = { 
+            id: challengerId,
+            name: challenger?.name || 'İsimsiz kullanıcı',
+            avatar_url: challenger?.avatar_url || '',
+            email: challenger?.email || '',
+            wins: 0, 
+            total: 0 
+          };
+        }
+        
+        userStats[challengerId].total++;
+        if (duel.result === 'challenger_won') {
+          userStats[challengerId].wins++;
+        }
+        
+        // Challenged kullanıcı istatistikleri
+        const challengedId = duel.challenged_id;
+        // Challenged bir dizi olarak geliyor, ilk elemanı alalım
+        const challenged = Array.isArray(duel.challenged) ? duel.challenged[0] : duel.challenged;
+        
+        if (!userStats[challengedId]) {
+          userStats[challengedId] = { 
+            id: challengedId,
+            name: challenged?.name || 'İsimsiz kullanıcı',
+            avatar_url: challenged?.avatar_url || '',
+            email: challenged?.email || '',
+            wins: 0, 
+            total: 0 
+          };
+        }
+        
+        userStats[challengedId].total++;
+        if (duel.result === 'challenged_won') {
+          userStats[challengedId].wins++;
+        }
+      });
+      
+      // Kazanma oranını hesapla ve sırala
+      const leaderboardData = Object.values(userStats)
+        .map(user => ({
+          ...user,
+          winRate: user.total > 0 ? (user.wins / user.total) * 100 : 0
+        }))
+        .sort((a, b) => b.wins - a.wins);
+      
+      setLeaderboard(leaderboardData);
+    } catch (error) {
+      console.error('Error in fetchLeaderboard:', error);
     }
   };
 
@@ -351,7 +493,7 @@ const DuelPage = () => {
 
       const { data: duel } = await supabase
         .from('duels')
-        .select('challenger_answer, challenged_answer, question_data')
+        .select('challenger_answer, challenged_answer, question_data, challenger_id, challenged_id')
         .eq('id', duelId)
         .single();
 
@@ -360,10 +502,15 @@ const DuelPage = () => {
         const correctAnswer = questionData.correctOptionId;
         
         let result = 'draw';
+        let winnerId = null;
+        const XP_REWARD = 10; // Kazanan için XP ödülü
+        
         if (duel.challenger_answer === correctAnswer && duel.challenged_answer !== correctAnswer) {
           result = 'challenger_won';
+          winnerId = duel.challenger_id;
         } else if (duel.challenged_answer === correctAnswer && duel.challenger_answer !== correctAnswer) {
           result = 'challenged_won';
+          winnerId = duel.challenged_id;
         }
 
         await supabase
@@ -374,6 +521,47 @@ const DuelPage = () => {
             result
           })
           .eq('id', duelId);
+        
+        // Kazanan kullanıcıya XP ver (berabere değilse)
+        if (winnerId) {
+          // XP'yi güncelle
+          const { error: xpError } = await supabase
+            .from('profiles')
+            .update({ experience: supabase.rpc('increment', { x: XP_REWARD }) })
+            .eq('id', winnerId);
+            
+          if (xpError) {
+            console.error('XP güncellenirken hata oluştu:', xpError);
+          }
+          
+          // Kazanan kullanıcı mevcut kullanıcıysa XP kazanımını göster
+          if (winnerId === currentUser?.id) {
+            toast.success(
+              <div className="flex flex-col items-center">
+                <div className="text-lg font-bold mb-1">Tebrikler! Düelloyu Kazandın!</div>
+                <div className="flex items-center justify-center w-full">
+                  <span className="text-yellow-500 text-lg font-semibold">+{XP_REWARD} XP</span>
+                  <span className="ml-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </span>
+                </div>
+              </div>,
+              {
+                duration: 5000,
+                style: {
+                  background: '#1E40AF',
+                  color: 'white',
+                  padding: '16px',
+                  border: '1px solid #1E3A8A',
+                  borderRadius: '8px',
+                },
+                icon: '🏆',
+              }
+            );
+          }
+        }
 
         await fetchDuels();
       }
@@ -441,9 +629,21 @@ const DuelPage = () => {
   const renderDuelCard = (duel: any) => {
     const isChallenger = duel.challenger_id === currentUser?.id;
     const opponent = isChallenger ? duel.challenged : duel.challenger;
+    
+    // Kazanan veya kaybeden kullanıcı bilgisini kontrol et
+    const isWinner = 
+      (duel.result === 'challenger_won' && duel.challenger_id === currentUser?.id) ||
+      (duel.result === 'challenged_won' && duel.challenged_id === currentUser?.id);
+    
+    const isLoser = 
+      (duel.result === 'challenger_won' && duel.challenged_id === currentUser?.id) ||
+      (duel.result === 'challenged_won' && duel.challenger_id === currentUser?.id);
 
     return (
-      <div key={duel.id} className="bg-white border rounded-xl shadow-sm hover:shadow-md transition-shadow p-6">
+      <div key={duel.id} className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 
+        ${duel.status === 'completed' && isWinner ? 'border-yellow-400 border-2' : ''}
+        ${duel.status === 'completed' && isLoser ? 'border-red-200' : ''}
+      `}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <img
@@ -472,6 +672,26 @@ const DuelPage = () => {
             <div className="text-center font-medium text-lg">
               {getDuelResultText(duel)}
             </div>
+            
+            {/* Kazanan veya kaybeden için farklı gösterim */}
+            {duel.result !== 'draw' && (
+              <div className="text-center">
+                {(duel.result === 'challenger_won' && duel.challenger_id === currentUser?.id) || 
+                 (duel.result === 'challenged_won' && duel.challenged_id === currentUser?.id) ? (
+                  <div className="flex items-center justify-center text-yellow-600 text-sm font-medium bg-yellow-50 py-1 px-3 rounded-full">
+                    <span className="mr-1">+10 XP</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="text-red-600 text-sm font-medium bg-red-50 py-1 px-3 rounded-full">
+                    Kaybettin - Daha çok çalış
+                  </div>
+                )}
+              </div>
+            )}
+            
             <button
               onClick={() => {
                 setSelectedDuel(duel);
@@ -686,6 +906,88 @@ const DuelPage = () => {
     <>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto p-4 pt-20">
+          {/* Liderlik Tablosu Butonu */}
+          <div className="flex justify-end mb-4">
+            <button 
+              onClick={() => setShowLeaderboard(!showLeaderboard)}
+              className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              {showLeaderboard ? 'Liderlik Tablosunu Kapat' : 'Liderlik Tablosunu Göster'}
+            </button>
+          </div>
+          
+          {/* Liderlik Tablosu */}
+          {showLeaderboard && (
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+              <h2 className="text-xl font-bold mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2 4 4 2-4 2-2 4-2-4-4-2 4-2 2-4z" />
+                </svg>
+                Düello Liderlik Tablosu
+              </h2>
+              
+              {leaderboard.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Henüz tamamlanmış düello bulunmuyor.</p>
+                  <p className="text-sm">Düellolar tamamlandıkça sıralama güncellenecek.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sıra</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kullanıcı</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Galibiyet</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam Düello</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kazanma Oranı</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {leaderboard.map((user, index) => (
+                        <tr key={user.id} className={`${index < 3 ? 'bg-yellow-50' : ''}`}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {index === 0 && <span className="text-yellow-500 mr-1">🥇</span>}
+                              {index === 1 && <span className="text-gray-400 mr-1">🥈</span>}
+                              {index === 2 && <span className="text-yellow-700 mr-1">🥉</span>}
+                              {index + 1}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <img className="h-10 w-10 rounded-full" src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email)}`} alt="" />
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{user.wins}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{user.total}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                              <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${user.winRate}%` }}></div>
+                            </div>
+                            <div className="text-sm text-gray-900 mt-1">{user.winRate.toFixed(1)}%</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {showQuestion && activeDuel && (
             <DuelQuestion
               duelId={activeDuel.id}
@@ -753,8 +1055,14 @@ const DuelPage = () => {
             <input
               type="text"
               placeholder="İsim ile ara..."
-              value=""
-              onChange={() => {}}
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                const filtered = users.filter(user => 
+                  user.name.toLowerCase().includes(e.target.value.toLowerCase())
+                );
+                setFilteredUsers(filtered);
+              }}
               className="w-full p-2 mb-4 border rounded"
             />
             {users.length === 0 ? (
@@ -767,7 +1075,7 @@ const DuelPage = () => {
               </div>
             ) : (
               <div className="space-y-2">
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                     <div className="flex items-center space-x-3">
                       <img
