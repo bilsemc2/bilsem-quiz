@@ -31,6 +31,10 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
     
     // Soru yükleme durumu için state
     const [loadingQuestion, setLoadingQuestion] = useState(true);
+    
+    // Görsellerin yüklenme durumunu izlemek için state'ler
+    const [totalImages, setTotalImages] = useState(0);
+    const [loadedImages, setLoadedImages] = useState(0);
 
     // XP kontrolü
     const { loading, userXP, requiredXP } = useXPCheck();
@@ -67,15 +71,33 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
     // Soru yükleme durumunu kontrol et
     useEffect(() => {
         if (quizState.currentQuestion) {
+            // Yeni soru yüklenirken durumu sıfırla
             setLoadingQuestion(true);
-            // Soru yükleme efekti için küçük gecikme (600ms)
-            const timer = setTimeout(() => {
-                setLoadingQuestion(false);
+            setLoadedImages(0);
+            
+            // Toplam görsel sayısını hesapla (soru görseli + seçenek görselleri)
+            const optionImagesCount = quizState.currentQuestion.options?.length || 0;
+            setTotalImages(optionImagesCount + 1); // +1 soru görseli için
+            
+            // Her zaman minimum 600ms yükleme göster - çok hızlı yüklendiğinde bile kul kullanıcı ne olduğunu anlayabilsin
+            const minTimer = setTimeout(() => {
+                // Eğer tüm görseller yüklendiyse ve minimum süre geçtiyse yükleme durumunu kapat
+                if (loadedImages >= totalImages && totalImages > 0) {
+                    setLoadingQuestion(false);
+                }
             }, 600);
             
-            return () => clearTimeout(timer);
+            return () => clearTimeout(minTimer);
         }
     }, [quizState.currentQuestionIndex, quizState.currentQuestion]);
+    
+    // Görsellerin yüklenme durumunu takip et
+    useEffect(() => {
+        // Görseller yüklendiyse ve minimum bir görsel varsa yükleme durumunu kapat
+        if (loadedImages >= totalImages && totalImages > 0) {
+            setLoadingQuestion(false);
+        }
+    }, [loadedImages, totalImages]);
 
     // Soru navigasyonu için daha öz bir şekilde tanımladık
     const handleNext = useCallback(() => {
@@ -253,39 +275,26 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                         />
                     </div>
 
-                    {loadingQuestion ? (
-                        <div className="flex flex-col items-center justify-center py-16">
-                            <div className="relative w-24 h-24 mb-4">
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <svg className="w-16 h-16 text-blue-500" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                        <circle className="opacity-25" cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="10" />
-                                        <path className="opacity-75 animate-pulse" fill="currentColor" d="M50 15 L70 15 L60 5 L50 15" />
-                                        <path className="opacity-75" fill="currentColor" d="M85 50 L85 70 L95 60 L85 50" />
-                                        <path className="opacity-75 animate-pulse" fill="currentColor" d="M50 85 L30 85 L40 95 L50 85" />
-                                        <path className="opacity-75" fill="currentColor" d="M15 50 L15 30 L5 40 L15 50" />
+                    <div className="relative">
+                        {/* Yükleme göstergesi - soru yüklenirken gösterilir */}
+                        {loadingQuestion && (
+                            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white bg-opacity-70">
+                                <div className="bg-white/90 rounded-full p-3 shadow-lg flex items-center space-x-2">
+                                    <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                </div>
-                                <div className="absolute inset-0 animate-spin" style={{ animationDuration: '3s' }}>
-                                    <svg className="w-24 h-24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="50" cy="15" r="6" fill="#60A5FA" className="animate-pulse" />
-                                        <circle cx="85" cy="50" r="6" fill="#3B82F6" />
-                                        <circle cx="50" cy="85" r="6" fill="#2563EB" className="animate-pulse" />
-                                        <circle cx="15" cy="50" r="6" fill="#1D4ED8" />
-                                    </svg>
+                                    <span className="text-blue-600 font-medium">Yükleniyor</span>
                                 </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                                <span className="text-blue-600 text-xl font-semibold animate-pulse">Soru hazırlanıyor</span>
-                                <span className="text-blue-600 text-xl animate-bounce">.</span>
-                                <span className="text-blue-600 text-xl animate-bounce delay-100">.</span>
-                                <span className="text-blue-600 text-xl animate-bounce delay-200">.</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
+                        )}
+                        
+                        {/* Soru içeriği - yüklenirken buğulu görünür, yüklendiğinde normal görünür */}
+                        <div className={`transition-all duration-300 ${loadingQuestion ? 'filter blur-sm opacity-70' : ''}`}>
                             <QuizQuestionComponent
                                 question={quizState.currentQuestion}
                                 questionNumber={quizState.currentQuestionIndex + 1}
+                                onImageLoad={() => setLoadedImages(prev => prev + 1)}
                             />
 
                             <QuizOptions
@@ -293,9 +302,10 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                                 selectedOption={quizState.selectedOption}
                                 isAnswered={quizState.isAnswered}
                                 onOptionSelect={handleOptionSelect}
+                                onImageLoad={() => setLoadedImages(prev => prev + 1)}
                             />
-                        </>
-                    )}
+                        </div>
+                    </div>
 
                     <QuizFooter
                         isLastQuestion={quizState.isLastQuestion}

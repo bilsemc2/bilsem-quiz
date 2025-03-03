@@ -3,6 +3,7 @@ import TeacherStats from './components/TeacherStats';
 import ClassManagement from './components/ClassManagement';
 import AssignmentManagement from './components/AssignmentManagement';
 import ReferralManagement from './components/ReferralManagement';
+import AnnouncementManagement from './components/AnnouncementManagement';
 
 type MenuItem = {
   id: string;
@@ -29,6 +30,12 @@ const menuItems: MenuItem[] = [
     title: 'Ödev Yönetimi',
     icon: '📝',
     component: AssignmentManagement
+  },
+  {
+    id: 'announcements',
+    title: 'Duyuru Yönetimi',
+    icon: '📢',
+    component: AnnouncementManagement
   },
   {
     id: 'referrals',

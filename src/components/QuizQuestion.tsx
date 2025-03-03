@@ -5,6 +5,7 @@ interface QuizQuestionProps {
   question: Question;
   questionNumber: number;
   // totalQuestions artık kullanılmıyor
+  onImageLoad?: () => void; // Görsel yüklenme olayı için callback
 }
 
 /**
@@ -14,7 +15,8 @@ interface QuizQuestionProps {
  */
 const QuizQuestion: React.FC<QuizQuestionProps> = ({
   question,
-  questionNumber
+  questionNumber,
+  onImageLoad
 }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -27,6 +29,7 @@ const QuizQuestion: React.FC<QuizQuestionProps> = ({
               src={question.questionImageUrl}
               alt={`Soru ${questionNumber}`}
               className="w-full max-h-[400px] object-contain rounded-lg"
+              onLoad={() => onImageLoad && onImageLoad()}
             />
           )}
           {/* Soru numarası etiketini kaldırdık */}

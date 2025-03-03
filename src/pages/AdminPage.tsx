@@ -38,6 +38,7 @@ import AdminSettings from '../components/admin/AdminSettings';
 import QuestionManagement from '../components/admin/QuestionManagement';
 import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
 import BlogManagement from '../components/admin/BlogManagement';
+import SendMessage from '../components/admin/SendMessage';
 import { toast } from 'react-hot-toast';
 
 interface Notification {
@@ -129,6 +130,13 @@ const AdminPage: React.FC = () => {
       icon: <SchoolIcon />,
       component: <XPRequirementsManagement />,
       path: '/admin/xp-requirements',
+    },
+    {
+      id: 'messages',
+      title: 'Mesaj Gönder',
+      icon: <MenuIcon />,
+      component: <SendMessage />,
+      path: '/admin/messages',
     },
   ]);
 

@@ -153,6 +153,10 @@ export default function QuizResultPage() {
         return questionsData?.find((q: QuestionData) => q.image_url.includes(imageName!));
     };
 
+    const getQuestionNumberFromUrl = (imageUrl: string): string | undefined => {
+        return imageUrl.match(/Soru-(\d+)\.webp/)?.[1];
+    };
+
 
     if (loading) {
         return <LoadingSpinner />;
@@ -299,6 +303,9 @@ export default function QuizResultPage() {
                                             <h4 className="font-semibold text-gray-800 mb-1">Açıklama:</h4>
                                             <p className="text-sm text-gray-700">
                                                 {getQuestionDataByImageUrl(answer.questionImage)?.text}
+                                            </p>
+                                            <p className="text-xs font-medium text-gray-500 mt-2 text-right">
+                                                Soru {getQuestionNumberFromUrl(answer.questionImage) || `#${index + 1}`}
                                             </p>
                                         </div>
                                     )}
