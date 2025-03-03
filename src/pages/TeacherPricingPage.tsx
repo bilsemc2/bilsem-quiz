@@ -25,7 +25,7 @@ export default function TeacherPricingPage() {
                                 'Ödev oluşturma ve takip',
                                 'Canlı Ders oluşturma',
                                 '2 öğrenci kadar ücretsiz',
-                                'Öğretmnimize 5000 xp hediye',
+                                'Öğretmenimize 5000 xp hediye',
                                 '2 öğrencisine ayrı ayrı 2000 xp hediye',
                                 'Ekstra öğrenciler için öğrenci başına ücret',
                                 'Öğrenci sayısına göre artan soru görüntüleme limiti',
@@ -102,7 +102,7 @@ export default function TeacherPricingPage() {
                                     </tr>
                                     <tr>
                                         <td className="px-4 py-3 text-sm text-gray-800">21+ Öğrenci</td>
-                                        <td className="px-4 py-3 text-sm text-gray-800">₺25/öğrenci</td>
+                                        <td className="px-4 py-3 text-sm text-gray-800">₺1000/öğrenci</td>
                                         <td className="px-4 py-3 text-sm text-gray-800">Soru Havuzu</td>
                                         <td className="px-4 py-3 text-sm text-gray-800">VIP danışmanlık</td>
                                     </tr>
