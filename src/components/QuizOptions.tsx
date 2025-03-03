@@ -6,13 +6,15 @@ interface QuizOptionsProps {
     selectedOption: string | null;
     isAnswered: boolean;
     onOptionSelect: (optionId: string) => void;
+    onImageLoad?: () => void; // Görsel yüklenme olayı için callback
 }
 
 const QuizOptions: React.FC<QuizOptionsProps> = ({
     options,
     selectedOption,
     isAnswered,
-    onOptionSelect
+    onOptionSelect,
+    onImageLoad
 }) => {
     return (
         <div className="bg-white rounded-lg shadow-md p-6">
@@ -45,6 +47,7 @@ const QuizOptions: React.FC<QuizOptionsProps> = ({
                                     src={option.imageUrl} 
                                     alt={option.text} 
                                     className="w-full h-full object-contain"
+                                    onLoad={() => onImageLoad && onImageLoad()}
                                 />
                             ) : (
                                 <span>{option.text}</span>

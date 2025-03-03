@@ -195,7 +195,17 @@ const withErrorHandling = async <T,>(
         return await operation();
     } catch (error) {
         console.error(`${errorMessage}:`, error);
-        toast.error(errorMessage);
+        const errorIcons = {
+            'Sınıf verileri yüklenirken hata oluştu': '🏫',
+            'Sınıf üyeleri yüklenirken hata oluştu': '👥',
+            'Ödevler yüklenirken hata oluştu': '📚',
+            'Sınıf erişimi kontrol edilirken hata oluştu': '🔒'
+        };
+        
+        toast.error(errorMessage, {
+            icon: errorIcons[errorMessage as keyof typeof errorIcons] || '⚠️',
+            description: 'Bir sorun oluştu. Lütfen daha sonra tekrar deneyin.'
+        });
         onError?.();
         return null;
     }
@@ -220,7 +230,10 @@ export const ClassroomPage: React.FC = () => {
 
         if (error) {
             console.error('Duyurular alınırken hata:', error);
-            toast.error('Duyurular yüklenirken bir hata oluştu');
+            toast.error('Duyurular yüklenirken bir hata oluştu', {
+                icon: '❌',
+                description: 'Sunucu bağlantısında sorun oluştu. Lütfen sayfayı yenileyin.'
+            });
             return;
         }
 
@@ -284,7 +297,10 @@ export const ClassroomPage: React.FC = () => {
         
         if (!classId || !user) {
             setHasClassAccess(false);
-            toast.error('Geçersiz sınıf bilgisi.');
+            toast.error('Geçersiz sınıf bilgisi.', {
+                icon: '❌',
+                description: 'Profil sayfasına yönlendiriliyorsunuz.'
+            });
             navigate('/profile');
             return;
         }
@@ -1078,11 +1094,17 @@ export const ClassroomPage: React.FC = () => {
 
                                             if (error) {
                                                 console.error('Duyuru eklenirken hata:', error);
-                                                toast.error('Duyuru eklenirken bir hata oluştu');
+                                                toast.error('Duyuru eklenirken bir hata oluştu', {
+                                                    icon: '❌',
+                                                    description: 'Lütfen daha sonra tekrar deneyiniz.'
+                                                });
                                                 return;
                                             }
 
-                                            toast.success('Duyuru başarıyla eklendi');
+                                            toast.success('Duyuru başarıyla eklendi', {
+                                                icon: '✅',
+                                                description: 'Yeni duyuru tüm öğrenciler için görünür olacak.'
+                                            });
                                             setShowAnnouncementModal(false);
                                             fetchAnnouncements();
                                         }}
@@ -1156,11 +1178,17 @@ export const ClassroomPage: React.FC = () => {
 
                                             if (error) {
                                                 console.error('Öğrenci eklenirken hata:', error);
-                                                toast.error('Öğrenci eklenirken bir hata oluştu');
+                                                toast.error('Öğrenci eklenirken bir hata oluştu', {
+                                                    icon: '❌',
+                                                    description: 'Lütfen doğru ID girdiğinizden emin olun.'
+                                                });
                                                 return;
                                             }
 
-                                            toast.success('Öğrenci başarıyla eklendi');
+                                            toast.success('Öğrenci başarıyla eklendi', {
+                                                icon: '👨‍🎓',
+                                                description: 'Öğrenci artık bu sınıfa erişebilir.'
+                                            });
                                             setShowInviteModal(false);
                                             if (classId) fetchClassMembers(classId);
                                         }}
@@ -1202,11 +1230,17 @@ export const ClassroomPage: React.FC = () => {
 
                                         if (error) {
                                             console.error('Sınıf güncellenirken hata:', error);
-                                            toast.error('Sınıf güncellenirken bir hata oluştu');
+                                            toast.error('Sınıf güncellenirken bir hata oluştu', {
+                                                icon: '❌',
+                                                description: 'Ayarlar kaydedilemedi. Lütfen tekrar deneyin.'
+                                            });
                                             return;
                                         }
 
-                                        toast.success('Sınıf başarıyla güncellendi');
+                                        toast.success('Sınıf başarıyla güncellendi', {
+                                            icon: '🏫',
+                                            description: 'Yeni ayarlar kaydedildi.'
+                                        });
                                         setShowSettingsModal(false);
                                         if (classId) fetchClassData(classId);
                                     }}
