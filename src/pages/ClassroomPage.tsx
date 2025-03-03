@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Button, List, Modal, Card, Progress, Row, Col, Statistic, Image, Tag, Form, Input, Select, DatePicker } from 'antd';
-import { EyeOutlined, CheckCircleOutlined, FieldTimeOutlined, TrophyOutlined, CheckCircleFilled, CloseCircleFilled, PlusOutlined, UserAddOutlined, SettingOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { Button, List, Modal, Card, Progress, Row, Col, Statistic, Image, Tag, Form, Input, Select, DatePicker, Table, Avatar } from 'antd';
+import { EyeOutlined, CheckCircleOutlined, FieldTimeOutlined, TrophyOutlined, CheckCircleFilled, CloseCircleFilled, PlusOutlined, UserAddOutlined, SettingOutlined, VideoCameraOutlined, CrownOutlined } from '@ant-design/icons';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import BadgeList from '../components/Badge/BadgeList';
 import { MEET_CODES } from '../constants/meetCodes';
@@ -46,6 +46,17 @@ interface ProfileData {
     name: string;
     avatar_url: string;
     points: number;
+}
+
+interface LeaderboardEntry {
+    student_id: string;
+    student_name: string;
+    avatar_url?: string;
+    total_score: number;
+    correct_answers: number;
+    total_questions: number;
+    completion_rate: number;
+    rank?: number;
 }
 
 interface QuizData {
@@ -249,6 +260,65 @@ export const ClassroomPage: React.FC = () => {
     const [showAllBadges, setShowAllBadges] = useState(false);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
     const [userBadges, setUserBadges] = useState<any[]>([]);
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+
+    // Sınıfın başarı sıralamasını getir
+    const fetchLeaderboard = async () => {
+        if (!classId) return;
+        
+        setLoadingLeaderboard(true);
+        
+        try {
+            console.log('Sıralama için get_class_leaderboard fonksiyonu çağrılıyor...');
+            
+            // get_class_leaderboard RPC fonksiyonunu çağıralım
+            const { data, error } = await supabase
+                .rpc('get_class_leaderboard', { class_id: classId });
+                
+            if (error) {
+                console.error('Sıralama alınırken hata:', error);
+                toast.error('Sıralama yüklenirken bir sorun oluştu', {
+                    icon: '⚠️',
+                    description: 'Sunucu bağlantısında sorun oluştu. Lütfen sayfayı yenileyin.'
+                });
+                setLoadingLeaderboard(false);
+                return;
+            }
+            
+            console.log('Alınan sıralama verileri:', data);
+            
+            if (!data || data.length === 0) {
+                setLeaderboard([]);
+                setLoadingLeaderboard(false);
+                return;
+            }
+            
+            // Verileri LeaderboardEntry formatına dönüştürelim
+            const formattedData = data.map((item: any, index: number) => ({
+                student_id: item.student_id || item.id,
+                student_name: item.student_name || item.name,
+                avatar_url: item.avatar_url,
+                total_score: item.total_score || item.score || 0,
+                correct_answers: item.correct_answers || 0,
+                total_questions: item.total_questions || 0,
+                completion_rate: item.completion_rate || 
+                    (item.total_questions > 0 ? Math.round((item.correct_answers / item.total_questions) * 100) : 0),
+                rank: index + 1
+            }));
+            
+            setLeaderboard(formattedData);
+            console.log('Sıralama tablosu güncellendi:', formattedData);
+        } catch (err) {
+            console.error('Sıralama verileri alınırken hata:', err);
+            toast.error('Sıralama hesaplanırken bir sorun oluştu', {
+                icon: '❌',
+                description: 'Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.'
+            });
+        } finally {
+            setLoadingLeaderboard(false);
+        }
+    };
 
 
     // Kullanıcının rozetlerini çek
@@ -289,6 +359,7 @@ export const ClassroomPage: React.FC = () => {
             fetchClassroomData();
             fetchAnnouncements();
             fetchUserBadges();
+            fetchLeaderboard();
         }
     }, [hasClassAccess, classId]);
 
@@ -1329,24 +1400,90 @@ export const ClassroomPage: React.FC = () => {
                                 />
                             </Modal>
 
-                            <h2 className="text-2xl font-semibold mb-4">Sınıf Arkadaşların</h2>
-                            <div className="space-y-4">
-                                {classMembers.filter(member => member.id !== user?.id).map((member) => (
-                                    <div 
-                                        key={member.id} 
-                                        className="flex items-center space-x-4 p-2 hover:bg-gray-50 rounded-lg"
+                            <h2 className="text-2xl font-semibold mb-6">Sınıf Sıralaması</h2>
+                            {loadingLeaderboard ? (
+                                <div className="flex justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                                </div>
+                            ) : leaderboard.length > 0 ? (
+                                <div className="overflow-hidden">
+                                    <Table 
+                                        dataSource={leaderboard} 
+                                        rowKey="student_id"
+                                        pagination={false}
+                                        size="small"
+                                        className="leaderboard-table"
                                     >
-                                        <img 
-                                            src={member.avatar_url || '/default-avatar.png'} 
-                                            alt={member.name} 
-                                            className="w-10 h-10 rounded-full object-cover"
+                                        <Table.Column 
+                                            title="Sıra" 
+                                            dataIndex="rank" 
+                                            key="rank"
+                                            width={60}
+                                            render={(rank) => {
+                                                const icons = {
+                                                    1: <CrownOutlined style={{ color: '#FFD700', fontSize: '20px' }} />,
+                                                    2: <CrownOutlined style={{ color: '#C0C0C0', fontSize: '18px' }} />,
+                                                    3: <CrownOutlined style={{ color: '#CD7F32', fontSize: '16px' }} />
+                                                };
+                                                return (
+                                                    <div className="flex items-center">
+                                                        {rank <= 3 ? icons[rank as keyof typeof icons] : null}
+                                                        <span className={`ml-1 font-semibold ${rank <= 3 ? 'text-lg' : ''}`}>{rank}</span>
+                                                    </div>
+                                                );
+                                            }}
                                         />
-                                        <div className="flex-1">
-                                            <h3 className="font-medium">{member.name}</h3>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                        <Table.Column 
+                                            title="Öğrenci" 
+                                            dataIndex="student_name" 
+                                            key="student_name"
+                                            render={(text, record: any) => (
+                                                <div className="flex items-center">
+                                                    <Avatar 
+                                                        src={record.avatar_url || '/default-avatar.png'} 
+                                                        size="small"
+                                                        className="mr-2" 
+                                                    />
+                                                    <span className={`${record.student_id === user?.id ? 'font-bold text-blue-600' : ''}`}>
+                                                        {text}
+                                                        {record.student_id === user?.id && ' (Sen)'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        />
+                                        <Table.Column 
+                                            title="Puan" 
+                                            dataIndex="total_score" 
+                                            key="total_score"
+                                            width={80}
+                                            sorter={(a: any, b: any) => a.total_score - b.total_score}
+                                            render={(score) => (
+                                                <Tag color="blue">{score} puan</Tag>
+                                            )}
+                                        />
+                                        <Table.Column 
+                                            title="Başarı" 
+                                            dataIndex="completion_rate" 
+                                            key="completion_rate"
+                                            width={90}
+                                            render={(rate) => (
+                                                <Progress 
+                                                    percent={rate} 
+                                                    size="small" 
+                                                    format={(percent) => `%${percent}`}
+                                                    status={rate > 75 ? 'success' : rate > 50 ? 'normal' : 'exception'}
+                                                />
+                                            )}
+                                        />
+                                    </Table>
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 text-gray-500">
+                                    Henüz sıralama bilgisi bulunmuyor.
+                                </div>
+                            )}
+                            
+                            {/* Sınıf Arkadaşların bölümü kaldırıldı, çünkü sıralama tablosunda zaten bu bilgi mevcut */}
                         </div>
                     </div>
                 </div>
