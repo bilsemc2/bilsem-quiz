@@ -408,7 +408,7 @@ const DeyimlerPage = () => {
     return (
       <XPWarning
         title="Deyimler Dünyası"
-        requiredXP={1000}
+        requiredXP={10}
         currentXP={userXP}
       />
     );
