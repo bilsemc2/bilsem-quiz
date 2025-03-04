@@ -5,6 +5,7 @@ import AssignmentManagement from './components/AssignmentManagement';
 import ReferralManagement from './components/ReferralManagement';
 import AnnouncementManagement from './components/AnnouncementManagement';
 import StudentManagement from './components/StudentManagement';
+import CreatePdfPage from '../CreatePdfPage';
 
 type MenuItem = {
   id: string;
@@ -49,11 +50,21 @@ const menuItems: MenuItem[] = [
     title: 'Referans Yönetimi',
     icon: '🔗',
     component: ReferralManagement
+  },
+  {
+    id: 'create-pdf',
+    title: 'PDF Oluştur',
+    icon: '📄',
+    component: CreatePdfPage
   }
 ];
 
 const TeacherDashboard: React.FC = () => {
   const [activeMenuItem, setActiveMenuItem] = React.useState<string>('dashboard');
+
+  const handleMenuClick = (itemId: string) => {
+    setActiveMenuItem(itemId);
+  };
 
   const ActiveComponent = menuItems.find(item => item.id === activeMenuItem)?.component || TeacherStats;
 
@@ -68,7 +79,7 @@ const TeacherDashboard: React.FC = () => {
             {menuItems.map(item => (
               <button
                 key={item.id}
-                onClick={() => setActiveMenuItem(item.id)}
+                onClick={() => handleMenuClick(item.id)}
                 className={`w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3 transition-colors ${activeMenuItem === item.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
               >
                 <span className="text-xl">{item.icon}</span>
