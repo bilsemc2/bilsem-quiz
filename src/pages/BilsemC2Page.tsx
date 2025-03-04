@@ -7,7 +7,6 @@ import {
   FlipHorizontal2,
   RotateCcw,
   KeyRound,
-  FileText,
   Brain,
   Calculator,
   BookOpen,
@@ -119,14 +118,6 @@ const games = [
     path: '/visual-encoder',
     color: 'bg-blue-100'
   },
-  {
-    title: 'PDF Oluştur',
-    description: 'Özel PDF\'ler oluşturun ve yazdırın. VIP üyeler için özel bir özellik!',
-    icon: <FileText className="w-12 h-12 text-orange-500" />,
-    path: '/create-pdf',
-    color: 'bg-orange-100'
-  },
-
   {
     title: 'Matematik M1',
     description: 'Matematik işlemlerini çöz, hızlı düşün ve doğru cevabı bul!',

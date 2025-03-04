@@ -191,7 +191,7 @@ const StudentManagement: React.FC = () => {
     
     doc.setFontSize(10);
     doc.text(`Tamamlanan Ödev Sayısı: ${student.completed_assignments}`, 14, 50);
-    doc.text(`Ortalama Puan: ${student.avg_score.toFixed(1)}%`, 14, 56);
+    doc.text(`Ortalama Puan: ${student.avg_score.toFixed(1)}`, 14, 56);
     doc.text(`Toplam Çalışma Süresi: ${(student.total_time / 60).toFixed(1)} saat`, 14, 62);
     
     // Toplam soru istatistikleri
@@ -201,8 +201,9 @@ const StudentManagement: React.FC = () => {
     
     studentDetails.assignments.forEach((assignment: Assignment) => {
       totalQuestions += assignment.question_count;
-      totalCorrect += assignment.correct_count;
-      totalIncorrect += assignment.incorrect_count;
+      // Score doğru sayısını temsil ediyor
+      totalCorrect += Math.round(assignment.score);
+      totalIncorrect += assignment.question_count - Math.round(assignment.score);
     });
     
     doc.text(`Toplam Soru Sayısı: ${totalQuestions}`, 14, 68);
@@ -218,11 +219,11 @@ const StudentManagement: React.FC = () => {
       const tableRows = studentDetails.assignments.map((assignment: any) => [
         assignment.title,
         new Date(assignment.completed_at).toLocaleDateString('tr-TR'),
-        `${assignment.score.toFixed(1)}%`,
+        `${Math.round(assignment.score)}`,
         assignment.duration_minutes,
         assignment.question_count,
-        assignment.correct_count,
-        assignment.incorrect_count
+        Math.round(assignment.score),
+        assignment.question_count - Math.round(assignment.score)
       ]);
       
       autoTable(doc, {
@@ -278,10 +279,10 @@ const StudentManagement: React.FC = () => {
       sorter: (a: Student, b: Student) => a.completed_assignments - b.completed_assignments,
     },
     {
-      title: 'Ortalama Puan',
+      title: 'Ortalama Doğru Sayısı',
       dataIndex: 'avg_score',
       key: 'avg_score',
-      render: (score: number) => `${score.toFixed(1)}%`,
+      render: (score: number) => `${score.toFixed(1)}`,
       sorter: (a: Student, b: Student) => a.avg_score - b.avg_score,
     },
     {
@@ -396,10 +397,10 @@ const StudentManagement: React.FC = () => {
                         render: (date: string) => new Date(date).toLocaleDateString('tr-TR'),
                       },
                       {
-                        title: 'Puan',
+                        title: 'Doğru Sayısı',
                         dataIndex: 'score',
                         key: 'score',
-                        render: (score: number) => `${score.toFixed(1)}%`,
+                        render: (score: number) => `${Math.round(score)}`,
                       },
                       {
                         title: 'Süre',
