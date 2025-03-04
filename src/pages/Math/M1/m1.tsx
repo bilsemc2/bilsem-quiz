@@ -67,16 +67,31 @@ export default function MathProblem() {
 
   // Yeni problem oluştur
   const generateNewProblem = () => {
-    // 1-10 arası 3 rastgele sayı üret
-    const newNumbers = Array.from({length: 3}, () => getRandomInt(1, 10));
+    let validProblemFound = false;
+    let attempts = 0;
+    let newNumbers: number[] = [];
+    let result = 0;
     
-    // Sonucu hesapla
-    const result = calculateResult(newNumbers);
+    // Maksimum 10 deneme yap
+    while (!validProblemFound && attempts < 10) {
+      // 1-10 arası 3 rastgele sayı üret
+      newNumbers = Array.from({length: 3}, () => getRandomInt(1, 10));
+      
+      // Sonucu hesapla
+      result = calculateResult(newNumbers);
+      
+      // Eğer sonuç pozitif ve 20'den küçük veya eşitse geçerli bir problem
+      if (result >= 0 && result <= 20) {
+        validProblemFound = true;
+      }
+      
+      attempts++;
+    }
     
-    // Eğer sonuç negatif veya çok büyükse yeniden üret
-    if (result < 0 || result > 20) {
-      generateNewProblem();
-      return;
+    // 10 denemede geçerli problem bulunamadıysa, varsayılan değerler kullan
+    if (!validProblemFound) {
+      newNumbers = [2, 3, 5]; // Garantili çalışacak basit sayılar
+      result = calculateResult(newNumbers);
     }
 
     // Seçenekleri oluştur
@@ -93,7 +108,7 @@ export default function MathProblem() {
     if (currentUser) {
       generateNewProblem();
     }
-  }, [currentUser]);
+  }, [currentUser]); // generateNewProblem'i bağımlılık olarak eklemiyoruz çünkü içeride state değiştiriyor
 
   const handleChoiceSelected = (choice: number) => {
     const result = calculateResult(numbers);
