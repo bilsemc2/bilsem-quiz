@@ -4,6 +4,7 @@ import { EyeOutlined, BookOutlined, LineChartOutlined, TrophyOutlined, ClockCirc
 import { READING_TEXTS } from '../constants/readingTexts';
 import { MEMORY_EXERCISES } from '../constants/memoryExercises';
 import { WORD_SEARCH_GAMES, MATCHING_GAMES, MISSING_WORD_GAMES } from '../constants/miniGames';
+import RequireAuth from '../components/RequireAuth';
 
 interface ReadingStats {
     wpm: number;
@@ -15,7 +16,7 @@ interface ReadingStats {
     dailyProgress: number;
 }
 
-const SpeedReadingPage: React.FC = () => {
+const SpeedReadingPageContent: React.FC = () => {
 
     const [activeTab, setActiveTab] = useState('eye-exercises');
     const [stats, setStats] = useState<ReadingStats>({
@@ -943,6 +944,14 @@ const SpeedReadingPage: React.FC = () => {
                 </Card>
             </div>
         </div>
+    );
+};
+
+const SpeedReadingPage: React.FC = () => {
+    return (
+        <RequireAuth>
+            <SpeedReadingPageContent />
+        </RequireAuth>
     );
 };
 
