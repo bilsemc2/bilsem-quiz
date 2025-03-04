@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import { useSound } from '../hooks/useSound';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +8,7 @@ import { toast } from 'react-hot-toast';
 import { Brain } from 'lucide-react';
 import { useXPCheck } from '../hooks/useXPCheck';
 import XPWarning from '../components/XPWarning';
-import { useUser } from '../hooks/useUser';
+// import { useUser } from '../hooks/useUser';
 
 interface ImageCard {
   id: string;
@@ -23,14 +23,11 @@ interface ImageCard {
 const MemoryGamePage = () => {
   // Auth ve XP hook'ları
   const { user } = useAuth();
-  const { currentUser, loading: userLoading } = useUser();
-  const { hasEnoughXP, userXP, requiredXP, error: xpError, loading: xpLoading } = useXPCheck(
-    userLoading ? undefined : currentUser?.id,
-    '/memory-game'
-  );
+  // const { currentUser, loading: userLoading } = useUser();
+  const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(false);
 
   // Diğer state'ler
-  const [loading, setLoading] = useState(true);
+  const [_, setIsLoading] = useState(true);
   const [showQuestion, setShowQuestion] = useState(false);
   const [targetImage, setTargetImage] = useState<ImageCard | null>(null);
   const [options, setOptions] = useState<ImageCard[]>([]);
@@ -41,11 +38,11 @@ const MemoryGamePage = () => {
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const { playSound } = useSound();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const loadNewQuestion = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       setShowQuestion(false);
       setSelectedOption(null);
       setIsAnswered(false);
@@ -167,7 +164,7 @@ const MemoryGamePage = () => {
       setTargetImage({ ...target, position: Math.random() });
       setOptions(allOptions);
 
-      setLoading(false);
+      setIsLoading(false);
       
       // 3 saniye sonra hedef resmi gizle
       setTimeout(() => {
@@ -176,7 +173,7 @@ const MemoryGamePage = () => {
 
     } catch (error) {
       console.error('Soru yüklenirken hata:', error);
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -230,7 +227,7 @@ const MemoryGamePage = () => {
 
   const renderContent = () => {
     // Loading durumunda bekle
-    if (userLoading || xpLoading) {
+    if (xpLoading) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -318,33 +315,33 @@ const MemoryGamePage = () => {
               <h2 className="text-xl font-semibold mb-6 text-gray-800">Hedef resmi bul:</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-xl mx-auto">
                 {[targetImage, ...options]
-                  .sort((a, b) => (a.position || 0) - (b.position || 0))
+                  .sort((a, b) => ((a?.position || 0) - (b?.position || 0)))
                   .map((image, index) => (
                   <motion.div
-                    key={`${image.id}-${image.option}`}
+                    key={`${image?.id || index}-${image?.option || ''}`}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.1 }}
                     whileHover={{ scale: 1.02, translateY: -5 }}
                     className={`relative cursor-pointer group w-32 h-32 mx-auto`}
-                    onClick={() => !isAnswered && handleOptionClick(image)}
+                    onClick={() => !isAnswered && image && handleOptionClick(image)}
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
                     <div 
                       className={`relative rounded-xl overflow-hidden transition-all duration-300 shadow-lg h-full
-                        ${isAnswered && selectedOption === image.src
-                          ? image.src === targetImage?.src
+                        ${isAnswered && selectedOption === image?.src
+                          ? image?.src === targetImage?.src
                             ? 'ring-4 ring-emerald-500 shadow-emerald-200'
                             : 'ring-4 ring-red-500 shadow-red-200'
                           : 'hover:shadow-xl'
                         }`}
                     >
                       <img
-                        src={image.src}
+                        src={image?.src}
                         alt={`Seçenek ${index + 1}`}
                         className="w-full h-full object-contain"
                       />
-                      {isAnswered && image.src === targetImage?.src && (
+                      {isAnswered && image?.src === targetImage?.src && (
                         <div className="absolute inset-0 flex items-center justify-center bg-emerald-500 bg-opacity-20 backdrop-blur-sm">
                           <motion.div
                             initial={{ scale: 0 }}
