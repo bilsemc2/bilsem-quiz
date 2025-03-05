@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
 import SportsBaseballIcon from '@mui/icons-material/SportsBaseball';
 import BubbleChartIcon from '@mui/icons-material/BubbleChart';
+import ExtensionIcon from '@mui/icons-material/Extension';
 
 interface QuizResult {
     id: string;
@@ -258,6 +259,40 @@ export default function QuizResultPage() {
                                         className={`w-full flex justify-center items-center gap-1 ${result && result.correct_answers >= 7 ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-400 cursor-not-allowed'} text-white font-medium py-2 px-4 rounded shadow-sm transition-colors text-sm`}
                                     >
                                         {result && result.correct_answers >= 7 ? 'Oyna' : 'Kilitli'}
+                                    </button>
+                                </div>
+                                
+                                {/* Hafıza Kartı Oyunu */}
+                                <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg shadow p-4 flex flex-col">
+                                    <div className="flex items-center mb-2">
+                                        <ExtensionIcon className="text-amber-600 mr-2" />
+                                        <h4 className="font-medium text-amber-800">Hafıza Kartları</h4>
+                                    </div>
+                                    <p className="text-xs text-amber-700 mb-1 flex-grow">
+                                        Eşleşen resim çiftlerini bul! Hafızanı test et. 
+                                        <span className="font-semibold block mt-1">
+                                            En az 4 doğru cevap gerektiriyor.
+                                        </span>
+                                    </p>
+                                    {result && result.correct_answers < 4 && (
+                                        <div className="bg-amber-200 text-amber-800 text-xs p-1 rounded mb-2 text-center">
+                                            Şu an: {result?.correct_answers || 0}/10 doğru yanıt
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => navigate('/memory-cards', { 
+                                            state: { 
+                                                fromResult: true, 
+                                                previousState: { 
+                                                    quizId, 
+                                                    correctAnswers: result?.correct_answers || 0
+                                                } 
+                                            } 
+                                        })}
+                                        disabled={!result || result.correct_answers < 4}
+                                        className={`w-full flex justify-center items-center gap-1 ${result && result.correct_answers >= 4 ? 'bg-amber-600 hover:bg-amber-700' : 'bg-amber-400 cursor-not-allowed'} text-white font-medium py-2 px-4 rounded shadow-sm transition-colors text-sm`}
+                                    >
+                                        {result && result.correct_answers >= 4 ? 'Oyna' : 'Kilitli'}
                                     </button>
                                 </div>
                                 

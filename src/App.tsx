@@ -53,6 +53,7 @@ import toast from 'react-hot-toast';
 import FilledEmptyPage from './pages/FilledEmptyPage';
 import FallingNumbersPage from './pages/FallingNumbersPage';
 import BubbleNumbersPage from './pages/BubbleNumbersPage';
+import MemoryCardGamePage from './pages/MemoryCardGamePage';
 import { QuizProvider } from './contexts/QuizContext';
 import QuizResultPage from './pages/QuizResultPage';
 import DeyimlerPage from './pages/DeyimlerPage';
@@ -310,6 +311,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/falling-numbers" element={<FallingNumbersPage />} />
           <Route path="/cube" element={<CubePage />} />
           <Route path="/bubble-numbers" element={<BubbleNumbersPage />} />
+          <Route path="/memory-cards" element={<MemoryCardGamePage />} />
           <Route path="/quiz/:quizId/results" element={
             <RequireAuth>
               <QuizResultPage />

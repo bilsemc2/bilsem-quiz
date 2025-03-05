@@ -1,0 +1,17 @@
+/* Memory Game Styles */
+
+/* Kart çevirme animasyonu */
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Kart hover efekti */
+.memory-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Kart eşleşme efekti */
+.matched {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.8);
+}
