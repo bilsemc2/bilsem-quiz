@@ -13,7 +13,6 @@ const GAME_HEIGHT = 600;
 const BUBBLE_MIN_SIZE = 40;
 const BUBBLE_MAX_SIZE = 80;
 const INITIAL_TIME = 60;
-const LEVEL_BONUS_TIME = 10;
 
 // Seviye ayarları
 interface LevelSettings {
@@ -167,11 +166,13 @@ const BubbleNumbersGame: React.FC = () => {
 
   // Güçlendirici yönetimi
   const powerUpManagerRef = useRef(new PowerUpManager());
-  const [activePowerUps, setActivePowerUps] = useState<PowerUpType[]>([]);
+  // PowerUps state'i sadece setter için kullanılıyor, değeri okunmuyor
+  const [, setActivePowerUps] = useState<PowerUpType[]>([]);
   const [currentTime, setCurrentTime] = useState(0);
 
   // State
-  const [bubbles, setBubbles] = useState<Bubble[]>([]);
+  // Bubbles state'i sadece setter için kullanılıyor, değeri okunmuyor
+  const [, setBubbles] = useState<Bubble[]>([]);
   const [targetNumber, setTargetNumber] = useState(0);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
@@ -354,17 +355,19 @@ const BubbleNumbersGame: React.FC = () => {
           setTargetNumber(newTarget.result);
         } else {
           const handleLevelUp = () => {
-            soundManager.play('levelUp');
+            // Seviye atlama efekti
+            soundManager.play('pop');
             
             setIsPaused(true);
             const newLevel = level + 1;
             const settings = getLevelSettings(newLevel);
             
-            const levelMessage = `Tebrikler! Seviye ${newLevel}\n${
-              newLevel === 2 ? 'Çıkarma işlemleri eklendi!' :
-              newLevel === 3 ? 'Çarpma işlemleri eklendi!' :
-              `Daha hızlı ve daha çok baloncuk!\nBonus Süre: +${settings.timeBonus} saniye`
-            }`;
+            // Seviye mesajı - şu anda gösterilmiyor ama ileri aşamalarda kullanılabilir
+            // const levelMessage = `Tebrikler! Seviye ${newLevel}\n${
+            //   newLevel === 2 ? 'Çıkarma işlemleri eklendi!' :
+            //   newLevel === 3 ? 'Çarpma işlemleri eklendi!' :
+            //   `Daha hızlı ve daha çok baloncuk!\nBonus Süre: +${settings.timeBonus} saniye`
+            // }`;
             
             setTimeout(() => {
               setIsPaused(false);
@@ -574,7 +577,19 @@ const BubbleNumbersGame: React.FC = () => {
               <p>Seviye: {level}</p>
               <p>Puanınız: {score}</p>
               <button 
-                onClick={() => navigate('/result', { state: { ...previousState, gameScore: score }, replace: true })}
+                onClick={() => {
+                  // Quiz ID ve diğer sonuç sayfası bilgilerini koruyarak, orijinal sonuç sayfasına dön
+                  const quizId = location.state?.quizId || previousState?.quizId;
+                  const quizResultPath = quizId ? `/quiz/${quizId}/result` : '/result';
+                  navigate(quizResultPath, { 
+                    state: { 
+                      ...previousState, 
+                      gameScore: score, 
+                      fromBubbleGame: true 
+                    }, 
+                    replace: true 
+                  });
+                }}
                 className="mt-4 px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
               >
                 Sonuçlara Dön

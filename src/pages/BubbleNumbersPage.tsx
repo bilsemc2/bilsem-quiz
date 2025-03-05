@@ -5,7 +5,6 @@ import BubbleNumbersGame from '../components/BubbleNumbersGame/BubbleNumbersGame
 const BubbleNumbersPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const previousState = location.state?.previousState;
 
   useEffect(() => {
     // Sadece ResultPage'den gelenlere ve 7+ doğru cevabı olanlara izin ver

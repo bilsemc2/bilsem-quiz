@@ -7,7 +7,7 @@ export async function fetchImageAsBase64(url: string): Promise<string> {
       `https://cors-anywhere.herokuapp.com/${url}`
     ];
     
-    let lastError = null;
+    let lastError: Error | null = null;
     
     // Her proxy'yi sırayla dene
     for (const proxyUrl of proxyUrls) {
@@ -45,7 +45,7 @@ export async function fetchImageAsBase64(url: string): Promise<string> {
           reader.readAsDataURL(blob);
         });
       } catch (error) {
-        lastError = error;
+        lastError = error as Error;
         console.warn(`Proxy başarısız (${proxyUrl}):`, error);
         continue; // Sonraki proxy'yi dene
       }
@@ -53,10 +53,10 @@ export async function fetchImageAsBase64(url: string): Promise<string> {
     
     // Tüm proxy'ler başarısız olduysa
     throw new Error(`Resim yüklenemedi: ${lastError?.message || 'Bilinmeyen hata'}`);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Resim yükleme hatası:', error);
     
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Resim yükleme zaman aşımına uğradı');
     }
 
