@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import SportsBaseballIcon from '@mui/icons-material/SportsBaseball';
+import BubbleChartIcon from '@mui/icons-material/BubbleChart';
 
 interface QuizResult {
     id: string;
@@ -41,6 +43,7 @@ interface QuestionData {
 export default function QuizResultPage() {
     const { quizId } = useParams<{ quizId: string }>();
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [result, setResult] = useState<QuizResult | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -188,6 +191,80 @@ export default function QuizResultPage() {
         <div className="min-h-screen bg-gray-100 py-8">
             <div className="max-w-3xl mx-auto px-4">
                 <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl w-full">
+                    {/* Oyun Kartları */}
+                    <div className="mb-6">
+                        <div className="bg-white rounded-lg shadow-md p-4 max-w-xl mx-auto">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center justify-center">
+                                <PlayCircleIcon className="mr-2" />
+                                Mini Oyunlar
+                            </h3>
+                            <p className="text-gray-600 mb-4 text-sm text-center">
+                                Quiz sonucuna göre çeşitli eğlenceli oyunları oynayabilirsin
+                            </p>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Top Oyunu Kartı */}
+                                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow p-4 flex flex-col">
+                                    <div className="flex items-center mb-2">
+                                        <SportsBaseballIcon className="text-blue-600 mr-2" />
+                                        <h4 className="font-medium text-blue-800">Top Oyunu</h4>
+                                    </div>
+                                    <p className="text-xs text-blue-700 mb-3 flex-grow">
+                                        Topları hedeflere atarak puan topla! Tüm quiz kullanıcıları için açık.
+                                    </p>
+                                    <button
+                                        onClick={() => navigate('/ball-game', { 
+                                            state: { 
+                                                fromResult: true,
+                                                previousState: { 
+                                                    quizId 
+                                                }
+                                            }
+                                        })}
+                                        className="w-full flex justify-center items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded shadow-sm transition-colors text-sm"
+                                    >
+                                        Oyna
+                                    </button>
+                                </div>
+
+                                {/* Baloncuk Sayılar Oyunu Kartı */}
+                                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow p-4 flex flex-col">
+                                    <div className="flex items-center mb-2">
+                                        <BubbleChartIcon className="text-purple-600 mr-2" />
+                                        <h4 className="font-medium text-purple-800">Baloncuk Sayılar</h4>
+                                    </div>
+                                    <p className="text-xs text-purple-700 mb-1 flex-grow">
+                                        Doğru hesaplamaları bul ve baloncukları patlat! 
+                                        <span className="font-semibold block mt-1">
+                                            En az 7 doğru cevap gerektiriyor.
+                                        </span>
+                                    </p>
+                                    {result && result.correct_answers < 7 && (
+                                        <div className="bg-purple-200 text-purple-800 text-xs p-1 rounded mb-2 text-center">
+                                            Şu an: {result?.correct_answers || 0}/10 doğru yanıt
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => navigate('/bubble-numbers', { 
+                                            state: { 
+                                                fromResult: true, 
+                                                previousState: { 
+                                                    quizId, 
+                                                    correctAnswers: result?.correct_answers || 0
+                                                } 
+                                            } 
+                                        })}
+                                        disabled={!result || result.correct_answers < 7}
+                                        className={`w-full flex justify-center items-center gap-1 ${result && result.correct_answers >= 7 ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-400 cursor-not-allowed'} text-white font-medium py-2 px-4 rounded shadow-sm transition-colors text-sm`}
+                                    >
+                                        {result && result.correct_answers >= 7 ? 'Oyna' : 'Kilitli'}
+                                    </button>
+                                </div>
+                                
+                                {/* Yeni oyunlar için buraya ek kartlar eklenebilir */}
+                            </div>
+                        </div>
+                    </div>
                     {/* Başlık */}
                     <div className="text-center mb-6">
                         <h1 className="text-2xl font-bold text-gray-900">

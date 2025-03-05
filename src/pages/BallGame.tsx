@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 interface Position {
@@ -319,12 +319,19 @@ export function BallGame() {
       }, 1000);
     } else if (timeLeft === 0 && !gameOver) {
       setGameOver(true);
-      // Oyun bittiğinde ResultPage'e önceki state ile geri dön
+      // Oyun bittiğinde geldiği quiz sonuç sayfasına geri dön
       setTimeout(() => {
-        navigate('/result', { 
-          replace: true,
-          state: previousState // Önceki state'i geri gönder
-        });
+        const quizId = previousState?.quizId;
+        if (quizId) {
+          navigate(`/quiz/${quizId}/result`, { 
+            replace: true
+          });
+        } else {
+          // Eğer quizId yoksa ana sayfaya gönder
+          navigate('/', { 
+            replace: true
+          });
+        }
       }, 1000);
     }
 

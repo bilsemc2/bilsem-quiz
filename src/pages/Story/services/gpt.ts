@@ -3,7 +3,7 @@ import { StoryTheme } from '../components/types';
 const STORY_PROMPT = (theme: StoryTheme): string => {
   // Temaya göre özelleştirilebilir içerikler burada hazırlanabilir
   const themeSpecificContent = {
-    animals: 'Hayvanların özellikleri ve arkadaşlıkları hakkında',
+    animals: 'Hayvanın özellikleri ve arkadaşlıkları hakkında',
     adventure: 'Macera dolu bir keşif yolculuğu hakkında',
     fantasy: 'Sihirli yaratıklar ve büyülü dünyalar hakkında',
     science: 'Bilimsel keşifler ve merak uyandıran deneyler hakkında',
