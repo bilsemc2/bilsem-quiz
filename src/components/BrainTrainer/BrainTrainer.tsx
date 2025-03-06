@@ -27,7 +27,7 @@ const BrainTrainer: React.FC = () => {
   return (
     <div className="brain-trainer-container">
       <div className="brain-trainer-header">
-        <h1>Beyin Antrenörü</h1>
+        <h1>Beyin Egzersizleri</h1>
         <p>Beyin gücünüzü geliştiren çeşitli egzersizlerle zihinsel becerilerinizi test edin ve geliştirin!</p>
       </div>
 
