@@ -4,9 +4,9 @@ const STORY_PROMPT = (theme: StoryTheme): string => {
   // Temaya göre özelleştirilebilir içerikler burada hazırlanabilir
   const themeSpecificContent = {
     animals: 'Hayvanın özellikleri ve arkadaşlıkları hakkında',
-    adventure: 'Macera dolu bir keşif yolculuğu hakkında',
+    adventure: 'Tavşan, Mağarada ki devler ve Macera dolu bir keşif yolculuğuna çıkan  Ahmet hakkında',
     fantasy: 'Sihirli yaratıklar ve büyülü dünyalar hakkında',
-    science: 'Bilimsel keşifler ve merak uyandıran deneyler hakkında',
+    science: 'Bilim insanları ve buldukları hakkında',
     friendship: 'Arkadaşlığın önemi ve birlikte çalışmak hakkında',
     'life-lessons': 'Günlük hayattan öğrenilen dersler hakkında'
   };

@@ -223,9 +223,10 @@ const ColorGrid: React.FC = () => {
     );
     
     // Kullanıcının seçimini kaydet
+    const newUserSequence = [...gameState.userSequence, { cellId, color: expectedColor }];
     setGameState(prev => ({
       ...prev,
-      userSequence: [...prev.userSequence, { cellId, color: expectedColor }]
+      userSequence: newUserSequence
     }));
     
     // 500ms sonra hücreyi deaktif et
@@ -237,16 +238,45 @@ const ColorGrid: React.FC = () => {
       );
       
       // Kullanıcı tüm sekansı tamamladı mı kontrol et
-      const newUserSequence = [...gameState.userSequence, { cellId, color: expectedColor }];
       if (newUserSequence.length === gameState.sequence.length) {
-        // Skor artır
-        setScore(prev => prev + gameState.level * 10);
+        // Tüm sekans doğru mu kontrol et
+        const isSequenceCorrect = newUserSequence.every((item, index) => 
+          item.cellId === gameState.sequence[index].cellId
+        );
         
-        // Tüm seviyeler tamamlandı mı kontrol et
-        if (gameState.level === 5) {
-          // Oyun tamamlandı
-          toast.success('Tebrikler! Tüm seviyeleri tamamladınız! 🎉', {
-            duration: 5000,
+        if (isSequenceCorrect) {
+          // Skor artır
+          setScore(prev => prev + gameState.level * 10);
+          
+          // Tüm seviyeler tamamlandı mı kontrol et
+          if (gameState.level === 5) {
+            // Oyun tamamlandı
+            toast.success('Tebrikler! Tüm seviyeleri tamamladınız! 🎉', {
+              duration: 5000,
+              position: 'top-center',
+            });
+            
+            setGameState(prev => ({
+              ...prev,
+              gameOver: true,
+              isUserTurn: false
+            }));
+          } else {
+            // Sonraki seviyeye geç
+            toast.success(`Tebrikler! ${gameState.level}. seviyeyi tamamladınız! 🎉`, {
+              duration: 3000,
+              position: 'top-center',
+            });
+            
+            // Kısa bir bekleme sonrası yeni seviyeye geç
+            setTimeout(() => {
+              generateSequence(gameState.level + 1);
+            }, 2000);
+          }
+        } else {
+          // Yanlış sıra - oyunu bitir
+          toast.error(`Yanlış sıra! Oyun bitti.`, {
+            duration: 3000,
             position: 'top-center',
           });
           
@@ -255,17 +285,6 @@ const ColorGrid: React.FC = () => {
             gameOver: true,
             isUserTurn: false
           }));
-        } else {
-          // Sonraki seviyeye geç
-          toast.success(`Tebrikler! ${gameState.level}. seviyeyi tamamladınız! 🎉`, {
-            duration: 3000,
-            position: 'top-center',
-          });
-          
-          // Kısa bir bekleme sonrası yeni seviyeye geç
-          setTimeout(() => {
-            generateSequence(gameState.level + 1);
-          }, 2000);
         }
       }
     }, 500);
