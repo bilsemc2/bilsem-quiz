@@ -293,7 +293,7 @@ const ColorGrid: React.FC = () => {
   // Kullanıcı arayüzünü render et
   return (
     <div className="color-grid-container">
-      <h1>Beyin Antrenörü - Renk Sekansı</h1>
+      <h1>Beyin Egzersizi - Renk Sekansı</h1>
       
       <div className="game-info">
         <p>Seviye: {gameState.level}/5</p>
