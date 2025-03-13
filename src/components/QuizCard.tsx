@@ -141,7 +141,7 @@ export const QuizCard = ({ question, onAnswer }: QuizCardProps) => {
                 if (prevTime <= 0) {
                     clearInterval(timer);
                     if (!showResult) {
-                        const randomWrongOption = question.options.find(opt => opt.id !== question.correctOptionId)?.id || '';
+                        const randomWrongOption = question.options.find(opt => opt.id !== question.correctOptionId)?.id || 'varsayılan_değer';
                         handleTimeOut(randomWrongOption);
                     }
                     return 0;
@@ -217,7 +217,7 @@ export const QuizCard = ({ question, onAnswer }: QuizCardProps) => {
             {/* Büyütülmüş Görsel Modal */}
             {showEnlargedImage && (
                 <EnlargedImageModal 
-                    imageUrl={question.questionImageUrl} 
+                    imageUrl={question.questionImageUrl || 'varsayılan_image_url.jpg'} 
                     onClose={() => setShowEnlargedImage(false)} 
                 />
             )}
@@ -227,7 +227,11 @@ export const QuizCard = ({ question, onAnswer }: QuizCardProps) => {
                 {question.options.map((option) => (
                     <Option
                         key={option.id}
-                        option={option}
+                        option={{
+                            id: option.id,
+                            imageUrl: option.imageUrl || 'varsayılan_image_url.jpg',
+                            text: option.text
+                        }}
                         isSelected={selectedOption === option.id}
                         isCorrect={option.id === question.correctOptionId}
                         showResult={showResult}

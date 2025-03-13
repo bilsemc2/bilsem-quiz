@@ -1,5 +1,5 @@
 export const QUESTIONS_CONFIG = {
-  totalQuestions: 1353, // Toplam soru sayısı
+  totalQuestions: 1373, // Toplam soru sayısı
   categories: {
     Matris: {
       totalQuestions: 1353,
