@@ -1,4 +1,3 @@
-// QuizManagement.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
@@ -614,12 +613,12 @@ const QuizManagement: React.FC = () => {
   // Filtreleme fonksiyonu
   const getFilteredQuizzes = () => {
     return quizzes.filter(quiz => {
-      const matchesSearch = !filters.searchText || 
+      const matchesSearch = !filters.searchText ||
         quiz.title.toLowerCase().includes(filters.searchText.toLowerCase()) ||
         quiz.description.toLowerCase().includes(filters.searchText.toLowerCase());
-      
+
       const matchesGrade = !filters.grade || quiz.grade.toString() === filters.grade;
-      const matchesSubject = !filters.subject || 
+      const matchesSubject = !filters.subject ||
         quiz.subject.toLowerCase().includes(filters.subject.toLowerCase());
       const matchesStatus = filters.status === 'all' || quiz.status === filters.status;
 
