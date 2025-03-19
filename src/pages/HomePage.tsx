@@ -15,9 +15,9 @@ interface LeaderUser {
 }
 
 const slides = [
-    { id: 1, image: '/images/k1.jpg', alt: 'Bilsem Sınavı Hero' },
-    { id: 2, image: '/images/k2.jpg', alt: 'Bilsem Sınavı Learning' },
-    { id: 3, image: '/images/k3.jpg', alt: 'Bilsem sınavı Success' },
+    { id: 1, image: '/images/k1.jpg', alt: 'Bilsem Sınavı Matris' },
+    { id: 2, image: '/images/k2.jpg', alt: 'Bilsem Sınavı Hafıza' },
+    { id: 3, image: '/images/k3.jpg', alt: 'Bilsem sınavı Parça Bütün' },
 ];
 
 export default function HomePage() {
