@@ -21,7 +21,7 @@ interface Question {
   id: string;
   text: string;
   number: number;
-  options: string[]; // Options artık bir dizi
+  options: string[]; 
   correct_option: string;
   points: number;
   type: 'multiple_choice' | 'true_false';
@@ -29,15 +29,19 @@ interface Question {
 }
 
 interface QuestionSelectorProps {
-  onQuestionsSelected: (questions: Question[]) => void; // Dizi olarak güncellendi
-  initialSelectedQuestions?: Question[]; // Dizi olarak güncellendi
+  onQuestionsSelected: (questions: Question[]) => void;
+  initialSelectedQuestions?: Question[];
+  saveMode?: 'auto' | 'manual'; // Yeni prop: kaydetme modu
+  onSelectionChange?: (questions: Question[]) => void; // Yeni prop: seçim değişikliği için callback
 }
 
 const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   onQuestionsSelected,
   initialSelectedQuestions = [],
+  saveMode = 'manual', // Varsayılan olarak manual
+  onSelectionChange,
 }) => {
-  const [questions, setQuestions] = useState<Question[]>([]); // Başlangıçta boş bir dizi
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>(
     initialSelectedQuestions
   );
@@ -50,21 +54,16 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const questionsPerPage = ITEMS_PER_PAGE;
+  const savedRef = useRef(false); // Kaydedilip edilmediğini takip eden ref
 
-    // onQuestionsSelected fonksiyonu için useRef hook'u
-    const onQuestionsSelectedRef = useRef(onQuestionsSelected);
-
-    // onQuestionsSelected değiştiğinde ref'i güncelle
-    useEffect(() => {
-        onQuestionsSelectedRef.current = onQuestionsSelected;
-    }, [onQuestionsSelected]);
-
+  // Sayfa değişiminde kaydetme işleminin gerçekleşmemesi için
+  const hasInitializedRef = useRef(false);
 
   const getQuestionImagePath = useCallback((questionNumber: number) => {
     return `/images/questions/Matris/Soru-${questionNumber}.webp`;
   }, []);
 
-  // Doğru cevabı bulan fonksiyon (useCallback ile optimize edildi)
+  // Doğru cevabı bulan fonksiyon
   const findCorrectAnswer = useCallback(async (questionNumber: number): Promise<string | null> => {
     const letters = ['A', 'B', 'C', 'D', 'E'];
     for (const letter of letters) {
@@ -80,87 +79,79 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
         if(normalResponse.ok){
             continue;
         }
-
       } catch (error) {
-          console.error(`Error fetching option ${letter} for question ${questionNumber}:`, error);
-
+        console.error(`Error fetching option ${letter} for question ${questionNumber}:`, error);
       }
     }
     return null; // Hiçbir doğru cevap bulunamazsa null döndür
   }, []);
 
+  // Sayfa için soruları yükleyen fonksiyon
+  const loadQuestionsForPage = useCallback(async (pageNum: number) => {
+    setLoading(true);
+    setError(null);
+    setLoadingProgress(0);
 
-    // Sayfa için soruları yükleyen fonksiyon (useCallback ile optimize edildi)
-    const loadQuestionsForPage = useCallback(async (pageNum: number) => {
-        setLoading(true);
-        setError(null);
-        setLoadingProgress(0); // Yükleme başlamadan önce progress'i sıfırla
+    const newQuestions: Question[] = [];
+    const startIndex = (pageNum - 1) * questionsPerPage;
+    const endIndex = Math.min(startIndex + questionsPerPage, MAX_QUESTION_NUMBER);
 
-        const newQuestions: Question[] = [];
-        const startIndex = (pageNum - 1) * questionsPerPage;
-        const endIndex = Math.min(startIndex + questionsPerPage, MAX_QUESTION_NUMBER);
+    try {
+      for (let i = startIndex + 1; i <= endIndex; i++) {
+        const questionImagePath = getQuestionImagePath(i);
+        const questionResponse = await fetch(questionImagePath);
 
-        try {
-            for (let i = startIndex + 1; i <= endIndex; i++) {
-                const questionImagePath = getQuestionImagePath(i);
-                const questionResponse = await fetch(questionImagePath);
-
-                if (!questionResponse.ok) {
-                    // Eğer dosya yoksa, bu soruyu atla ve devam et
-                    console.warn(`Question image not found for question number ${i}`);
-                    continue;
-                }
-
-                const correctAnswer = await findCorrectAnswer(i);
-                if (!correctAnswer) {
-                    // Eğer doğru cevap bulunamazsa, bu soruyu atla
-                    console.warn(`Correct answer not found for question number ${i}`);
-                    continue;
-                }
-
-                newQuestions.push({
-                    id: i.toString(),
-                    text: `Soru ${i}`,
-                    number: i,
-                    options: ['A', 'B', 'C', 'D', 'E'],
-                    correct_option: correctAnswer,
-                    points: 10,
-                    type: 'multiple_choice',
-                    difficulty: 2,
-                });
-
-                // İlerleme çubuğunu güncelle
-                setLoadingProgress(((i - startIndex) / questionsPerPage) * 100);
-            }
-
-            setQuestions(newQuestions);
-        } catch (error) {
-            setError('Sorular yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
-            console.error('Error loading questions:', error);
-        } finally {
-            setLoading(false);
-            setLoadingProgress(100); // Yükleme bitince 100 yap
+        if (!questionResponse.ok) {
+          console.warn(`Question image not found for question number ${i}`);
+          continue;
         }
-    }, [questionsPerPage, getQuestionImagePath, findCorrectAnswer]); // Bağımlılıkları doğru şekilde belirt
 
-
-  // Toplam soru sayısını hesaplayan fonksiyon (useCallback ile optimize edildi)
-    const calculateTotalQuestions = useCallback(async () => {
-        let count = 0;
-        for (let i = 1; i <= MAX_QUESTION_NUMBER; i++) {
-            const questionImagePath = getQuestionImagePath(i);
-            try {
-                const response = await fetch(questionImagePath);
-                if (response.ok) {
-                    count++;
-                }
-            } catch {
-                // Hata durumunda sayacı artırma, devam et
-            }
+        const correctAnswer = await findCorrectAnswer(i);
+        if (!correctAnswer) {
+          console.warn(`Correct answer not found for question number ${i}`);
+          continue;
         }
-        setTotalQuestions(count);
-    }, [getQuestionImagePath]);
 
+        newQuestions.push({
+          id: i.toString(),
+          text: `Soru ${i}`,
+          number: i,
+          options: ['A', 'B', 'C', 'D', 'E'],
+          correct_option: correctAnswer,
+          points: 10,
+          type: 'multiple_choice',
+          difficulty: 2,
+        });
+
+        setLoadingProgress(((i - startIndex) / questionsPerPage) * 100);
+      }
+
+      setQuestions(newQuestions);
+    } catch (error) {
+      setError('Sorular yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+      console.error('Error loading questions:', error);
+    } finally {
+      setLoading(false);
+      setLoadingProgress(100);
+    }
+  }, [questionsPerPage, getQuestionImagePath, findCorrectAnswer]);
+
+  // Toplam soru sayısını hesaplayan fonksiyon
+  const calculateTotalQuestions = useCallback(async () => {
+    let count = 0;
+    for (let i = 1; i <= MAX_QUESTION_NUMBER; i++) {
+      const questionImagePath = getQuestionImagePath(i);
+      try {
+        const response = await fetch(questionImagePath);
+        if (response.ok) {
+          count++;
+        }
+      } catch {
+        // Hata durumunda sayacı artırma, devam et
+      }
+    }
+    setTotalQuestions(count);
+  }, [getQuestionImagePath]);
 
   // useEffect hook'ları
   useEffect(() => {
@@ -171,9 +162,19 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
     loadQuestionsForPage(page);
   }, [page, loadQuestionsForPage]);
 
+  // Component mount olduğunda
+  useEffect(() => {
+    hasInitializedRef.current = true;
+    return () => {
+      // Component unmount olduğunda, eğer saveMode 'manual' ise ve kaydetme işlemi yapılmadıysa
+      // seçili soruları kaydetmez
+      if (saveMode === 'manual' && !savedRef.current) {
+        console.log("Component unmounting without saving selected questions");
+      }
+    };
+  }, [saveMode]);
 
-
-  // Soru seçimi (useCallback ile optimize edildi)
+  // Soru seçimi
   const handleQuestionSelect = useCallback(
     (question: Question) => {
       setSelectedQuestions((prevSelectedQuestions) => {
@@ -189,19 +190,22 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
       });
     },
     []
-  ); // Bağımlılık dizisi boş, çünkü fonksiyon içinde state'e bağlı bir değişiklik yok.
+  );
 
-//   useEffect(() => {
-//       onQuestionsSelected(selectedQuestions);
-//   }, [selectedQuestions, onQuestionsSelected]);
+  // Seçim değişikliğini bildiren fonksiyon - ancak sadece seçimi günceller, kaydetmez
+  useEffect(() => {
+    if (hasInitializedRef.current && onSelectionChange) {
+      onSelectionChange(selectedQuestions);
+    }
+  }, [selectedQuestions, onSelectionChange]);
 
-  // selectedQuestions değiştiğinde onQuestionsSelectedRef.current'i çağır
-    useEffect(() => {
-        onQuestionsSelectedRef.current(selectedQuestions);
-    }, [selectedQuestions]);
+  // Manuel kaydetme işlemi için fonksiyon
+  const saveSelectedQuestions = useCallback(() => {
+    onQuestionsSelected(selectedQuestions);
+    savedRef.current = true; // Kaydedildiğini işaretler
+  }, [selectedQuestions, onQuestionsSelected]);
 
-
-  // Soru önizlemesi (useCallback ile optimize edildi)
+  // Soru önizlemesi
   const handlePreview = useCallback(
     (question: Question) => {
       setPreviewQuestion(question);
@@ -210,7 +214,7 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
     []
   );
 
-  // Filtrelenmiş sorular (useMemo ile optimize edildi)
+  // Filtrelenmiş sorular
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) =>
       question.text.toLowerCase().includes(searchTerm.toLowerCase())
@@ -291,6 +295,20 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
               color="primary"
             />
           </Box>
+          
+          {/* Manuel kaydetme modu etkinse, kaydetme butonu göster */}
+          {saveMode === 'manual' && (
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+              <Button 
+                variant="contained" 
+                color="primary"
+                onClick={saveSelectedQuestions}
+                disabled={selectedQuestions.length === 0}
+              >
+                Soruları Kaydet ({selectedQuestions.length})
+              </Button>
+            </Box>
+          )}
         </>
       )}
 
