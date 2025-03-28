@@ -9,29 +9,23 @@ export interface PuzzleData {
   approved: boolean;
 }
 
-export const savePuzzle = async (puzzleData: PuzzleData) => {
+export const savePuzzle = async (puzzleData: Partial<PuzzleData>) => {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-            throw new Error('User not authenticated');
+            throw new Error('Kullanıcı kimliği doğrulanamadı');
         }
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.is_admin) {
-            throw new Error('You do not have permission for this action');
-        }
+        // Admin kontrolünü kaldırdık, tüm kullanıcılar bulmaca oluşturabilir
+        // Ancak bulmacalar onay bekleyecek
 
         const { data, error } = await supabase
             .from('puzzles')
             .insert([{
-                ...puzzleData,
-                created_by: user.id,
-                approved: true
+                grid: puzzleData.grid,
+                title: puzzleData.title,
+                created_by: user.id, // Her zaman mevcut kullanıcı ID'sini kullan
+                approved: false // Varsayılan olarak onaylanmamış
             }])
             .select();
 
@@ -62,7 +56,7 @@ export const getRecentPuzzles = async (): Promise<PuzzleData[]> => {
 
   const { data, error } = await supabase
     .from('puzzles')
-    .select('id, grid, created_at')
+    .select('id, grid, created_at, title, created_by, approved')
     .eq('approved', true)
     .order('created_at', { ascending: false })
     .limit(6);
@@ -74,11 +68,11 @@ export const getRecentPuzzles = async (): Promise<PuzzleData[]> => {
 
   // Update cache
   puzzleCache = {
-    data,
+    data: data as PuzzleData[],
     timestamp: Date.now()
   };
 
-  return data;
+  return data as PuzzleData[];
 };
 
 // Subscribe to real-time puzzle updates
@@ -86,8 +80,9 @@ export const subscribeToNewPuzzles = (callback: (puzzle: PuzzleData) => void) =>
   const channel = supabase
     .channel('public:puzzles')
     .on(
-      'INSERT',
-      (payload) => {
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'puzzles' },
+      (payload: { new: PuzzleData }) => {
         if (payload.new.approved) {
           // Invalidate cache when new puzzle is added
           puzzleCache = null;

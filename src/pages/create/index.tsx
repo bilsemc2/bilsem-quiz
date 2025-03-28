@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   Save, 
-  Plus,
-  Type,
   Loader2,
   Info
 } from 'lucide-react';
@@ -18,8 +16,8 @@ import { Color, colors } from '@/lib/colors';
 import { Bilsemc2Item, bilsemc2Items } from '@/lib/bilsemc2';
 import { savePuzzle } from '@/lib/puzzleService';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
-import { useNavigate } from 'react-router-dom';
+// import { supabase } from '@/lib/supabase';
+// import { useNavigate } from 'react-router-dom';
 import { useXPCheck } from '../../hooks/useXPCheck';
 import XPWarning from '../../components/XPWarning';
 import { useUser } from '../../hooks/useUser';
@@ -35,11 +33,10 @@ import {
 type ItemType = Letter | Animal | Number | Profession | Fruit | Color | Bilsemc2Item;
 
 const LogicPuzzleCreator = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const { currentUser, loading: userLoading } = useUser();
   const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(
-    userLoading ? undefined : currentUser?.id,
-    '/create'
+    true // skipCheck parametresi - XP kontrolünü atla
   );
 
   const [selectedType, setSelectedType] = useState<'letter' | 'animal' | 'number' | 'profession' | 'fruit' | 'color' | 'bilsemc2'>('letter');
@@ -83,11 +80,19 @@ const LogicPuzzleCreator = () => {
     setGrid(newGrid);
   };
 
-  const handleSavePuzzle = async () => {
+const handleSavePuzzle = async () => {
     if (!title.trim()) {
       toast.error('Lütfen bulmaca için bir başlık girin');
       return;
     }
+
+    // --- YENİ: Kullanıcı kontrolü ---
+    if (!currentUser) {
+      toast.error('Bulmaca kaydetmek için giriş yapmanız gerekmektedir.');
+      setIsSaving(false); // Kaydetme durumunu sıfırla
+      return;
+    }
+    // --- BİTTİ: Kullanıcı kontrolü ---
 
     try {
       setIsSaving(true);
@@ -97,21 +102,36 @@ const LogicPuzzleCreator = () => {
           id: cell.id,
           type: cell.type,
           value: cell.value
+          // Not: SVG'yi veritabanına kaydetmiyorsanız bu yeterli.
+          // Eğer SVG veya başka kompleks veri varsa, ona göre ayarlayın.
         } : null)
       );
 
+      // PuzzleData tipine uygun veri oluştur
       const puzzleData = {
+        id: '', // Boş bırakılabilir, veritabanı otomatik oluşturacak
         grid: serializedGrid,
         title: title.trim(),
+        created_by: currentUser.id,
+        created_at: new Date().toISOString(), // Şu anki tarih
+        approved: false // Varsayılan değer
       };
 
       await savePuzzle(puzzleData);
-      toast.success('Bulmaca başarıyla kaydedildi!');
+
+      toast.success('Bulmaca başarıyla kaydedildi! Onaylandıktan sonra yayınlanacaktır.'); // Mesajı güncelledim
       setTitle('');
       setGrid(Array(3).fill(null).map(() => Array(3).fill(null)));
+      // İsteğe bağlı: Kullanıcıyı başka sayfaya yönlendir
+      // navigate('/my-puzzles');
     } catch (error: any) {
       console.error('Error saving puzzle:', error);
-      toast.error(error.message || 'Bulmaca kaydedilirken bir hata oluştu');
+      // RLS hatası genellikle "permission denied" veya benzeri bir mesaj içerir
+      if (error.message.includes('permission') || error.message.includes('RLS')) {
+         toast.error('Bulmacayı kaydetme yetkiniz yok veya bir kural ihlali oluştu.');
+      } else {
+         toast.error(error.message || 'Bulmaca kaydedilirken bir hata oluştu');
+      }
     } finally {
       setIsSaving(false);
     }

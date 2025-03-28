@@ -98,11 +98,60 @@
 
 /* Custom Animations */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideUp {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+/* Dolu-Boş Şekil Bulmacası Stilleri */
+.text-shadow-cyan {
+  text-shadow: 0 0 25px rgba(34, 211, 238, 0.4); /* Cyan */
+}
+
+/* SVG stilleri */
+.shape.filled {
+  fill: currentColor;
+  stroke: none;
+}
+
+.shape.outline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  /* vector-effect: non-scaling-stroke; - SVG özelliği, CSS doğrulayıcı tarafından tanınmıyor ama tarayıcılar destekliyor */
+}
+
+/* Animasyon sınıfları */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Yükleme/Hata Ekranı Stilleri */
+.loading-screen, .error-screen, .xp-warning-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom right, #0f172a, #1e293b);
+  color: white;
+  padding: 1rem;
+  text-align: center;
+}
+
+.loading-text {
+  font-size: 1.5rem;
+  font-weight: 600;
 }
