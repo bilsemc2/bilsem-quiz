@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-type SoundType = 'correct' | 'incorrect' | 'tick' | 'timeWarning';
+type SoundType = 'correct' | 'incorrect' | 'tick' | 'timeWarning' | 'select';
 
 const SOUND_URLS = {
     correct: '/sounds/correct.mp3',
     incorrect: '/sounds/incorrect.mp3',
     tick: '/sounds/tick.mp3',
     timeWarning: '/sounds/time-warning.mp3',
+    select: '/sounds/select.mp3'
 };
 
 export const useSound = () => {
