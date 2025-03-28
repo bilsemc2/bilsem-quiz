@@ -1,32 +1,23 @@
-// React import'unu kaldırdık çünkü kullanılmıyor
-
-
+// JSX kullanıldığında React otomatik olarak import edilir (React 17+)
 
 interface CircularProgressProps {
-
     timeLeft: number;
-    
-    progress: number;
-    
-    totalTime?: number; // İsteğe bağlı olarak değiştirdim, kullanılmadığı için
-    
-    }
-    
-    
-    
-    export default function CircularProgress({
-    
+    totalTime: number;
+    progress?: number; // İsteğe bağlı yaptık çünkü timeLeft ve totalTime'dan hesaplanabilir
+}
+
+export default function CircularProgress({
     timeLeft,
-    
-    progress
-    
-    }: CircularProgressProps) {
+    totalTime,
+    progress: externalProgress
+}: CircularProgressProps) {
+    // timeLeft ve totalTime'a göre ilerleme yüzdesini hesapla
+    // Dışarıdan progress verilmişse onu kullan, yoksa hesapla
+    const calculatedProgress = externalProgress ?? Math.max(0, Math.min(100, (timeLeft / totalTime) * 100));
     
     const radius = 20;
-    
     const circumference = 2 * Math.PI * radius;
-    
-    const strokeDashoffset = circumference - (progress / 100) * circumference;
+    const strokeDashoffset = circumference - (calculatedProgress / 100) * circumference;
     
     
     

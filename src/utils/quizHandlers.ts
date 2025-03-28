@@ -15,11 +15,12 @@ interface QuizActions {
     getIsAnswered?: () => boolean;
 }
 
-interface TimerActions {
-    resetTimer: (time?: number) => void;
-    stopTimer: () => void;
-    startTimer: () => void;
-}
+// Zamanlayıcı kaldırıldı
+// interface TimerActions {
+//     resetTimer: (time?: number) => void;
+//     stopTimer: () => void;
+//     startTimer: () => void;
+// }
 
 interface FeedbackActions {
     showFeedback: (message: string, type: 'success' | 'error' | 'info', permanent?: boolean) => void;
@@ -31,7 +32,6 @@ export interface QuizHandlerParams {
     currentQuestionIndex: number;
     isLastQuestion: boolean;
     quizActions: QuizActions;
-    timerActions: TimerActions;
     feedbackActions: FeedbackActions;
     handleNext: () => void;
 }
@@ -42,7 +42,6 @@ export async function handleOptionSelection(
     currentQuestionIndex: number,
     isLastQuestion: boolean,
     quizActions: QuizActions,
-    timerActions: TimerActions,
     feedbackActions: FeedbackActions,
     handleNext: () => void
 ) {
@@ -62,7 +61,7 @@ export async function handleOptionSelection(
         // Seçeneği işaretle
         quizActions.setSelectedOption(optionId);
         quizActions.setIsAnswered(true);
-        timerActions.stopTimer();
+        // Zamanlayıcı kaldırıldı
 
         // Cevabı kaydet
         const answer: Answer = {
@@ -103,7 +102,7 @@ export async function handleOptionSelection(
                 quizActions.setSelectedOption(null);
                 quizActions.setIsAnswered(false);
                 quizActions.setIsTimeout(false);
-                timerActions.resetTimer();
+                // Zamanlayıcı kaldırıldı
                 handleNext(); // Sonraki soruya geç
             }, 2000);
         } else {
@@ -128,7 +127,6 @@ export interface QuizEndParams {
     currentQuestionIndex: number;
     isLastQuestion: boolean;
     quizActions: QuizActions;
-    timerActions: TimerActions;
     feedbackActions: FeedbackActions;
     handleNext: () => void;
     timeSpent: number;
@@ -160,11 +158,10 @@ const createTimeoutAnswer = (params: QuizEndParams): Answer => {
 
 // Son soruyu işleme - tekrarlanan kodu modülerleştirdik
 const handleLastQuestion = (params: QuizEndParams) => {
-    const { timerActions, feedbackActions, handleNext } = params;
+    const { feedbackActions, handleNext } = params;
     
-    timerActions.stopTimer();
-    timerActions.resetTimer(60);
-    feedbackActions.showFeedback('Süre doldu! Quiz tamamlanıyor...', 'error', true);
+    // Zamanlayıcı kaldırıldı
+    feedbackActions.showFeedback('Quiz tamamlanıyor...', 'info', true);
     
     // Quiz tamamlama işlemi için gecikme
     setTimeout(() => {
@@ -174,14 +171,14 @@ const handleLastQuestion = (params: QuizEndParams) => {
 
 // Normal soruları işleme - tekrarlanan kodu modülerleştirdik
 const handleNonLastQuestion = (params: QuizEndParams) => {
-    const { quizActions, timerActions, handleNext } = params;
+    const { quizActions, handleNext } = params;
     
     setTimeout(() => {
         quizActions.setSelectedOption(null);
         quizActions.setIsAnswered(false);
         quizActions.setIsTimeout(false);
         quizActions.setShowSolution(false);
-        timerActions.resetTimer();
+        // Zamanlayıcı kaldırıldı
         handleNext();
     }, 2000);
 };
@@ -192,7 +189,6 @@ export const handleQuizEnd = async (
     currentQuestionIndex: number,
     isLastQuestion: boolean,
     quizActions: QuizActions,
-    timerActions: TimerActions,
     feedbackActions: FeedbackActions,
     handleNext: () => void,
     timeSpent: number
@@ -205,7 +201,7 @@ export const handleQuizEnd = async (
             currentQuestionIndex,
             isLastQuestion,
             quizActions,
-            timerActions,
+    
             feedbackActions,
             handleNext,
             timeSpent
@@ -225,7 +221,7 @@ export const handleQuizEnd = async (
             playSound('timeout');
         }
 
-        timerActions.stopTimer();
+        // Zamanlayıcı kaldırıldı
 
         // Son soru veya normal sorular için modüler yardımcı fonksiyonları kullanıyoruz
         if (isLastQuestion) {
@@ -235,7 +231,7 @@ export const handleQuizEnd = async (
                 currentQuestionIndex,
                 isLastQuestion,
                 quizActions,
-                timerActions,
+        
                 feedbackActions,
                 handleNext,
                 timeSpent
@@ -247,7 +243,7 @@ export const handleQuizEnd = async (
                 currentQuestionIndex,
                 isLastQuestion,
                 quizActions,
-                timerActions,
+        
                 feedbackActions,
                 handleNext,
                 timeSpent
@@ -262,22 +258,14 @@ export const handleQuizEnd = async (
 export const handleQuestionNavigation = (
     newIndex: number,
     quizActions: QuizActions,
-    timerActions: TimerActions,
     feedbackActions: FeedbackActions
 ) => {
     try {
-        // Soru değişiminde timer'ı sıfırla
-        timerActions.stopTimer();
-        timerActions.resetTimer(60);
-
         // Yeni soruya geç
         quizActions.setCurrentQuestionIndex(newIndex);
         quizActions.setSelectedOption(null);
         quizActions.setIsAnswered(false);
         quizActions.setIsTimeout(false);
-
-        // Timer'ı başlat
-        timerActions.startTimer();
     } catch (error) {
         console.error('Soru değiştirilirken hata:', error);
         feedbackActions.showFeedback('Bir hata oluştu', 'error');

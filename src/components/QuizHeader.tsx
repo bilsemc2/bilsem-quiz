@@ -1,6 +1,6 @@
 import React from 'react';
-
-import CircularProgress from './CircularProgress'; // Assuming CircularProgress is a separate component
+import CircularProgress from './CircularProgress';
+import { QUIZ_DURATION } from '../config/constants';
 
 
 
@@ -43,13 +43,9 @@ Soru {currentQuestionIndex + 1}/{totalQuestions}
 <div className="flex items-center space-x-4">
 
 <CircularProgress
-
-timeLeft={timeLeft}
-
-totalTime={60}
-
-progress={progress}
-
+  timeLeft={timeLeft}
+  totalTime={QUIZ_DURATION}
+  progress={progress}
 />
 
 </div>
