@@ -20,8 +20,8 @@ BEGIN
     profiles.id as student_id,
     profiles.name as student_name,
     profiles.avatar_url,
-    COALESCE(SUM(ar.score), 0)::bigint as total_score,
-    COALESCE(SUM(ar.score), 0)::bigint as correct_answers, -- score kullanıyoruz
+    COALESCE(MAX(ar.score), 0)::bigint as total_score, -- En yüksek skoru al
+    COALESCE(SUM(ar.score), 0)::bigint as correct_answers,
     COALESCE(SUM(ar.total_questions), 0)::bigint as total_questions,
     CASE
       WHEN COALESCE(SUM(ar.total_questions), 0) > 0 

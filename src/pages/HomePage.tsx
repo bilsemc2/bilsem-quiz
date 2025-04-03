@@ -11,6 +11,13 @@ interface LeaderUser {
     avatar_url: string;
     points: number;
     email: string;
+    score?: number;
+    performance?: {
+        completed_at: string;
+        title: string;
+        score: number;
+        completion_rate: number;
+    }[];
 }
 
 // Slider verisi artık kullanılmayacak, isterseniz silebilirsiniz
@@ -24,38 +31,112 @@ export default function HomePage() {
     const { user } = useAuth();
 
     useEffect(() => {
-        // ... (Liderleri ve öğrenci sayısını fetch etme kodu - Değişiklik yok) ...
         const fetchLeaders = async () => {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, name, avatar_url, points, email')
-                .order('points', { ascending: false })
-                .limit(10);
-
-            if (error) {
-                console.error('Error fetching leaders:', error);
-                return;
-            }
-
-            if (data) {
-                const updatedLeaders = data.map(leader => ({
-                    ...leader,
-                    avatar_url: leader.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(leader.email)}`
-                }));
-                setLeaders(updatedLeaders);
+            try {
+                // Tüm sınıflar için liderlik tablosunu al
+                const { data: classesData, error: classesError } = await supabase
+                    .from('classes')
+                    .select('id')
+                    .limit(5); // En fazla 5 sınıf için liderlik tablosu al
+                
+                if (classesError) {
+                    console.error('Sınıflar alınırken hata:', classesError);
+                    return;
+                }
+                
+                if (!classesData || classesData.length === 0) {
+                    console.log('Hiç sınıf bulunamadı');
+                    return;
+                }
+                
+                // Tüm sınıflar için liderlik tablosunu al ve birleştir
+                const leaderboardPromises = classesData.map(async (classItem) => {
+                    const { data, error } = await supabase
+                        .rpc('get_class_leaderboard', { class_id: classItem.id });
+                        
+                    if (error) {
+                        console.error(`${classItem.id} sınıfı için liderlik tablosu alınırken hata:`, error);
+                        return [];
+                    }
+                    
+                    return data || [];
+                });
+                
+                // Tüm liderlik tablolarını bekle ve birleştir
+                const allLeaderboards = await Promise.all(leaderboardPromises);
+                
+                // Tüm liderlik tablolarını düzleştir ve birleştir
+                const combinedLeaderboard = allLeaderboards.flat();
+                
+                // Öğrenci ID'sine göre en yüksek puanları al
+                const studentMap = new Map();
+                combinedLeaderboard.forEach(entry => {
+                    if (!studentMap.has(entry.student_id) || 
+                        studentMap.get(entry.student_id).total_score < entry.total_score) {
+                        studentMap.set(entry.student_id, entry);
+                    }
+                });
+                
+                // En yüksek puanlı 10 öğrenciyi al
+                const topLeaders = Array.from(studentMap.values())
+                    .sort((a, b) => b.total_score - a.total_score)
+                    .slice(0, 10);
+                
+                // İsimleri maskeleme fonksiyonu
+                const maskName = (name: string) => {
+                    if (!name) return '';
+                    
+                    // İsmi boşluklara göre böl
+                    const nameParts = name.split(' ');
+                    
+                    // Her bir parçayı maskele
+                    return nameParts.map(part => {
+                        if (part.length <= 1) return part;
+                        return part[0] + '*'.repeat(part.length - 1);
+                    }).join(' ');
+                };
+                
+                // Liderlik tablosunu LeaderUser formatına dönüştür
+                const formattedLeaders = topLeaders.map(leader => {
+                    // İsmi maskele
+                    const maskedName = maskName(leader.student_name);
+                    
+                    return {
+                        id: leader.student_id,
+                        name: maskedName,
+                        avatar_url: leader.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(leader.student_name)}`,
+                        points: 0, // Bu alanı doldurabilirsiniz
+                        email: '', // Bu alanı doldurabilirsiniz
+                        score: leader.total_score,
+                        performance: [{
+                            completed_at: new Date().toISOString(),
+                            title: 'Sınıf Performansı',
+                            score: leader.completion_rate,
+                            completion_rate: leader.completion_rate
+                        }]
+                    };
+                });
+                
+                setLeaders(formattedLeaders);
+            } catch (err) {
+                console.error('Lider tablosu yüklenirken hata oluştu:', err);
             }
 
             // Toplam öğrenci sayısını al
-            const { count, error: countError } = await supabase
-                .from('profiles')
-                .select('*', { count: 'exact', head: true });
+            try {
+                const { count, error: countError } = await supabase
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true });
 
-            if (countError) {
-                console.error('Error fetching student count:', countError);
-                return;
+                if (countError) {
+                    console.error('Error fetching student count:', countError);
+                    return;
+                }
+
+                setActiveStudentCount(count || 0);
+            } catch (countErr) {
+                console.error('Öğrenci sayısı alınırken hata:', countErr);
             }
-
-            setActiveStudentCount(count || 0);
         };
 
         fetchLeaders();
@@ -164,8 +245,13 @@ export default function HomePage() {
                                             {leader.name}
                                         </p>
                                         <p className="text-sm text-gray-500">
-                                            {leader.points} puan
+                                            {leader.score} puan
                                         </p>
+                                        {leader.performance && leader.performance.length > 0 && (
+                                            <p className="text-xs text-indigo-500 mt-1">
+                                                Son test: {leader.performance[leader.performance.length - 1].score}%
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -188,7 +274,7 @@ export default function HomePage() {
                     </div>
                     <div className="bg-white rounded-lg shadow-lg p-6 text-center transform transition hover:scale-105 duration-300 border border-transparent hover:border-pink-300">
                          <div className="text-3xl font-bold text-pink-600 mb-2">
-                            {leaders.length > 0 ? leaders[0].points : 0}
+                            {leaders.length > 0 ? leaders[0].score : 0}
                         </div>
                         <div className="text-gray-600 text-sm font-medium">
                             En Yüksek Puan
