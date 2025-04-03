@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import QuestionCount from '../components/QuestionCount';
-import QuizizzSurprise from '../components/QuizizzSurprise';
-
+import GununSorusu from '../components/GununSorusu'; // Günün Sorusu bileşeni
 
 interface LeaderUser {
     id: string;
@@ -14,19 +13,18 @@ interface LeaderUser {
     email: string;
 }
 
-const slides = [
-    { id: 1, image: '/images/k1.jpg', alt: 'Bilsem Sınavı Matris' },
-    { id: 2, image: '/images/k2.jpg', alt: 'Bilsem Sınavı Hafıza' },
-    { id: 3, image: '/images/k3.jpg', alt: 'Bilsem sınavı Parça Bütün' },
-];
+// Slider verisi artık kullanılmayacak, isterseniz silebilirsiniz
+// const slides = [ ... ];
 
 export default function HomePage() {
     const [leaders, setLeaders] = useState<LeaderUser[]>([]);
-    const [currentSlide, setCurrentSlide] = useState(0);
+    // currentSlide state'i artık kullanılmayacak, isterseniz silebilirsiniz
+    // const [currentSlide, setCurrentSlide] = useState(0);
     const [activeStudentCount, setActiveStudentCount] = useState(0);
     const { user } = useAuth();
 
     useEffect(() => {
+        // ... (Liderleri ve öğrenci sayısını fetch etme kodu - Değişiklik yok) ...
         const fetchLeaders = async () => {
             const { data, error } = await supabase
                 .from('profiles')
@@ -65,114 +63,95 @@ export default function HomePage() {
         return () => clearInterval(interval);
     }, []);
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % slides.length);
-        }, 5000);
+    // Slider için olan useEffect artık gerekli değil, silebilirsiniz
+    // useEffect(() => { ... }, []);
 
-        return () => clearInterval(timer);
-    }, []);
-
-    const goToSlide = (index: number) => {
-        setCurrentSlide(index);
-    };
+    // goToSlide fonksiyonu artık gerekli değil, silebilirsiniz
+    // const goToSlide = (index: number) => { ... };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12"> {/* Padding ayarlandı */}
                 {/* Header */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                        Bilsemc2 - Çocuğunuzun geleceği ile oynayın
+                <div className="text-center mb-10">
+                     {/* ... (Header içeriği - Değişiklik yok) ... */}
+                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+                        Bilsemc2 - Zeka Gelişim Platformu
                     </h1>
-                    <p className="text-xl text-gray-600 mb-6">
-                        Öğrenmeyi Eğlenceli Hale Getirin
+                    <p className="text-lg sm:text-xl text-gray-600 mb-6">
+                        Öğrenmeyi Eğlenceye Dönüştürün!
                     </p>
                     {user ? (
-                        <div className="flex justify-center space-x-4">
+                        <div className="flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4"> {/* Mobil için düzenleme */}
                             <Link
                                 to="/quiz"
-                                className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 mb-4 w-48"
+                                className="inline-block w-full sm:w-48 text-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
                                 Sınava Başla
                             </Link>
                             <Link
                                 to="/duel"
-                                className="inline-block bg-gradient-to-r from-pink-600 to-red-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-pink-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 mb-4 w-48"
+                                className="inline-block w-full sm:w-48 text-center bg-gradient-to-r from-pink-600 to-red-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-pink-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
                                 Düello Başlat
                             </Link>
                         </div>
                     ) : (
-                        <div className="space-y-4">
+                         <div className="space-y-4">
+                            {/* ... (Giriş yapmamış kullanıcı butonu - Değişiklik yok) ... */}
                             <div className="relative group inline-block">
                                 <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-200"></div>
                                 <Link
                                     to="/login"
-                                    className="relative block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 w-48"
+                                    className="relative block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105" // Biraz büyütüldü
                                 >
-                                    Sınava Başla
+                                    Maceraya Başla!
                                 </Link>
                             </div>
-                            <p className="text-sm text-indigo-600 font-medium animate-bounce">
-                                🎮 Heyecan verici sınavlara başlamak için giriş yapın!
+                             <p className="text-sm text-indigo-600 font-medium animate-bounce">
+                                🎮 Heyecan verici görevler ve düellolar için giriş yapın!
                             </p>
-                        </div>
+                         </div>
                     )}
-                    <p className="text-sm text-gray-500 italic mt-3 max-w-md mx-auto">
+                     <p className="text-sm text-gray-500 italic mt-3 max-w-md mx-auto">
                         Her girişte karışık 10 soru gelmektedir.
                     </p>
                 </div>
 
-                {/* Hero Section with Slider and Leaderboard */}
+                {/* --- Ana İçerik Alanı: Günün Sorusu ve Liderlik --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                    {/* Slider */}
-                    <div className="lg:col-span-2 relative">
-                        <div className="relative h-[400px] overflow-hidden rounded-lg">
-                            <div
-                                className="flex h-full transition-transform duration-500 ease-out"
-                                style={{
-                                    transform: `translateX(-${currentSlide * 100}%)`,
-                                }}
-                            >
-                                {slides.map((s) => (
-                                    <div
-                                        key={s.id}
-                                        className="w-full h-full flex-shrink-0 relative p-4"
-                                    >
-                                        <img
-                                            src={s.image}
-                                            alt={s.alt}
-                                            className="w-full h-full object-contain rounded-lg"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                                {slides.map((_, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => goToSlide(index)}
-                                        className={`w-2 h-2 rounded-full transition-colors ${
-                                            index === currentSlide
-                                                ? 'bg-white'
-                                                : 'bg-white/50'
-                                        }`}
-                                    />
-                                ))}
-                            </div>
+
+                    {/* --- Günün Sorusu Alanı (Ön Plana Alındı) --- */}
+                    <div className="lg:col-span-2 bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 rounded-xl shadow-xl p-6 border-2 border-orange-200 flex flex-col"> {/* Dikkat çekici stil */}
+                        <h2 className="text-2xl sm:text-3xl font-bold text-center text-orange-700 mb-5 pb-3 border-b border-orange-200">
+                            💡 Günün Sorusu 💡
+                        </h2>
+                        <div className="flex-grow flex items-center justify-center">
+                            {/* GununSorusu bileşeninin içeriği ortalayacağını varsayıyoruz */}
+                            <GununSorusu />
                         </div>
+                         {/* İsteğe bağlı: Çözüm veya tartışma linki
+                         <div className="mt-4 text-center">
+                             <Link to="/gunun-sorusu" className="text-sm text-orange-600 hover:underline font-medium">
+                                 Çözümü Gör / Tartışmaya Katıl
+                             </Link>
+                         </div>
+                         */}
                     </div>
 
-                    {/* Leaderboard */}
+                    {/* Liderlik Tablosu Alanı */}
                     <div className="bg-white rounded-xl shadow-lg p-6">
-                        <h3 className="text-lg font-semibold mb-4">Lider Tablosu</h3>
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                           🏆 Lider Tablosu
+                       </h3>
                         <div className="space-y-4">
-                            {leaders.slice(0, 5).map((leader, index) => (
+                           {/* ... (Liderlik Tablosu içeriği - Değişiklik Yok) ... */}
+                           {leaders.slice(0, 5).map((leader, index) => (
                                 <div
                                     key={leader.id}
-                                    className="flex items-center space-x-4"
+                                    className="flex items-center space-x-4 p-2 rounded-md hover:bg-gray-50"
                                 >
+                                    <span className="font-semibold text-indigo-600 w-5 text-right">{index + 1}.</span>
                                     <div className="flex-shrink-0">
                                         <img
                                             src={leader.avatar_url}
@@ -188,42 +167,45 @@ export default function HomePage() {
                                             {leader.points} puan
                                         </p>
                                     </div>
-                                    <div className="flex-shrink-0">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                            #{index + 1}
-                                        </span>
-                                    </div>
                                 </div>
                             ))}
+                            {leaders.length === 0 && <p className='text-sm text-gray-500 text-center py-4'>Liderlik tablosu yakında dolacak!</p>}
                         </div>
                     </div>
                 </div>
 
                 {/* Stats Section */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 border-t border-gray-100 pt-12">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 border-t border-gray-200 pt-10">
+                    {/* ... (İstatistikler içeriği - Değişiklik Yok) ... */}
                     <QuestionCount />
-                    <div className="bg-white rounded-lg shadow-lg p-6 text-center transform hover:scale-105 transition-transform duration-200">
+                    <div className="bg-white rounded-lg shadow-lg p-6 text-center transform transition hover:scale-105 duration-300 border border-transparent hover:border-purple-300">
                         <div className="text-3xl font-bold text-purple-600 mb-2">
                             {activeStudentCount}
                         </div>
-                        <div className="text-gray-600 text-sm">
+                        <div className="text-gray-600 text-sm font-medium">
                             Aktif Öğrenci
                         </div>
                     </div>
-                    <div className="bg-white rounded-lg shadow-lg p-6 text-center transform hover:scale-105 transition-transform duration-200">
-                        <div className="text-3xl font-bold text-pink-600 mb-2">
+                    <div className="bg-white rounded-lg shadow-lg p-6 text-center transform transition hover:scale-105 duration-300 border border-transparent hover:border-pink-300">
+                         <div className="text-3xl font-bold text-pink-600 mb-2">
                             {leaders.length > 0 ? leaders[0].points : 0}
                         </div>
-                        <div className="text-gray-600 text-sm">
+                        <div className="text-gray-600 text-sm font-medium">
                             En Yüksek Puan
                         </div>
                     </div>
                 </div>
 
-                <div className="container mx-auto px-4 py-8">
-                    <QuizizzSurprise currentUser={user} />
-                    {/* Diğer ana sayfa içeriği */}
-                </div>
+                 {/* Quizizz Sürprizi gibi diğer içerikler buraya eklenebilir */}
+                 {/*
+                 <div className="container mx-auto px-4 py-8 border-t border-gray-200">
+                      <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Sürpriz Test</h2>
+                     <QuizizzSurprise currentUser={user} />
+                 </div>
+                 */}
+
+                 {/* Eski Günün Sorusu bölümü buradan kaldırıldı */}
+
             </div>
         </div>
     );

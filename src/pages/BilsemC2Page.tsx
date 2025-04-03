@@ -62,13 +62,7 @@ const games = [
     color: 'bg-cyan-100',
     isNew: true
   },
-  {
-    title: 'Bulmaca Oluştur',
-    description: 'Kendi bulmacalarınızı oluşturun ve paylaşın. Yaratıcılığınızı konuşturun!',
-    icon: <Puzzle className="w-12 h-12 text-pink-500" />,
-    path: '/puzzle-creator',
-    color: 'bg-pink-100'
-  },
+  // Bulmaca Oluştur kartı kaldırıldı
   {
     title: 'Eksik Parça',
     description: 'Şekil desenindeki eksik parçayı bulun. Farklı zorluk seviyeleriyle kendinizi test edin!',

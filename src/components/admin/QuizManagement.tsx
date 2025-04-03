@@ -48,18 +48,11 @@ import toast from 'react-hot-toast';
 import QuestionSelector from './QuestionSelector';
 
 // ------------------- INTERFACES -------------------
-export interface Question {
-  id: string;
-  text: string;
-  options: string[];
-  correct_option: string;
-  explanation?: string;
-  points: number;
-  type: 'multiple_choice' | 'true_false';
-  difficulty: 1 | 2 | 3;
-  number: number;
-  image_url?: string;
-}
+// QuestionSelector bileşeninden Question arayüzünü kullanmak için import ediyoruz
+import { Question as QuestionSelectorQuestion } from './QuestionSelector';
+
+// Eski Question arayüzünü yeni Question arayüzüne eşleştiriyoruz
+export type Question = QuestionSelectorQuestion;
 
 interface Quiz {
   id: string;
@@ -226,7 +219,7 @@ const QuizManagement: React.FC = () => {
   const handleCheckAnswers = async () => {
     try {
       setLoadingImages(true);
-      const questionNumbers = previewQuiz?.questions.map(q => q.number) || [];
+      const questionNumbers = previewQuiz?.questions.map(q => q.question_number) || [];
       const questions = await Promise.all(
         questionNumbers.map(num => fetchQuestionFromDatabase(num))
       );
@@ -234,8 +227,8 @@ const QuizManagement: React.FC = () => {
       const answers = questions
         .filter((q): q is Question => q !== null)
         .map(q => ({
-          number: q.number,
-          answer: q.correct_option,
+          number: q.question_number,
+          answer: q.correct_option_id,
         }));
 
       console.log('Doğru cevaplar:', answers);
@@ -467,12 +460,10 @@ const QuizManagement: React.FC = () => {
         id: data.id,
         text: data.text,
         options: data.options,
-        correct_option: data.correct_option_id,
+        correct_option_id: data.correct_option_id,
         image_url: data.image_url,
-        number: questionNumber,
-        type: 'multiple_choice',
-        difficulty: 1,
-        points: 1,
+        question_number: questionNumber,
+        is_active: true,
       };
     } catch (err) {
       handleError(`Soru ${questionNumber} çekilirken`, err);
@@ -540,11 +531,11 @@ const QuizManagement: React.FC = () => {
         // Tüm sorular için paralel yükleme
         await Promise.all(
           questionsToLoad.map(async (question) => {
-            const dbQuestion = await fetchQuestionFromDatabase(question.number);
+            const dbQuestion = await fetchQuestionFromDatabase(question.question_number);
             if (!dbQuestion || !isMounted) return;
 
             // Ana soru resmini yükle
-            const mainImageUrl = `/images/questions/Matris/Soru-${question.number}.webp`;
+            const mainImageUrl = `/images/questions/Matris/Soru-${question.question_number}.webp`;
             if (!imageCache.has(mainImageUrl)) {
               const img = new Image();
               const loadPromise = new Promise((resolve) => {
@@ -560,9 +551,9 @@ const QuizManagement: React.FC = () => {
             await Promise.all(
               ['A', 'B', 'C', 'D', 'E'].map(async (option) => {
                 const optionUrl = getOptionImagePath(
-                  question.number,
+                  question.question_number,
                   option,
-                  option === dbQuestion.correct_option
+                  option === dbQuestion.correct_option_id
                 );
                 if (!imageCache.has(optionUrl)) {
                   const img = new Image();
@@ -578,15 +569,15 @@ const QuizManagement: React.FC = () => {
             );
 
             // Soru bilgilerini güncelle
-            if (isMounted && question.number === currentQuestion.number) {
+            if (isMounted && question.question_number === currentQuestion.question_number) {
               setPreviewQuiz(prev => {
                 if (!prev) return null;
                 const updatedQuestions = [...prev.questions];
-                const index = updatedQuestions.findIndex(q => q.number === question.number);
+                const index = updatedQuestions.findIndex(q => q.question_number === question.question_number);
                 if (index !== -1) {
                   updatedQuestions[index] = {
                     ...updatedQuestions[index],
-                    correct_option: dbQuestion.correct_option,
+                    correct_option_id: dbQuestion.correct_option_id,
                   };
                 }
                 return { ...prev, questions: updatedQuestions };
@@ -926,7 +917,7 @@ const QuizManagement: React.FC = () => {
                       <Grid item xs={6} key={question.id}>
                         <Card sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
                           <Typography variant="body2" sx={{ flex: 1 }}>
-                            Soru {question.number}
+                            Soru {question.question_number}
                           </Typography>
                           <IconButton
                             size="small"
@@ -1003,10 +994,10 @@ const QuizManagement: React.FC = () => {
                     <img
                       src={
                         imageCache.get(
-                          `/images/questions/Matris/Soru-${previewQuiz.questions[currentQuestionIndex].number}.webp`
+                          `/images/questions/Matris/Soru-${previewQuiz.questions[currentQuestionIndex].question_number}.webp`
                         ) || ''
                       }
-                      alt={`Soru ${previewQuiz.questions[currentQuestionIndex].number}`}
+                      alt={`Soru ${previewQuiz.questions[currentQuestionIndex].question_number}`}
                       style={{
                         width: '100%',
                         height: 'auto',
@@ -1037,9 +1028,9 @@ const QuizManagement: React.FC = () => {
                   </Box>
                   <Grid container spacing={1}>
                     {['A', 'B', 'C', 'D', 'E'].map(option => {
-                      const isCorrect = option === previewQuiz.questions[currentQuestionIndex].correct_option;
+                      const isCorrect = option === previewQuiz.questions[currentQuestionIndex].correct_option_id;
                       const imagePath = getOptionImagePath(
-                        previewQuiz.questions[currentQuestionIndex].number,
+                        previewQuiz.questions[currentQuestionIndex].question_number,
                         option,
                         isCorrect
                       );

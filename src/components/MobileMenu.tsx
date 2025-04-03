@@ -98,13 +98,7 @@ export const MobileMenu: React.FC = () => {
                             >
                                 Quiz
                             </Link>
-                            <Link
-                                to="/puzzle-creator"
-                                onClick={() => setIsOpen(false)}
-                                className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                            >
-                                Bulmaca Oluştur
-                            </Link>
+                            {/* Bulmaca Oluştur bağlantısı kaldırıldı */}
                             <Link
                                 to="/drawing"
                                 onClick={() => setIsOpen(false)}
