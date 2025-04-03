@@ -10,7 +10,7 @@ import 'dayjs/locale/tr';
 dayjs.locale('tr');
 
 interface Announcement {
-  id: number;
+  id: string; // UUID türünde
   title: string;
   content: string;
   created_at: string;
@@ -206,24 +206,50 @@ const AnnouncementManagement: React.FC = () => {
   };
 
   // Duyuru silme
-  const handleDeleteAnnouncement = async (id: number) => {
+  const handleDeleteAnnouncement = async (id: string) => {
     try {
+      // Önce duyuruyu kontrol et
+      const { data: announcement, error: fetchError } = await supabase
+        .from('announcements')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        console.error('Duyuru kontrol edilirken hata:', fetchError);
+        throw new Error(`Duyuru bulunamadı: ${fetchError.message}`);
+      }
+
+      if (!announcement) {
+        throw new Error('Silinecek duyuru bulunamadı');
+      }
+
+      // Duyuruyu silme işlemi
       const { error } = await supabase
         .from('announcements')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Silme hatası:', error);
+        throw new Error(`Silme işlemi başarısız: ${error.message}`);
+      }
 
       toast.success('Duyuru başarıyla silindi', {
         icon: '🗑️',
         description: 'Duyuru artık görüntülenmeyecek.'
       });
       
+      // Duyuru listesini güncelle
+      setAnnouncements(prevAnnouncements => 
+        prevAnnouncements.filter(a => a.id !== id)
+      );
+      
+      // Tam güncelleme için tüm listeyi yeniden yükle
       fetchAnnouncements();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Duyuru silinirken hata:', error);
-      toast.error('Duyuru silinirken bir hata oluştu', {
+      toast.error(`Duyuru silinirken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`, {
         icon: '❌',
         description: 'İşlem gerçekleştirilemedi.'
       });

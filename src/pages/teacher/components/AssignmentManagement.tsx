@@ -77,15 +77,47 @@ const AssignmentManagement: React.FC = () => {
   const fetchQuestionStats = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .rpc('get_teacher_question_stats', { teacher_id: user.id });
-
-    if (error) {
-      toast.error('Soru istatistikleri alınırken bir hata oluştu');
-      return;
+    try {
+      // Önce toplam soru sayısını al
+      const { count: totalQuestions, error: countError } = await supabase
+        .from('questions')
+        .select('*', { count: 'exact', head: true });
+      
+      if (countError) {
+        console.error('Soru sayısı hatası:', countError);
+        toast.error('Soru sayısı alınırken bir hata oluştu');
+        return;
+      }
+      
+      // Profil bilgilerini al
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_admin, is_vip')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileError) {
+        console.error('Profil bilgisi hatası:', profileError);
+        toast.error('Profil bilgisi alınırken bir hata oluştu');
+        return;
+      }
+      
+      // Admin veya VIP ise tüm sorulara erişim var, değilse sabit limit
+      const questionLimit = profile.is_admin || profile.is_vip ? 999999 : 10;
+      const availableQuestions = Math.min(totalQuestions || 0, questionLimit);
+      
+      const stats = {
+        total_questions: totalQuestions || 0,
+        available_questions: availableQuestions,
+        question_limit: questionLimit
+      };
+      
+      console.log('Soru istatistikleri:', stats);
+      setQuestionStats(stats);
+    } catch (err) {
+      console.error('Beklenmeyen hata:', err);
+      toast.error('Soru istatistikleri alınırken beklenmeyen bir hata oluştu');
     }
-
-    setQuestionStats(data);
   };
 
   const fetchAssignments = async () => {

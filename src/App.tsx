@@ -12,11 +12,11 @@ import HomeworkPage from './pages/HomeworkPage';
 import DuelPage from './pages/DuelPage';
 import MirrorPage from './pages/MirrorPage';
 import MathWorld from './pages/MathWorld';
-import LogicPuzzleCreator from './pages/create';
+
+// LogicPuzzleCreator import'u kaldırıldı
 import PuzzleManagement from './pages/admin/PuzzleManagement';
 import XPRequirementsPage from './pages/admin/XPRequirementsPage';
-import PuzzleRankingPage from './pages/PuzzleRankingPage';
-import PuzzlePage from './pages/PuzzlePage';
+// Bulmaca sayfaları kaldırıldı
 import CreatePdfPage from './pages/CreatePdfPage';
 import GamePage from './pages/GamePage';
 import CubePage from './pages/CubePage';
@@ -201,22 +201,8 @@ const LocationAwareRouter: React.FC = () => {
               </RequireAuth>
             } 
           />
-          <Route 
-            path="/create" 
-            element={
-              <RequireAuth>
-                <LogicPuzzleCreator />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/puzzle-creator" 
-            element={
-              <RequireAuth skipXPCheck>
-                <LogicPuzzleCreator />
-              </RequireAuth>
-            } 
-          />
+          {/* /create rotası kaldırıldı */}
+          {/* puzzle-creator rotası kaldırıldı */}
           <Route 
             path="/homework" 
             element={
@@ -226,14 +212,7 @@ const LocationAwareRouter: React.FC = () => {
             } 
           />
 
-          <Route
-            path="/puzzle-ranking" 
-            element={
-              <RequireAuth>
-                <PuzzleRankingPage />
-              </RequireAuth>
-            }
-          />
+          {/* /puzzle-ranking rotası kaldırıldı */}
           <Route
             path="/teacher"
             element={
@@ -258,14 +237,7 @@ const LocationAwareRouter: React.FC = () => {
               </RequireAuth>
             }
           />
-          <Route 
-            path="/puzzle/:id" 
-            element={
-              <RequireAuth>
-                <PuzzlePage />
-              </RequireAuth>
-            } 
-          />
+          {/* /puzzle/:id rotası kaldırıldı */}
           <Route 
             path="/game" 
             element={

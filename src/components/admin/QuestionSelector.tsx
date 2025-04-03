@@ -15,17 +15,20 @@ import {
   Alert,
   LinearProgress,
 } from '@mui/material';
-import { MAX_QUESTION_NUMBER, ITEMS_PER_PAGE } from '../../config/constants';
+import { ITEMS_PER_PAGE } from '../../config/constants';
+import { supabase } from '../../lib/supabase';
 
-interface Question {
+export interface Question {
   id: string;
   text: string;
-  number: number;
-  options: string[]; 
-  correct_option: string;
-  points: number;
-  type: 'multiple_choice' | 'true_false';
-  difficulty: 1 | 2 | 3;
+  question_number: number;
+  options: any; // Supabase'den jsonb olarak geliyor
+  correct_option_id: string;
+  image_url?: string;
+  solution_video?: any;
+  is_active: boolean;
+  created_at?: string;
+  created_by?: string;
 }
 
 interface QuestionSelectorProps {
@@ -59,31 +62,15 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   // Sayfa değişiminde kaydetme işleminin gerçekleşmemesi için
   const hasInitializedRef = useRef(false);
 
-  const getQuestionImagePath = useCallback((questionNumber: number) => {
-    return `/images/questions/Matris/Soru-${questionNumber}.webp`;
-  }, []);
-
-  // Doğru cevabı bulan fonksiyon
-  const findCorrectAnswer = useCallback(async (questionNumber: number): Promise<string | null> => {
-    const letters = ['A', 'B', 'C', 'D', 'E'];
-    for (const letter of letters) {
-      try {
-        const correctPath = `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${letter}.webp`;
-        const correctResponse = await fetch(correctPath);
-        if (correctResponse.ok) {
-          return letter;
-        }
-        //Eğer cevaplı görsel yoksa cevapsız görseli de kontrol ediyoruz.
-        const normalPath = `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${letter}.webp`;
-        const normalResponse = await fetch(normalPath);
-        if(normalResponse.ok){
-            continue;
-        }
-      } catch (error) {
-        console.error(`Error fetching option ${letter} for question ${questionNumber}:`, error);
-      }
+  // Soru görüntüsü için URL oluşturan fonksiyon
+  const getQuestionImageUrl = useCallback((question: Question) => {
+    // Eğer soru için özel bir image_url varsa onu kullan
+    if (question.image_url) {
+      return question.image_url;
     }
-    return null; // Hiçbir doğru cevap bulunamazsa null döndür
+    
+    // Yoksa varsayılan bir görsel döndür
+    return `/images/question-placeholder.png`;
   }, []);
 
   // Sayfa için soruları yükleyen fonksiyon
@@ -92,66 +79,58 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
     setError(null);
     setLoadingProgress(0);
 
-    const newQuestions: Question[] = [];
-    const startIndex = (pageNum - 1) * questionsPerPage;
-    const endIndex = Math.min(startIndex + questionsPerPage, MAX_QUESTION_NUMBER);
-
     try {
-      for (let i = startIndex + 1; i <= endIndex; i++) {
-        const questionImagePath = getQuestionImagePath(i);
-        const questionResponse = await fetch(questionImagePath);
-
-        if (!questionResponse.ok) {
-          console.warn(`Question image not found for question number ${i}`);
-          continue;
-        }
-
-        const correctAnswer = await findCorrectAnswer(i);
-        if (!correctAnswer) {
-          console.warn(`Correct answer not found for question number ${i}`);
-          continue;
-        }
-
-        newQuestions.push({
-          id: i.toString(),
-          text: `Soru ${i}`,
-          number: i,
-          options: ['A', 'B', 'C', 'D', 'E'],
-          correct_option: correctAnswer,
-          points: 10,
-          type: 'multiple_choice',
-          difficulty: 2,
-        });
-
-        setLoadingProgress(((i - startIndex) / questionsPerPage) * 100);
+      // Sayfa başına soru sayısı hesaplama
+      const from = (pageNum - 1) * questionsPerPage;
+      const to = from + questionsPerPage - 1;
+      
+      // Supabase'den soruları çekme
+      const { data, error, count } = await supabase
+        .from('questions')
+        .select('*', { count: 'exact' })
+        .eq('is_active', true)
+        .order('question_number', { ascending: true })
+        .range(from, to);
+      
+      if (error) {
+        throw error;
       }
-
-      setQuestions(newQuestions);
-    } catch (error) {
-      setError('Sorular yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+      
+      // Toplam soru sayısını güncelle
+      if (count !== null) {
+        setTotalQuestions(count);
+      }
+      
+      // Soruları ayarla
+      setQuestions(data || []);
+      setLoadingProgress(100);
+    } catch (error: any) {
+      setError(`Sorular yüklenirken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
       console.error('Error loading questions:', error);
     } finally {
       setLoading(false);
-      setLoadingProgress(100);
     }
-  }, [questionsPerPage, getQuestionImagePath, findCorrectAnswer]);
+  }, [questionsPerPage]);
 
-  // Toplam soru sayısını hesaplayan fonksiyon
+  // Toplam soru sayısını hesaplayan fonksiyon - artık loadQuestionsForPage içinde yapılıyor
   const calculateTotalQuestions = useCallback(async () => {
-    let count = 0;
-    for (let i = 1; i <= MAX_QUESTION_NUMBER; i++) {
-      const questionImagePath = getQuestionImagePath(i);
-      try {
-        const response = await fetch(questionImagePath);
-        if (response.ok) {
-          count++;
-        }
-      } catch {
-        // Hata durumunda sayacı artırma, devam et
+    try {
+      const { count, error } = await supabase
+        .from('questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+      
+      if (error) {
+        throw error;
       }
+      
+      if (count !== null) {
+        setTotalQuestions(count);
+      }
+    } catch (error) {
+      console.error('Toplam soru sayısı hesaplanırken hata:', error);
     }
-    setTotalQuestions(count);
-  }, [getQuestionImagePath]);
+  }, []);
 
   // useEffect hook'ları
   useEffect(() => {
@@ -216,8 +195,10 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
   // Filtrelenmiş sorular
   const filteredQuestions = useMemo(() => {
+    if (!searchTerm) return questions;
+    
     return questions.filter((question) =>
-      question.text.toLowerCase().includes(searchTerm.toLowerCase())
+      question.text && question.text.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [questions, searchTerm]);
 
@@ -272,14 +253,16 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                 >
                   <CardMedia
                     component="img"
-                    image={getQuestionImagePath(question.number)}
-                    alt={`Soru ${question.number}`}
+                    image={getQuestionImageUrl(question)}
+                    alt={`Soru ${question.question_number}`}
                     sx={{ height: 200, objectFit: 'contain' }}
                   />
                   <CardContent>
-                    <Typography variant="subtitle1">{question.text}</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                      Soru {question.question_number}
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Doğru Cevap: {question.correct_option}
+                      Doğru Cevap: {question.correct_option_id}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -317,15 +300,20 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
           <DialogContent>
             <Box sx={{ textAlign: 'center' }}>
               <img
-                src={getQuestionImagePath(previewQuestion.number)}
-                alt={`Soru ${previewQuestion.number}`}
+                src={getQuestionImageUrl(previewQuestion)}
+                alt={`Soru ${previewQuestion.question_number}`}
                 style={{ maxWidth: '100%', height: 'auto' }}
               />
               <Typography variant="h6" sx={{ mt: 2 }}>
-                {previewQuestion.text}
+                Soru {previewQuestion.question_number}
               </Typography>
+              {previewQuestion.text && (
+                <Typography variant="body1" sx={{ mt: 1, maxHeight: '150px', overflow: 'auto' }}>
+                  {previewQuestion.text}
+                </Typography>
+              )}
               <Typography color="text.secondary">
-                Doğru Cevap: {previewQuestion.correct_option}
+                Doğru Cevap: {previewQuestion.correct_option_id}
               </Typography>
             </Box>
           </DialogContent>
