@@ -2,15 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
-  Tooltip,
   Button,
   Dialog,
   DialogTitle,
@@ -34,7 +26,7 @@ import {
   ListItemSecondaryAction,
   ListItemIcon,
   Avatar,
-  Chip,
+
   Checkbox
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -90,6 +82,7 @@ export const ClassManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [className, setClassName] = useState('');
   const [classGrade, setClassGrade] = useState<number>(1);
@@ -125,7 +118,21 @@ export const ClassManagement: React.FC = () => {
 
   useEffect(() => {
     fetchClasses();
+    checkAdminStatus();
   }, []);
+  
+  // Kullanıcının admin durumunu kontrol eden fonksiyon
+  const checkAdminStatus = async () => {
+    if (user?.id) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      
+      setIsAdmin(data?.is_admin || false);
+    }
+  };
 
   const handleOpenDialog = (cls?: Class) => {
     if (cls) {
@@ -206,7 +213,10 @@ export const ClassManagement: React.FC = () => {
       
       // Yetki kontrolü: Sadece sınıfı oluşturan kişi veya admin öğrenci ekleyebilir
       if (!selectedClass) return;
-      if (selectedClass.created_by !== user?.id && !user?.is_admin) {
+      
+      // isAdmin değişkeni bileşen seviyesinde tanımlandı
+      
+      if (selectedClass.created_by !== user?.id && !isAdmin) {
         setError('Bu sınıfa öğrenci ekleme yetkiniz yok');
         return;
       }
@@ -322,7 +332,7 @@ export const ClassManagement: React.FC = () => {
                 </Typography>
               </CardContent>
               <CardActions>
-                {(cls.created_by === user?.id || user?.is_admin) && (
+                {(cls.created_by === user?.id || isAdmin) && (
                   <>
                     <Button
                       size="small"

@@ -294,18 +294,37 @@ export const ClassroomPage: React.FC = () => {
                 return;
             }
             
+            // İsimleri maskeleme fonksiyonu
+            const maskName = (name: string) => {
+                if (!name) return '';
+                
+                // İsmi boşluklara göre böl
+                const nameParts = name.split(' ');
+                
+                // Her bir parçayı maskele
+                return nameParts.map(part => {
+                    if (part.length <= 1) return part;
+                    return part[0] + '*'.repeat(part.length - 1);
+                }).join(' ');
+            };
+            
             // Verileri LeaderboardEntry formatına dönüştürelim
-            const formattedData = data.map((item: any, index: number) => ({
-                student_id: item.student_id || item.id,
-                student_name: item.student_name || item.name,
-                avatar_url: item.avatar_url,
-                total_score: item.total_score || item.score || 0,
-                correct_answers: item.correct_answers || 0,
-                total_questions: item.total_questions || 0,
-                completion_rate: item.completion_rate || 
-                    (item.total_questions > 0 ? Math.round((item.correct_answers / item.total_questions) * 100) : 0),
-                rank: index + 1
-            }));
+            const formattedData = data.map((item: any, index: number) => {
+                const originalName = item.student_name || item.name;
+                const maskedName = maskName(originalName);
+                
+                return {
+                    student_id: item.student_id || item.id,
+                    student_name: maskedName, // Maskelenmiş isim kullan
+                    avatar_url: item.avatar_url,
+                    total_score: item.total_score || item.score || 0,
+                    correct_answers: item.correct_answers || 0,
+                    total_questions: item.total_questions || 0,
+                    completion_rate: item.completion_rate || 
+                        (item.total_questions > 0 ? Math.round((item.correct_answers / item.total_questions) * 100) : 0),
+                    rank: index + 1
+                };
+            });
             
             setLeaderboard(formattedData);
             console.log('Sıralama tablosu güncellendi:', formattedData);
