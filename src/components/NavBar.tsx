@@ -12,6 +12,7 @@ const NavBar: React.FC = () => {
   const { user } = useAuth();
   const [onlineCount, setOnlineCount] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isVip, setIsVip] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 
@@ -31,18 +32,21 @@ const NavBar: React.FC = () => {
     const checkUser = async () => {
       if (!user) {
         setIsAdmin(false);
+        setIsVip(false);
         return;
       }
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_admin')
+          .select('is_admin, is_vip')
           .eq('id', user.id)
           .single();
         setIsAdmin(profile?.is_admin || false);
+        setIsVip(profile?.is_vip || false);
       } catch (error) {
-        console.error("Admin kontrolü yapılırken hata:", error);
+        console.error("Kullanıcı bilgileri kontrol edilirken hata:", error);
         setIsAdmin(false);
+        setIsVip(false);
       }
     };
 
@@ -94,8 +98,8 @@ const NavBar: React.FC = () => {
     { name: "Düello", path: "/duel", showWhenAuth: true },
     { name: "Brain", path: "/beyin-antrenoru", showWhenAuth: true },
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
-    { name: "Fiyatlandırma", path: "/pricing" },
-    { name: "Öğretmenim", path: "/teacher-pricing" },
+    { name: "Fiyatlandırma", path: "/pricing", hideWhenVip: true },
+    { name: "Öğretmenim", path: "/teacher-pricing", hideWhenVip: true },
   ];
 
   // Desktop veya mobil menüde kullanılacak menü öğelerini render eden fonksiyon
@@ -104,6 +108,7 @@ const NavBar: React.FC = () => {
       if (item.showWhenNotAuth && user) return null;
       if (item.showWhenAuth && !user) return null;
       if (item.adminOnly && !isAdmin) return null;
+      if (item.hideWhenVip && isVip) return null;
       return (
         <Link
           key={item.path}
@@ -145,6 +150,7 @@ const NavBar: React.FC = () => {
               if (item.showWhenNotAuth && user) return null;
               if (item.showWhenAuth && !user) return null;
               if (item.adminOnly && !isAdmin) return null;
+              if (item.hideWhenVip && isVip) return null;
               return (
                 <Link
                   key={item.path}
