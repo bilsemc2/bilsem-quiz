@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-// import { useNavigate } from 'react-router-dom';
 import { useSound } from '../hooks/useSound';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,395 +7,398 @@ import { toast } from 'react-hot-toast';
 import { Brain } from 'lucide-react';
 import { useXPCheck } from '../hooks/useXPCheck';
 import XPWarning from '../components/XPWarning';
-// import { useUser } from '../hooks/useUser';
+
+// Constants
+const MEMORIZE_DURATION = 3000; // ms
+const FEEDBACK_DURATION = 2000; // ms
+const NUM_SAME_FOLDER_OPTIONS = 3;
+const NUM_NEARBY_FOLDER_OPTIONS = 2; // Total options = 1 target + NUM_SAME + NUM_NEARBY
+const MAX_NEARBY_FOLDER_DISTANCE = 3;
 
 interface ImageCard {
-  id: string;
+  id: string; // Folder ID
   src: string;
-  name: string;
-  option: string;
+  name: string; // e.g., "Soru 123"
+  option: string; // A, B, C, D, E
   isTarget: boolean;
   isAnswer: boolean;
-  position?: number;
+  position?: number; // For shuffling in render
+}
+
+interface GameSession {
+    userId: string | undefined;
+    score: number;
+    questionsAnswered: number;
+    streak: number;
+    startTime: Date | null;
 }
 
 const MemoryGamePage = () => {
-  // Auth ve XP hook'ları
-  const { user } = useAuth();
-  // const { currentUser, loading: userLoading } = useUser();
-  const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(false);
+    const { user } = useAuth();
+    const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(false);
+    const { playSound } = useSound();
 
-  // Diğer state'ler
-  const [_, setIsLoading] = useState(true);
-  const [showQuestion, setShowQuestion] = useState(false);
-  const [targetImage, setTargetImage] = useState<ImageCard | null>(null);
-  const [options, setOptions] = useState<ImageCard[]>([]);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
-  const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(0);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const { playSound } = useSound();
-  // const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(true); // Overall page/initial load
+    const [isQuestionLoading, setIsQuestionLoading] = useState(false); // Loading next question
+    const [showQuestion, setShowQuestion] = useState(false); // Controls showing options vs target
+    const [targetImage, setTargetImage] = useState<ImageCard | null>(null);
+    const [options, setOptions] = useState<ImageCard[]>([]);
+    const [selectedSrc, setSelectedSrc] = useState<string | null>(null); // Store src for comparison
+    const [isAnswered, setIsAnswered] = useState(false);
+    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-  const loadNewQuestion = async () => {
-    try {
-      setIsLoading(true);
-      setShowQuestion(false);
-      setSelectedOption(null);
-      setIsAnswered(false);
-      setIsCorrect(null);
+    // Session State for better DB interaction
+    const [session, setSession] = useState<GameSession>({
+        userId: user?.id,
+        score: 0,
+        questionsAnswered: 0,
+        streak: 0,
+        startTime: null,
+    });
 
-      // Import all option images - both answer and option images
-      const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
-      
-      // Convert imports to usable paths and group by folder
-      const imagesByFolder: { [key: string]: ImageCard[] } = {};
-      
-      Object.keys(optionImports).forEach(path => {
-        // Try to match both formats:
-        // 1. Soru-cevap-246C.webp (answer)
-        // 2. Soru-246A.webp (option)
-        const answerMatch = path.match(/Matris\/(\d+)\/Soru-cevap-\d+([A-E])/);
-        const optionMatch = path.match(/Matris\/(\d+)\/Soru-\d+([A-E])/);
-        
-        const match = answerMatch || optionMatch;
-        if (!match) return;
-        
-        const [_, folderId, option] = match;
-        const image: ImageCard = {
-          id: folderId,
-          src: path.replace('/public', ''),
-          name: `Soru ${folderId}`,
-          option,
-          isTarget: false,
-          isAnswer: !!answerMatch
-        };
-        
-        if (!imagesByFolder[folderId]) {
-          imagesByFolder[folderId] = [];
-        }
-        imagesByFolder[folderId].push(image);
-      });
+    // --- Helper Function: Get Image Data ---
+    const getImageData = useCallback((): { [key: string]: ImageCard[] } => {
+        const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
+        const imagesByFolder: { [key: string]: ImageCard[] } = {};
 
-      // Get all folder IDs and sort them
-      const folderIds = Object.keys(imagesByFolder).sort((a, b) => parseInt(a) - parseInt(b));
-      
-      if (folderIds.length === 0) {
-        toast.error('Yeterli sayıda soru bulunamadı');
-        return;
-      }
+        Object.keys(optionImports).forEach(path => {
+            const answerMatch = path.match(/Matris\/(\d+)\/Soru-cevap-\d+([A-E])\.webp/);
+            const optionMatch = path.match(/Matris\/(\d+)\/Soru-\d+([A-E])\.webp/);
+            const match = answerMatch || optionMatch;
 
-      // Rastgele bir klasör seç
-      const targetFolderIndex = Math.floor(Math.random() * folderIds.length);
-      const targetFolderId = folderIds[targetFolderIndex];
-      
-      // Hedef klasörden cevap resmini seç
-      const targetFolderImages = imagesByFolder[targetFolderId];
-      const answerImage = targetFolderImages.find(img => img.isAnswer);
-      
-      if (!answerImage) {
-        console.error('Bu klasörde cevap resmi yok:', targetFolderId);
-        return;
-      }
+            if (!match) return;
 
-      const target = { ...answerImage, isTarget: true };
+            const [_, folderId, option] = match;
+            const image: ImageCard = {
+                id: folderId,
+                src: path.replace('/public', ''),
+                name: `Soru ${folderId}`,
+                option,
+                isTarget: false,
+                isAnswer: !!answerMatch
+            };
 
-      console.log('Hedef:', {
-        folderId: targetFolderId,
-        option: target.option,
-        path: target.src
-      });
-
-      // Aynı klasörden diğer şıkları seç (3 tane)
-      const sameFolderOptions = targetFolderImages
-        .filter(img => !img.isAnswer) // Sadece cevap olmayan resimleri al
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3);
-
-      console.log('Aynı Klasör Seçenekleri:', sameFolderOptions.map(opt => ({
-        folderId: opt.id,
-        option: opt.option,
-        path: opt.src
-      })));
-
-      // Yakın klasörlerden 2 tane seç
-      const nearbyFolderIds = folderIds.filter(id => {
-        const diff = Math.abs(parseInt(id) - parseInt(targetFolderId));
-        return diff <= 3 && id !== targetFolderId;
-      });
-
-      console.log('Yakın Klasör IDleri:', nearbyFolderIds);
-
-      const nearbyOptions: ImageCard[] = [];
-      while (nearbyOptions.length < 2 && nearbyFolderIds.length > 0) {
-        const randomIndex = Math.floor(Math.random() * nearbyFolderIds.length);
-        const folderId = nearbyFolderIds[randomIndex];
-        const folderImages = imagesByFolder[folderId];
-        // Cevap olmayan resimlerden rastgele seç
-        const nonAnswerImages = folderImages.filter(img => !img.isAnswer);
-        if (nonAnswerImages.length > 0) {
-          const randomImage = nonAnswerImages[Math.floor(Math.random() * nonAnswerImages.length)];
-          nearbyOptions.push(randomImage);
-        }
-        nearbyFolderIds.splice(randomIndex, 1);
-      }
-
-      console.log('Yakın Klasör Seçenekleri:', nearbyOptions.map(opt => ({
-        folderId: opt.id,
-        option: opt.option,
-        path: opt.src
-      })));
-
-      // Tüm seçenekleri birleştir ve karıştır (sadece başlangıçta)
-      const allOptions = [...sameFolderOptions, ...nearbyOptions]
-        .sort(() => Math.random() - 0.5)
-        .map(opt => ({ ...opt, position: Math.random() }));
-
-      console.log('Final Seçenekler:', allOptions.map(opt => ({
-        folderId: opt.id,
-        option: opt.option,
-        path: opt.src
-      })));
-
-      // Hedef resmi ve seçenekleri ayarla
-      setTargetImage({ ...target, position: Math.random() });
-      setOptions(allOptions);
-
-      setIsLoading(false);
-      
-      // 3 saniye sonra hedef resmi gizle
-      setTimeout(() => {
-        setShowQuestion(true);
-      }, 3000);
-
-    } catch (error) {
-      console.error('Soru yüklenirken hata:', error);
-      setIsLoading(false);
-    }
-  };
-
-  const handleOptionClick = async (selectedImage: ImageCard) => {
-    if (isAnswered || !targetImage) return;
-
-    setSelectedOption(selectedImage.src);
-    setIsAnswered(true);
-
-    const correct = selectedImage.src === targetImage.src;
-    setIsCorrect(correct);
-
-    if (correct) {
-      playSound('correct');
-      setScore(prev => prev + 1);
-      setStreak(prev => prev + 1);
-    } else {
-      playSound('incorrect');
-      setStreak(0);
-    }
-
-    // Puanı Supabase'e kaydet
-    if (user) {
-      const { error } = await supabase
-        .from('quiz_results')
-        .insert({
-          user_id: user.id,
-          score: score + (correct ? 1 : 0),
-          questions_answered: totalQuestions + 1,
-          correct_answers: score + (correct ? 1 : 0),
-          completed_at: new Date().toISOString(),
-          title: 'Hafıza Oyunu',
-          subject: 'Matris',
-          grade: 0
+            if (!imagesByFolder[folderId]) {
+                imagesByFolder[folderId] = [];
+            }
+            imagesByFolder[folderId].push(image);
         });
+        return imagesByFolder;
+    }, []);
 
-      if (error) console.error('Skor kaydedilirken hata:', error);
-    }
+    // --- Helper Function: Select Target and Options ---
+    const selectQuestionElements = useCallback((imagesByFolder: { [key: string]: ImageCard[] }) => {
+        const folderIds = Object.keys(imagesByFolder).sort((a, b) => parseInt(a) - parseInt(b));
+        if (folderIds.length === 0) {
+            toast.error('Yeterli sayıda soru bulunamadı.');
+            throw new Error('No image folders found');
+        }
 
-    setTotalQuestions(prev => prev + 1);
+        // Select Target
+        const targetFolderIndex = Math.floor(Math.random() * folderIds.length);
+        const targetFolderId = folderIds[targetFolderIndex];
+        const targetFolderImages = imagesByFolder[targetFolderId];
+        const answerImage = targetFolderImages.find(img => img.isAnswer);
 
-    // 2 saniye sonra yeni soru yükle
-    setTimeout(() => {
-      loadNewQuestion();
-    }, 2000);
-  };
+        if (!answerImage) {
+            console.error('Bu klasörde cevap resmi yok:', targetFolderId);
+            // Fallback: try another folder or throw error
+            throw new Error(`Answer image not found in folder ${targetFolderId}`);
+        }
+        const finalTarget = { ...answerImage, isTarget: true, position: Math.random() };
 
-  useEffect(() => {
-    loadNewQuestion();
-  }, []);
+        // Select Same Folder Options
+        const sameFolderOptions = targetFolderImages
+            .filter(img => !img.isAnswer)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, NUM_SAME_FOLDER_OPTIONS);
 
-  const renderContent = () => {
-    // Loading durumunda bekle
-    if (xpLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-        </div>
-      );
-    }
+        // Select Nearby Folder Options
+        const nearbyFolderIds = folderIds.filter(id => {
+            const diff = Math.abs(parseInt(id) - parseInt(targetFolderId));
+            return diff > 0 && diff <= MAX_NEARBY_FOLDER_DISTANCE;
+        }).sort(() => Math.random() - 0.5); // Shuffle nearby folders
 
-    // XP kontrolü
-    if (!hasEnoughXP) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-          <XPWarning
-            requiredXP={requiredXP}
-            currentXP={userXP}
-            title="Hafıza Oyunu sayfasına erişim için yeterli XP'niz yok"
-          />
-        </div>
-      );
-    }
+        const nearbyOptions: ImageCard[] = [];
+        for (const folderId of nearbyFolderIds) {
+             if (nearbyOptions.length >= NUM_NEARBY_FOLDER_OPTIONS) break;
+             const folderImages = imagesByFolder[folderId]?.filter(img => !img.isAnswer); // Get non-answers
+             if (folderImages && folderImages.length > 0) {
+                 nearbyOptions.push(folderImages[Math.floor(Math.random() * folderImages.length)]);
+             }
+        }
 
-    // Ana oyun içeriği
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-8">
-        <div className="container mx-auto px-4">
-          {/* Üst Bilgi */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-3 rounded-xl">
-                  <Brain className="w-8 h-8 text-white" />
+         // Ensure total options (excluding target) reach the desired number if needed
+        // (Could add logic here to pick from random folders if nearby/same aren't enough)
+
+        const finalOptions = [...sameFolderOptions, ...nearbyOptions]
+             .map(opt => ({ ...opt, position: Math.random() })); // Assign random position for shuffling
+
+        return { finalTarget, finalOptions };
+
+    }, []);
+
+
+    // --- Load New Question Logic ---
+    const loadNewQuestion = useCallback(async () => {
+        setIsQuestionLoading(true);
+        setShowQuestion(false);
+        setSelectedSrc(null);
+        setIsAnswered(false);
+        setIsCorrect(null);
+        setTargetImage(null); // Clear previous target while loading
+        setOptions([]);
+
+        try {
+            const imagesByFolder = getImageData();
+            const { finalTarget, finalOptions } = selectQuestionElements(imagesByFolder);
+
+            setTargetImage(finalTarget);
+            setOptions(finalOptions);
+
+            setIsQuestionLoading(false);
+            setIsLoading(false); // Also set main loading to false after first load
+
+            // Start timer to hide target and show options
+            const timer = setTimeout(() => {
+                setShowQuestion(true);
+            }, MEMORIZE_DURATION);
+
+            return () => clearTimeout(timer); // Cleanup timer on unmount or reload
+
+        } catch (error: any) {
+            console.error('Soru yüklenirken hata:', error);
+            toast.error(`Soru yüklenemedi: ${error.message || 'Bilinmeyen bir hata oluştu.'}`);
+            setIsQuestionLoading(false);
+            setIsLoading(false);
+            // Handle error state appropriately, maybe show an error message component
+        }
+    }, [getImageData, selectQuestionElements]); // Add dependencies
+
+    // --- Handle Option Click Logic ---
+    const handleOptionClick = useCallback(async (selectedImage: ImageCard) => {
+        if (isAnswered || !targetImage || isQuestionLoading) return;
+
+        setSelectedSrc(selectedImage.src);
+        setIsAnswered(true);
+        const correct = selectedImage.src === targetImage.src;
+        setIsCorrect(correct);
+
+        // Update Session State
+        setSession(prev => ({
+            ...prev,
+            score: prev.score + (correct ? 1 : 0),
+            streak: correct ? prev.streak + 1 : 0,
+            questionsAnswered: prev.questionsAnswered + 1,
+        }));
+
+        if (correct) {
+            playSound('correct');
+        } else {
+            playSound('incorrect');
+        }
+
+        // Save progress less frequently or at the end (example: every 5 questions)
+        // Or use useEffect to save on session change with debounce
+        // Or save on component unmount / game end
+
+        // Schedule next question
+        const timer = setTimeout(() => {
+            loadNewQuestion();
+        }, FEEDBACK_DURATION);
+
+        return () => clearTimeout(timer); // Cleanup timer
+
+    }, [isAnswered, targetImage, isQuestionLoading, playSound, loadNewQuestion]); // Add dependencies
+
+
+    // --- Initial Load & Start Session ---
+    useEffect(() => {
+        loadNewQuestion();
+        setSession(prev => ({ ...prev, startTime: new Date(), userId: user?.id }));
+
+        // Add cleanup logic for saving results when the component unmounts (example)
+        return () => {
+             console.log("Component unmounting, potentially save final results here");
+             saveGameSession(); // Call save function on unmount
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loadNewQuestion, user?.id]); // Load question once on mount, update userId if it changes
+
+    // --- Function to Save Session Result ---
+    const saveGameSession = async () => {
+        if (!session.userId || session.questionsAnswered === 0) return; // Don't save if no user or no questions answered
+
+        console.log("Saving game session:", session);
+
+        const { error } = await supabase
+            .from('quiz_results') // Use your actual table name
+            .insert({
+                user_id: session.userId,
+                score: session.score,
+                questions_answered: session.questionsAnswered,
+                correct_answers: session.score, // Assuming score directly maps to correct answers
+                completed_at: new Date().toISOString(), // Record end time
+                // started_at: session.startTime?.toISOString(), // Optional: Record start time
+                title: 'Hafıza Oyunu',
+                subject: 'Matris',
+                grade: 0 // Or derive from difficulty/user level if applicable
+            });
+
+        if (error) {
+            console.error('Oturum sonucu kaydedilirken hata:', error);
+            toast.error("Oyun sonucu kaydedilemedi.");
+        } else {
+            console.log("Oturum sonucu başarıyla kaydedildi.");
+            // Optionally reset session state here if needed
+        }
+    };
+
+    // --- Render Logic ---
+    const renderContent = () => {
+        if (xpLoading || (isLoading && !targetImage)) { // Show loading on initial XP check or first question load
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
                 </div>
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  Hafıza Oyunu
-                </h1>
-              </div>
-              <div className="flex gap-4">
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl shadow-lg p-4 min-w-[100px]">
-                  <p className="text-sm text-emerald-600 font-medium">Skor</p>
-                  <p className="text-2xl font-bold text-emerald-700">{score}</p>
-                </div>
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-4 min-w-[100px]">
-                  <p className="text-sm text-blue-600 font-medium">Seri</p>
-                  <p className="text-2xl font-bold text-blue-700">{streak}</p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg p-4 min-w-[100px]">
-                  <p className="text-sm text-purple-600 font-medium">Toplam</p>
-                  <p className="text-2xl font-bold text-purple-700">{totalQuestions}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+            );
+        }
 
-          {/* Hedef Resim */}
-          {targetImage && !showQuestion && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-xl p-6 mb-8"
-            >
-              <h2 className="text-xl font-semibold mb-6 text-gray-800">Bu resmi hatırla:</h2>
-              <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                className="flex justify-center"
-              >
-                <div className="relative w-full max-w-xs mx-auto">
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur-xl opacity-20"></div>
-                  <img
-                    src={targetImage.src}
-                    alt="Hedef Resim"
-                    className="relative rounded-2xl shadow-2xl w-full"
-                  />
+        if (!hasEnoughXP) {
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+                    <XPWarning
+                        requiredXP={requiredXP}
+                        currentXP={userXP}
+                        title="Hafıza Oyunu sayfasına erişim için yeterli XP'niz yok"
+                    />
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
+            );
+        }
 
-          {/* Seçenekler */}
-          {showQuestion && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-xl p-6"
-            >
-              <h2 className="text-xl font-semibold mb-6 text-gray-800">Hedef resmi bul:</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-xl mx-auto">
-                {[targetImage, ...options]
-                  .sort((a, b) => ((a?.position || 0) - (b?.position || 0)))
-                  .map((image, index) => (
-                  <motion.div
-                    key={`${image?.id || index}-${image?.option || ''}`}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ scale: 1.02, translateY: -5 }}
-                    className={`relative cursor-pointer group w-32 h-32 mx-auto`}
-                    onClick={() => !isAnswered && image && handleOptionClick(image)}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                    <div 
-                      className={`relative rounded-xl overflow-hidden transition-all duration-300 shadow-lg h-full
-                        ${isAnswered && selectedOption === image?.src
-                          ? image?.src === targetImage?.src
-                            ? 'ring-4 ring-emerald-500 shadow-emerald-200'
-                            : 'ring-4 ring-red-500 shadow-red-200'
-                          : 'hover:shadow-xl'
-                        }`}
-                    >
-                      <img
-                        src={image?.src}
-                        alt={`Seçenek ${index + 1}`}
-                        className="w-full h-full object-contain"
-                      />
-                      {isAnswered && image?.src === targetImage?.src && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-emerald-500 bg-opacity-20 backdrop-blur-sm">
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="bg-white rounded-full p-2"
-                          >
-                            <svg 
-                              className="w-8 h-8 text-emerald-500" 
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              <path 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                strokeWidth={2} 
-                                d="M5 13l4 4L19 7" 
-                              />
-                            </svg>
-                          </motion.div>
+        // Combine target and options for rendering, sort by pre-calculated position
+        const displayImages = targetImage ? [targetImage, ...options] : [...options];
+        displayImages.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-8">
+                <div className="container mx-auto px-4">
+                    {/* Header */}
+                    <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-3 rounded-xl">
+                                    <Brain className="w-8 h-8 text-white" />
+                                </div>
+                                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                    Hafıza Oyunu
+                                </h1>
+                            </div>
+                            <div className="flex gap-4">
+                                {/* Use session state for display */}
+                                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl shadow-lg p-4 min-w-[100px] text-center">
+                                    <p className="text-sm text-emerald-600 font-medium">Skor</p>
+                                    <p className="text-2xl font-bold text-emerald-700">{session.score}</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-4 min-w-[100px] text-center">
+                                    <p className="text-sm text-blue-600 font-medium">Seri</p>
+                                    <p className="text-2xl font-bold text-blue-700">{session.streak}</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg p-4 min-w-[100px] text-center">
+                                    <p className="text-sm text-purple-600 font-medium">Toplam</p>
+                                    <p className="text-2xl font-bold text-purple-700">{session.questionsAnswered}</p>
+                                </div>
+                            </div>
                         </div>
-                      )}
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
 
-          {/* Sonuç Mesajı */}
-          {isAnswered && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`mt-8 p-6 rounded-2xl text-center ${
-                isCorrect 
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500' 
-                  : 'bg-gradient-to-r from-red-500 to-pink-500'
-              }`}
-            >
-              <motion.p 
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                className="text-xl font-bold text-white"
-              >
-                {isCorrect ? 'Harika! Doğru resmi buldun! 🎉' : 'Üzgünüm, yanlış resmi seçtin! 😢'}
-              </motion.p>
-            </motion.div>
-          )}
-        </div>
-      </div>
-    );
-  };
+                    {/* Target Image Display */}
+                    {targetImage && !showQuestion && !isQuestionLoading && (
+                         <motion.div /* ... existing animation ... */ className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+                             <h2 className="text-xl font-semibold mb-6 text-gray-800">Bu resmi hatırla:</h2>
+                             <motion.div /* ... existing animation ... */ className="flex justify-center">
+                                 {/* ... existing image rendering ... */}
+                                  <img
+                                      src={targetImage.src}
+                                      alt={`Hedef: ${targetImage.name} - ${targetImage.option}`} // More descriptive alt text
+                                      className="relative rounded-2xl shadow-2xl w-full max-w-xs"
+                                  />
+                             </motion.div>
+                         </motion.div>
+                    )}
 
-  return renderContent();
+                     {/* Question Loading Indicator */}
+                     {isQuestionLoading && (
+                        <div className="flex justify-center items-center h-64">
+                             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div>
+                        </div>
+                     )}
+
+
+                    {/* Options Display */}
+                    {showQuestion && !isQuestionLoading && (
+                        <motion.div /* ... existing animation ... */ className="bg-white rounded-2xl shadow-xl p-6">
+                            <h2 className="text-xl font-semibold mb-6 text-gray-800">Hatırladığın resmi bul:</h2>
+                             {/* Use the combined and sorted displayImages array */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-xl mx-auto">
+                                {displayImages.map((image, index) => (
+                                    <motion.div
+                                        key={`${image.id}-${image.option}-${index}`} // Ensure unique key
+                                        // ... existing animation & layout ...
+                                        className={`relative cursor-pointer group w-32 h-32 mx-auto ${isAnswered ? 'pointer-events-none' : ''}`} // Disable clicks after answer
+                                        onClick={() => handleOptionClick(image)}
+                                    >
+                                       {/* ... Inner divs and img tag ... */}
+                                       <div
+                                            className={`relative rounded-xl overflow-hidden transition-all duration-300 shadow-lg h-full
+                                            ${isAnswered && selectedSrc === image.src // Check selected source
+                                                ? image.src === targetImage?.src // Is it the correct one?
+                                                    ? 'ring-4 ring-emerald-500 shadow-emerald-200' // Correct selected
+                                                    : 'ring-4 ring-red-500 shadow-red-200' // Incorrect selected
+                                                : isAnswered && image.src === targetImage?.src // If answered and this IS the target (but wasn't selected)
+                                                    ? 'ring-4 ring-emerald-300 opacity-70' // Highlight correct answer gently if wrong one was picked
+                                                    : 'hover:shadow-xl' // Default hover
+                                            }`}
+                                       >
+                                            <img
+                                                src={image.src}
+                                                alt={`Seçenek ${index + 1}: ${image.name} - ${image.option}`} // More descriptive alt
+                                                className="w-full h-full object-contain"
+                                            />
+                                             {/* Checkmark only on the CORRECT image when answered */}
+                                             {isAnswered && image.src === targetImage?.src && (
+                                                 <div className="absolute inset-0 flex items-center justify-center bg-emerald-500 bg-opacity-20 backdrop-blur-sm">
+                                                      <motion.div /* ... animation ... */>
+                                                         {/* ... svg checkmark ... */}
+                                                      </motion.div>
+                                                 </div>
+                                             )}
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Result Message */}
+                    {isAnswered && (
+                         <motion.div /* ... existing animation ... */
+                             className={`mt-8 p-6 rounded-2xl text-center ${isCorrect ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-red-500 to-pink-500'}`}
+                         >
+                             <motion.p /* ... existing animation ... */ className="text-xl font-bold text-white">
+                                 {isCorrect ? 'Harika! Doğru resmi buldun! 🎉' : 'Üzgünüm, yanlış resmi seçtin! 😢'}
+                             </motion.p>
+                             {/* Optional: Add a "Next Question" button here */}
+                             {/* <button onClick={loadNewQuestion} className="mt-4 px-4 py-2 bg-white text-indigo-600 rounded shadow">Sonraki Soru</button> */}
+                         </motion.div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    return renderContent();
 };
 
 export default MemoryGamePage;

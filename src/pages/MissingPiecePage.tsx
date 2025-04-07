@@ -148,6 +148,7 @@ function useAdvancedMissingPieceGame(user: any): UseGameReturn {
   };
 
   // ------------------ Yardımcı Fonksiyonlar ------------------
+  // Geçici bildirim gösterme fonksiyonu
   const showTemporaryNotification = (message: string): void => {
     setNotificationMessage(message);
     setShowNotification(true);
@@ -459,6 +460,9 @@ function useAdvancedMissingPieceGame(user: any): UseGameReturn {
 
       setScore(score + earnedPoints);
       setStreak(streak + 1);
+      
+      // Başarılı cevap bildirimi
+      showTemporaryNotification(`+${earnedPoints} puan ve +${earnedXP} XP kazandın!`);
 
       // Profili güncelle
       try {
