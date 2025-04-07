@@ -64,7 +64,7 @@ export default function SignUpPage() {
                     data: {
                         name: formData.name,
                         school: formData.school,
-                        grade: parseInt(formData.grade)
+                        grade: formData.grade
                     }
                 }
             });
@@ -79,7 +79,7 @@ export default function SignUpPage() {
                         name: formData.name,
                         email: formData.email,
                         school: formData.school,
-                        grade: parseInt(formData.grade),
+                        grade: formData.grade,
                         referred_by: formData.referralCode || null,
                         avatar_url: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${formData.name}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy`,
                         points: 0,
