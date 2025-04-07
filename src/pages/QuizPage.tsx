@@ -14,6 +14,8 @@ import QuizFooter from '../components/QuizFooter';
 import { Feedback } from '../components/Feedback';
 import { handleOptionSelection, handleQuizComplete as handleQuizCompleteUtil, handleQuestionNavigation } from '../utils/quizHandlers';
 // import { QUIZ_DURATION } from '../config/constants';
+import { useSwipeable } from 'react-swipeable';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface QuizPageProps {
     onComplete?: (score: number, totalQuestions: number) => void;
@@ -37,6 +39,9 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
     const [totalImages, setTotalImages] = useState(0);
     const [loadedImages, setLoadedImages] = useState(0);
     const { loading, userXP, requiredXP } = useXPCheck();
+    
+    // Mobil deneyim iyileştirmeleri için eklenen state
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
     const questionsMap = useMemo(() => {
         if (!quizState.quiz) return new Map();
@@ -55,7 +60,17 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
 
     // --- Diğer useEffect'ler (Başlangıç, Soru/Görsel Yükleme) ---
     // (Önceki kodunuzdaki gibi, bir değişiklik önerilmiyor)
-     useEffect(() => {
+     // Ekran boyutu değişikliklerini izleme
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    useEffect(() => {
         if (quizState.quiz && !loading && !quizState.quizStarted) {
             feedbackActions.showFeedback('Quiz başladı! Her soruyu dikkatlice inceleyin.', 'info', true);
             quizActions.setQuizStarted(true);
@@ -105,11 +120,16 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
      }, [loadedImages, totalImages]);
 
 
-    // --- handleNext (Değişiklik yok) ---
+    // --- handleNext ve handlePrevious ---
     const handleNext = useCallback(() => {
         const nextIndex = quizState.isLastQuestion
             ? quizState.currentQuestionIndex
             : quizState.currentQuestionIndex + 1;
+
+        // Dokunmatik geri bildirim
+        if (navigator.vibrate) {
+            navigator.vibrate(50); // 50ms titreşim
+        }
 
         handleQuestionNavigation(
             nextIndex,
@@ -117,6 +137,22 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
             feedbackActions
         );
     }, [quizState.isLastQuestion, quizState.currentQuestionIndex, quizActions, feedbackActions]);
+    
+    // Önceki soruya dönme işlevi (isteğe bağlı)
+    const handlePrevious = useCallback(() => {
+        if (quizState.currentQuestionIndex > 0) {
+            // Dokunmatik geri bildirim
+            if (navigator.vibrate) {
+                navigator.vibrate(50); // 50ms titreşim
+            }
+            
+            handleQuestionNavigation(
+                quizState.currentQuestionIndex - 1,
+                quizActions,
+                feedbackActions
+            );
+        }
+    }, [quizState.currentQuestionIndex, quizActions, feedbackActions]);
 
     // Geri sayım zamanlayıcısı kaldırıldı
 
@@ -158,14 +194,17 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
 
     // Geri sayım zamanlayıcısı kaldırıldı
 
-    // --- handleOptionSelect (isAnswered kontrolü ve stopTimer eklendi) ---
+    // --- handleOptionSelect (dokunmatik geri bildirim eklendi) ---
     const handleOptionSelect = useCallback((optionId: string) => {
-        // *** DÜZELTME: Eğer zaten cevaplanmışsa veya soru yoksa işlem yapma ***
+        // Eğer zaten cevaplanmışsa veya soru yoksa işlem yapma
         if (!quizState.currentQuestion || quizState.isAnswered) {
             return;
         }
 
-        // Timer kaldırıldı
+        // Dokunmatik geri bildirim
+        if (navigator.vibrate) {
+            navigator.vibrate(50); // 50ms titreşim
+        }
 
         // Parametreleri oluştur (nesne olarak göndermek iyi bir pratik)
         const params = {
@@ -173,9 +212,7 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
             currentQuestion: quizState.currentQuestion,
             currentQuestionIndex: quizState.currentQuestionIndex,
             isLastQuestion: quizState.isLastQuestion,
-            // handleOptionSelection'ın ihtiyaç duyduğu diğer parametreler
             quizActions,
-            // Zamanlayıcı kaldırıldı
             feedbackActions,
             handleNext
         };
@@ -186,7 +223,6 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
             params.currentQuestionIndex,
             params.isLastQuestion,
             params.quizActions,
-            // Zamanlayıcı kaldırıldı
             params.feedbackActions,
             params.handleNext
         );
@@ -199,6 +235,21 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
         feedbackActions,
         handleNext
     ]);
+    
+    // Kaydırma jestleri için handlers
+    const swipeHandlers = useSwipeable({
+        onSwipedLeft: () => {
+            if (!quizState.isLastQuestion && quizState.isAnswered) {
+                handleNext();
+            }
+        },
+        onSwipedRight: () => {
+            if (quizState.currentQuestionIndex > 0) {
+                handlePrevious();
+            }
+        },
+        trackMouse: false
+    });
 
     // --- Render Kısmı (Koşullar ve JSX) ---
     // (Önceki kodunuzdaki gibi, önemli bir değişiklik önerilmiyor)
@@ -251,19 +302,40 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                 {/* İsteğe bağlı XP Uyarısı */}
                 {/* <XPWarning requiredXP={requiredXP} currentXP={userXP} title="Quiz XP Gereksinimi" /> */}
 
-                <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-4">
-                    {/* Header: Soru Sayısı ve Timer */}
-                    <div className="flex justify-between items-center mb-4">
+                <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-4 md:p-6">
+                    {/* Header: Soru Sayısı ve İlerleme Göstergesi */}
+                    <div className="flex justify-between items-center mb-4 md:mb-6">
                         <h2 className="text-xl font-bold">
                             {quizState.currentQuestionIndex + 1}/{quizState.quiz.questions.length}
                         </h2>
-                        {/* Zamanlayıcı kaldırıldı */}
+                        {/* Soru ilerleme göstergesi */}
+                        <div className="hidden md:flex items-center space-x-1">
+                            {quizState.quiz && quizState.quiz.questions.map((_, index) => (
+                                <div 
+                                    key={`progress-${index}`}
+                                    className={`w-3 h-3 rounded-full ${index === quizState.currentQuestionIndex 
+                                        ? 'bg-blue-500' 
+                                        : index < quizState.currentQuestionIndex 
+                                            ? 'bg-green-500' 
+                                            : 'bg-gray-300'}`}
+                                ></div>
+                            ))}
+                        </div>
+                        {/* Mobil için daha kompakt ilerleme göstergesi */}
+                        <div className="md:hidden bg-gray-200 h-2 w-24 rounded-full overflow-hidden">
+                            <div 
+                                className="bg-blue-500 h-full" 
+                                style={{
+                                    width: `${(quizState.currentQuestionIndex / (quizState.quiz?.questions.length || 1)) * 100}%`
+                                }}
+                            ></div>
+                        </div>
                     </div>
 
-                    {/* Soru Alanı (Yükleme Ekranı ile) */}
-                    <div className="relative mb-4"> {/* Biraz boşluk ekledim */}
+                    {/* Soru Alanı (Yükleme Ekranı ile) - Kaydırma jestleri eklendi */}
+                    <div className="relative mb-6" {...swipeHandlers}> 
                         {loadingQuestion && (
-                            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white bg-opacity-75 rounded-lg"> {/* Arka planı yuvarlat */}
+                            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white bg-opacity-75 rounded-lg"> 
                                 <div className="bg-white/90 rounded-full p-3 shadow-lg flex items-center space-x-2">
                                     <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -273,20 +345,41 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                                 </div>
                             </div>
                         )}
-                        <div className={`transition-opacity duration-300 ${loadingQuestion ? 'opacity-50 filter blur-sm pointer-events-none' : 'opacity-100'}`}>
-                            <QuizQuestionComponent
-                                question={quizState.currentQuestion}
-                                questionNumber={quizState.currentQuestionIndex + 1}
-                                onImageLoad={() => setLoadedImages(prev => prev + 1)}
-                            />
-                            <QuizOptions
-                                options={quizState.currentQuestion.options}
-                                selectedOption={quizState.selectedOption}
-                                isAnswered={quizState.isAnswered}
-                                onOptionSelect={handleOptionSelect}
-                                onImageLoad={() => setLoadedImages(prev => prev + 1)}
-                            />
-                        </div>
+                        <AnimatePresence mode="wait">
+                            <motion.div 
+                                key={quizState.currentQuestionIndex}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.3 }}
+                                className={`transition-opacity duration-300 ${loadingQuestion ? 'opacity-50 filter blur-sm pointer-events-none' : 'opacity-100'}`}
+                            >
+                                <QuizQuestionComponent
+                                    question={quizState.currentQuestion}
+                                    questionNumber={quizState.currentQuestionIndex + 1}
+                                    onImageLoad={() => setLoadedImages(prev => prev + 1)}
+                                />
+                                <div className="mt-6">
+                                    <QuizOptions
+                                        options={quizState.currentQuestion.options}
+                                        selectedOption={quizState.selectedOption}
+                                        isAnswered={quizState.isAnswered}
+                                        onOptionSelect={handleOptionSelect}
+                                        onImageLoad={() => setLoadedImages(prev => prev + 1)}
+                                    />
+                                </div>
+                                
+                                {/* Mobil için kaydırma ipucu */}
+                                {isMobile && quizState.isAnswered && !quizState.isLastQuestion && (
+                                    <div className="text-center text-sm text-gray-500 mt-4 animate-pulse">
+                                        <span>Sonraki soru için sola kaydırın</span>
+                                        <svg className="inline-block ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                )}
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
 
                     {/* Footer: Bitir Butonu */}
@@ -294,8 +387,6 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
                         isLastQuestion={quizState.isLastQuestion}
                         isAnswered={quizState.isAnswered}
                         onFinishQuiz={handleFinishQuiz}
-                        // Eğer footer'da Sonraki butonu varsa:
-                        // onNext={handleNext}
                     />
                 </div>
 
