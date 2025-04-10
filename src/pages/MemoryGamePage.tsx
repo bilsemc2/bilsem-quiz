@@ -1,22 +1,22 @@
-import { useState, useEffect, useCallback, useRef } from 'react'; // useRef eklendi
- import { supabase } from '../lib/supabase';
- import { useSound } from '../hooks/useSound';
+import { useState, useEffect, useCallback, useRef } from 'react';
+ import { supabase } from '../lib/supabase'; // Bu dosyanın içeriği burada değil
+ import { useSound } from '../hooks/useSound'; // Bu hook'un tanımı burada değil
  import { motion, AnimatePresence } from 'framer-motion';
- import { useAuth } from '../contexts/AuthContext';
+ import { useAuth } from '../contexts/AuthContext'; // Bu context/hook tanımı burada değil
  import { toast } from 'react-hot-toast';
  import { Brain, CheckCircle, XCircle } from 'lucide-react';
- import { useXPCheck } from '../hooks/useXPCheck';
- import XPWarning from '../components/XPWarning';
+ import { useXPCheck } from '../hooks/useXPCheck'; // Bu hook'un tanımı burada değil
+ import XPWarning from '../components/XPWarning'; // Bu component'in tanımı burada değil
 
  // Constants
- const MEMORIZE_DURATION = 3000; // Hedefi ezberleme süresi (ms)
- const FEEDBACK_DURATION = 2000; // Doğru/yanlış geri bildirim süresi (ms)
- const OPTIONS_APPEAR_DELAY = 3000; // Seçeneklerin görünme gecikmesi (ms)
+ const MEMORIZE_DURATION = 3000;
+ const FEEDBACK_DURATION = 2000;
+ const OPTIONS_APPEAR_DELAY = 3000;
  const NUM_SAME_FOLDER_OPTIONS = 3;
  const NUM_NEARBY_FOLDER_OPTIONS = 2;
  const MAX_NEARBY_FOLDER_DISTANCE = 3;
 
- // Interfaces (Tam Tanım)
+ // Interfaces
  interface ImageCard {
    id: string;
    src: string;
@@ -42,25 +42,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
      exit: { opacity: 0, transition: { duration: 0.3 } }
  };
 
- // Kart Dönme Efekti İçin
  const itemVariants = {
-     hidden: {
-         opacity: 0,
-         rotateY: 90,
-     },
-     visible: {
-         opacity: 1,
-         rotateY: 0,
-         transition: {
-             duration: 0.4,
-             delay: 0
-         }
-     },
-      exit: {
-          opacity: 0,
-          rotateY: -90,
-          transition: { duration: 0.3 }
-      }
+     hidden: { opacity: 0, rotateY: 90 },
+     visible: { opacity: 1, rotateY: 0, transition: { duration: 0.4, delay: 0 } },
+     exit: { opacity: 0, rotateY: -90, transition: { duration: 0.3 } }
  };
 
 
@@ -83,13 +68,15 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
      const [targetImage, setTargetImage] = useState<ImageCard | null>(null);
      const [options, setOptions] = useState<ImageCard[]>([]);
      const [selectedSrc, setSelectedSrc] = useState<string | null>(null);
-     const [session, setSession] = useState<GameSession>({ // Tam Tanım
+     const [session, setSession] = useState<GameSession>({
          userId: user?.id,
          score: 0,
          questionsAnswered: 0,
          streak: 0,
          startTime: null,
      });
+     const [imageLoadStatus, setImageLoadStatus] = useState<{ [src: string]: boolean }>({});
+     const [allOptionsLoaded, setAllOptionsLoaded] = useState(false);
 
      // --- Data Fetching and Processing ---
      const getImageData = useCallback((): { [key: string]: ImageCard[] } => {
@@ -153,12 +140,30 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
          return { finalTarget, finalOptions };
      }, []);
 
+     // --- Image Load Handling ---
+     const handleImageLoad = useCallback((src: string) => {
+         setImageLoadStatus(prev => ({ ...prev, [src]: true }));
+     }, []);
+
+     useEffect(() => {
+         if (!showOptions || allOptionsLoaded || options.length === 0) {
+             return;
+         }
+         const currentOptionSrcs = options.map(opt => opt.src);
+         const allLoaded = currentOptionSrcs.every(src => imageLoadStatus[src]);
+         if (allLoaded) {
+             setAllOptionsLoaded(true);
+         }
+     }, [imageLoadStatus, options, showOptions, allOptionsLoaded]);
+
      // --- Game Logic ---
      const loadNewQuestion = useCallback(async () => {
         if (memorizeTimerRef.current) clearTimeout(memorizeTimerRef.current);
         if (optionsDelayTimerRef.current) clearTimeout(optionsDelayTimerRef.current);
         setIsQuestionLoading(true);
         setShowOptions(false);
+        setAllOptionsLoaded(false);
+        setImageLoadStatus({});
         setSelectedSrc(null);
         setIsAnswered(false);
         setIsCorrect(null);
@@ -185,12 +190,12 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
      }, [getImageData, selectQuestionElements]);
 
      const handleOptionClick = useCallback(async (selectedImage: ImageCard) => {
-         if (isAnswered || !targetImage || isQuestionLoading) return;
+         if (isAnswered || !targetImage || isQuestionLoading || !allOptionsLoaded) return;
          setSelectedSrc(selectedImage.src);
          setIsAnswered(true);
          const correct = selectedImage.src === targetImage.src;
          setIsCorrect(correct);
-         setSession(prev => ({ // Tam State Güncellemesi
+         setSession(prev => ({
              ...prev,
              score: prev.score + (correct ? 1 : 0),
              streak: correct ? prev.streak + 1 : 0,
@@ -200,9 +205,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
          const timer = setTimeout(() => {
              loadNewQuestion();
          }, FEEDBACK_DURATION);
-         // Bu timer için de ref kullanmak daha güvenli olabilir, ama şimdilik böyle bırakıyoruz.
          return () => clearTimeout(timer);
-     }, [isAnswered, targetImage, isQuestionLoading, playSound, loadNewQuestion]);
+     }, [isAnswered, targetImage, isQuestionLoading, allOptionsLoaded, playSound, loadNewQuestion]);
 
      // --- Lifecycle ---
      useEffect(() => {
@@ -211,12 +215,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
          setSession(prev => ({ ...prev, startTime: new Date(), userId: user?.id }));
          return () => {
               console.log("Hafıza Oyunu: Component kaldırılıyor, oturum kaydediliyor...");
-              if (memorizeTimerRef.current) {
-                  clearTimeout(memorizeTimerRef.current);
-              }
-              if (optionsDelayTimerRef.current) {
-                  clearTimeout(optionsDelayTimerRef.current);
-              }
+              if (memorizeTimerRef.current) clearTimeout(memorizeTimerRef.current);
+              if (optionsDelayTimerRef.current) clearTimeout(optionsDelayTimerRef.current);
               saveGameSession();
          };
          // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -251,7 +251,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
 
      // --- Rendering ---
      const renderContent = () => {
-         // 1. Yükleniyor Ekranı (Tam JSX)
+         // 1. Yükleniyor Ekranı
          if (xpLoading || isLoading) {
              return (
                  <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -261,7 +261,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
              );
          }
 
-         // 2. Yetersiz XP Ekranı (Tam JSX)
+         // 2. Yetersiz XP Ekranı
          if (!hasEnoughXP) {
              return (
                  <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -281,7 +281,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
          return (
              <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-8 px-4">
                  <div className="container mx-auto max-w-4xl">
-                     {/* Header (Tam JSX) */}
+                     {/* Header */}
                      <motion.div
                          initial={{ opacity: 0, y: -20 }}
                          animate={{ opacity: 1, y: 0 }}
@@ -317,8 +317,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
                      {/* Ana Oyun Alanı */}
                      <div className="relative min-h-[400px]">
                          <AnimatePresence mode="wait">
-
-                             {/* Durum 1: Hedef Gösteriliyor (Tam JSX) */}
+                             {/* Durum 1: Hedef Gösteriliyor */}
                              {targetImage && !showOptions && !isQuestionLoading && (
                                  <motion.div
                                      key="target-display"
@@ -344,7 +343,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
                                  </motion.div>
                              )}
 
-                             {/* Durum 2: Yeni Soru Yükleniyor (Tam JSX) */}
+                             {/* Durum 2: Yeni Soru Yükleniyor */}
                              {isQuestionLoading && (
                                  <motion.div
                                      key="question-loading"
@@ -359,7 +358,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
                                  </motion.div>
                              )}
 
-                             {/* Durum 3: Seçenekler Gösteriliyor (Tam JSX) */}
+                             {/* Durum 3: Seçenekler Gösteriliyor */}
                              {showOptions && !isQuestionLoading && (
                                  <motion.div
                                      key="options-display"
@@ -374,12 +373,14 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
                                         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 max-w-xl mx-auto"
                                         style={{ perspective: '1000px' }}
                                      >
-                                         {displayImages.map((image, index) => (
+                                         {options.map((image, index) => (
                                              <motion.div
                                                  key={`<span class="math-inline">\{image\.id\}\-</span>{image.option}-${index}`}
                                                  variants={itemVariants}
+                                                 initial="hidden"
+                                                 animate={allOptionsLoaded ? 'visible' : 'hidden'}
                                                  className={`relative aspect-square cursor-pointer group ${isAnswered ? 'pointer-events-none' : ''}`}
-                                                 onClick={() => !isAnswered && handleOptionClick(image)}
+                                                 onClick={() => !isAnswered && allOptionsLoaded && handleOptionClick(image)}
                                              >
                                                  <div
                                                      className={`relative rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 shadow-md h-full w-full
@@ -397,8 +398,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
                                                          alt={`Seçenek ${index + 1}: ${image.name} - ${image.option}`}
                                                          className="w-full h-full object-contain bg-gray-50"
                                                          loading="lazy"
+                                                         onLoad={() => handleImageLoad(image.src)}
+                                                         onError={() => handleImageLoad(image.src)} // Hata durumunda da yüklenmiş say
                                                      />
-                                                     {/* Doğru Cevap İşareti */}
+                                                     {/* Checkmark */}
                                                      {isAnswered && image.src === targetImage?.src && (
                                                          <motion.div
                                                             initial={{ scale: 0 }}
@@ -409,7 +412,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
                                                               <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                                                          </motion.div>
                                                      )}
-                                                      {/* Yanlış Seçim İşareti */}
+                                                      {/* XCircle */}
                                                       {isAnswered && selectedSrc === image.src && image.src !== targetImage?.src && (
                                                          <motion.div
                                                             initial={{ scale: 0 }}
@@ -424,10 +427,14 @@ import { useState, useEffect, useCallback, useRef } from 'react'; // useRef ekle
                                              </motion.div>
                                          ))}
                                      </div>
+                                      {/* Resimler yüklenirken gösterge */}
+                                      {!allOptionsLoaded && options.length > 0 && (
+                                         <div className="text-center text-sm text-gray-500 mt-4">Resimler yükleniyor...</div>
+                                      )}
                                  </motion.div>
                              )}
 
-                             {/* Durum 4: Sonuç Mesajı Gösteriliyor (Tam JSX) */}
+                             {/* Durum 4: Sonuç Mesajı Gösteriliyor */}
                              {isAnswered && (
                                  <motion.div
                                      key="result-message"
