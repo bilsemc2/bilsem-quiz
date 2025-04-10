@@ -1,29 +1,30 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'; // useRef eklendi
  import { supabase } from '../lib/supabase';
  import { useSound } from '../hooks/useSound';
- import { motion, AnimatePresence } from 'framer-motion'; // AnimatePresence ekledik
+ import { motion, AnimatePresence } from 'framer-motion';
  import { useAuth } from '../contexts/AuthContext';
  import { toast } from 'react-hot-toast';
- import { Brain, CheckCircle, XCircle } from 'lucide-react'; // İkonları ekledik
+ import { Brain, CheckCircle, XCircle } from 'lucide-react';
  import { useXPCheck } from '../hooks/useXPCheck';
  import XPWarning from '../components/XPWarning';
 
  // Constants
  const MEMORIZE_DURATION = 3000; // Hedefi ezberleme süresi (ms)
  const FEEDBACK_DURATION = 2000; // Doğru/yanlış geri bildirim süresi (ms)
- const NUM_SAME_FOLDER_OPTIONS = 3; // Hedefle aynı klasörden kaç seçenek alınacağı
- const NUM_NEARBY_FOLDER_OPTIONS = 2; // Hedefe yakın klasörlerden kaç seçenek alınacağı
- const MAX_NEARBY_FOLDER_DISTANCE = 3; // Yakın klasörler için maksimum uzaklık
+ const OPTIONS_APPEAR_DELAY = 3000; // Seçeneklerin görünme gecikmesi (ms)
+ const NUM_SAME_FOLDER_OPTIONS = 3;
+ const NUM_NEARBY_FOLDER_OPTIONS = 2;
+ const MAX_NEARBY_FOLDER_DISTANCE = 3;
 
- // Interfaces
+ // Interfaces (Tam Tanım)
  interface ImageCard {
-   id: string; // Klasör ID'si
-   src: string; // Resim yolu
-   name: string; // Resim adı (örn. "Soru 123")
-   option: string; // Seçenek harfi (A, B, C, D, E)
-   isTarget: boolean; // Bu resim hedefin kendisi mi?
-   isAnswer: boolean; // Bu resim cevap resmi mi? (klasördeki cevap)
-   position?: number; // Render sırasında karıştırma için rastgele pozisyon
+   id: string;
+   src: string;
+   name: string;
+   option: string;
+   isTarget: boolean;
+   isAnswer: boolean;
+   position?: number;
  }
 
  interface GameSession {
@@ -37,20 +38,29 @@ import { useState, useEffect, useCallback } from 'react';
  // Animation Variants
  const containerVariants = {
      hidden: { opacity: 0 },
-     visible: {
-         opacity: 1,
-         transition: { duration: 0.5 }
-     },
+     visible: { opacity: 1, transition: { duration: 0.5 } },
      exit: { opacity: 0, transition: { duration: 0.3 } }
  };
 
+ // Kart Dönme Efekti İçin
  const itemVariants = {
-     hidden: { opacity: 0, scale: 0.95 },
+     hidden: {
+         opacity: 0,
+         rotateY: 90,
+     },
      visible: {
          opacity: 1,
-         scale: 1,
-         transition: { duration: 0.3, delay: 0 } // ÖNEMLİ: delay: 0 -> aynı anda başlar
-     }
+         rotateY: 0,
+         transition: {
+             duration: 0.4,
+             delay: 0
+         }
+     },
+      exit: {
+          opacity: 0,
+          rotateY: -90,
+          transition: { duration: 0.3 }
+      }
  };
 
 
@@ -60,23 +70,20 @@ import { useState, useEffect, useCallback } from 'react';
      const { hasEnoughXP, userXP, requiredXP, loading: xpLoading } = useXPCheck(false);
      const { playSound } = useSound();
 
+     // --- Refs for Timers ---
+     const memorizeTimerRef = useRef<NodeJS.Timeout | null>(null);
+     const optionsDelayTimerRef = useRef<NodeJS.Timeout | null>(null);
+
      // --- State ---
-     // Loading States
-     const [isLoading, setIsLoading] = useState(true); // Sayfanın genel yüklenmesi (XP kontrolü dahil)
-     const [isQuestionLoading, setIsQuestionLoading] = useState(false); // Yeni soru yüklenirken aktifleşir
-
-     // Game Flow States
-     const [showOptions, setShowOptions] = useState(false); // Seçeneklerin gösterilip gösterilmeyeceği
-     const [isAnswered, setIsAnswered] = useState(false); // Soru cevaplandı mı?
-     const [isCorrect, setIsCorrect] = useState<boolean | null>(null); // Cevap doğru mu?
-
-     // Game Data States
-     const [targetImage, setTargetImage] = useState<ImageCard | null>(null); // Ezberlenecek hedef resim
-     const [options, setOptions] = useState<ImageCard[]>([]); // Seçenek resimler (hedef hariç)
-     const [selectedSrc, setSelectedSrc] = useState<string | null>(null); // Kullanıcının tıkladığı resmin src'si
-
-     // Game Session State
-     const [session, setSession] = useState<GameSession>({
+     const [isLoading, setIsLoading] = useState(true);
+     const [isQuestionLoading, setIsQuestionLoading] = useState(false);
+     const [showOptions, setShowOptions] = useState(false);
+     const [isAnswered, setIsAnswered] = useState(false);
+     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+     const [targetImage, setTargetImage] = useState<ImageCard | null>(null);
+     const [options, setOptions] = useState<ImageCard[]>([]);
+     const [selectedSrc, setSelectedSrc] = useState<string | null>(null);
+     const [session, setSession] = useState<GameSession>({ // Tam Tanım
          userId: user?.id,
          score: 0,
          questionsAnswered: 0,
@@ -85,32 +92,23 @@ import { useState, useEffect, useCallback } from 'react';
      });
 
      // --- Data Fetching and Processing ---
-
-     // Resim verilerini dosya sisteminden alır ve klasörlere göre gruplar
      const getImageData = useCallback((): { [key: string]: ImageCard[] } => {
-         // Vite'nin glob import özelliği kullanılıyor
          const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
          const imagesByFolder: { [key: string]: ImageCard[] } = {};
-
          Object.keys(optionImports).forEach(path => {
-             // Dosya adından klasör ID'sini, seçenek harfini ve cevap olup olmadığını çıkarır
              const answerMatch = path.match(/Matris\/(\d+)\/Soru-cevap-\d+([A-E])\.webp/);
              const optionMatch = path.match(/Matris\/(\d+)\/Soru-\d+([A-E])\.webp/);
              const match = answerMatch || optionMatch;
-
-             if (!match) return; // Eşleşme yoksa atla
-
+             if (!match) return;
              const [_, folderId, option] = match;
              const image: ImageCard = {
                  id: folderId,
-                 src: path.replace('/public', ''), // Public kısmını kaldırarak URL'yi düzelt
+                 src: path.replace('/public', ''),
                  name: `Soru ${folderId}`,
                  option,
-                 isTarget: false, // Başlangıçta hedef değil
-                 isAnswer: !!answerMatch, // answerMatch varsa true, yoksa false
+                 isTarget: false,
+                 isAnswer: !!answerMatch,
              };
-
-             // Klasöre göre gruplama
              if (!imagesByFolder[folderId]) {
                  imagesByFolder[folderId] = [];
              }
@@ -119,191 +117,141 @@ import { useState, useEffect, useCallback } from 'react';
          return imagesByFolder;
      }, []);
 
-     // Verilen resim verilerinden hedef ve seçenekleri seçer
      const selectQuestionElements = useCallback((imagesByFolder: { [key: string]: ImageCard[] }) => {
          const folderIds = Object.keys(imagesByFolder).sort((a, b) => parseInt(a) - parseInt(b));
          if (folderIds.length === 0) {
              toast.error('Yeterli sayıda soru klasörü bulunamadı.');
              throw new Error('No image folders found');
          }
-
-         // 1. Hedefi Seç
          const targetFolderIndex = Math.floor(Math.random() * folderIds.length);
          const targetFolderId = folderIds[targetFolderIndex];
          const targetFolderImages = imagesByFolder[targetFolderId];
-         const answerImage = targetFolderImages?.find(img => img.isAnswer); // Klasördeki cevap resmini bul
-
+         const answerImage = targetFolderImages?.find(img => img.isAnswer);
          if (!answerImage) {
              console.error('Cevap resmi bulunamadı:', targetFolderId);
-             // Hata durumunda başka bir klasör dene veya hata fırlat (şimdilik fırlatıyoruz)
              throw new Error(`'${targetFolderId}' klasöründe cevap resmi bulunamadı.`);
          }
-         // Hedef resmi belirle ve karıştırma için rastgele pozisyon ata
          const finalTarget = { ...answerImage, isTarget: true, position: Math.random() };
-
-         // 2. Aynı Klasörden Seçenekleri Seç
          const sameFolderOptions = targetFolderImages
-             .filter(img => !img.isAnswer) // Cevap olmayanları al
-             .sort(() => Math.random() - 0.5) // Rastgele sırala
-             .slice(0, NUM_SAME_FOLDER_OPTIONS); // İstenen sayıda al
-
-         // 3. Yakın Klasörlerden Seçenekleri Seç
+             .filter(img => !img.isAnswer)
+             .sort(() => Math.random() - 0.5)
+             .slice(0, NUM_SAME_FOLDER_OPTIONS);
          const nearbyFolderIds = folderIds.filter(id => {
              const diff = Math.abs(parseInt(id) - parseInt(targetFolderId));
-             // Kendisi olmayan ve belirli mesafedeki klasörleri al
              return diff > 0 && diff <= MAX_NEARBY_FOLDER_DISTANCE;
-         }).sort(() => Math.random() - 0.5); // Yakın klasörleri de karıştır
-
+         }).sort(() => Math.random() - 0.5);
          const nearbyOptions: ImageCard[] = [];
          for (const folderId of nearbyFolderIds) {
-              if (nearbyOptions.length >= NUM_NEARBY_FOLDER_OPTIONS) break; // İstenen sayıya ulaşıldıysa dur
-              const folderImages = imagesByFolder[folderId]?.filter(img => !img.isAnswer); // O klasördeki cevap olmayanları al
+              if (nearbyOptions.length >= NUM_NEARBY_FOLDER_OPTIONS) break;
+              const folderImages = imagesByFolder[folderId]?.filter(img => !img.isAnswer);
               if (folderImages && folderImages.length > 0) {
-                  // Klasörden rastgele bir seçenek al ve ekle
                   nearbyOptions.push(folderImages[Math.floor(Math.random() * folderImages.length)]);
               }
          }
-
-         // Eğer hala yeterli sayıda seçenek yoksa, rastgele başka klasörlerden de eklenebilir (opsiyonel)
-
-         // Tüm seçenekleri birleştir ve her birine rastgele pozisyon ata
          const finalOptions = [...sameFolderOptions, ...nearbyOptions]
-              .map(opt => ({ ...opt, isTarget: false, position: Math.random() })); // Hedef olmadıklarını ve pozisyonlarını belirle
-
+              .map(opt => ({ ...opt, isTarget: false, position: Math.random() }));
          return { finalTarget, finalOptions };
-
-     }, []); // Bu fonksiyonların bağımlılığı yok
-
+     }, []);
 
      // --- Game Logic ---
-
-     // Yeni bir soru yükler (hedef ve seçenekleri ayarlar)
      const loadNewQuestion = useCallback(async () => {
-         setIsQuestionLoading(true); // Soru yükleniyor...
-         setShowOptions(false); // Seçenekleri gizle
-         setSelectedSrc(null); // Önceki seçimi temizle
-         setIsAnswered(false); // Cevaplanmadı olarak işaretle
-         setIsCorrect(null); // Doğruluk durumunu sıfırla
-         setTargetImage(null); // Önceki hedefi temizle
-         setOptions([]);       // Önceki seçenekleri temizle
-
-         try {
-             // Resim verilerini al ve işle
-             const imagesByFolder = getImageData();
-             // Hedef ve seçenekleri seç
-             const { finalTarget, finalOptions } = selectQuestionElements(imagesByFolder);
-
-             // State'i güncelle
-             setTargetImage(finalTarget);
-             setOptions(finalOptions);
-
-             setIsLoading(false); // Genel yüklenme bitti (ilk soru yüklendiğinde)
-             setIsQuestionLoading(false); // Soru yükleme bitti
-
-             // Hedefi gösterme süresini başlat
-             const timer = setTimeout(() => {
-                 setShowOptions(true); // Süre dolunca seçenekleri göster
-             }, MEMORIZE_DURATION);
-
-             // Component unmount olursa veya tekrar yüklenirse timer'ı temizle
-             return () => clearTimeout(timer);
-
-         } catch (error: any) {
+        if (memorizeTimerRef.current) clearTimeout(memorizeTimerRef.current);
+        if (optionsDelayTimerRef.current) clearTimeout(optionsDelayTimerRef.current);
+        setIsQuestionLoading(true);
+        setShowOptions(false);
+        setSelectedSrc(null);
+        setIsAnswered(false);
+        setIsCorrect(null);
+        setTargetImage(null);
+        setOptions([]);
+        try {
+            const imagesByFolder = getImageData();
+            const { finalTarget, finalOptions } = selectQuestionElements(imagesByFolder);
+            setTargetImage(finalTarget);
+            setOptions(finalOptions);
+            setIsLoading(false);
+            setIsQuestionLoading(false);
+            memorizeTimerRef.current = setTimeout(() => {
+                optionsDelayTimerRef.current = setTimeout(() => {
+                    setShowOptions(true);
+                }, OPTIONS_APPEAR_DELAY);
+            }, MEMORIZE_DURATION);
+        } catch (error: any) {
              console.error('Soru yüklenirken hata oluştu:', error);
              toast.error(`Soru yüklenemedi: ${error.message || 'Bilinmeyen bir hata.'}`);
-             setIsLoading(false); // Yüklenmeyi durdur
+             setIsLoading(false);
              setIsQuestionLoading(false);
-             // Burada kullanıcıya hata mesajı göstermek için ek bir state kullanılabilir
-         }
-     }, [getImageData, selectQuestionElements]); // useCallback bağımlılıkları
+        }
+     }, [getImageData, selectQuestionElements]);
 
-     // Kullanıcı bir seçeneğe tıkladığında çalışır
      const handleOptionClick = useCallback(async (selectedImage: ImageCard) => {
-         // Eğer zaten cevaplanmışsa, hedef yoksa veya yeni soru yükleniyorsa işlem yapma
          if (isAnswered || !targetImage || isQuestionLoading) return;
-
-         setSelectedSrc(selectedImage.src); // Seçilen resmin kaynağını kaydet
-         setIsAnswered(true); // Cevaplandı olarak işaretle
-         const correct = selectedImage.src === targetImage.src; // Seçilen hedefle aynı mı?
-         setIsCorrect(correct); // Doğruluk durumunu ayarla
-
-         // Oyun oturum state'ini güncelle
-         setSession(prev => ({
+         setSelectedSrc(selectedImage.src);
+         setIsAnswered(true);
+         const correct = selectedImage.src === targetImage.src;
+         setIsCorrect(correct);
+         setSession(prev => ({ // Tam State Güncellemesi
              ...prev,
-             score: prev.score + (correct ? 1 : 0), // Doğruysa skoru artır
-             streak: correct ? prev.streak + 1 : 0, // Doğruysa seriyi artır, yanlışsa sıfırla
-             questionsAnswered: prev.questionsAnswered + 1, // Cevaplanan soru sayısını artır
+             score: prev.score + (correct ? 1 : 0),
+             streak: correct ? prev.streak + 1 : 0,
+             questionsAnswered: prev.questionsAnswered + 1,
          }));
-
-         // Ses efekti çal
          playSound(correct ? 'correct' : 'incorrect');
-
-         // Geri bildirim süresinden sonra yeni soruyu yükle
          const timer = setTimeout(() => {
              loadNewQuestion();
          }, FEEDBACK_DURATION);
-
-         // Component unmount olursa veya tekrar yüklenirse timer'ı temizle
+         // Bu timer için de ref kullanmak daha güvenli olabilir, ama şimdilik böyle bırakıyoruz.
          return () => clearTimeout(timer);
-
-     }, [isAnswered, targetImage, isQuestionLoading, playSound, loadNewQuestion]); // useCallback bağımlılıkları
+     }, [isAnswered, targetImage, isQuestionLoading, playSound, loadNewQuestion]);
 
      // --- Lifecycle ---
-
-     // Component ilk yüklendiğinde ve kullanıcı değiştiğinde çalışır
      useEffect(() => {
-         setIsLoading(true); // Başlangıçta yükleniyor
-         loadNewQuestion(); // İlk soruyu yükle
-         setSession(prev => ({ ...prev, startTime: new Date(), userId: user?.id })); // Oturumu başlat/güncelle
-
-         // Component kaldırıldığında (unmount) oturum sonucunu kaydet
+         setIsLoading(true);
+         loadNewQuestion();
+         setSession(prev => ({ ...prev, startTime: new Date(), userId: user?.id }));
          return () => {
               console.log("Hafıza Oyunu: Component kaldırılıyor, oturum kaydediliyor...");
+              if (memorizeTimerRef.current) {
+                  clearTimeout(memorizeTimerRef.current);
+              }
+              if (optionsDelayTimerRef.current) {
+                  clearTimeout(optionsDelayTimerRef.current);
+              }
               saveGameSession();
          };
          // eslint-disable-next-line react-hooks/exhaustive-deps
-     }, [loadNewQuestion, user?.id]); // Bağımlılıklar: Sadece ilk yükleme ve kullanıcı değişimi
+     }, [loadNewQuestion, user?.id]);
 
      // --- Database Interaction ---
-
-     // Oyun oturumunun sonucunu Supabase'e kaydeder
      const saveGameSession = async () => {
-         // Kullanıcı yoksa veya hiç soru cevaplanmadıysa kaydetme
          if (!session.userId || session.questionsAnswered === 0) {
              console.log("Hafıza Oyunu: Kaydedilecek oturum verisi yok veya kullanıcı yok.");
              return;
          }
-
          console.log("Hafıza Oyunu: Oturum sonucu kaydediliyor:", session);
-
          const { error } = await supabase
-             .from('quiz_results') // Supabase tablo adınız
+             .from('quiz_results')
              .insert({
                  user_id: session.userId,
                  score: session.score,
                  questions_answered: session.questionsAnswered,
-                 correct_answers: session.score, // Skor = doğru cevap sayısı varsayımı
-                 completed_at: new Date().toISOString(), // Bitiş zamanı
-                 // started_at: session.startTime?.toISOString(), // Başlangıç zamanı (isteğe bağlı)
-                 title: 'Hafıza Oyunu', // Oyunun adı
-                 subject: 'Matris',    // Konu
-                 grade: 0 // Seviye (varsa)
+                 correct_answers: session.score,
+                 completed_at: new Date().toISOString(),
+                 title: 'Hafıza Oyunu',
+                 subject: 'Matris',
+                 grade: 0
              });
-
          if (error) {
              console.error('Hafıza Oyunu: Oturum sonucu kaydedilirken hata:', error);
              toast.error("Oyun sonucu kaydedilemedi.");
          } else {
              console.log("Hafıza Oyunu: Oturum sonucu başarıyla kaydedildi.");
-             // Oturum kaydedildikten sonra state'i sıfırlamak isterseniz burada yapabilirsiniz
          }
      };
 
      // --- Rendering ---
-
-     // Render edilecek içeriği belirleyen fonksiyon
      const renderContent = () => {
-         // 1. Yükleniyor Ekranı (XP veya ilk soru)
+         // 1. Yükleniyor Ekranı (Tam JSX)
          if (xpLoading || isLoading) {
              return (
                  <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -313,7 +261,7 @@ import { useState, useEffect, useCallback } from 'react';
              );
          }
 
-         // 2. Yetersiz XP Ekranı
+         // 2. Yetersiz XP Ekranı (Tam JSX)
          if (!hasEnoughXP) {
              return (
                  <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -327,16 +275,13 @@ import { useState, useEffect, useCallback } from 'react';
          }
 
          // 3. Oyun Ekranı
-         // Seçenekleri render etmek için hedefi ve diğer seçenekleri birleştirip pozisyona göre sırala
          const displayImages = targetImage ? [targetImage, ...options] : [...options];
-         // Pozisyonu olmayanları sona atmak için ?? 0 kullandık
          displayImages.sort((a, b) => (a.position ?? Infinity) - (b.position ?? Infinity));
-
 
          return (
              <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-8 px-4">
                  <div className="container mx-auto max-w-4xl">
-                     {/* Header: Başlık ve Skor Tablosu */}
+                     {/* Header (Tam JSX) */}
                      <motion.div
                          initial={{ opacity: 0, y: -20 }}
                          animate={{ opacity: 1, y: 0 }}
@@ -344,7 +289,6 @@ import { useState, useEffect, useCallback } from 'react';
                          className="bg-white rounded-2xl shadow-xl p-6 mb-8"
                      >
                          <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
-                             {/* Başlık */}
                              <div className="flex items-center gap-3">
                                  <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-3 rounded-xl shadow-lg">
                                      <Brain className="w-7 h-7 text-white" />
@@ -353,7 +297,6 @@ import { useState, useEffect, useCallback } from 'react';
                                      Bilsem Sınavı Hafıza
                                  </h1>
                              </div>
-                             {/* Skor Tablosu */}
                              <div className="flex gap-3 sm:gap-4">
                                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl shadow-lg p-3 min-w-[80px] sm:min-w-[100px] text-center">
                                      <p className="text-xs sm:text-sm text-emerald-600 font-medium">Skor</p>
@@ -372,10 +315,10 @@ import { useState, useEffect, useCallback } from 'react';
                      </motion.div>
 
                      {/* Ana Oyun Alanı */}
-                     <div className="relative min-h-[400px]"> {/* Animasyon geçişleri için alan */}
-                         <AnimatePresence mode="wait"> {/* Bir eleman çıkarken diğeri beklemesi için */}
+                     <div className="relative min-h-[400px]">
+                         <AnimatePresence mode="wait">
 
-                             {/* Durum 1: Hedef Gösteriliyor */}
+                             {/* Durum 1: Hedef Gösteriliyor (Tam JSX) */}
                              {targetImage && !showOptions && !isQuestionLoading && (
                                  <motion.div
                                      key="target-display"
@@ -401,7 +344,7 @@ import { useState, useEffect, useCallback } from 'react';
                                  </motion.div>
                              )}
 
-                             {/* Durum 2: Yeni Soru Yükleniyor */}
+                             {/* Durum 2: Yeni Soru Yükleniyor (Tam JSX) */}
                              {isQuestionLoading && (
                                  <motion.div
                                      key="question-loading"
@@ -416,7 +359,7 @@ import { useState, useEffect, useCallback } from 'react';
                                  </motion.div>
                              )}
 
-                             {/* Durum 3: Seçenekler Gösteriliyor */}
+                             {/* Durum 3: Seçenekler Gösteriliyor (Tam JSX) */}
                              {showOptions && !isQuestionLoading && (
                                  <motion.div
                                      key="options-display"
@@ -427,35 +370,35 @@ import { useState, useEffect, useCallback } from 'react';
                                      className="bg-white rounded-2xl shadow-xl p-4 sm:p-6"
                                  >
                                      <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-center text-gray-800">Hatırladığın resmi bul:</h2>
-                                     {/* Seçenekler Grid'i */}
-                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 max-w-xl mx-auto">
+                                     <div
+                                        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 max-w-xl mx-auto"
+                                        style={{ perspective: '1000px' }}
+                                     >
                                          {displayImages.map((image, index) => (
                                              <motion.div
-                                                 key={`<span class="math-inline">\{image\.id\}\-</span>{image.option}-${index}`} // Benzersiz key
-                                                 variants={itemVariants} // Yukarıda tanımlanan item animasyonu
-                                                 // initial, animate, exit prop'ları kapsayıcıdan miras alınır ama override edilebilir
-                                                 // Burada container'ın `visible`'ı tetiklediği için item'lar da `visible` olur
+                                                 key={`<span class="math-inline">\{image\.id\}\-</span>{image.option}-${index}`}
+                                                 variants={itemVariants}
                                                  className={`relative aspect-square cursor-pointer group ${isAnswered ? 'pointer-events-none' : ''}`}
-                                                 onClick={() => !isAnswered && handleOptionClick(image)} // Sadece cevaplanmadıysa tıkla
+                                                 onClick={() => !isAnswered && handleOptionClick(image)}
                                              >
                                                  <div
                                                      className={`relative rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 shadow-md h-full w-full
-                                                     ${isAnswered && selectedSrc === image.src // Seçilen resim mi?
-                                                         ? image.src === targetImage?.src // Seçilen doğru mu?
-                                                             ? 'ring-4 ring-emerald-400 shadow-emerald-300/50' // Seçilen Doğru
-                                                             : 'ring-4 ring-red-400 shadow-red-300/50'       // Seçilen Yanlış
-                                                         : isAnswered && image.src === targetImage?.src // Seçilmeyen ama doğru olan mı?
-                                                             ? 'ring-4 ring-emerald-300 opacity-60'      // Doğru Cevap (Vurgu)
-                                                             : 'hover:shadow-lg hover:scale-105'           // Normal / Hover
+                                                     ${isAnswered && selectedSrc === image.src
+                                                         ? image.src === targetImage?.src
+                                                             ? 'ring-4 ring-emerald-400 shadow-emerald-300/50'
+                                                             : 'ring-4 ring-red-400 shadow-red-300/50'
+                                                         : isAnswered && image.src === targetImage?.src
+                                                             ? 'ring-4 ring-emerald-300 opacity-60'
+                                                             : 'hover:shadow-lg hover:scale-105'
                                                      }`}
                                                  >
                                                      <img
                                                          src={image.src}
                                                          alt={`Seçenek ${index + 1}: ${image.name} - ${image.option}`}
                                                          className="w-full h-full object-contain bg-gray-50"
-                                                         loading="lazy" // Lazy loading
+                                                         loading="lazy"
                                                      />
-                                                     {/* Doğru Cevap İşareti (Sadece doğru resmin üzerinde gösterilir) */}
+                                                     {/* Doğru Cevap İşareti */}
                                                      {isAnswered && image.src === targetImage?.src && (
                                                          <motion.div
                                                             initial={{ scale: 0 }}
@@ -466,7 +409,7 @@ import { useState, useEffect, useCallback } from 'react';
                                                               <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                                                          </motion.div>
                                                      )}
-                                                      {/* Yanlış Seçim İşareti (Sadece yanlış seçilenin üzerinde gösterilir) */}
+                                                      {/* Yanlış Seçim İşareti */}
                                                       {isAnswered && selectedSrc === image.src && image.src !== targetImage?.src && (
                                                          <motion.div
                                                             initial={{ scale: 0 }}
@@ -484,14 +427,14 @@ import { useState, useEffect, useCallback } from 'react';
                                  </motion.div>
                              )}
 
-                             {/* Durum 4: Sonuç Mesajı Gösteriliyor */}
+                             {/* Durum 4: Sonuç Mesajı Gösteriliyor (Tam JSX) */}
                              {isAnswered && (
                                  <motion.div
                                      key="result-message"
                                      initial={{ opacity: 0, y: 20 }}
                                      animate={{ opacity: 1, y: 0 }}
-                                     transition={{ delay: 0.3 }} // Seçenek animasyonundan biraz sonra gelsin
-                                     className={`absolute bottom-[-70px] left-0 right-0 mx-auto w-fit mt-6 p-4 rounded-lg text-center shadow-lg ${isCorrect ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-red-500 to-pink-500'}`}
+                                     transition={{ delay: 0.3 }}
+                                     className={`absolute bottom-[-70px] left-0 right-0 mx-auto w-fit mt-6 p-4 rounded-lg text-center shadow-lg z-10 ${isCorrect ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-red-500 to-pink-500'}`}
                                  >
                                      <p className="text-base sm:text-lg font-semibold text-white">
                                          {isCorrect ? 'Harika! Doğru bildin! 🎉' : 'Üzgünüm, yanlış seçim! 😢'}
@@ -505,7 +448,6 @@ import { useState, useEffect, useCallback } from 'react';
          );
      };
 
-     // Ana render fonksiyonu çağrılır
      return renderContent();
  };
 
