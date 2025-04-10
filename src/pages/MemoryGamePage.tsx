@@ -350,7 +350,7 @@ import { useState, useEffect, useCallback } from 'react';
                                      <Brain className="w-7 h-7 text-white" />
                                  </div>
                                  <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                                     Hafıza Oyunu (Matris)
+                                     Bilsem Sınavı Hafıza
                                  </h1>
                              </div>
                              {/* Skor Tablosu */}
