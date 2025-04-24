@@ -2,9 +2,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const HomePage: React.FC = () => (
-  <div className="font-open-sans text-gray-800">
+  <div className="font-open-sans text-gray-800 dark:text-gray-100">
     {/* HERO */}
-    <section className="flex flex-col-reverse md:flex-row items-center px-8 py-16 bg-[#FFF3B0]">
+    <section className="flex flex-col-reverse md:flex-row items-center px-8 py-16 bg-[#FFF3B0] dark:bg-gray-800">
       <div className="md:w-1/2 text-center md:text-left">
         <h1 className="text-4xl md:text-5xl font-poppins font-bold mb-4">Bilsemc2’ye Hoş Geldin!</h1>
         <p className="text-lg mb-6">Yaratıcılığını Keşfet, Öğren, Eğlen.</p>
@@ -19,7 +19,7 @@ const HomePage: React.FC = () => (
     </section>
 
     {/* ATÖLYELER KARTLARI */}
-    <section className="px-8 py-16 bg-white">
+    <section className="px-8 py-16 bg-white dark:bg-gray-900">
       <h2 className="text-3xl font-poppins font-bold text-center mb-12">Atölyeler</h2>
       <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <div className="p-6 rounded-lg text-center">
@@ -41,7 +41,7 @@ const HomePage: React.FC = () => (
     </section>
 
     {/* HAKKIMIZDA */}
-    <section className="px-8 py-16 bg-white flex flex-col md:flex-row items-center">
+    <section className="px-8 py-16 bg-white flex flex-col md:flex-row items-center dark:bg-gray-900">
       <div className="md:w-1/2 mb-8 md:mb-0">
         <h2 className="text-3xl font-poppins font-bold mb-4">Hakkımızda</h2>
         <p className="font-open-sans text-lg mb-6">Bilsemc2, çocukların yaratıcılığını ve zekâ gelişimini desteklemek amacıyla tasarlanmış eğlenceli bir platformdur.</p>

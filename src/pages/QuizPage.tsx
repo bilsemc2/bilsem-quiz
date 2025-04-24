@@ -292,12 +292,12 @@ export default function QuizPage({ onComplete }: QuizPageProps) {
 
     if (!quizState.currentQuestion) {
          // ... Soru yok uyarısı ...
-         return <div className="text-center py-10">Quiz yükleniyor veya soru bulunamadı...</div>;
+         return <div className="text-center py-10 text-gray-800 dark:text-gray-100">Quiz yükleniyor veya soru bulunamadı...</div>;
     }
 
     // Ana Quiz Arayüzü
     return (
-        <div className="min-h-screen bg-gray-100 py-4">
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-800 py-4">
             <div className="container mx-auto px-4">
                 {/* İsteğe bağlı XP Uyarısı */}
                 {/* <XPWarning requiredXP={requiredXP} currentXP={userXP} title="Quiz XP Gereksinimi" /> */}

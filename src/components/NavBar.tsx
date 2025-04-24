@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Chip from '@mui/material/Chip';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 const NavBar: React.FC = () => {
   const location = useLocation();
@@ -14,7 +16,9 @@ const NavBar: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isVip, setIsVip] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  );
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -25,6 +29,18 @@ const NavBar: React.FC = () => {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(prev => !prev);
+  };
+
+  const toggleTheme = () => {
+    if (theme === 'dark') {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+      setTheme('light');
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+      setTheme('dark');
+    }
   };
 
   // Kullanıcı ve çevrimiçi sayısını kontrol eden useEffect
@@ -212,6 +228,9 @@ const NavBar: React.FC = () => {
                 }}
               />
             </div>
+            <button onClick={toggleTheme} className="ml-4 p-2 text-gray-600 hover:text-yellow-500">
+              {theme === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </button>
           </div>
 
           {/* Mobil Menü Butonu */}
@@ -292,6 +311,9 @@ const NavBar: React.FC = () => {
               </Link>
             </>
           )}
+          <button onClick={() => { toggleTheme(); setIsMobileMenuOpen(false); }} className="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 hover:bg-gray-100">
+            {theme === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />} Tema Değiştir
+          </button>
           <Link
             to="/blog"
             onClick={() => setIsMobileMenuOpen(false)}

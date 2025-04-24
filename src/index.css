@@ -11,6 +11,10 @@
     @apply bg-background text-gray-800 antialiased font-sans min-h-full;
   }
 
+  .dark body {
+    @apply bg-gray-900 text-gray-100;
+  }
+
   #root {
     @apply min-h-full flex flex-col;
   }
