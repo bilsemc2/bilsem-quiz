@@ -33,7 +33,7 @@ export default function PricingPage() {
                             description="Bilsemc2'ye ilk adımınızı atın ve temel özelliklere erişim kazanın. Başlangıç seviyesi için ideal plan."
                             features={[
                                 'Tüm Başlangıç özellikleri',
-                                '+5000 XP',
+                                '+1500 XP',
                                 'XP kazanım fırsatları',
                                 'Temel etkinliklere erişim',
                                 'Puan tablosunda yer alma'
@@ -48,6 +48,7 @@ export default function PricingPage() {
                             description="Daha fazla destek ve özel içeriklerle sınava hazırlanın. Özel Whatsapp grubu ve canlı denemelerle başarıya ulaşın."
                             features={[
                                 'Tüm Temel özellikleri',
+                                '+1500 XP',
                                 ' Özel Whatsapp grubu',
                                 'Canlı/cansız denemeler',
                                 'Zor soruların çözümlü Videoları/Açıklamaları',
@@ -66,7 +67,7 @@ export default function PricingPage() {
                             description="En kapsamlı hazırlık planı! Canlı dersler, günlük denemeler ve özel ödevlerle tam donanımlı bir hazırlık deneyimi."
                             features={[
                                 'Tüm Standart özellikleri',
-                                '+5000 XP',
+                                '+2000 XP',
                                 'Sınıfa Atama',
                                 'Ödevler',
                                 'Hafta içi hergün 2 deneme',
