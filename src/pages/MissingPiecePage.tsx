@@ -189,16 +189,21 @@ function useAdvancedMissingPieceGame(user: any): UseGameReturn {
 
   // ------------------ Desen Oluşturma ------------------
   const vibrantColors = [
-    '#FF4D6D', // Canlı Pembe
-    '#FF9F1C', // Portakal
-    '#FFBD00', // Güneş Sarısı
-    '#4CAF50', // Yeşil
-    '#00B4D8', // Okyanus Mavisi
-    '#7209B7', // Mor
-    '#F72585', // Fuşya
-    '#4CC9F0', // Elektrik Mavisi
-    '#FB5607', // Turuncu
-    '#3A86FF'  // Parlak Mavi
+  '#FFD966', // Pastel sarı (yumuşak ve neşeli)
+  '#FFB4B4', // Yumuşak pembe (mutlu ve güvenli)
+  '#A7C7E7', // Açık gökyüzü mavisi (sakin ve serin)
+  '#FF90B3', // Şeker pembe (neşeli)
+  '#B5E48C', // Açık yeşil (taze ve dinlendirici)
+  '#FFAB76', // Pastel turuncu (canlı ama göz yormaz)
+  '#E5D1FA', // Açık mor-lila (yumuşak ve sevimli)
+  '#FFD6E0', // Pudra pembe (nazik, tatlı)
+  '#A1FFD6', // Açık nane yeşili (serinletici)
+  '#90E0EF', // Bebek mavisi (rahatlatıcı)
+  '#F9F871', // Parlak limon (neşeli vurgular için)
+  '#FFF0B3', // Açık vanilya (araya yumuşaklık için)
+  '#ACE7FF', // Hafif turkuaz
+  '#FFDAC1', // Açık şeftali (davetkar)
+  '#F7B7A3', // Somon (sıcak ve eğlenceli)
   ];
 
   const getContrastColor = (baseColor: string) => {
