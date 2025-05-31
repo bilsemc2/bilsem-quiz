@@ -6,6 +6,20 @@ import ModernProgress from '../components/ModernProgress';
 import EditProfileModal from '../components/EditProfileModal';
 import UserMessages from '@/components/UserMessages';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    Trophy, 
+    Target, 
+    TrendingUp, 
+    Users, 
+    Star, 
+    Gift,
+    MessageCircle,
+    Award,
+    BookOpen,
+    Calendar,
+    Zap
+} from 'lucide-react';
 
 // Profilden yeni tip importları
 import { UserProfile, QuizStats, DailyStats, ClassStudent } from '@/types/profile';
@@ -21,10 +35,11 @@ import WeeklyChart from '@/components/profile/WeeklyChart';
 import ReferralSystem from '@/components/profile/ReferralSystem';
 
 export const ProfilePage: React.FC = () => {
-    const { } = useSound(); // Sound context'i ileride kullanılabilir
+    const { } = useSound();
     const { user } = useAuth();
     const [weeklyStats, setWeeklyStats] = useState<DailyStats[]>([]);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [userData, setUserData] = useState<UserProfile>({
         name: "",
         email: user?.email || "",
@@ -55,7 +70,6 @@ export const ProfilePage: React.FC = () => {
 
     // Haftalık istatistikleri işleyen yardımcı fonksiyon
     const processWeeklyStats = (quizData: any[]) => {
-        // Son 7 gün içindeki verileri filtrele
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
         
@@ -63,10 +77,8 @@ export const ProfilePage: React.FC = () => {
             result => new Date(result.completed_at) >= oneWeekAgo
         );
 
-        // Group results by date
         const dailyStats = new Map<string, DailyStats>();
         
-        // Initialize last 7 days with 0 values
         for (let i = 0; i < 7; i++) {
             const date = new Date();
             date.setDate(date.getDate() - i);
@@ -78,7 +90,6 @@ export const ProfilePage: React.FC = () => {
             });
         }
 
-        // Aggregate results by date
         weeklyData.forEach(result => {
             const dateStr = new Date(result.completed_at).toISOString().split('T')[0];
             const existing = dailyStats.get(dateStr) || { date: dateStr, correct: 0, wrong: 0 };
@@ -91,7 +102,6 @@ export const ProfilePage: React.FC = () => {
             });
         });
 
-        // Convert to array and sort by date
         const statsArray = Array.from(dailyStats.values())
             .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -102,8 +112,8 @@ export const ProfilePage: React.FC = () => {
     const fetchUserData = async () => {
         if (!user) return;
         
+        setIsLoading(true);
         try {
-            // Profil, sınıf ve quiz sonuçlarını paralel olarak çekelim
             const [profileResponse, quizResultsResponse] = await Promise.all([
                 supabase
                     .from('profiles')
@@ -126,7 +136,6 @@ export const ProfilePage: React.FC = () => {
                     .eq('user_id', user.id)
             ]);
             
-            // Profil verilerini işle
             const { data: profileData, error: profileError } = profileResponse;
             if (profileError) {
                 console.error('Error fetching profile:', profileError);
@@ -134,11 +143,9 @@ export const ProfilePage: React.FC = () => {
             }
             
             if (profileData) {
-                // Avatar URL kontrolü
                 const avatar_url = profileData.avatar_url || 
                     `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || '')}`;
                 
-                // Sınıf bilgilerini düzenle
                 const classes = (profileData.class_students as ClassStudent[] | null)
                     ?.filter((cs: ClassStudent) => cs.classes)
                     .map((cs: ClassStudent) => ({
@@ -147,19 +154,16 @@ export const ProfilePage: React.FC = () => {
                         grade: cs.classes.grade
                     }));
 
-                // Seviye bilgilerini hesapla
                 const levelInfo = calculateLevelInfo(profileData.experience || 0);
                 const levelBadge = getLevelBadge(levelInfo.currentLevel);
                 const levelTitle = getLevelTitle(levelInfo.currentLevel);
                 
-                // State'i güncelle
                 setUserData({
                     ...profileData,
                     avatar_url,
                     classes
                 });
 
-                // Seviye bilgilerini güncelle
                 setQuizStats(prev => ({
                     ...prev,
                     currentLevel: levelInfo.currentLevel,
@@ -170,7 +174,6 @@ export const ProfilePage: React.FC = () => {
                     levelTitle
                 }));
                 
-                // Avatar URL güncellenmesi gerekiyorsa güncelle
                 if (avatar_url !== profileData.avatar_url) {
                     const { error: updateError } = await supabase
                         .from('profiles')
@@ -183,7 +186,6 @@ export const ProfilePage: React.FC = () => {
                 }
             }
             
-            // Quiz verilerini işle
             const { data: quizData, error: quizError } = quizResultsResponse;
             if (quizError) {
                 console.error('Error fetching quiz stats:', quizError);
@@ -205,11 +207,12 @@ export const ProfilePage: React.FC = () => {
                     averageScore
                 }));
                 
-                // Haftalık istatistikleri işle
                 processWeeklyStats(quizData);
             }
         } catch (err) {
             console.error('Exception in fetchUserData:', err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -224,7 +227,6 @@ export const ProfilePage: React.FC = () => {
         try {
             const newCode = generateReferralCode();
             
-            // Kodu güncelle
             const { error: updateError } = await supabase
                 .from('profiles')
                 .update({ referral_code: newCode })
@@ -232,7 +234,6 @@ export const ProfilePage: React.FC = () => {
 
             if (updateError) throw updateError;
 
-            // State'i güncelle
             setUserData(prev => ({ ...prev, referral_code: newCode }));
             toast.success('Yeni referans kodunuz oluşturuldu!');
 
@@ -242,19 +243,12 @@ export const ProfilePage: React.FC = () => {
         }
     };
 
-    // Ana veri çekme işlemi için useEffect
     useEffect(() => {
         if (user) {
             fetchUserData();
         }
     }, [user]);
 
-    // Debug amaçlı useEffect
-    useEffect(() => {
-        console.log('Current userData:', userData);
-    }, [userData]);
-
-    // Okunmamış mesajlar için ayrı useEffect
     useEffect(() => {
         if (!user) return;
         
@@ -274,7 +268,6 @@ export const ProfilePage: React.FC = () => {
         
         fetchUnreadCount();
         
-        // Realtime subscription for new messages
         const channel = supabase
             .channel('messages-changes')
             .on(
@@ -295,71 +288,266 @@ export const ProfilePage: React.FC = () => {
         };
     }, [user]);
 
-    return (
-        <div className="container mx-auto px-4 py-8">
-            {isEditModalOpen && (
-                <EditProfileModal
-                    onClose={() => setIsEditModalOpen(false)}
-                    onSave={fetchUserData}
-                    userData={{
-                        name: userData.name,
-                        grade: userData.grade,
-                        school: userData.school,
-                    }}
-                />
-            )}
-
-            <div className="max-w-5xl mx-auto">
-                {/* Profil Bilgileri ve Avatar */}
-                <ProfileHeader 
-                    userData={userData} 
-                    unreadCount={unreadCount} 
-                    onEditClick={() => setIsEditModalOpen(true)} 
-                />
-
-                {/* Sınıflarım */}
-                <ClassList classes={userData.classes} />
-
-                {/* İstatistikler */}
-                <StatsSummary userData={userData} quizStats={quizStats} />
-
-                {/* Haftalık Performans */}
-                <WeeklyChart weeklyStats={weeklyStats} />
-
-                {/* Arkadaşlarını Davet Et Bölümü */}
-                <ReferralSystem 
-                    referralCode={userData.referral_code} 
-                    referralCount={userData.referral_count} 
-                    onGenerateCode={updateReferralCode} 
-                />
-
-                {/* Kullanıcı Mesajları */}
-                <div className="my-8">
-                    <UserMessages userId={user?.id} />
-                </div>
-
-                {/* Gelişim İzleme */}
-                <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold">Seviye İlerlemesi</h2>
-                        <div className="text-lg flex items-center gap-2">
-                            <span className="text-2xl" title="Seviye Rozeti">{quizStats.levelBadge}</span>
-                            <span className="text-purple-600 font-bold">Seviye {quizStats.currentLevel}</span>
-                            <span className="text-gray-500 text-sm">({quizStats.levelTitle})</span>
-                        </div>
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+                <div className="text-center space-y-6">
+                    <div className="relative">
+                        <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+                        <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-r-purple-600 rounded-full animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
                     </div>
-                    
-                    <ModernProgress 
-                        value={quizStats.levelProgress} 
-                        label="Seviye İlerlemesi"
-                        color="#8B5CF6"
-                        icon="⭐"
-                        description={`${quizStats.currentXP} / ${quizStats.nextLevelXP} XP`}
-                    />
-                    
-                    <div className="flex justify-between text-sm text-gray-600 mt-2">
-                        <span>{quizStats.currentXP} XP</span>
-                        <span>{quizStats.nextLevelXP} XP</span>
+                    <div className="space-y-2">
+                        <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">Profil Yükleniyor</h3>
+                        <p className="text-gray-500 dark:text-gray-400">Verileriniz hazırlanıyor...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+            <div className="container mx-auto px-4 py-8">
+                <AnimatePresence>
+                    {isEditModalOpen && (
+                        <EditProfileModal
+                            onClose={() => setIsEditModalOpen(false)}
+                            onSave={fetchUserData}
+                            userData={{
+                                name: userData.name,
+                                grade: userData.grade,
+                                school: userData.school,
+                            }}
+                        />
+                    )}
+                </AnimatePresence>
+
+                <div className="max-w-6xl mx-auto space-y-6">
+                    {/* Header Section */}
+                    <motion.div 
+                        className="text-center mb-8"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                            Profilim
+                        </h1>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            Gelişiminizi takip edin ve başarılarınızı görün
+                        </p>
+                    </motion.div>
+
+                    {/* Profile Header Card */}
+                    <motion.div
+                        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 overflow-hidden"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.1 }}
+                    >
+                        <div className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-8">
+                            <div className="absolute inset-0 bg-black/20"></div>
+                            <div className="relative z-10">
+                                <ProfileHeader 
+                                    userData={userData} 
+                                    unreadCount={unreadCount} 
+                                    onEditClick={() => setIsEditModalOpen(true)} 
+                                />
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Quick Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                            { icon: Trophy, label: 'Toplam Quiz', value: quizStats.totalQuizzes, color: 'from-yellow-500 to-orange-500' },
+                            { icon: Target, label: 'Doğru Cevap', value: quizStats.totalCorrect, color: 'from-green-500 to-emerald-500' },
+                            { icon: TrendingUp, label: 'Ortalama Skor', value: `%${Math.round(quizStats.averageScore)}`, color: 'from-blue-500 to-cyan-500' },
+                            { icon: Star, label: 'Seviye', value: quizStats.currentLevel, color: 'from-purple-500 to-pink-500' }
+                        ].map((stat, index) => (
+                            <motion.div
+                                key={stat.label}
+                                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 dark:border-gray-700/20 p-6"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.6, delay: 0.2 + index * 0.1 }}
+                                whileHover={{ scale: 1.02 }}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{stat.label}</p>
+                                        <p className="text-2xl font-bold text-gray-800 dark:text-white">{stat.value}</p>
+                                    </div>
+                                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center`}>
+                                        <stat.icon className="w-6 h-6 text-white" />
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+
+                    {/* Main Content Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Left Column */}
+                        <div className="lg:col-span-2 space-y-6">
+                            {/* Level Progress */}
+                            <motion.div 
+                                className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 p-6"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.6, delay: 0.3 }}
+                            >
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                                            <Award className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Seviye İlerlemesi</h2>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                {quizStats.levelTitle}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-3xl mb-1">{quizStats.levelBadge}</div>
+                                        <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                                            Seviye {quizStats.currentLevel}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <ModernProgress 
+                                    value={quizStats.levelProgress} 
+                                    label="Seviye İlerlemesi"
+                                    color="#8B5CF6"
+                                    icon="⭐"
+                                    description={`${quizStats.currentXP} / ${quizStats.nextLevelXP} XP`}
+                                />
+                                
+                                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mt-3">
+                                    <span className="flex items-center gap-1">
+                                        <Zap className="w-4 h-4" />
+                                        {quizStats.currentXP} XP
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                        <Target className="w-4 h-4" />
+                                        {quizStats.nextLevelXP} XP
+                                    </span>
+                                </div>
+                            </motion.div>
+
+                            {/* Weekly Performance */}
+                            <motion.div 
+                                className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 p-6"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.6, delay: 0.4 }}
+                            >
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                                        <Calendar className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Haftalık Performans</h2>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">Son 7 günlük performansınız</p>
+                                    </div>
+                                </div>
+                                <WeeklyChart weeklyStats={weeklyStats} />
+                            </motion.div>
+
+                            {/* Stats Summary */}
+                            <motion.div 
+                                className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 overflow-hidden"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.6, delay: 0.5 }}
+                            >
+                                <div className="p-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                                            <BookOpen className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Detaylı İstatistikler</h2>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Genel performans özetiniz</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <StatsSummary userData={userData} quizStats={quizStats} />
+                            </motion.div>
+                        </div>
+
+                        {/* Right Column */}
+                        <div className="space-y-6">
+                            {/* Classes */}
+                            <motion.div 
+                                className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 p-6"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.6, delay: 0.3 }}
+                            >
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
+                                        <Users className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Sınıflarım</h2>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">Kayıtlı olduğum sınıflar</p>
+                                    </div>
+                                </div>
+                                <ClassList classes={userData.classes} />
+                            </motion.div>
+
+                            {/* Referral System */}
+                            <motion.div 
+                                className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 p-6"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.6, delay: 0.4 }}
+                            >
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl flex items-center justify-center">
+                                        <Gift className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Arkadaşlarını Davet Et</h2>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">Referans kodunla puan kazan</p>
+                                    </div>
+                                </div>
+                                <ReferralSystem 
+                                    referralCode={userData.referral_code} 
+                                    referralCount={userData.referral_count} 
+                                    onGenerateCode={updateReferralCode} 
+                                />
+                            </motion.div>
+
+                            {/* Messages */}
+                            <motion.div 
+                                className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 p-6"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.6, delay: 0.5 }}
+                            >
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl flex items-center justify-center relative">
+                                        <MessageCircle className="w-5 h-5 text-white" />
+                                        {unreadCount > 0 && (
+                                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                                                <span className="text-xs text-white font-bold">{unreadCount}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Mesajlarım</h2>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            {unreadCount > 0 ? `${unreadCount} okunmamış mesaj` : 'Tüm mesajlar okundu'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <UserMessages userId={user?.id} />
+                            </motion.div>
+                        </div>
                     </div>
                 </div>
             </div>
