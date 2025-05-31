@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRightLeft, Trash2, Loader2 } from 'lucide-react'; // İkonlar eklendi
+import { motion } from 'framer-motion';
+import { 
+  ArrowRightLeft, 
+  Trash2, 
+  Loader2, 
+  Eye, 
+  EyeOff, 
+  Copy, 
+  Shuffle,
+  Sparkles,
+  Zap
+} from 'lucide-react';
 import { useUser } from '../hooks/useUser';
 import { useXPCheck } from '../hooks/useXPCheck';
 import XPWarning from '../components/XPWarning';
-import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
-import { Card, CardContent, CardHeader } from '@/components/ui/card'; // Shadcn Card varsayımı
 
 // --- Sabit Veriler (Bileşen Dışında) ---
 interface CharMapValue {
@@ -45,7 +54,7 @@ const charMapping: CharMappingType = {
     'Ü': { color: '#2F4F4F', symbol: '🥒' }, // Salatalık
     'V': { color: '#FF69B4', symbol: '🥬' }, // Marul
     'Y': { color: '#20B2AA', symbol: '🥜' }, // Fıstık
-    'Z': { color: '#BA55D3', symbol: '🍇' }, // Üzüm (Zaten kullanılmış! Değiştirilmeli!) -> '🧄' (Sarımsak) yapalım
+    'Z': { color: '#BA55D3', symbol: '🧄' }, // Sarımsak
     ' ': { color: '#EAEAEA', symbol: '➖' }, // Boşluk için
     // Sayılar (Semboller benzersiz olmalı!)
     '0': { color: '#FFD700', symbol: '⭐' },
@@ -94,8 +103,10 @@ const VisualEncoderPage: React.FC = () => {
   // --- State'ler ---
   const [inputText, setInputText] = useState('');
   const [mode, setMode] = useState<'encode' | 'decode'>('encode');
-  const [decodedText, setDecodedText] = useState(''); // Decode sonucu için ayrı state
-  const [encodedElements, setEncodedElements] = useState<JSX.Element[]>([]); // Encode sonucu için ayrı state
+  const [decodedText, setDecodedText] = useState('');
+  const [encodedElements, setEncodedElements] = useState<JSX.Element[]>([]);
+  const [showReferenceTable, setShowReferenceTable] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // --- Efektler ---
   // Kullanıcı Giriş Kontrolü
@@ -141,36 +152,66 @@ const VisualEncoderPage: React.FC = () => {
 
   // --- Olay Yöneticileri (useCallback ile) ---
   const handleModeToggle = useCallback(() => {
-    setMode(prev => (prev === 'encode' ? 'decode' : 'encode'));
-    setInputText(''); // Mod değişince girişi temizle
-    setDecodedText('');
-    setEncodedElements([]);
-  }, []);
+    setIsProcessing(true);
+    setTimeout(() => {
+      setMode(prev => (prev === 'encode' ? 'decode' : 'encode'));
+      setInputText('');
+      setDecodedText('');
+      setEncodedElements([]);
+      setIsProcessing(false);
+      toast.success(`${mode === 'encode' ? 'Şifre Çözme' : 'Şifreleme'} moduna geçildi`);
+    }, 300);
+  }, [mode]);
 
   const handleSymbolClick = useCallback((symbol: string) => {
     setInputText(prev => prev + symbol);
   }, []);
 
   const handleBackspace = useCallback(() => {
-    // Son sembolü silmek için regex ile eşleşen son kısmı çıkar
     setInputText(prev => {
         const matches = prev.match(SYMBOL_REGEX) || [];
         if (matches.length > 0) {
-            // Son eşleşmeyi string'den çıkar
             const lastMatch = matches[matches.length - 1];
             const lastIndex = prev.lastIndexOf(lastMatch);
             if(lastIndex !== -1) {
                  return prev.substring(0, lastIndex);
             }
         }
-        return prev.slice(0, -1); // Fallback: son karakteri sil
+        return prev.slice(0, -1);
     });
   }, []);
 
   const handleClearInput = useCallback(() => {
       setInputText('');
-  }, [])
+      toast.success('Metin temizlendi');
+  }, []);
 
+  const handleCopyResult = useCallback(() => {
+    const textToCopy = mode === 'encode' 
+      ? encodedElements.map(el => el.props.children).join('')
+      : decodedText;
+    
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        toast.success('Sonuç panoya kopyalandı!');
+      }).catch(() => {
+        toast.error('Kopyalama başarısız');
+      });
+    }
+  }, [mode, encodedElements, decodedText]);
+
+  const generateRandomText = useCallback(() => {
+    const sampleTexts = [
+      'MERHABA DÜNYA',
+      'TÜRKÇE ŞIFRELEME',
+      'SEMBOL OYUNU',
+      'GÖRSEL KOD',
+      'RENGARENK HARFLER'
+    ];
+    const randomText = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+    setInputText(randomText);
+    toast.success('Örnek metin eklendi!');
+  }, []);
 
   // --- Yükleme ve Erişim Kontrolleri Render ---
    if (userLoading || xpLoading) {
@@ -191,111 +232,265 @@ const VisualEncoderPage: React.FC = () => {
 
   // --- Ana JSX ---
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8 max-w-5xl">
-      <Card className="shadow-xl">
-        <CardHeader className="text-center border-b pb-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-blue-500">
-            Görsel Sembol Şifreci
-          </h1>
-          <p className="text-gray-500 mt-2">Metinleri renkli sembollere dönüştürün veya sembolleri çözün.</p>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-6">
-          {/* Mod Değiştirme */}
-          <div className="flex justify-center">
-            <Button onClick={handleModeToggle} variant="outline" className="gap-2">
-              <ArrowRightLeft className="w-4 h-4" />
-              {mode === 'encode' ? 'Şifre Çözme Modu' : 'Şifreleme Modu'}
-            </Button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-lg mb-4">
+            <Sparkles className="w-8 h-8 text-indigo-600" />
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Görsel Sembol Şifreci
+            </h1>
+            <Zap className="w-8 h-8 text-purple-600" />
+          </div>
+          <p className="text-gray-600 dark:text-gray-300 text-lg">
+            Metinleri renkli sembollere dönüştürün veya sembolleri çözün
+          </p>
+        </motion.div>
+
+        {/* Main Content */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-2xl p-6 sm:p-8"
+        >
+          {/* Mode Toggle */}
+          <div className="flex justify-center mb-8">
+            <motion.button
+              onClick={handleModeToggle}
+              disabled={isProcessing}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`
+                flex items-center gap-3 px-6 py-3 rounded-xl font-semibold transition-all duration-300
+                ${mode === 'encode' 
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
+                  : 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+                }
+                ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-xl'}
+              `}
+            >
+              {isProcessing ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <ArrowRightLeft className="w-5 h-5" />
+              )}
+              {mode === 'encode' ? 'Şifre Çözme Moduna Geç' : 'Şifreleme Moduna Geç'}
+            </motion.button>
           </div>
 
-          {/* Giriş Alanı */}
-          <div className="space-y-2">
-            <label className="block text-lg font-semibold text-gray-700">
-              {mode === 'encode' ? 'Şifrelenecek Metin:' : 'Şifreli Semboller:'}
-            </label>
-            {mode === 'encode' ? (
-              <textarea
-                value={inputText}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInputText(e.target.value)}
-                className="w-full h-36 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
-                placeholder="Metni buraya yazın..."
-                maxLength={200} // Karakter limiti
-              />
-            ) : (
-              // Decode Modu Giriş
-              <div className="space-y-3">
-                {/* Sembol Seçim Butonları */}
-                <div className="flex flex-wrap gap-1 border rounded p-2 bg-gray-50 max-h-40 overflow-y-auto">
-                  {Object.entries(charMapping).map(([char, { color, symbol }]) => (
-                    <button
-                      key={char}
-                      onClick={() => handleSymbolClick(symbol)}
-                      className="p-1.5 rounded hover:bg-gray-200 transition-colors text-2xl leading-none"
-                      title={`Harf: ${char}`} // Hover'da harfi göster
-                      style={{ color: color }}
-                      aria-label={`Sembol ekle: ${symbol}`}
-                    >
-                      {symbol}
-                    </button>
-                  ))}
-                </div>
-                {/* Seçilen Semboller Alanı */}
+          {/* Content Grid */}
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Input Section */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+                  {mode === 'encode' ? '📝 Şifrelenecek Metin' : '🔤 Şifreli Semboller'}
+                </h3>
+                {mode === 'encode' && (
+                  <motion.button
+                    onClick={generateRandomText}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all"
+                  >
+                    <Shuffle className="w-4 h-4" />
+                    Örnek
+                  </motion.button>
+                )}
+              </div>
+
+              {mode === 'encode' ? (
                 <div className="relative">
                   <textarea
-                    readOnly
                     value={inputText}
-                    className="w-full h-36 p-3 pr-20 border rounded-lg bg-white text-2xl leading-relaxed" // Yazı tipi büyütüldü
-                    placeholder="Sembolleri seçin veya yapıştırın..."
+                    onChange={(e) => setInputText(e.target.value.toUpperCase())}
+                    className="w-full h-48 p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 transition-all text-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                    placeholder="Metni buraya yazın..."
+                    maxLength={200}
                   />
-                  <div className='absolute right-2 top-2 flex flex-col gap-1'>
-                    <Button onClick={handleBackspace} variant="outline" className="bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-2" aria-label="Son sembolü sil">
-                       <Trash2 className="w-4 h-4 mr-1"/> Sil
-                    </Button>
-                     <Button onClick={handleClearInput} variant="outline" className="text-xs py-1 px-2" aria-label="Tümünü temizle">
-                       Temizle
-                    </Button>
+                  <div className="absolute bottom-2 right-2 text-xs text-gray-500 dark:text-gray-400">
+                    {inputText.length}/200
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Çıktı Alanı */}
-          <div className="space-y-2">
-            <label className="block text-lg font-semibold text-gray-700">
-              {mode === 'encode' ? 'Şifrelenmiş Sonuç:' : 'Çözülmüş Metin:'}
-            </label>
-            <Card className="w-full min-h-[9rem] p-3 bg-gray-100 shadow-inner overflow-y-auto">
-               {/* Kelime kaydırma için break-words */}
-              <div className="break-words leading-relaxed">
-                 {mode === 'encode' ?
-                    (encodedElements.length > 0 ? encodedElements : <span className="text-gray-400">Sonuç burada görünecek...</span>)
-                    :
-                    (decodedText ? <span className='text-lg font-mono'>{decodedText}</span> : <span className="text-gray-400">Sonuç burada görünecek...</span>)
-                 }
-              </div>
-            </Card>
-          </div>
-
-          {/* Referans Tablosu (Opsiyonel, Açılır/Kapanır olabilir) */}
-          <details className="mt-6 group">
-              <summary className="cursor-pointer text-center text-gray-500 hover:text-blue-600 group-open:mb-2">
-                  Sembol Referans Tablosunu Göster/Gizle
-              </summary>
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1 text-center border rounded p-2">
-                {Object.entries(charMapping).map(([char, { color, symbol }]) => (
-                  <div key={char} className="border rounded p-1 hover:bg-gray-50 transition-colors text-xs sm:text-sm" title={`${char} = ${symbol}`}>
-                    <span className="font-bold text-gray-700 block">{char}</span>
-                    <span className="text-xl sm:text-2xl" style={{ color }}>
-                      {symbol}
-                    </span>
+              ) : (
+                <div className="space-y-4">
+                  {/* Symbol Picker */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 max-h-48 overflow-y-auto">
+                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
+                      {Object.entries(charMapping).map(([char, { color, symbol }]) => (
+                        <motion.button
+                          key={char}
+                          onClick={() => handleSymbolClick(symbol)}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="p-2 rounded-lg hover:bg-white dark:hover:bg-gray-600 transition-all text-2xl"
+                          style={{ color: color }}
+                          title={`Harf: ${char}`}
+                        >
+                          {symbol}
+                        </motion.button>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-          </details>
 
-        </CardContent>
-      </Card>
+                  {/* Input Area */}
+                  <div className="relative">
+                    <div className="w-full min-h-[12rem] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-2xl leading-relaxed overflow-y-auto">
+                      {inputText || <span className="text-gray-400">Sembolleri seçin...</span>}
+                    </div>
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <motion.button
+                        onClick={handleBackspace}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex items-center gap-1 px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Sil
+                      </motion.button>
+                      <motion.button
+                        onClick={handleClearInput}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-3 py-1 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all"
+                      >
+                        Temizle
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Output Section */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+                  {mode === 'encode' ? '🎨 Şifrelenmiş Sonuç' : '📄 Çözülmüş Metin'}
+                </h3>
+                <motion.button
+                  onClick={handleCopyResult}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
+                  disabled={!inputText}
+                >
+                  <Copy className="w-4 h-4" />
+                  Kopyala
+                </motion.button>
+              </div>
+
+              <div className="min-h-[20rem] p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-600 overflow-y-auto">
+                <div className="break-words leading-relaxed">
+                  {mode === 'encode' ? (
+                    encodedElements.length > 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-2xl"
+                      >
+                        {encodedElements}
+                      </motion.div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                        <div className="text-center">
+                          <Sparkles className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p>Sonuç burada görünecek...</p>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    decodedText ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-lg font-mono text-gray-900 dark:text-white"
+                      >
+                        {decodedText}
+                      </motion.div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                        <div className="text-center">
+                          <Eye className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p>Çözüm burada görünecek...</p>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Reference Table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-8"
+          >
+            <motion.button
+              onClick={() => setShowReferenceTable(!showReferenceTable)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:shadow-lg transition-all"
+            >
+              {showReferenceTable ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              Sembol Referans Tablosunu {showReferenceTable ? 'Gizle' : 'Göster'}
+            </motion.button>
+
+            {showReferenceTable && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-600"
+              >
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-3">
+                  {Object.entries(charMapping).map(([char, { color, symbol }]) => (
+                    <motion.div
+                      key={char}
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: Math.random() * 0.3 }}
+                      whileHover={{ scale: 1.1 }}
+                      className="flex flex-col items-center p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer"
+                      title={`${char} = ${symbol}`}
+                      onClick={() => mode === 'decode' && handleSymbolClick(symbol)}
+                    >
+                      <span className="font-bold text-gray-700 dark:text-gray-300 text-sm">
+                        {char}
+                      </span>
+                      <span 
+                        className="text-2xl mt-1" 
+                        style={{ color }}
+                      >
+                        {symbol}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 };
