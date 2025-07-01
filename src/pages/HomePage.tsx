@@ -104,7 +104,7 @@ const HomePage: React.FC = () => (
                 </p>
               </div>
               <a 
-                href="https://bilsemce.com/" 
+                href="https://yetenekvezeka.com/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-poppins font-semibold rounded-xl hover:scale-105 transform transition-all duration-300 shadow-lg hover:shadow-xl"
