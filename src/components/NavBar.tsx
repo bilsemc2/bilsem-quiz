@@ -110,7 +110,7 @@ const NavBar: React.FC = () => {
   const menuItems = [
     { name: "Bilsem", path: "/bilsemc2" },
     { name: "İletişim", path: "/contact", showWhenNotAuth: true },
-    { name: "Quizeka", path: "/quiz", showWhenAuth: true },
+    //{ name: "Quizeka", path: "/quiz", showWhenAuth: true },
     { name: "Düello", path: "/duel", showWhenAuth: true },
 
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
