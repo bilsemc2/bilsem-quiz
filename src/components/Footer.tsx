@@ -61,7 +61,7 @@ export default function Footer() {
                             <a href="https://www.instagram.com/bilsemc2/" className="text-gray-400 hover:text-white transition-colors">
                                 <InstagramOutlined className="text-2xl" />
                             </a>
-                            <a href="https://www.youtube.com/@yetenekvezeka" className="text-gray-400 hover:text-white transition-colors">
+                            <a href="https://www.youtube.com/@bilsemce" className="text-gray-400 hover:text-white transition-colors">
                                 <YoutubeOutlined className="text-2xl" />
                             </a>
                         </div>

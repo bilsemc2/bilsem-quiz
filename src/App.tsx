@@ -63,7 +63,7 @@ import AssignmentStudents from './pages/teacher/AssignmentStudents';
 import StoryListPage from './pages/Story/StoryListPage';
 import StoryDetailPage from './pages/Story/StoryDetailPage';
 import StoryGeneratorPage from './pages/Story/StoryGeneratorPage';
-import BrainTrainerPage from './pages/BrainTrainerPage';
+
 import ColorGridPage from './pages/ColorGridPage';
 import ColorPerceptionPage from './pages/ColorPerceptionPage';
 // Hata mesajını gösterecek bileşen
@@ -98,23 +98,7 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/deyimler" element={<DeyimlerPage />} />
           <Route path="/matematik-dunyasi" element={<MathWorld />} />
-          <Route path="/brain-trainer" element={<Navigate to="/beyin-antrenoru" replace />} />
-          <Route 
-            path="/beyin-antrenoru" 
-            element={
-              <RequireAuth>
-                <BrainTrainerPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/beyin-antrenoru/renk-sekans" 
-            element={
-              <RequireAuth>
-                <ColorGridPage />
-              </RequireAuth>
-            } 
-          />
+
           <Route 
             path="/beyin-antrenoru/renk-algilama" 
             element={

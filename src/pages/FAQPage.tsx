@@ -16,7 +16,7 @@ const FAQPage = () => {
         {
             category: 'XP Sistemi',
             question: 'XP sistemi nasıl çalışır?',
-            answer: 'BilsemC2\'de her etkinlik ve sayfa için belirli bir XP puanı gereklidir. Etkinliklere katıldıkça XP harcanır, bu yüzden başlangıçta yüksek XP ile başlamak önemlidir. Temel plan ile 5000 XP kazanır ve tüm temel özelliklere erişim sağlarsınız. XP\'niz bittiğinde yeni XP satın alabilir veya etkinliklerden XP kazanabilirsiniz.'
+            answer: 'BilsemC2\'de her etkinlik ve sayfa için belirli bir XP puanı gereklidir. Etkinliklere katıldıkça XP harcanır, bu yüzden başlangıçta yüksek XP ile başlamak önemlidir. Temel plan ile XP kazanır ve tüm temel özelliklere erişim sağlarsınız. XP\'niz bittiğinde yeni XP satın alabilir veya etkinliklerden XP kazanabilirsiniz.'
         },
         {
             category: 'XP Sistemi',
