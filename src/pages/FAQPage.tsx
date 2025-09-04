@@ -21,7 +21,7 @@ const FAQPage = () => {
         {
             category: 'XP Sistemi',
             question: 'Hangi sayfalarda ne kadar XP harcanır?',
-            answer: 'Sayfaların XP maliyetleri şöyledir:\n\n- Quizeka: Her quizeka girişinde 10 XP\n- Düello: Her düello girişinde 10 XP\n- Hızlı Okuma: Her egzersiz için 0 XP\n- Hafıza Oyunu: Her Hafıza oyun girişinde 10 XP\n- Eksik Parça: Her sayfaya girişte 10 XP\n- Açık Küp: Her girişte 10 XP\n- Şekil Oyunu: Her giriş için 10 XP\n- Küp Sayma: Her giriş için 10 XP\n- Ayna Simetrisi: Her giriş için 10 XP\n- Döndürme: Her giriş için 10 XP\n\n'
+            answer: 'Sayfaların XP maliyetleri şöyledir:\n\n\n- Düello: Her düello girişinde 10 XP\n- Hızlı Okuma: Her egzersiz için 0 XP\n- Hafıza Oyunu: Her Hafıza oyun girişinde 10 XP\n- Eksik Parça: Her sayfaya girişte 10 XP\n- Açık Küp: Her girişte 10 XP\n- Şekil Oyunu: Her giriş için 10 XP\n- Küp Sayma: Her giriş için 10 XP\n- Ayna Simetrisi: Her giriş için 10 XP\n- Döndürme: Her giriş için 10 XP\n\n'
         },
         {
             category: 'Genel',
