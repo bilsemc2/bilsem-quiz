@@ -112,7 +112,7 @@ const NavBar: React.FC = () => {
     { name: "İletişim", path: "/contact", showWhenNotAuth: true },
     { name: "Quizeka", path: "/quiz", showWhenAuth: true },
     { name: "Düello", path: "/duel", showWhenAuth: true },
-    { name: "Brain", path: "/beyin-antrenoru", showWhenAuth: true },
+
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
     { name: "Fiyatlandırma", path: "/pricing", hideWhenVip: true },
     { name: "Öğretmenim", path: "/teacher-pricing", hideWhenVip: true },
