@@ -24,7 +24,7 @@ export default function PricingPage() {
             {/* Temel Paket */}
             <PricingCard
               title="Temel Paket"
-              price="₺3.000/Dönem"
+              price="₺1.000/Dönem"
               description="Temel hazırlık için ihtiyacınız olan düzen ve destek."
               features={[
                 'Hafta içi her gün sınıf seviyesine uygun 2 deneme kodu',
@@ -40,7 +40,7 @@ export default function PricingPage() {
             {/* Standart Paket */}
             <PricingCard
               title="Standart Paket"
-              price="₺5.000/Dönem"
+              price="₺1.500/Aylık"
               description="Daha fazla içerik, canlı ders saatleri ve ek platform erişimi."
               features={[
                 'Tüm Temel özellikleri',
@@ -57,7 +57,7 @@ export default function PricingPage() {
             {/* Profesyonel Plan Paket */}
             <PricingCard
               title="Profesyonel Plan Paket"
-              price="₺7.500/Dönem"
+              price="₺2.500/Aylık"
               description="En kapsamlı paket: ek canlı dersler, özel uygulamalar ve VIP erişim."
               features={[
                 'Tüm Standart özellikleri',
