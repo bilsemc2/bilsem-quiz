@@ -24,13 +24,13 @@ export default function PricingPage() {
             {/* Temel Paket */}
             <PricingCard
               title="Temel Paket"
-              price="₺1.000/Dönem"
+              price="₺1.000/Ay"
               description="Temel hazırlık için ihtiyacınız olan düzen ve destek."
               features={[
                 'Hafta içi her gün sınıf seviyesine uygun 2 deneme kodu',
                 'Sınıfına göre WhatsApp VIP grubu',
-                'Her Pazar 19:30’da Genel Deneme',
-                'Bilsemce.com 1 aylık ücretsiz üyelik',
+                'Bilsemc2.com ve yetenekvezeka.com üyelik',
+            
                 'Son hafta grubu: Motivasyon konuşmaları, oyun & eğlence',
               ]}
               buttonText="Plana ait sorularım var"
@@ -40,7 +40,7 @@ export default function PricingPage() {
             {/* Standart Paket */}
             <PricingCard
               title="Standart Paket"
-              price="₺1.500/Aylık"
+              price="₺8.500/Döenmlik"
               description="Daha fazla içerik, canlı ders saatleri ve ek platform erişimi."
               features={[
                 'Tüm Temel özellikleri',
@@ -57,7 +57,7 @@ export default function PricingPage() {
             {/* Profesyonel Plan Paket */}
             <PricingCard
               title="Profesyonel Plan Paket"
-              price="₺2.500/Aylık"
+              price="₺10.500/Dönemlik"
               description="En kapsamlı paket: ek canlı dersler, özel uygulamalar ve VIP erişim."
               features={[
                 'Tüm Standart özellikleri',
