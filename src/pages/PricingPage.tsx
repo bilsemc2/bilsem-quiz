@@ -40,7 +40,7 @@ export default function PricingPage() {
             {/* Standart Paket */}
             <PricingCard
               title="Standart Paket"
-              price="₺8.500/Döenmlik"
+              price="₺8.500/Dönemlik"
               description="Daha fazla içerik, canlı ders saatleri ve ek platform erişimi."
               features={[
                 'Tüm Temel özellikleri',
@@ -64,7 +64,7 @@ export default function PricingPage() {
                 'Hafta içi her gün sınıf seviyesine uygun 2 deneme kodu',
                 'Sınıfına göre WhatsApp VIP grubu',
                 'Her Pazar 19:30’da Genel Deneme',
-                'Bilsemce.com 1 aylık ücretsiz üyelik',
+                'Bilsemce.com 6 aylık ücretsiz üyelik',
                 'Son hafta grubu: Motivasyon, oyun & eğlence',
                 'Salı & Perşembe canlı dersler:',
                 '• 1. Sınıf 19:30 • 2. Sınıf 20:00 • 3. Sınıf 20:30',
