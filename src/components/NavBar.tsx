@@ -109,6 +109,7 @@ const NavBar: React.FC = () => {
   // Menü öğelerinin tanımı (ortak kullanım için)
   const menuItems = [
     { name: "Bilsem", path: "/bilsemc2" },
+    { name: "Beyin Antrenörü", path: "/beyin-antrenoru-merkezi", showWhenAuth: true },
     { name: "İletişim", path: "/contact", showWhenNotAuth: true },
     //{ name: "Quizeka", path: "/quiz", showWhenAuth: true },
     { name: "Düello", path: "/duel", showWhenAuth: true },
@@ -130,11 +131,10 @@ const NavBar: React.FC = () => {
           key={item.path}
           to={item.path}
           onClick={() => setIsMobileMenuOpen(false)}
-          className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-            isActive(item.path)
-              ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-              : "text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white"
-          }`}
+          className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${isActive(item.path)
+            ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+            : "text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white"
+            }`}
         >
           {item.name}
         </Link>
@@ -148,15 +148,12 @@ const NavBar: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center">
               <img
-                src="/bilsemc2.svg"
-                alt="Bilsem Sınavı"
-                className="w-10 h-10"
+                src="/images/beyninikullan.png"
+                alt="Bilsemc2"
+                className="h-12 w-auto"
               />
-              <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent">
-                BilsemC2
-              </span>
             </Link>
           </div>
 
@@ -171,11 +168,10 @@ const NavBar: React.FC = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`text-lg font-semibold px-3 py-2 rounded-lg transition-colors duration-200 ${
-                    isActive(item.path)
-                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                      : "text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white"
-                  }`}
+                  className={`text-lg font-semibold px-3 py-2 rounded-lg transition-colors duration-200 ${isActive(item.path)
+                    ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                    : "text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white"
+                    }`}
                 >
                   {item.name}
                 </Link>
@@ -185,11 +181,10 @@ const NavBar: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <Link
                   to="/profile"
-                  className={`text-lg font-semibold px-3 py-2 rounded-lg transition-colors duration-200 ${
-                    isActive("/profile")
-                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                      : "text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white"
-                  }`}
+                  className={`text-lg font-semibold px-3 py-2 rounded-lg transition-colors duration-200 ${isActive("/profile")
+                    ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                    : "text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white"
+                    }`}
                 >
                   Profil
                 </Link>
@@ -275,11 +270,10 @@ const NavBar: React.FC = () => {
               <Link
                 to="/profile"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-                  isActive('/profile')
-                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
-                    : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white'
-                }`}
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${isActive('/profile')
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
+                  : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white'
+                  }`}
               >
                 Profil
               </Link>
@@ -317,22 +311,20 @@ const NavBar: React.FC = () => {
           <Link
             to="/blog"
             onClick={() => setIsMobileMenuOpen(false)}
-            className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-              isActive('/blog')
-                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
-                : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white'
-            }`}
+            className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${isActive('/blog')
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
+              : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white'
+              }`}
           >
             Blog
           </Link>
           <Link
             to="/contact"
             onClick={() => setIsMobileMenuOpen(false)}
-            className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-              isActive('/contact')
-                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
-                : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white'
-            }`}
+            className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${isActive('/contact')
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
+              : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-500 hover:text-white'
+              }`}
           >
             İletişim
           </Link>
