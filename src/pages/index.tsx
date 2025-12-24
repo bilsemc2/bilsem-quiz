@@ -100,85 +100,142 @@ const HomePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-white">
-      {/* Hero Section - Now at the top */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      {/* Hero Section - Modern and Playful */}
+      <div className="container mx-auto px-4 py-12 md:py-20">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* Left side - Logo and Text */}
+            <div className="text-center md:text-left space-y-6 order-2 md:order-1">
+              {/* Logo Image */}
+              <div className="inline-block">
+                <img
+                  src="/images/beyninikullan.png"
+                  alt="Beynini Kullan"
+                  className="w-72 md:w-96 mx-auto md:mx-0 animate-bounce-slow"
+                />
+              </div>
+
+              <p className="text-xl md:text-2xl text-gray-700 font-medium">
+                Öğrenmeyi Eğlenceli Hale Getirin! 🎯
+              </p>
+
+              <div className="flex flex-col sm:flex-row justify-center md:justify-start gap-4">
+                <Link to="/quiz" className="transform hover:scale-105 transition-transform">
+                  <Button className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-10 py-4 rounded-2xl text-lg font-bold shadow-lg hover:shadow-xl transition-all">
+                    🎮 Quiz'e Başla
+                  </Button>
+                </Link>
+                <Link to="/duello" className="transform hover:scale-105 transition-transform">
+                  <Button className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-10 py-4 rounded-2xl text-lg font-bold shadow-lg hover:shadow-xl transition-all">
+                    ⚔️ Düello Başlat
+                  </Button>
+                </Link>
+              </div>
+
+              <p className="text-sm text-gray-600 italic max-w-lg mx-auto md:mx-0 bg-white/50 backdrop-blur-sm p-3 rounded-lg">
+                💡 Her girişte karışık 10 soru gelmektedir. Soru sayısı arttıkça benzer soruların gelme olasılığı düşecektir.
+              </p>
+            </div>
+
+            {/* Right side - Character */}
+            <div className="flex justify-center order-1 md:order-2">
+              <div className="relative">
+                {/* Decorative circles */}
+                <div className="absolute -top-4 -left-4 w-24 h-24 bg-blue-300 rounded-full opacity-50 animate-pulse"></div>
+                <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-pink-300 rounded-full opacity-50 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+
+                {/* Character Image */}
+                <img
+                  src="/images/beyni.png"
+                  alt="Beyin Karakteri"
+                  className="w-64 md:w-80 relative z-10 animate-float"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Section - Colorful Cards */}
       <div className="container mx-auto px-4 py-16">
-        <div className="max-w-3xl mx-auto text-center space-y-8">
-          <h1 className="text-5xl font-bold text-gray-900">Bilsem Quiz</h1>
-          <p className="text-xl text-gray-600">Öğrenmeyi Eğlenceli Hale Getirin</p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link to="/quiz">
-              <Button className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors">
-                Quiz'e Başla
-              </Button>
-            </Link>
-            <Link to="/duello">
-              <Button className="w-full sm:w-auto bg-pink-600 hover:bg-pink-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors">
-                Düello Başlat
-              </Button>
-            </Link>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {/* Total Questions Card */}
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 hover:-rotate-1">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-5xl">📚</div>
+              <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold">
+                Sorular
+              </div>
+            </div>
+            <div className="text-4xl font-bold mb-2">{stats.totalQuestions}</div>
+            <div className="text-blue-100 font-medium">Toplam Soru</div>
           </div>
-          <p className="text-sm text-gray-500 italic max-w-2xl mx-auto">
-            Her girişte karışık 10 soru gelmektedir. Soru sayısı arttıkça benzer soruların gelme olasılığı düşecektir.
-          </p>
+
+          {/* Active Users Card */}
+          <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-all transform hover:scale-105">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-5xl">👥</div>
+              <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold">
+                Aktif
+              </div>
+            </div>
+            <div className="text-4xl font-bold mb-2">{stats.activeUsers}</div>
+            <div className="text-pink-100 font-medium">Aktif Kullanıcı</div>
+          </div>
+
+          {/* Highest Score Card */}
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 hover:rotate-1">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-5xl">🏆</div>
+              <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold">
+                Rekor
+              </div>
+            </div>
+            <div className="text-4xl font-bold mb-2">{stats.highestScore}</div>
+            <div className="text-purple-100 font-medium">En Yüksek Skor</div>
+          </div>
         </div>
       </div>
 
-      {/* Stats Section - In the middle */}
-      <div className="container mx-auto px-4 py-16 border-t border-gray-100">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-600 mb-2">{stats.totalQuestions}</div>
-            <div className="text-gray-600">Toplam Soru</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-pink-600 mb-2">{stats.activeUsers}</div>
-            <div className="text-gray-600">Aktif Kullanıcı</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-600 mb-2">{stats.highestScore}</div>
-            <div className="text-gray-600">En Yüksek Skor</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Puzzles Section - Now at the bottom */}
-      <div className="container mx-auto px-4 py-12 border-t border-gray-100">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Son Eklenen Bulmacalar
-            </h2>
-            <p className="mt-2 text-gray-600">En son eklenen bulmacaları keşfedin ve çözün</p>
-          </div>
-          <Link to="/puzzles" className="text-purple-600 hover:text-purple-700 text-sm font-medium transition-colors">
+      {/* Recent Puzzles Section - Playful Design */}
+      <div className="container mx-auto px-4 py-12">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+            🧩 Son Eklenen Bulmacalar
+          </h2>
+          <p className="text-lg text-gray-600">En son eklenen bulmacaları keşfedin ve çözün</p>
+          <Link to="/puzzles" className="inline-block mt-4 text-purple-600 hover:text-purple-700 font-semibold transition-colors bg-purple-50 px-6 py-2 rounded-full hover:bg-purple-100">
             Tümünü Gör →
           </Link>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {recentPuzzles.map((puzzle) => (
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {recentPuzzles.map((puzzle, index) => (
             <Link key={puzzle.id} to={`/puzzle/${puzzle.id}`}>
-              <Card className="group overflow-hidden bg-white hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-purple-200">
+              <Card className="group overflow-hidden bg-white hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-purple-300 rounded-2xl transform hover:-translate-y-2">
                 <div className="relative">
-                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-gray-600 font-medium">
-                    {formatDistanceToNow(new Date(puzzle.created_at!), { 
+                  <div className="absolute top-3 right-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10">
+                    {formatDistanceToNow(new Date(puzzle.created_at!), {
                       addSuffix: true,
-                      locale: tr 
+                      locale: tr
                     })}
                   </div>
-                  <div className="p-6 bg-gradient-to-br from-purple-50/50 to-pink-50/50">
+                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-gray-700 z-10">
+                    {index === 0 ? '🆕 Yeni' : `#${index + 1}`}
+                  </div>
+                  <div className="p-6 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
                     <PuzzlePreview grid={puzzle.grid} size="sm" />
                   </div>
                 </div>
-                <div className="p-4 border-t border-gray-100">
+                <div className="p-5 bg-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                      <p className="text-sm font-medium text-gray-700">Bulmaca #{puzzle.id.slice(-4)}</p>
+                      <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-green-500 rounded-full animate-pulse"></div>
+                      <p className="text-sm font-bold text-gray-800">Bulmaca #{puzzle.id.slice(-4)}</p>
                     </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="inline-flex items-center text-purple-600 font-medium">
+                    <div className="opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                      <span className="inline-flex items-center text-purple-600 font-bold text-sm bg-purple-50 px-3 py-1 rounded-full">
                         Çöz
                         <svg className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -190,18 +247,18 @@ const HomePage = () => {
               </Card>
             </Link>
           ))}
-          
+
           <Link to="/create">
-            <Card className="group h-full bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <Card className="group h-full bg-gradient-to-br from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 hover:shadow-2xl transition-all duration-300 overflow-hidden rounded-2xl border-2 border-dashed border-purple-300 hover:border-solid transform hover:-translate-y-2">
               <div className="h-full relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Plus className="w-8 h-8 text-purple-600" />
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-400/20 to-pink-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative h-full flex flex-col items-center justify-center p-8 text-center space-y-4 min-h-[280px]">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <Plus className="w-10 h-10 text-white" />
                   </div>
                   <div>
-                    <p className="text-xl font-semibold text-gray-800 mb-2">Sen de Oluştur!</p>
-                    <p className="text-gray-600">Kendi bulmacalarını oluşturmaya başla</p>
+                    <p className="text-2xl font-bold text-gray-800 mb-2">✨ Sen de Oluştur!</p>
+                    <p className="text-gray-700 font-medium">Kendi bulmacalarını oluşturmaya başla</p>
                   </div>
                 </div>
               </div>

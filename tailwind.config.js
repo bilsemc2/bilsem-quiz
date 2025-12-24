@@ -9,6 +9,8 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Nunito', 'sans-serif'],
+        poppins: ['Poppins', 'sans-serif'],
+        'open-sans': ['Open Sans', 'sans-serif'],
       },
       colors: {
         primary: {
@@ -34,6 +36,8 @@ export default {
         'gradient': 'gradient 3s linear infinite',
         'fadeIn': 'fadeIn 0.5s ease-in',
         'slideUp': 'slideUp 0.5s ease-out',
+        'bounce-slow': 'bounce-slow 3s ease-in-out infinite',
+        'float': 'float 3s ease-in-out infinite',
       },
       keyframes: {
         blob: {
@@ -63,13 +67,29 @@ export default {
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%': { 
+          '0%': {
             transform: 'translateY(20px)',
             opacity: '0',
           },
           '100%': {
             transform: 'translateY(0)',
             opacity: '1',
+          },
+        },
+        'bounce-slow': {
+          '0%, 100%': {
+            transform: 'translateY(0)',
+          },
+          '50%': {
+            transform: 'translateY(-10px)',
+          },
+        },
+        'float': {
+          '0%, 100%': {
+            transform: 'translateY(0px)',
+          },
+          '50%': {
+            transform: 'translateY(-20px)',
           },
         },
       },

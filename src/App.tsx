@@ -66,6 +66,7 @@ import StoryGeneratorPage from './pages/Story/StoryGeneratorPage';
 
 import ColorGridPage from './pages/ColorGridPage';
 import ColorPerceptionPage from './pages/ColorPerceptionPage';
+import BeyinAntrenoruMerkezi from './pages/BeyinAntrenoruMerkezi';
 // Hata mesajını gösterecek bileşen
 const LocationAwareRouter: React.FC = () => {
   const location = useLocation();
@@ -82,11 +83,11 @@ const LocationAwareRouter: React.FC = () => {
       <main className="flex-1 pt-16">
 
         <Routes>
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <HomePage />
-            } 
+            }
           />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -99,51 +100,67 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/deyimler" element={<DeyimlerPage />} />
           <Route path="/matematik-dunyasi" element={<MathWorld />} />
 
-          <Route 
-            path="/beyin-antrenoru/renk-algilama" 
+          <Route
+            path="/beyin-antrenoru/renk-sekansi"
+            element={
+              <RequireAuth>
+                <ColorGridPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/beyin-antrenoru/renk-algilama"
             element={
               <RequireAuth>
                 <ColorPerceptionPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/create-pdf" 
+          <Route
+            path="/create-pdf"
             element={
               <RequireAuth>
                 <CreatePdfPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/quiz" 
+          <Route
+            path="/quiz"
             element={
               <RequireAuth>
                 <QuizPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/duel" 
+          <Route
+            path="/duel"
             element={
               <RequireAuth>
                 <DuelPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/mirror" 
+          <Route
+            path="/mirror"
             element={
               <RequireAuth>
                 <MirrorPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/cube" 
+          <Route
+            path="/beyin-antrenoru-merkezi"
+            element={
+              <RequireAuth>
+                <BeyinAntrenoruMerkezi />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/cube"
             element={
               <CubePage />
-            } 
+            }
           />
           <Route
             path="/class-environment"
@@ -153,47 +170,47 @@ const LocationAwareRouter: React.FC = () => {
               </RequireAuth>
             }
           />
-          <Route 
-            path="/admin/*" 
+          <Route
+            path="/admin/*"
             element={
               <RequireAuth requireAdmin>
                 <AdminPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/admin/puzzle-management" 
+          <Route
+            path="/admin/puzzle-management"
             element={
               <RequireAuth requireAdmin>
                 <PuzzleManagement />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/admin/xp-requirements" 
+          <Route
+            path="/admin/xp-requirements"
             element={
               <RequireAuth requireAdmin>
                 <XPRequirementsPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/profile" 
+          <Route
+            path="/profile"
             element={
               <RequireAuth skipXPCheck>
                 <ProfilePage />
               </RequireAuth>
-            } 
+            }
           />
           {/* /create rotası kaldırıldı */}
           {/* puzzle-creator rotası kaldırıldı */}
-          <Route 
-            path="/homework" 
+          <Route
+            path="/homework"
             element={
               <RequireAuth>
                 <HomeworkPage />
               </RequireAuth>
-            } 
+            }
           />
 
           {/* /puzzle-ranking rotası kaldırıldı */}
@@ -222,21 +239,21 @@ const LocationAwareRouter: React.FC = () => {
             }
           />
           {/* /puzzle/:id rotası kaldırıldı */}
-          <Route 
-            path="/game" 
+          <Route
+            path="/game"
             element={
               <RequireAuth>
                 <GamePage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/spatial/cube" 
+          <Route
+            path="/spatial/cube"
             element={
               <RequireAuth>
                 <CubePage />
               </RequireAuth>
-            } 
+            }
           />
 
           <Route path="/unfolded-cube" element={<UnfoldedCubePage />} />
@@ -252,27 +269,27 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/teacher-pricing" element={<TeacherPricingPage />} />
           <Route path="/speed-reading" element={<SpeedReadingPage />} />
-          <Route 
-            path="/memory-game-2" 
+          <Route
+            path="/memory-game-2"
             element={
               <RequireAuth>
                 <MemoryGamePage2 />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/math/M1/m1" 
+          <Route
+            path="/math/M1/m1"
             element={
               <InfiniteMathProblems />
-            } 
+            }
           />
-          <Route 
-            path="/memory-game" 
+          <Route
+            path="/memory-game"
             element={
               <RequireAuth>
                 <MemoryGamePage />
               </RequireAuth>
-            } 
+            }
           />
           <Route
             path="/classroom/:classId"
@@ -282,13 +299,13 @@ const LocationAwareRouter: React.FC = () => {
               </RequireAuth>
             }
           />
-          <Route 
-            path="/ball-game" 
+          <Route
+            path="/ball-game"
             element={
               <RequireAuth>
                 <BallGame />
               </RequireAuth>
-            } 
+            }
           />
 
           <Route path="/games" element={<GamePage />} />
@@ -301,47 +318,47 @@ const LocationAwareRouter: React.FC = () => {
               <QuizResultPage />
             </RequireAuth>
           } />
-          <Route 
-            path="/quiz/:quizId" 
+          <Route
+            path="/quiz/:quizId"
             element={
               <RequireAuth>
                 <QuizPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/assignments/quiz/:quizId" 
+          <Route
+            path="/assignments/quiz/:quizId"
             element={
               <RequireAuth>
                 <QuizPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/quiz/:quizId/result" 
+          <Route
+            path="/quiz/:quizId/result"
             element={
               <RequireAuth>
                 <QuizResultPage />
               </RequireAuth>
-            } 
+            }
           />
-          <Route 
-            path="/assignments/results/:assignmentId" 
+          <Route
+            path="/assignments/results/:assignmentId"
             element={
               <RequireAuth>
                 <AssignmentResults />
               </RequireAuth>
-            } 
+            }
           />
           <Route path="/stories" element={<StoryListPage />} />
           <Route path="/stories/:id" element={<StoryDetailPage />} />
-          <Route 
-            path="/admin/stories/create" 
+          <Route
+            path="/admin/stories/create"
             element={
               <RequireAuth requireAdmin>
                 <StoryGeneratorPage />
               </RequireAuth>
-            } 
+            }
           />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
