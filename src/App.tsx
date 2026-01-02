@@ -43,7 +43,6 @@ import HowItWorksPage from './pages/HowItWorksPage';
 import FAQPage from './pages/FAQPage';
 import ContactPage from './pages/ContactPage';
 import PricingPage from './pages/PricingPage';
-import TeacherPricingPage from './pages/TeacherPricingPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
@@ -267,7 +266,6 @@ const LocationAwareRouter: React.FC = () => {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPage />} />
           <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/teacher-pricing" element={<TeacherPricingPage />} />
           <Route path="/speed-reading" element={<SpeedReadingPage />} />
           <Route
             path="/memory-game-2"

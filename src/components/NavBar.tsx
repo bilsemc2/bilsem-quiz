@@ -116,7 +116,6 @@ const NavBar: React.FC = () => {
 
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
     { name: "Fiyatlandırma", path: "/pricing", hideWhenVip: true },
-    { name: "Öğretmenim", path: "/teacher-pricing", hideWhenVip: true },
   ];
 
   // Desktop veya mobil menüde kullanılacak menü öğelerini render eden fonksiyon
