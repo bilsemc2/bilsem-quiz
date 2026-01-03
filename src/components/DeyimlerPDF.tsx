@@ -1,159 +1,178 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { FileDown, Loader2 } from 'lucide-react';
+
+interface Deyim {
+  deyim: string;
+  aciklama: string;
+  ornek: string | null;
+}
+
+interface Option {
+  label: string;
+  text: string;
+  isCorrect: boolean;
+}
 
 interface DeyimlerPDFProps {
-  deyimler: Array<{
-    deyim: string;
-    aciklama: string;
-    ornek: string | null;
-  }>;
+  deyimler: Deyim[];
 }
 
 const DeyimlerPDF = ({ deyimler }: DeyimlerPDFProps) => {
   const pdfRef = useRef<HTMLDivElement>(null);
-  const [answerKey, setAnswerKey] = useState<string[]>([]);
-  const [shuffledOptions, setShuffledOptions] = useState<Array<Array<{label: string; text: string}>>>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [shuffledQuestions, setShuffledQuestions] = useState<Option[][]>([]);
 
-  // Rastgele yanlış cevaplar oluştur
-  const generateWrongAnswers = (correctAnswer: string, allDeyimler: typeof deyimler) => {
+  // Deyimlerden 10 soru seç ve hazırla
+  const selectedDeyimler = useMemo(() => deyimler.slice(0, 10), [deyimler]);
+
+  // Şıkları oluştur ve karıştır
+  const generateOptions = useCallback((correctAnswer: string, allDeyimler: Deyim[]): Option[] => {
     const wrongAnswers = allDeyimler
-      .filter(d => d.aciklama !== correctAnswer) // Doğru cevabı hariç tut
-      .map(d => d.aciklama) // Sadece açıklamaları al
-      .sort(() => Math.random() - 0.5) // Karıştır
-      .slice(0, 3); // İlk 3 tanesini al
+      .filter(d => d.aciklama !== correctAnswer)
+      .map(d => d.aciklama)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
 
-    return wrongAnswers;
-  };
+    const options: Option[] = [
+      { label: '', text: correctAnswer, isCorrect: true },
+      { label: '', text: wrongAnswers[0] || '', isCorrect: false },
+      { label: '', text: wrongAnswers[1] || '', isCorrect: false },
+      { label: '', text: wrongAnswers[2] || '', isCorrect: false },
+    ].sort(() => Math.random() - 0.5);
 
-  // Şıkları karıştır
-  const shuffleOptions = (correctAnswer: string, wrongAnswers: string[]) => {
-    const options = [
-      { label: 'A', text: correctAnswer },
-      { label: 'B', text: wrongAnswers[0] },
-      { label: 'C', text: wrongAnswers[1] },
-      { label: 'D', text: wrongAnswers[2] }
-    ];
-    // Şıkları rastgele sırala
-    return options.sort(() => Math.random() - 0.5);
-  };
+    // Karıştırdıktan sonra label'ları ata
+    return options.map((opt, i) => ({ ...opt, label: ['A', 'B', 'C', 'D'][i] }));
+  }, []);
 
-  // Başlangıçta şıkları ve cevap anahtarını oluştur
+  // Başlangıçta soruları hazırla
   useEffect(() => {
-    const newShuffledOptions = deyimler.slice(0, 10).map(deyim => {
-      return shuffleOptions(deyim.aciklama, generateWrongAnswers(deyim.aciklama, deyimler));
-    });
-    setShuffledOptions(newShuffledOptions);
+    const questions = selectedDeyimler.map(deyim =>
+      generateOptions(deyim.aciklama, deyimler)
+    );
+    setShuffledQuestions(questions);
+  }, [selectedDeyimler, deyimler, generateOptions]);
 
-    const newAnswerKey = newShuffledOptions.map(options => {
-      const correctOption = options.find(opt => opt.text === options[0].text);
-      return correctOption?.label || 'A';
-    });
-    setAnswerKey(newAnswerKey);
-  }, [deyimler]);
+  // Cevap anahtarını hesapla
+  const answerKey = useMemo(() =>
+    shuffledQuestions.map(options =>
+      options.find(opt => opt.isCorrect)?.label || 'A'
+    ), [shuffledQuestions]);
 
   const generatePDF = async () => {
     if (!pdfRef.current) return;
+    setIsGenerating(true);
 
-    // PDF oluşturmadan önce cevap anahtarını gizle
-    const answerKey = document.getElementById('answer-key');
-    if (answerKey) answerKey.style.display = 'none';
+    try {
+      // Cevap anahtarını gizle
+      const answerKeyEl = document.getElementById('answer-key');
+      if (answerKeyEl) answerKeyEl.style.display = 'none';
 
-    const canvas = await html2canvas(pdfRef.current, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-    });
+      const canvas = await html2canvas(pdfRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
 
-    // PDF oluşturduktan sonra cevap anahtarını tekrar göster
-    if (answerKey) answerKey.style.display = 'block';
+      if (answerKeyEl) answerKeyEl.style.display = 'block';
 
-    const imgData = canvas.toDataURL('image/jpeg', 1.0);
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = canvas.width;
-    const imgHeight = canvas.height;
-    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-    const imgX = (pdfWidth - imgWidth * ratio) / 2;
-    const imgY = 0;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
 
-    pdf.addImage(
-      imgData,
-      'JPEG',
-      imgX,
-      imgY,
-      imgWidth * ratio,
-      imgHeight * ratio
-    );
+      pdf.addImage(
+        canvas.toDataURL('image/jpeg', 0.95),
+        'JPEG',
+        (pdfWidth - imgWidth * ratio) / 2,
+        0,
+        imgWidth * ratio,
+        imgHeight * ratio
+      );
 
-    pdf.save('deyimler_testi.pdf');
+      pdf.save('deyimler_testi.pdf');
+    } catch (error) {
+      console.error('PDF oluşturma hatası:', error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 max-w-4xl mx-auto">
       <button
         onClick={generatePDF}
-        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        disabled={isGenerating}
+        className="mb-4 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 
+                   transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed
+                   flex items-center gap-2 font-medium"
       >
-        PDF Oluştur
+        {isGenerating ? (
+          <><Loader2 className="w-5 h-5 animate-spin" /> Oluşturuluyor...</>
+        ) : (
+          <><FileDown className="w-5 h-5" /> PDF Oluştur</>
+        )}
       </button>
 
-      <div ref={pdfRef} className="bg-white p-8 shadow-lg rounded-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-4">Deyimler Testi</h1>
-          <div className="space-y-2">
-            <div className="flex space-x-2">
-              <span className="font-semibold">Ad Soyad:</span>
-              <div className="border-b border-gray-400 flex-grow"></div>
-            </div>
-            <div className="flex space-x-2">
-              <span className="font-semibold">Sınıf:</span>
-              <div className="border-b border-gray-400 flex-grow"></div>
-            </div>
-            <div className="flex space-x-2">
-              <span className="font-semibold">Tarih:</span>
-              <div className="border-b border-gray-400 flex-grow"></div>
-            </div>
+      <div ref={pdfRef} className="bg-white p-8 shadow-xl rounded-2xl border border-slate-200">
+        {/* Başlık */}
+        <div className="text-center mb-8 pb-6 border-b-2 border-indigo-100">
+          <h1 className="text-3xl font-bold text-indigo-700 mb-6">Deyimler Testi</h1>
+          <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto">
+            {['Ad Soyad', 'Sınıf', 'Tarih'].map(label => (
+              <div key={label} className="text-left">
+                <span className="text-sm font-semibold text-slate-600">{label}:</span>
+                <div className="mt-1 h-8 border-b-2 border-slate-300" />
+              </div>
+            ))}
           </div>
         </div>
 
+        {/* Sorular */}
         <div className="space-y-6">
-          {deyimler.slice(0, 10).map((deyim, index) => (
-            <div key={index} className="border-b pb-4">
-              <p className="font-semibold mb-2">
-                {index + 1}. "{deyim.deyim}" deyiminin anlamı aşağıdakilerden hangisidir?
+          {selectedDeyimler.map((deyim, index) => (
+            <div key={index} className="p-4 bg-slate-50 rounded-xl">
+              <p className="font-semibold text-slate-800 mb-3">
+                <span className="inline-flex items-center justify-center w-7 h-7 bg-indigo-600 text-white rounded-full text-sm mr-2">
+                  {index + 1}
+                </span>
+                "{deyim.deyim}" deyiminin anlamı nedir?
               </p>
-              <div className="pl-6 space-y-2">
-                {shuffledOptions[index]?.map((option) => (
-                  <div key={option.label} className="flex items-start space-x-2">
-                    <span className="font-semibold">{option.label})</span>
-                    <p>{option.text}</p>
+              <div className="grid grid-cols-2 gap-2 pl-9">
+                {shuffledQuestions[index]?.map(option => (
+                  <div key={option.label} className="flex items-start gap-2 p-2 bg-white rounded-lg border border-slate-200">
+                    <span className="font-bold text-indigo-600 min-w-[20px]">{option.label})</span>
+                    <span className="text-slate-700 text-sm">{option.text}</span>
                   </div>
                 ))}
               </div>
               {deyim.ornek && (
-                <div className="mt-2 text-gray-600 italic">
-                  Örnek: {deyim.ornek}
-                </div>
+                <p className="mt-3 pl-9 text-sm text-slate-500 italic">
+                  💡 Örnek: {deyim.ornek}
+                </p>
               )}
             </div>
           ))}
         </div>
 
-        {/* Cevap Anahtarı - PDF'de gözükmeyecek */}
-        <div id="answer-key" className="mt-8 p-4 bg-gray-100 rounded-lg">
-          <h2 className="text-xl font-bold mb-4">Cevap Anahtarı</h2>
-          <div className="grid grid-cols-5 gap-4">
-            {deyimler.slice(0, 10).map((_, index) => (
-              <div key={index} className="text-center">
-                <span className="font-semibold">{index + 1})</span> {answerKey[index] || 'A'}
+        {/* Cevap Anahtarı */}
+        <div id="answer-key" className="mt-8 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+          <h2 className="text-lg font-bold text-emerald-700 mb-3">📋 Cevap Anahtarı</h2>
+          <div className="flex flex-wrap gap-4">
+            {answerKey.map((answer, i) => (
+              <div key={i} className="flex items-center gap-1 px-3 py-1 bg-white rounded-lg border border-emerald-300">
+                <span className="font-bold text-slate-600">{i + 1}.</span>
+                <span className="font-bold text-emerald-600">{answer}</span>
               </div>
             ))}
           </div>
-          <div className="mt-4 text-sm text-gray-600">
-            Not: Bu bölüm PDF'de gözükmeyecektir.
-          </div>
+          <p className="mt-3 text-xs text-slate-500">
+            ⚠️ Bu bölüm PDF'de görünmeyecektir.
+          </p>
         </div>
       </div>
     </div>

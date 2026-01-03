@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import html2pdf from 'html2pdf.js';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { QUESTIONS_CONFIG } from '../config/questions';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -97,7 +98,7 @@ const CreatePdfPage: React.FC = () => {
               <br /><br />
               <a href="https://www.youtube.com/watch?v=oV5d68f5MvY" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="red" viewBox="0 0 24 24">
-                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
                 </svg>
                 Nasıl kullanılır? Video izle
               </a>
@@ -136,7 +137,7 @@ const CreatePdfPage: React.FC = () => {
       }
       questions.sort((a, b) => a - b);
     }
-    
+
     setSelectedQuestions(questions);
     setShowPreview(true);
   };
@@ -173,25 +174,34 @@ const CreatePdfPage: React.FC = () => {
     addWatermark();
 
     const element = contentRef.current;
-    const opt = {
-      margin: 0,
-      filename: 'sorular.pdf',
-      image: { type: 'jpeg', quality: 1 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        logging: true,
-      },
-      jsPDF: { 
-        unit: 'mm', 
-        format: 'a4', 
-        orientation: 'portrait',
-      },
-      pagebreak: { mode: 'avoid-all' }
-    };
+    const pages = element.querySelectorAll('.pdf-page');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
 
     try {
-      await html2pdf().set(opt).from(element).save();
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
+
+        const canvas = await html2canvas(page, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
+      }
+
+      pdf.save('sorular.pdf');
     } catch (error) {
       console.error('PDF oluşturma hatası:', error);
     } finally {
@@ -209,7 +219,7 @@ const CreatePdfPage: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
             <h1 className="text-2xl font-bold mb-4">PDF Oluştur</h1>
-            
+
             <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2">
                 Soru Seçim Tipi:
@@ -292,17 +302,17 @@ const CreatePdfPage: React.FC = () => {
               PDF İndir
             </button>
           </div>
-          
+
           <div className="pdf-preview" style={{ maxWidth: '210mm', margin: '0 auto' }}>
             <div ref={contentRef} style={{ display: 'flex', flexDirection: 'column' }}>
               {/* Soru sayfaları */}
               {Array.from({ length: Math.ceil(selectedQuestions.length / 6) }, (_, pageIndex) => {
                 const pageQuestions = selectedQuestions.slice(pageIndex * 6, (pageIndex + 1) * 6);
                 return pageQuestions.length > 0 ? (
-                  <div 
-                    key={pageIndex} 
+                  <div
+                    key={pageIndex}
                     className="pdf-page bg-white"
-                    style={{ 
+                    style={{
                       width: '210mm',
                       minHeight: '297mm',
                       padding: '10mm',
@@ -320,7 +330,7 @@ const CreatePdfPage: React.FC = () => {
                           <div className="question-header mb-2 text-center w-full">
                             <h2 className="text-sm font-bold">Soru {index + 1}</h2>
                           </div>
-                          
+
                           {/* Soru görseli */}
                           <div className="question-image mb-3 flex justify-center" style={{ height: '110px', width: '85%' }}>
                             <img
@@ -329,7 +339,7 @@ const CreatePdfPage: React.FC = () => {
                               className="h-full object-contain"
                             />
                           </div>
-                          
+
                           {/* Seçenekler */}
                           <div className="options-grid flex flex-row flex-wrap justify-center gap-2" style={{ width: '95%' }}>
                             {['A', 'B', 'C', 'D', 'E'].map((option) => (
@@ -359,9 +369,9 @@ const CreatePdfPage: React.FC = () => {
               })}
 
               {/* Cevap sayfası */}
-              <div 
+              <div
                 className="pdf-page bg-white"
-                style={{ 
+                style={{
                   width: '210mm',
                   minHeight: '297mm',
                   padding: '15mm',

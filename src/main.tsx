@@ -17,3 +17,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>,
 )
+
+// React yüklendikten sonra loading screen'i kaldır
+const hideLoader = () => {
+  const loader = document.getElementById('app-loader');
+  if (loader) {
+    loader.classList.add('hidden');
+    // Animasyon bittikten sonra DOM'dan kaldır
+    setTimeout(() => loader.remove(), 400);
+  }
+};
+
+// React render tamamlandığında çalıştır
+requestAnimationFrame(() => {
+  requestAnimationFrame(hideLoader);
+});

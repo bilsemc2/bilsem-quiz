@@ -19,6 +19,14 @@ const brainActivities = [
     path: '/beyin-antrenoru/renk-algilama',
     difficulty: 'Zor',
     skills: ['Algılama', 'Hızlı Tepki', 'Odaklanma']
+  },
+  {
+    id: 'cosmic-memory',
+    title: 'Kozmik Hafıza',
+    description: 'Parlayan yıldız sekanslarını hatırla. Uzamsal hafızanı ve çalışma belleğini zorla.',
+    path: '/games/kozmik-hafiza',
+    difficulty: 'Zor',
+    skills: ['Hafıza', 'Uzamsal Mantık', 'Odaklanma']
   }
   // İlerleyen zamanlarda yeni etkinlikler buraya eklenebilir
 ];
@@ -37,7 +45,7 @@ const BrainTrainer: React.FC = () => {
             <div className="activity-content">
               <h2>{activity.title}</h2>
               <p className="activity-description">{activity.description}</p>
-              
+
               <div className="activity-meta">
                 <span className="difficulty">
                   Zorluk: <strong>{activity.difficulty}</strong>
@@ -49,7 +57,7 @@ const BrainTrainer: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="activity-action">
               <Link to={activity.path} className="start-activity-btn">
                 Etkinliği Başlat
@@ -58,15 +66,15 @@ const BrainTrainer: React.FC = () => {
           </div>
         ))}
       </div>
-      
+
       <div className="brain-trainer-info">
         <h3>Beyin Antrenörü Nedir?</h3>
         <p>
           Beyin Antrenörü, zihinsel becerilerinizi geliştirmenize yardımcı olan interaktif egzersizler
-          sunarak beyin işlevlerinizi güçlendirmenizi sağlar. Düzenli kullanımla hafıza, dikkat, 
+          sunarak beyin işlevlerinizi güçlendirmenizi sağlar. Düzenli kullanımla hafıza, dikkat,
           problem çözme ve tepki süresi gibi bilişsel becerilerde gelişme sağlayabilirsiniz.
         </p>
-        
+
         <h3>Düzenli Beyin Egzersizlerinin Faydaları</h3>
         <ul>
           <li>Hafıza kapasitesi ve hatırlama yeteneğinde artış</li>

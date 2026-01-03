@@ -1,38 +1,25 @@
 import React, { useState, useCallback } from 'react';
-import toast from 'react-hot-toast';
-import './ColorGrid.css';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { Brain, Star, Trophy, Rocket, RotateCcw, ChevronLeft, Play, Eye } from 'lucide-react';
+import { useSound } from '../../hooks/useSound';
 
-// Renk seçenekleri
-const COLORS = ['red', 'blue', 'yellow', 'green'];
-// Renk isimlerinin Türkçe karşılıkları - ileride toast mesajlarında kullanılabilir
-const COLOR_NAMES_TR: Record<string, string> = {
-  red: 'Kırmızı',
-  blue: 'Mavi',
-  yellow: 'Sarı',
-  green: 'Yeşil'
-};
+// Renk seçenekleri ve modern tonları
+const COLORS = [
+  { id: 'red', name: 'Kırmızı', bg: 'bg-red-500', shadow: 'shadow-red-500/50', active: 'ring-red-400' },
+  { id: 'blue', name: 'Mavi', bg: 'bg-blue-500', shadow: 'shadow-blue-500/50', active: 'ring-blue-400' },
+  { id: 'yellow', name: 'Sarı', bg: 'bg-yellow-400', shadow: 'shadow-yellow-400/50', active: 'ring-yellow-300' },
+  { id: 'green', name: 'Yeşil', bg: 'bg-emerald-500', shadow: 'shadow-emerald-500/50', active: 'ring-emerald-400' }
+];
 
-// Seviye başına gösterilecek renk sayısı
 const LEVEL_COLORS = {
-  1: 2, // 1. seviye: 2 renk
-  2: 3, // 2. seviye: 3 renk
-  3: 4, // 3. seviye: 4 renk
-  4: 5, // 4. seviye: 5 renk
-  5: 6  // 5. seviye: 6 renk
+  1: 2, 2: 3, 3: 4, 4: 5, 5: 6
 };
 
-// Hücre arayüzü
-interface Cell {
-  id: number;
-  color: string | null;
-  active: boolean;
-}
-
-// Oyun durumu için tip
 interface GameState {
   level: number;
-  sequence: Array<{cellId: number, color: string}>;
-  userSequence: Array<{cellId: number, color: string}>;
+  sequence: Array<{ cellId: number, colorId: string }>;
+  userSequence: Array<{ cellId: number, colorId: string }>;
   isShowingSequence: boolean;
   gameOver: boolean;
   gameStarted: boolean;
@@ -40,16 +27,11 @@ interface GameState {
 }
 
 const ColorGrid: React.FC = () => {
-  // Izgara hücreleri
-  const [cells, setCells] = useState<Cell[]>(
-    Array(9).fill(null).map((_, index) => ({
-      id: index,
-      color: null,
-      active: false
-    }))
+  const { playSound } = useSound();
+  const [cells, setCells] = useState(
+    Array(9).fill(null).map((_, index) => ({ id: index, activeColor: null as string | null }))
   );
-  
-  // Oyun durumu
+
   const [gameState, setGameState] = useState<GameState>({
     level: 1,
     sequence: [],
@@ -60,10 +42,9 @@ const ColorGrid: React.FC = () => {
     isUserTurn: false
   });
 
-  // Kullanıcı ilerlemesi
   const [score, setScore] = useState(0);
-  
-  // Oyunu başlat
+  const [showLevelComplete, setShowLevelComplete] = useState(false);
+
   const startGame = useCallback(() => {
     setGameState({
       level: 1,
@@ -74,45 +55,23 @@ const ColorGrid: React.FC = () => {
       gameStarted: true,
       isUserTurn: false
     });
-    
-    // Hücreleri sıfırla
-    setCells(
-      Array(9).fill(null).map((_, index) => ({
-        id: index,
-        color: null,
-        active: false
-      }))
-    );
-    
+    setCells(Array(9).fill(null).map((_, index) => ({ id: index, activeColor: null })));
     setScore(0);
-    
-    // İlk seviye için sekans oluştur
-    setTimeout(() => {
-      generateSequence(1);
-    }, 1000);
-    
-    toast.success('Oyun başladı! Renk sırasını takip edin.', {
-      duration: 3000,
-      position: 'top-center',
-    });
+    setShowLevelComplete(false);
+    setTimeout(() => generateSequence(1), 1000);
   }, []);
-  
-  // Belirli bir seviye için yeni bir renk sekansı oluştur
+
   const generateSequence = useCallback((level: number) => {
+    setShowLevelComplete(false);
     const numberOfColors = LEVEL_COLORS[level as keyof typeof LEVEL_COLORS] || 2;
-    const newSequence: Array<{cellId: number, color: string}> = [];
-    
-    // Seviyeye göre renk sayısı kadar rastgele renk ve hücre seç
+    const newSequence: Array<{ cellId: number, colorId: string }> = [];
+
     for (let i = 0; i < numberOfColors; i++) {
       const randomCellId = Math.floor(Math.random() * 9);
       const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-      
-      newSequence.push({
-        cellId: randomCellId,
-        color: randomColor
-      });
+      newSequence.push({ cellId: randomCellId, colorId: randomColor.id });
     }
-    
+
     setGameState(prev => ({
       ...prev,
       level,
@@ -121,221 +80,241 @@ const ColorGrid: React.FC = () => {
       isShowingSequence: true,
       isUserTurn: false
     }));
-    
-    // Sekansı göstermeye başla
+
     showSequence(newSequence);
   }, []);
-  
-  // Renk sekansını kullanıcıya göster
-  const showSequence = async (sequence: Array<{cellId: number, color: string}>) => {
-    // Toast ile kullanıcıyı bilgilendir
-    toast.success(`${sequence.length} renk gösterilecek! Dikkatle izleyin.`, {
-      duration: 2000,
-      position: 'top-center',
-    });
-    
-    // Her renk arasında bekleme süresi
-    const delayBetweenColors = 500; // milisaniye
-    // Her rengin gösterilme süresi
-    const colorDisplayTime = 3000; // 3 saniye
-    
-    // Sekans başlamadan önce kısa bir bekleme
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Sekansı göster
+
+  const showSequence = async (sequence: Array<{ cellId: number, colorId: string }>) => {
+    const colorDisplayTime = 1200;
+    const delayBetweenColors = 400;
+
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     for (let i = 0; i < sequence.length; i++) {
-      const { cellId, color } = sequence[i];
-      
-      // Rengi aktif et
-      setCells(prevCells => 
-        prevCells.map(cell => 
-          cell.id === cellId ? { ...cell, color, active: true } : cell
-        )
-      );
-      
-      // Rengi belirli bir süre göster
+      const { cellId, colorId } = sequence[i];
+
+      setCells(prev => prev.map(c => c.id === cellId ? { ...c, activeColor: colorId } : c));
+      playSound('pop');
       await new Promise(resolve => setTimeout(resolve, colorDisplayTime));
-      
-      // Rengi deaktif et
-      setCells(prevCells => 
-        prevCells.map(cell => 
-          cell.id === cellId ? { ...cell, color: null, active: false } : cell
-        )
-      );
-      
-      // Sonraki renge geçmeden önce kısa bir bekleme
+      setCells(prev => prev.map(c => c.id === cellId ? { ...c, activeColor: null } : c));
+
       if (i < sequence.length - 1) {
         await new Promise(resolve => setTimeout(resolve, delayBetweenColors));
       }
     }
-    
-    // Sekans bittiğinde kullanıcı sırası
-    setGameState(prev => ({
-      ...prev,
-      isShowingSequence: false,
-      isUserTurn: true
-    }));
-    
-    toast.success(`Şimdi sizin sıranız! Gördüğünüz ${sequence.length} rengin sırasını tekrar edin.`, {
-      duration: 3000,
-      position: 'top-center',
-    });
+
+    setGameState(prev => ({ ...prev, isShowingSequence: false, isUserTurn: true }));
   };
-  
-  // Kullanıcı hücreye tıkladığında
+
   const handleCellClick = (cellId: number) => {
-    // Sekans gösteriliyorsa veya kullanıcı sırası değilse tıklamaları engelle
-    if (gameState.isShowingSequence || !gameState.isUserTurn || gameState.gameOver) {
-      toast.error('Şu an tıklayamazsınız!', {
-        duration: 1000,
-        position: 'top-center',
-      });
-      return;
-    }
-    
-    // Tıklanan hücre için doğru rengi belirle (o anki beklenen renk)
+    if (gameState.isShowingSequence || !gameState.isUserTurn || gameState.gameOver || showLevelComplete) return;
+
     const currentStep = gameState.userSequence.length;
-    const expectedColor = gameState.sequence[currentStep]?.color || '';
-    
-    // Kullanıcı doğru hücreyi seçti mi kontrol et
-    const expectedCellId = gameState.sequence[currentStep]?.cellId;
-    
-    if (cellId !== expectedCellId) {
-      // Yanlış hücre - oyunu bitir
-      toast.error(`Yanlış hücre! Beklenen renk: ${COLOR_NAMES_TR[expectedColor] || expectedColor}. Oyun bitti.`, {
-        duration: 3000,
-        position: 'top-center',
-      });
-      
-      setGameState(prev => ({
-        ...prev,
-        gameOver: true,
-        isUserTurn: false
-      }));
+    const expected = gameState.sequence[currentStep];
+
+    if (cellId !== expected.cellId) {
+      playSound('incorrect');
+      setGameState(prev => ({ ...prev, gameOver: true, isUserTurn: false }));
       return;
     }
-    
-    // Hücreyi kısa süreliğine aktif et
-    setCells(prevCells => 
-      prevCells.map(cell => 
-        cell.id === cellId ? { ...cell, color: expectedColor, active: true } : cell
-      )
-    );
-    
-    // Kullanıcının seçimini kaydet
-    const newUserSequence = [...gameState.userSequence, { cellId, color: expectedColor }];
-    setGameState(prev => ({
-      ...prev,
-      userSequence: newUserSequence
-    }));
-    
-    // 500ms sonra hücreyi deaktif et
+
+    setCells(prev => prev.map(c => c.id === cellId ? { ...c, activeColor: expected.colorId } : c));
+    playSound('select');
+
+    const newUserSequence = [...gameState.userSequence, expected];
+    setGameState(prev => ({ ...prev, userSequence: newUserSequence }));
+
     setTimeout(() => {
-      setCells(prevCells => 
-        prevCells.map(cell => 
-          cell.id === cellId ? { ...cell, color: null, active: false } : cell
-        )
-      );
-      
-      // Kullanıcı tüm sekansı tamamladı mı kontrol et
+      setCells(prev => prev.map(c => c.id === cellId ? { ...c, activeColor: null } : c));
+
       if (newUserSequence.length === gameState.sequence.length) {
-        // Tüm sekans doğru mu kontrol et
-        const isSequenceCorrect = newUserSequence.every((item, index) => 
-          item.cellId === gameState.sequence[index].cellId
-        );
-        
-        if (isSequenceCorrect) {
-          // Skor artır
-          setScore(prev => prev + gameState.level * 10);
-          
-          // Tüm seviyeler tamamlandı mı kontrol et
-          if (gameState.level === 5) {
-            // Oyun tamamlandı
-            toast.success('Tebrikler! Tüm seviyeleri tamamladınız! 🎉', {
-              duration: 5000,
-              position: 'top-center',
-            });
-            
-            setGameState(prev => ({
-              ...prev,
-              gameOver: true,
-              isUserTurn: false
-            }));
-          } else {
-            // Sonraki seviyeye geç
-            toast.success(`Tebrikler! ${gameState.level}. seviyeyi tamamladınız! 🎉`, {
-              duration: 3000,
-              position: 'top-center',
-            });
-            
-            // Kısa bir bekleme sonrası yeni seviyeye geç
-            setTimeout(() => {
-              generateSequence(gameState.level + 1);
-            }, 2000);
-          }
+        setScore(prev => prev + gameState.level * 10);
+
+        if (gameState.level === 5) {
+          playSound('complete');
+          setGameState(prev => ({ ...prev, gameOver: true, isUserTurn: false }));
         } else {
-          // Yanlış sıra - oyunu bitir
-          toast.error(`Yanlış sıra! Oyun bitti.`, {
-            duration: 3000,
-            position: 'top-center',
-          });
-          
-          setGameState(prev => ({
-            ...prev,
-            gameOver: true,
-            isUserTurn: false
-          }));
+          playSound('correct');
+          setShowLevelComplete(true);
         }
       }
-    }, 500);
+    }, 400);
   };
-  
-  // Kullanıcı arayüzünü render et
+
   return (
-    <div className="color-grid-container">
-      <h1>Beyin Egzersizi - Renk Sekansı</h1>
-      
-      <div className="game-info">
-        <p>Seviye: {gameState.level}/5</p>
-        <p>Skor: {score}</p>
-      </div>
-      
-      <div className="grid-3x3">
-        {cells.map(cell => (
-          <div
-            key={cell.id}
-            className={`cell ${cell.active ? 'active' : ''}`}
-            style={{ backgroundColor: cell.active && cell.color ? cell.color : 'white' }}
-            onClick={() => handleCellClick(cell.id)}
-          />
-        ))}
-      </div>
-      
-      <div className="game-controls">
-        {!gameState.gameStarted || gameState.gameOver ? (
-          <button onClick={startGame} className="start-button">
-            {gameState.gameOver ? 'Yeniden Başlat' : 'Oyunu Başlat'}
-          </button>
-        ) : (
-          <div className="game-status">
-            {gameState.isShowingSequence
-              ? 'Renk sırasını izleyin...'
-              : gameState.isUserTurn
-                ? 'Sırayı tekrar edin!'
-                : 'Hazırlanıyor...'}
+    <div className="max-w-4xl mx-auto px-4 py-8 select-none">
+      {/* Üst Bilgi Paneli */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-xl border border-white mb-8 flex flex-wrap items-center justify-between gap-6"
+      >
+        <div className="flex items-center gap-6">
+          <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-brand shadow-inner">
+            <Brain size={32} />
           </div>
-        )}
-      </div>
-      
-      <div className="game-instructions">
-        <h3>Nasıl Oynanır?</h3>
-        <p>
-          1. Izgarada belirli hücrelerde renkler yanıp sönecek.<br />
-          2. Renklerin sırasını ve yerini hafızanızda tutun.<br />
-          3. Tüm renkler gösterildikten sonra aynı sırayla ve aynı hücrelere tıklayın.<br />
-          4. Her seviyede daha fazla renk gösterilecek.<br />
-          5. Tüm 5 seviyeyi tamamlamaya çalışın!
-        </p>
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Renk Sekansı</h1>
+            <p className="text-gray-500 font-bold uppercase text-xs tracking-widest flex items-center gap-2">
+              <Eye size={14} /> Görsel Hafıza Antrenmanı
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="bg-purple-50 px-6 py-3 rounded-2xl border border-purple-100 text-center">
+            <span className="block text-xs font-black text-purple-400 uppercase">Seviye</span>
+            <span className="text-2xl font-black text-purple-brand">{gameState.level}/5</span>
+          </div>
+          <div className="bg-emerald-50 px-6 py-3 rounded-2xl border border-emerald-100 text-center">
+            <span className="block text-xs font-black text-emerald-400 uppercase">Skor</span>
+            <span className="text-2xl font-black text-emerald-600">{score}</span>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Oyun Alanı */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Sol Kolon: Talimatlar */}
+        <div className="space-y-6 order-2 lg:order-1">
+          <div className="bg-white/60 backdrop-blur rounded-[2rem] p-8 shadow-lg border border-white">
+            <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
+              <Star className="text-yellow-500" fill="currentColor" />
+              Nasıl Oynanır?
+            </h3>
+            <ul className="space-y-4">
+              {[
+                "Renklerin yanış sırasını dikkatle izle.",
+                "Sıra sana geldiğinde aynı hücrelere tıkla.",
+                "Her seviyede sekans daha da uzayacak.",
+                "Tüm seviyeleri hatasız tamamla!"
+              ].map((text, i) => (
+                <li key={i} className="flex gap-4">
+                  <span className="flex-shrink-0 w-6 h-6 bg-purple-brand text-white text-xs font-black rounded-full flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <span className="text-gray-600 font-medium leading-tight">{text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <Link
+            to="/beyin-antrenoru-merkezi"
+            className="flex items-center justify-center gap-2 w-full py-4 bg-gray-100 text-gray-500 font-black rounded-2xl hover:bg-gray-200 transition-all uppercase text-sm tracking-widest"
+          >
+            <ChevronLeft size={20} /> Antrenör Merkezine Dön
+          </Link>
+        </div>
+
+        {/* Orta Kolon: 3x3 Grid */}
+        <div className="lg:col-span-2 order-1 lg:order-2">
+          <motion.div
+            layout
+            className="bg-white/80 backdrop-blur-2xl rounded-[3rem] p-8 lg:p-12 shadow-2xl border border-white relative overflow-hidden"
+          >
+            {/* Durum Göstergesi */}
+            <div className="absolute top-0 left-0 right-0 py-4 px-8 bg-purple-brand/5 border-b border-purple-brand/10 text-center font-black text-purple-brand text-sm tracking-[0.2em] uppercase">
+              {gameState.isShowingSequence ? 'Sekans İzleniyor...' :
+                gameState.isUserTurn ? 'Sıra Sende!' :
+                  gameState.gameOver ? 'Oyun Bitti' : 'Başlamaya Hazır'}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 lg:gap-6 mt-8">
+              {cells.map((cell) => {
+                const activeColorData = COLORS.find(c => c.id === cell.activeColor);
+                return (
+                  <motion.button
+                    key={cell.id}
+                    whileHover={gameState.isUserTurn && !showLevelComplete ? { scale: 0.98 } : {}}
+                    whileTap={gameState.isUserTurn && !showLevelComplete ? { scale: 0.92 } : {}}
+                    onClick={() => handleCellClick(cell.id)}
+                    className={`
+                      aspect-square rounded-[2rem] lg:rounded-[2.5rem] transition-all duration-300 relative overflow-hidden
+                      ${cell.activeColor
+                        ? `${activeColorData?.bg} ${activeColorData?.shadow} shadow-2xl scale-105 z-10`
+                        : 'bg-gray-50 border-4 border-gray-100/50 hover:bg-gray-100'}
+                      ${gameState.isUserTurn && !showLevelComplete ? 'cursor-pointer' : 'cursor-default text-transparent'}
+                    `}
+                  >
+                    <AnimatePresence>
+                      {cell.activeColor && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 1.5 }}
+                          className="absolute inset-4 rounded-full bg-white/30 blur-xl"
+                        />
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Başlatma / Hata / Galibiyet / Seviye Geçişi Overlay Ekranları */}
+            <AnimatePresence mode="wait">
+              {(!gameState.gameStarted || gameState.gameOver || showLevelComplete) && (
+                <motion.div
+                  key={showLevelComplete ? 'level-up' : gameState.gameOver ? 'game-over' : 'start'}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-white/70 backdrop-blur-md z-30 flex items-center justify-center p-8"
+                >
+                  <motion.div
+                    initial={{ scale: 0.8, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    className="bg-white rounded-[3rem] p-12 shadow-2xl border border-purple-100 text-center max-w-sm relative"
+                  >
+                    {/* Seviye Geçiş Ekranı */}
+                    {showLevelComplete ? (
+                      <>
+                        <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center text-emerald-600 mx-auto mb-6 shadow-lg">
+                          <Star size={40} fill="currentColor" />
+                        </div>
+                        <h2 className="text-3xl font-black text-gray-900 mb-2">Harika!</h2>
+                        <p className="text-gray-500 font-bold mb-8">
+                          {gameState.level}. Seviye Tamamlandı. Bir sonraki aşamaya hazır mısın?
+                        </p>
+                        <button
+                          onClick={() => generateSequence(gameState.level + 1)}
+                          className="w-full py-5 bg-emerald-500 text-white font-black rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-emerald-200 hover:scale-105 transition-all text-xl"
+                        >
+                          Sonraki Seviye <Play size={24} fill="currentColor" />
+                        </button>
+                      </>
+                    ) : (
+                      /* Giriş / Oyun Bitti Ekranı */
+                      <>
+                        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg ${gameState.gameOver ? 'bg-red-100 text-red-500' : 'bg-purple-100 text-purple-brand'}`}>
+                          {gameState.gameOver ? (gameState.level === 5 ? <Trophy size={40} className="text-yellow-500" /> : <Rocket size={40} />) : <Play size={40} fill="currentColor" />}
+                        </div>
+                        <h2 className="text-3xl font-black text-gray-900 mb-2">
+                          {gameState.gameOver ? (gameState.level === 5 ? 'Şampiyon!' : 'Hata Yaptın!') : 'Hazır mısın?'}
+                        </h2>
+                        <p className="text-gray-500 font-bold mb-8 leading-relaxed">
+                          {gameState.gameOver
+                            ? (gameState.level === 5
+                              ? `Final Skoru: ${score}. Tüm sekansları kusursuz hatırladın!`
+                              : `Yanlış hücreye tıkladın. Final Skorun: ${score}`)
+                            : 'Zihnini odakla ve renkleri takip et.'}
+                        </p>
+                        <button
+                          onClick={startGame}
+                          className={`w-full py-5 text-white font-black rounded-2xl flex items-center justify-center gap-3 shadow-xl transition-all text-xl hover:scale-105 ${gameState.gameOver ? 'bg-gray-900 shadow-gray-200' : 'bg-purple-brand shadow-purple-200'}`}
+                        >
+                          {gameState.gameOver ? <RotateCcw size={24} /> : <Rocket size={24} />}
+                          {gameState.gameOver ? 'Yeniden Dene' : 'Başlat!'}
+                        </button>
+                      </>
+                    )}
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </div>
       </div>
     </div>
   );

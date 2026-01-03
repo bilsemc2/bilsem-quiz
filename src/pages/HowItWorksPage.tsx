@@ -1,37 +1,34 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-    UserPlus, 
-    LogIn, 
-    Target, 
+import {
+    UserPlus,
+    Target,
     Brain,
     Award,
     Users,
     Trophy,
     BookOpen,
-    Clock,
-    Zap
+    Clock
 } from 'lucide-react';
 
 const HowItWorksPage = () => {
     const steps = [
         {
-            icon: <UserPlus className="w-12 h-12 text-indigo-500" />,
+            icon: <UserPlus className="w-12 h-12 text-indigo-500" aria-hidden="true" />,
             title: "1. Üye Olun",
             description: "Ücretsiz hesap oluşturarak BilsemC2'nin tüm özelliklerine erişim sağlayın."
         },
         {
-            icon: <Target className="w-12 h-12 text-purple-500" />,
+            icon: <Target className="w-12 h-12 text-purple-500" aria-hidden="true" />,
             title: "2. Seviyenizi Belirleyin",
             description: "Kısa bir değerlendirme testi ile mevcut seviyenizi belirleyin."
         },
         {
-            icon: <Brain className="w-12 h-12 text-blue-500" />,
+            icon: <Brain className="w-12 h-12 text-blue-500" aria-hidden="true" />,
             title: "3. Alıştırmalara Başlayın",
             description: "Size özel hazırlanmış alıştırmalar ile zihinsel becerilerinizi geliştirin."
         },
         {
-            icon: <Award className="w-12 h-12 text-green-500" />,
+            icon: <Award className="w-12 h-12 text-green-500" aria-hidden="true" />,
             title: "4. İlerlemenizi Takip Edin",
             description: "Detaylı istatistikler ile gelişiminizi adım adım izleyin."
         }
@@ -39,22 +36,22 @@ const HowItWorksPage = () => {
 
     const features = [
         {
-            icon: <Users className="w-8 h-8 text-indigo-500" />,
+            icon: <Users className="w-8 h-8 text-indigo-500" aria-hidden="true" />,
             title: "Arkadaşlarınızla Yarışın",
             description: "Düello modunda arkadaşlarınızla yarışarak öğrenmeyi daha eğlenceli hale getirin."
         },
         {
-            icon: <Trophy className="w-8 h-8 text-yellow-500" />,
+            icon: <Trophy className="w-8 h-8 text-yellow-500" aria-hidden="true" />,
             title: "Başarıları Toplayın",
             description: "Hedeflerinize ulaştıkça rozetler ve ödüller kazanın."
         },
         {
-            icon: <BookOpen className="w-8 h-8 text-purple-500" />,
+            icon: <BookOpen className="w-8 h-8 text-purple-500" aria-hidden="true" />,
             title: "Özel İçerikler",
             description: "Bilsem sınavlarına özel hazırlanmış sorular ve alıştırmalarla pratik yapın."
         },
         {
-            icon: <Clock className="w-8 h-8 text-blue-500" />,
+            icon: <Clock className="w-8 h-8 text-blue-500" aria-hidden="true" />,
             title: "Esnek Çalışma",
             description: "İstediğiniz zaman, istediğiniz yerden çalışın."
         }
@@ -117,7 +114,7 @@ const HowItWorksPage = () => {
                                 key={index}
                                 className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
                             >
-                                <div className="flex items-center justify-center w-12 h-12 rounded-md bg-indigo-50 mb-4">
+                                <div className="flex items-center justify-center w-12 h-12 rounded-md bg-indigo-50 mb-4" aria-hidden="true">
                                     {feature.icon}
                                 </div>
                                 <h3 className="text-lg font-medium text-gray-900 mb-2">

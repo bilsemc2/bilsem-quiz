@@ -1,46 +1,15 @@
-import { useState, useEffect, type FC } from 'react';
+import { useState, useEffect } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { motion } from 'framer-motion';
+import { Plus, Edit, Trash2, X, Loader2, FileText, Eye, EyeOff } from 'lucide-react';
 import slugify from 'slugify';
-
-interface BlogPost {
-  id: string;
-  title: string;
-  content: string;
-  published: boolean;
-  created_at: string;
-  updated_at: string;
-  author_id: string;
-  slug: string;
-}
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-  CircularProgress,
-  Switch,
-  FormControlLabel,
-} from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Blog yazısı arayüzündeki veri tipi
 interface BlogPost {
   id: string;
   title: string;
@@ -54,14 +23,14 @@ interface BlogPost {
 
 const createSlug = (title: string) => {
   return slugify(title, {
-    lower: true,      // küçük harfe çevir
-    strict: true,     // sadece URL-safe karakterleri bırak
-    locale: 'tr',     // Türkçe karakter desteği
-    trim: true        // baş ve sondaki boşlukları temizle
+    lower: true,
+    strict: true,
+    locale: 'tr',
+    trim: true
   });
 };
 
-const BlogManagement: FC = () => {
+const BlogManagement = () => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,11 +72,7 @@ const BlogManagement: FC = () => {
       });
     } else {
       setEditingPost(null);
-      setFormData({
-        title: '',
-        content: '',
-        published: false,
-      });
+      setFormData({ title: '', content: '', published: false });
     }
     setOpenDialog(true);
   };
@@ -115,17 +80,13 @@ const BlogManagement: FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingPost(null);
-    setFormData({
-      title: '',
-      content: '',
-      published: false,
-    });
+    setFormData({ title: '', content: '', published: false });
   };
 
   const handleSave = async () => {
     try {
       const slug = createSlug(formData.title);
-      
+
       if (editingPost) {
         const { error } = await supabase
           .from('blog_posts')
@@ -180,112 +141,155 @@ const BlogManagement: FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center items-center min-h-[200px]">
+        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+      </div>
     );
   }
 
   return (
-    <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" component="h2">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <FileText className="w-6 h-6 text-indigo-500" />
           Blog Yönetimi
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
+        </h1>
+        <button
           onClick={() => handleOpenDialog()}
+          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 text-white font-medium rounded-xl hover:bg-indigo-600 transition-colors"
         >
+          <Plus className="w-4 h-4" />
           Yeni Blog Yazısı
-        </Button>
-      </Box>
+        </button>
+      </div>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Başlık</TableCell>
-              <TableCell>Oluşturulma Tarihi</TableCell>
-              <TableCell>Durum</TableCell>
-              <TableCell>İşlemler</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {posts.map((post) => (
-              <TableRow key={post.id}>
-                <TableCell>{post.title}</TableCell>
-                <TableCell>
-                  {format(new Date(post.created_at), 'd MMMM yyyy', { locale: tr })}
-                </TableCell>
-                <TableCell>{post.published ? 'Yayında' : 'Taslak'}</TableCell>
-                <TableCell>
-                  <IconButton onClick={() => handleOpenDialog(post)} color="primary">
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(post)} color="error">
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-left py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">Başlık</th>
+                <th className="text-left py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">Oluşturulma Tarihi</th>
+                <th className="text-center py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">Durum</th>
+                <th className="text-center py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {posts.map((post, idx) => (
+                <motion.tr
+                  key={post.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: idx * 0.03 }}
+                  className="hover:bg-slate-50 transition-colors"
+                >
+                  <td className="py-4 px-6 font-medium text-slate-800">{post.title}</td>
+                  <td className="py-4 px-6 text-slate-500 text-sm">
+                    {format(new Date(post.created_at), 'd MMMM yyyy', { locale: tr })}
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${post.published
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-slate-100 text-slate-600'
+                      }`}>
+                      {post.published ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                      {post.published ? 'Yayında' : 'Taslak'}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="flex justify-center gap-1">
+                      <button
+                        onClick={() => handleOpenDialog(post)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(post)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingPost ? 'Blog Yazısını Düzenle' : 'Yeni Blog Yazısı'}
-        </DialogTitle>
-        <DialogContent>
-          <Box mt={2} display="flex" flexDirection="column" gap={3}>
-            <TextField
-              label="Başlık"
-              fullWidth
-              value={formData.title}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, title: e.target.value })}
-            />
-            <TextField
-              label="İçerik (Markdown)"
-              fullWidth
-              multiline
-              rows={10}
-              value={formData.content}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, content: e.target.value })}
-              helperText="Markdown formatında yazabilirsiniz"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.published}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setFormData({ ...formData, published: e.target.checked })
-                  }
+      {/* Dialog */}
+      <Dialog.Root open={openDialog} onOpenChange={setOpenDialog}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto z-50">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-xl font-bold text-slate-800">
+                {editingPost ? 'Blog Yazısını Düzenle' : 'Yeni Blog Yazısı'}
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
+              </Dialog.Close>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Başlık</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
                 />
-              }
-              label="Yayınla"
-            />
-            {formData.content && (
-              <Box mt={2}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Önizleme:
-                </Typography>
-                <Paper sx={{ p: 2 }}>
-                  <ReactMarkdown>{formData.content}</ReactMarkdown>
-                </Paper>
-              </Box>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>İptal</Button>
-          <Button onClick={handleSave} variant="contained" color="primary">
-            Kaydet
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">İçerik (Markdown)</label>
+                <textarea
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  rows={10}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none resize-none font-mono text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">Markdown formatında yazabilirsiniz</p>
+              </div>
+
+              {/* Toggle */}
+              <label className="flex items-center gap-3 cursor-pointer">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, published: !formData.published })}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${formData.published ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                >
+                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${formData.published ? 'translate-x-7' : 'translate-x-1'}`} />
+                </button>
+                <span className="text-slate-700 font-medium">Yayınla</span>
+              </label>
+
+              {/* Preview */}
+              {formData.content && (
+                <div>
+                  <h3 className="text-sm font-medium text-slate-700 mb-2">Önizleme:</h3>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 prose prose-sm max-w-none">
+                    <ReactMarkdown>{formData.content}</ReactMarkdown>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <Dialog.Close asChild>
+                <button className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl">İptal</button>
+              </Dialog.Close>
+              <button onClick={handleSave} className="px-6 py-2.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600">
+                Kaydet
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </div>
   );
 };
 

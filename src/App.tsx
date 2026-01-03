@@ -1,72 +1,94 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import NavBar from './components/NavBar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
-import QuizPage from './pages/QuizPage';
-import ProfilePage from './pages/ProfilePage';
-import LoginPage from './pages/LoginPage';
-import SignUpPage from './pages/SignUpPage';
-import AdminPage from './pages/AdminPage';
-import HomeworkPage from './pages/HomeworkPage';
-import DuelPage from './pages/DuelPage';
-import MirrorPage from './pages/MirrorPage';
-import MathWorld from './pages/MathWorld';
-
-// LogicPuzzleCreator import'u kaldırıldı
-import PuzzleManagement from './pages/admin/PuzzleManagement';
-import XPRequirementsPage from './pages/admin/XPRequirementsPage';
-// Bulmaca sayfaları kaldırıldı
-import CreatePdfPage from './pages/CreatePdfPage';
-import GamePage from './pages/GamePage';
-import CubePage from './pages/CubePage';
-import ClassEnvironmentPage from './pages/ClassEnvironmentPage';
-import BlogPage from './pages/BlogPage';
-import UnfoldedCubePage from './pages/UnfoldedCubePage';
-import AdvancedMissingPieceGame from './pages/MissingPiecePage';
-import BilsemC2Page from './pages/BilsemC2Page';
-import MirrorGame from './components/MirrorGame';
-import CubeCountingPage from './pages/CubeCountingPage';
-import ShapeGamePage from './pages/ShapeGamePage';
-import RotationGamePage from './pages/RotationGamePage';
-import VisualEncoderPage from './pages/VisualEncoderPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import MemoryGamePage from './pages/MemoryGamePage';
-import MemoryGamePage2 from './pages/MemoryGamePage2';
-import InfiniteMathProblems from './pages/Math/M1/m1';
-import ClassroomPage from './pages/ClassroomPage';
-import BallGame from './pages/BallGame';
-import AssignmentResults from './pages/AssignmentResults';
-import ServicesPage from './pages/ServicesPage';
-import SpeedReadingPage from './pages/SpeedReadingPage';
-import HowItWorksPage from './pages/HowItWorksPage';
-import FAQPage from './pages/FAQPage';
-import ContactPage from './pages/ContactPage';
-import PricingPage from './pages/PricingPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
 import { Toaster } from 'react-hot-toast';
 import AdminMessageNotification from './components/AdminMessageNotification';
 import toast from 'react-hot-toast';
-import FilledEmptyPage from './pages/FilledEmptyPage';
-import FallingNumbersPage from './pages/FallingNumbersPage';
-import BubbleNumbersPage from './pages/BubbleNumbersPage';
-import MemoryCardGamePage from './pages/MemoryCardGamePage';
-import { QuizProvider } from './contexts/QuizContext';
-import QuizResultPage from './pages/QuizResultPage';
-import DeyimlerPage from './pages/DeyimlerPage';
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import AssignmentQuestions from './pages/teacher/AssignmentQuestions';
-import AssignmentStudents from './pages/teacher/AssignmentStudents';
-import StoryListPage from './pages/Story/StoryListPage';
-import StoryDetailPage from './pages/Story/StoryDetailPage';
-import StoryGeneratorPage from './pages/Story/StoryGeneratorPage';
 
-import ColorGridPage from './pages/ColorGridPage';
-import ColorPerceptionPage from './pages/ColorPerceptionPage';
-import BeyinAntrenoruMerkezi from './pages/BeyinAntrenoruMerkezi';
-// Hata mesajını gösterecek bileşen
+// ============================================
+// LAZY LOADED PAGES - Code Splitting
+// ============================================
+
+// Auth Pages
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const SignUpPage = React.lazy(() => import('./pages/SignUpPage'));
+const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
+
+// Admin Pages
+const AdminPage = React.lazy(() => import('./pages/AdminPage'));
+const XPRequirementsPage = React.lazy(() => import('./pages/admin/XPRequirementsPage'));
+
+// Content Pages
+const CreatePdfPage = React.lazy(() => import('./pages/CreatePdfPage'));
+const BlogPage = React.lazy(() => import('./pages/BlogPage'));
+const BilsemPage = React.lazy(() => import('./pages/BilsemPage'));
+const HomeworkPage = React.lazy(() => import('./pages/HomeworkPage'));
+const DeyimlerPage = React.lazy(() => import('./pages/DeyimlerPage'));
+const QuizizzCodesPage = React.lazy(() => import('./pages/QuizizzCodesPage'));
+
+// Info Pages
+const ServicesPage = React.lazy(() => import('./pages/ServicesPage'));
+const HowItWorksPage = React.lazy(() => import('./pages/HowItWorksPage'));
+const FAQPage = React.lazy(() => import('./pages/FAQPage'));
+const ContactPage = React.lazy(() => import('./pages/ContactPage'));
+const PricingPage = React.lazy(() => import('./pages/PricingPage'));
+
+// Story Pages
+const StoryListPage = React.lazy(() => import('./pages/Story/StoryListPage'));
+const StoryDetailPage = React.lazy(() => import('./pages/Story/StoryDetailPage'));
+const StoryGeneratorPage = React.lazy(() => import('./pages/Story/StoryGeneratorPage'));
+
+// Workshop Pages
+const GenelYetenekPage = React.lazy(() => import('./pages/workshops/GenelYetenekPage'));
+const ResimPage = React.lazy(() => import('./pages/workshops/ResimPage'));
+const MuzikPage = React.lazy(() => import('./pages/workshops/MuzikPage'));
+const TabletAssessmentPage = React.lazy(() => import('./pages/workshops/TabletAssessmentPage'));
+const IndividualAssessmentPage = React.lazy(() => import('./pages/workshops/IndividualAssessmentPage'));
+
+// Games
+const BallGame = React.lazy(() => import('./pages/BallGame'));
+const PartWholeGame = React.lazy(() => import('./components/BrainTrainer/PartWholeGame'));
+const RotationMatrixGame = React.lazy(() => import('./components/BrainTrainer/RotationMatrixGame'));
+const MagicCubeGame = React.lazy(() => import('./components/BrainTrainer/MagicCubeGame'));
+const CosmicMemoryGame = React.lazy(() => import('./components/BrainTrainer/CosmicMemoryGame'));
+const NBackGame = React.lazy(() => import('./components/BrainTrainer/NBackGame'));
+const ShadowDetectiveGame = React.lazy(() => import('./components/BrainTrainer/ShadowDetectiveGame'));
+const CrossMatchGame = React.lazy(() => import('./components/BrainTrainer/CrossMatchGame'));
+const SignalSumGame = React.lazy(() => import('./components/BrainTrainer/SignalSumGame'));
+const TargetGridGame = React.lazy(() => import('./components/BrainTrainer/TargetGridGame'));
+const StreamSumGame = React.lazy(() => import('./components/BrainTrainer/StreamSumGame'));
+const InvisibleTowerGame = React.lazy(() => import('./components/BrainTrainer/InvisibleTowerGame'));
+const MatrixEchoGame = React.lazy(() => import('./components/BrainTrainer/MatrixEchoGame'));
+const ReflectionSumGame = React.lazy(() => import('./components/BrainTrainer/ReflectionSumGame'));
+const MazeGame = React.lazy(() => import('./components/BrainTrainer/MazeGame'));
+const StroopGame = React.lazy(() => import('./components/BrainTrainer/StroopGame'));
+const DirectionStroopGame = React.lazy(() => import('./components/BrainTrainer/DirectionStroopGame'));
+const EmojiStroopGame = React.lazy(() => import('./components/BrainTrainer/EmojiStroopGame'));
+const PencilStroopGame = React.lazy(() => import('./components/BrainTrainer/PencilStroopGame'));
+const SymbolMatchGame = React.lazy(() => import('./components/BrainTrainer/SymbolMatchGame'));
+const DualBindGame = React.lazy(() => import('./components/BrainTrainer/DualBindGame'));
+
+// ============================================
+// LOADING FALLBACK COMPONENT
+// ============================================
+const PageLoader = () => (
+  <div className="min-h-[60vh] flex items-center justify-center">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+      <p className="text-slate-500 dark:text-slate-400 font-medium">Yükleniyor...</p>
+    </div>
+  </div>
+);
+
+// ============================================
+// LOCATION AWARE ROUTER
+// ============================================
 const LocationAwareRouter: React.FC = () => {
   const location = useLocation();
 
@@ -80,286 +102,76 @@ const LocationAwareRouter: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       <NavBar />
       <main className="flex-1 pt-16">
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Ana Sayfa - Lazy değil, hızlı yüklenmeli */}
+            <Route path="/" element={<HomePage />} />
 
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <HomePage />
-            }
-          />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/filled-empty" element={<FilledEmptyPage />} />
-          <Route path="/services" element={<ServicesPage />} />
-          <Route path="/how-it-works" element={<HowItWorksPage />} />
-          <Route path="/faq" element={<FAQPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/deyimler" element={<DeyimlerPage />} />
-          <Route path="/matematik-dunyasi" element={<MathWorld />} />
+            {/* Auth Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
 
-          <Route
-            path="/beyin-antrenoru/renk-sekansi"
-            element={
-              <RequireAuth>
-                <ColorGridPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/beyin-antrenoru/renk-algilama"
-            element={
-              <RequireAuth>
-                <ColorPerceptionPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/create-pdf"
-            element={
-              <RequireAuth>
-                <CreatePdfPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/quiz"
-            element={
-              <RequireAuth>
-                <QuizPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/duel"
-            element={
-              <RequireAuth>
-                <DuelPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/mirror"
-            element={
-              <RequireAuth>
-                <MirrorPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/beyin-antrenoru-merkezi"
-            element={
-              <RequireAuth>
-                <BeyinAntrenoruMerkezi />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/cube"
-            element={
-              <CubePage />
-            }
-          />
-          <Route
-            path="/class-environment"
-            element={
-              <RequireAuth>
-                <ClassEnvironmentPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/admin/*"
-            element={
-              <RequireAuth requireAdmin>
-                <AdminPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/admin/puzzle-management"
-            element={
-              <RequireAuth requireAdmin>
-                <PuzzleManagement />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/admin/xp-requirements"
-            element={
-              <RequireAuth requireAdmin>
-                <XPRequirementsPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <RequireAuth skipXPCheck>
-                <ProfilePage />
-              </RequireAuth>
-            }
-          />
-          {/* /create rotası kaldırıldı */}
-          {/* puzzle-creator rotası kaldırıldı */}
-          <Route
-            path="/homework"
-            element={
-              <RequireAuth>
-                <HomeworkPage />
-              </RequireAuth>
-            }
-          />
+            {/* Info Pages */}
+            <Route path="/services" element={<ServicesPage />} />
+            <Route path="/how-it-works" element={<HowItWorksPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/bilsem" element={<BilsemPage />} />
+            <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog/:slug" element={<BlogPage />} />
 
-          {/* /puzzle-ranking rotası kaldırıldı */}
-          <Route
-            path="/teacher"
-            element={
-              <RequireAuth requireTeacher>
-                <TeacherDashboard />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/teacher/assignments/:id/questions"
-            element={
-              <RequireAuth requireTeacher>
-                <AssignmentQuestions />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/teacher/assignments/:id/students"
-            element={
-              <RequireAuth requireTeacher>
-                <AssignmentStudents />
-              </RequireAuth>
-            }
-          />
-          {/* /puzzle/:id rotası kaldırıldı */}
-          <Route
-            path="/game"
-            element={
-              <RequireAuth>
-                <GamePage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/spatial/cube"
-            element={
-              <RequireAuth>
-                <CubePage />
-              </RequireAuth>
-            }
-          />
+            {/* Protected Routes */}
+            <Route path="/deyimler" element={<RequireAuth><DeyimlerPage /></RequireAuth>} />
+            <Route path="/create-pdf" element={<RequireAuth><CreatePdfPage /></RequireAuth>} />
+            <Route path="/profile" element={<RequireAuth skipXPCheck><ProfilePage /></RequireAuth>} />
+            <Route path="/homework" element={<RequireAuth><HomeworkPage /></RequireAuth>} />
+            <Route path="/quizizz-kodlari" element={<RequireAuth><QuizizzCodesPage /></RequireAuth>} />
 
-          <Route path="/unfolded-cube" element={<UnfoldedCubePage />} />
-          <Route path="/missing-piece" element={<AdvancedMissingPieceGame />} />
-          <Route path="/bilsemc2" element={<BilsemC2Page />} />
-          <Route path="/mirror-games" element={<MirrorGame />} />
-          <Route path="/cube-counting" element={<CubeCountingPage />} />
-          <Route path="/shape-game" element={<ShapeGamePage />} />
-          <Route path="/rotation-game" element={<RotationGamePage />} />
-          <Route path="/visual-encoder" element={<VisualEncoderPage />} />
-          <Route path="/blog" element={<BlogPage />} />
-          <Route path="/blog/:slug" element={<BlogPage />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/speed-reading" element={<SpeedReadingPage />} />
-          <Route
-            path="/memory-game-2"
-            element={
-              <RequireAuth>
-                <MemoryGamePage2 />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/math/M1/m1"
-            element={
-              <InfiniteMathProblems />
-            }
-          />
-          <Route
-            path="/memory-game"
-            element={
-              <RequireAuth>
-                <MemoryGamePage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/classroom/:classId"
-            element={
-              <RequireAuth>
-                <ClassroomPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/ball-game"
-            element={
-              <RequireAuth>
-                <BallGame />
-              </RequireAuth>
-            }
-          />
+            {/* Admin Routes */}
+            <Route path="/admin/*" element={<RequireAuth requireAdmin><AdminPage /></RequireAuth>} />
+            <Route path="/admin/xp-requirements" element={<RequireAuth requireAdmin><XPRequirementsPage /></RequireAuth>} />
+            <Route path="/admin/stories/create" element={<RequireAuth requireAdmin><StoryGeneratorPage /></RequireAuth>} />
 
-          <Route path="/games" element={<GamePage />} />
-          <Route path="/falling-numbers" element={<FallingNumbersPage />} />
-          <Route path="/cube" element={<CubePage />} />
-          <Route path="/bubble-numbers" element={<BubbleNumbersPage />} />
-          <Route path="/memory-cards" element={<MemoryCardGamePage />} />
-          <Route path="/quiz/:quizId/results" element={
-            <RequireAuth>
-              <QuizResultPage />
-            </RequireAuth>
-          } />
-          <Route
-            path="/quiz/:quizId"
-            element={
-              <RequireAuth>
-                <QuizPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/assignments/quiz/:quizId"
-            element={
-              <RequireAuth>
-                <QuizPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/quiz/:quizId/result"
-            element={
-              <RequireAuth>
-                <QuizResultPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/assignments/results/:assignmentId"
-            element={
-              <RequireAuth>
-                <AssignmentResults />
-              </RequireAuth>
-            }
-          />
-          <Route path="/stories" element={<StoryListPage />} />
-          <Route path="/stories/:id" element={<StoryDetailPage />} />
-          <Route
-            path="/admin/stories/create"
-            element={
-              <RequireAuth requireAdmin>
-                <StoryGeneratorPage />
-              </RequireAuth>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
+            {/* Story Routes */}
+            <Route path="/stories" element={<RequireAuth><StoryListPage /></RequireAuth>} />
+            <Route path="/stories/:id" element={<RequireAuth><StoryDetailPage /></RequireAuth>} />
+
+            {/* Workshop Routes */}
+            <Route path="/atolyeler/genel-yetenek" element={<RequireAuth><GenelYetenekPage /></RequireAuth>} />
+            <Route path="/atolyeler/resim" element={<RequireAuth><ResimPage /></RequireAuth>} />
+            <Route path="/atolyeler/muzik" element={<RequireAuth><MuzikPage /></RequireAuth>} />
+            <Route path="/atolyeler/tablet-degerlendirme" element={<RequireAuth><TabletAssessmentPage /></RequireAuth>} />
+            <Route path="/atolyeler/bireysel-degerlendirme" element={<RequireAuth><IndividualAssessmentPage /></RequireAuth>} />
+
+            {/* Game Routes */}
+            <Route path="/ball-game" element={<RequireAuth><BallGame /></RequireAuth>} />
+            <Route path="/games/parca-butun" element={<RequireAuth><PartWholeGame /></RequireAuth>} />
+            <Route path="/games/rotasyon-matrisi" element={<RequireAuth><RotationMatrixGame /></RequireAuth>} />
+            <Route path="/games/sihirli-kupler" element={<RequireAuth><MagicCubeGame /></RequireAuth>} />
+            <Route path="/games/kozmik-hafiza" element={<RequireAuth><CosmicMemoryGame /></RequireAuth>} />
+            <Route path="/games/n-geri-sifresi" element={<RequireAuth><NBackGame /></RequireAuth>} />
+            <Route path="/games/golge-dedektifi" element={<RequireAuth><ShadowDetectiveGame /></RequireAuth>} />
+            <Route path="/games/capraz-eslesme" element={<RequireAuth><CrossMatchGame /></RequireAuth>} />
+            <Route path="/games/sinyal-toplami" element={<RequireAuth><SignalSumGame /></RequireAuth>} />
+            <Route path="/games/hedef-sayi" element={<RequireAuth><TargetGridGame /></RequireAuth>} />
+            <Route path="/games/akiskan-toplam" element={<RequireAuth><StreamSumGame /></RequireAuth>} />
+            <Route path="/games/gorunmez-kule" element={<RequireAuth><InvisibleTowerGame /></RequireAuth>} />
+            <Route path="/games/matris-yankisi" element={<RequireAuth><MatrixEchoGame /></RequireAuth>} />
+            <Route path="/games/yansima-toplami" element={<RequireAuth><ReflectionSumGame /></RequireAuth>} />
+            <Route path="/games/labirent" element={<RequireAuth><MazeGame /></RequireAuth>} />
+            <Route path="/games/stroop" element={<RequireAuth><StroopGame /></RequireAuth>} />
+            <Route path="/games/yon-stroop" element={<RequireAuth><DirectionStroopGame /></RequireAuth>} />
+            <Route path="/games/sekil-hafizasi" element={<RequireAuth><SymbolMatchGame /></RequireAuth>} />
+            <Route path="/games/cift-mod-hafiza" element={<RequireAuth><DualBindGame /></RequireAuth>} />
+            <Route path="/games/emoji-stroop" element={<RequireAuth><EmojiStroopGame /></RequireAuth>} />
+            <Route path="/games/renkli-kalemler" element={<RequireAuth><PencilStroopGame /></RequireAuth>} />
+
+            {/* Catch-all */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Suspense>
       </main>
       <Footer />
     </div>
@@ -371,11 +183,23 @@ function App() {
     <AuthProvider>
       <SoundProvider>
         <AdminMessageNotification />
-        <Toaster position="top-center" />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 4000,
+            className: 'modern-toast',
+            success: {
+              className: 'modern-toast modern-toast-success',
+              iconTheme: { primary: '#10b981', secondary: '#fff' }
+            },
+            error: {
+              className: 'modern-toast modern-toast-error',
+              iconTheme: { primary: '#ef4444', secondary: '#fff' }
+            }
+          }}
+        />
         <Router>
-          <QuizProvider>
-            <LocationAwareRouter />
-          </QuizProvider>
+          <LocationAwareRouter />
         </Router>
       </SoundProvider>
     </AuthProvider>
