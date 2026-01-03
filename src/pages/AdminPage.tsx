@@ -32,10 +32,8 @@ import { supabase } from '../lib/supabase';
 import { useTheme, useMediaQuery } from '@mui/material';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserManagement from '../components/admin/UserManagement';
-import ClassManagement from '../components/admin/ClassManagement';
-import QuizManagement from '../components/admin/QuizManagement';
 import AdminSettings from '../components/admin/AdminSettings';
-import QuestionManagement from '../components/admin/QuestionManagement';
+
 import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
 import BlogManagement from '../components/admin/BlogManagement';
 import SendMessage from '../components/admin/SendMessage';
@@ -81,27 +79,6 @@ const AdminPage: React.FC = () => {
       icon: <PeopleIcon />,
       component: <UserManagement />,
       path: '/admin/users',
-    },
-    {
-      id: 'classes',
-      title: 'Sınıflar',
-      icon: <SchoolIcon />,
-      component: <ClassManagement />,
-      path: '/admin/classes',
-    },
-    {
-      id: 'questions',
-      title: 'Sorular',
-      icon: <QuizIcon />,
-      component: <QuestionManagement />,
-      path: '/admin/questions',
-    },
-    {
-      id: 'quizzes',
-      title: 'Quizler',
-      icon: <QuizIcon />,
-      component: <QuizManagement />,
-      path: '/admin/quizzes',
     },
     {
       id: 'stories',

@@ -1,864 +1,434 @@
-import { useState, useEffect, useRef } from 'react'; // useRef eklendi
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { motion } from 'framer-motion';
-import { BookOpen, Search, FileText } from 'lucide-react';
-import DeyimlerPDF from '../components/DeyimlerPDF';
-import { toast } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen, Search, ChevronLeft, Languages, Brain, Check, X, Loader2, ChevronRight, Trophy, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Deyim {
-  id: number;
-  deyim: string;
-  aciklama: string;
-  ornek: string | null;
+    id: number;
+    deyim: string;
+    aciklama: string;
+    ornek: string | null;
 }
 
-interface GameState {
-  currentDeyim: Deyim | null;
-  options: string[];
-  score: number;
-  answered: boolean;
-  selectedAnswer: string;
-  missingWord?: string;
-  deyimWords?: string[];
-  missingWordIndex?: number;
-  targetWord?: string;
-}
+type Mode = 'liste' | 'oyun';
+
+const ITEMS_PER_PAGE = 12;
+const QUESTIONS_PER_GAME = 10;
 
 const DeyimlerPage = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const currentPagePath = location.pathname;
+    const { user } = useAuth();
+    const navigate = useNavigate();
 
-  const [deyimler, setDeyimler] = useState<Deyim[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [mode, setMode] = useState<'liste' | 'oyun' | 'pdf' | 'tamamlama' | 'hafiza'>('liste');
-  const [showingDeyim, setShowingDeyim] = useState(true);
-  const [timer, setTimer] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const ITEMS_PER_PAGE = 12;
-  const [userXP, setUserXP] = useState<number>(0);
+    // State
+    const [deyimler, setDeyimler] = useState<Deyim[]>([]);
+    const [allDeyimler, setAllDeyimler] = useState<Deyim[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const [mode, setMode] = useState<Mode>('liste');
 
-  const [isProcessingXP, setIsProcessingXP] = useState(false);
-  const [xpProcessingError, setXpProcessingError] = useState<string | null>(null);
-  const [pageRequiredXP, setPageRequiredXP] = useState<number | null>(null);
+    // Game State
+    const [gameQuestion, setGameQuestion] = useState<Deyim | null>(null);
+    const [gameOptions, setGameOptions] = useState<string[]>([]);
+    const [missingWord, setMissingWord] = useState('');
+    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const [score, setScore] = useState(0);
+    const [questionNumber, setQuestionNumber] = useState(0);
+    const [gameOver, setGameOver] = useState(false);
 
-  // --- Çift Çalışmayı Önleme Ref'i ---
-  // Bu ref, XP düşürme işleminin bu sayfa ziyareti için zaten başlatılıp başlatılmadığını takip eder.
-  // State yerine ref kullanıyoruz çünkü bu değerin değişimi yeniden render tetiklememeli.
-  const xpDeductionAttemptedRef = useRef(false);
-  // --- Bitiş: Çift Çalışmayı Önleme Ref'i ---
+    // Kullanıcı kontrolü
+    useEffect(() => {
+        if (!user) {
+            navigate('/login');
+        }
+    }, [user, navigate]);
 
-
-  const QUESTIONS_PER_GAME = 10;
-
-  const [gameState, setGameState] = useState<GameState>({
-    currentDeyim: null,
-    options: [],
-    score: 0,
-    answered: false,
-    selectedAnswer: '',
-  });
-
-  const [gameDeyimler, setGameDeyimler] = useState<Deyim[]>([]);
-
-  // Deyimleri yükle
-  const fetchDeyimler = async () => {
-    try {
-      let query = supabase
-        .from('deyimler')
-        .select('*', { count: 'exact' });
-
-      if (debouncedSearchTerm) {
-        query = query.ilike('deyim', `%${debouncedSearchTerm}%`);
-      }
-
-      const { count, error: countError } = await query;
-      if (countError) throw countError;
-      setTotalCount(count || 0);
-
-      const { data, error } = await query
-        .order('id')
-        .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
-
-      if (error) throw error;
-      setDeyimler(data || []);
-    } catch (error: any) {
-      toast.error('Deyimler yüklenirken bir hata oluştu');
-      console.error('Deyimler yüklenirken hata:', error);
-    }
-  };
-
-  // Arama terimi için debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Sayfa veya arama değiştiğinde deyimleri yeniden yükle
-  useEffect(() => {
-    if (mode === 'liste' && !loading) {
-        fetchDeyimler();
-    }
-  }, [currentPage, debouncedSearchTerm, mode, loading]);
-
-  // Oyun deyimleri yüklendiğinde yeni soru yükle
-  useEffect(() => {
-    if (mode === 'oyun' && gameDeyimler.length > 0 && gameState.currentDeyim === null) {
-       loadNewQuestion();
-    }
-  }, [gameDeyimler, mode, gameState.currentDeyim]);
-
-  // Kullanıcı kontrolü ve yönlendirme
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    // Kullanıcı değiştiğinde veya sayfa ilk yüklendiğinde XP düşürme denemesini sıfırla
-    xpDeductionAttemptedRef.current = false;
-  }, [user, navigate]);
-
-  // Kullanıcı XP bilgisini yükle
-  useEffect(() => {
-    const fetchInitialUserXP = async () => {
-      if (user) {
+    // Deyimleri yükle
+    const fetchDeyimler = useCallback(async () => {
         try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('experience')
-            .eq('id', user.id)
-            .single();
-          if (error) throw error;
-          setUserXP(data?.experience || 0);
+            let query = supabase.from('deyimler').select('*', { count: 'exact' });
+
+            if (searchTerm) {
+                query = query.ilike('deyim', `%${searchTerm}%`);
+            }
+
+            const { count } = await query;
+            setTotalCount(count || 0);
+
+            const { data, error } = await query
+                .order('id')
+                .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
+
+            if (error) throw error;
+            setDeyimler(data || []);
         } catch (error) {
-          console.error('Başlangıç XP bilgisi alınırken hata:', error);
+            console.error('Deyimler yüklenirken hata:', error);
+            toast.error('Deyimler yüklenemedi');
         }
-      }
+    }, [searchTerm, currentPage]);
+
+    // Tüm deyimleri yükle (oyun için)
+    const fetchAllDeyimler = async () => {
+        const { data } = await supabase.from('deyimler').select('*');
+        setAllDeyimler(data || []);
     };
-    fetchInitialUserXP();
-  }, [user]);
 
-  // --- Sayfa Ziyareti İçin XP Azaltma useEffect (Güncellendi) ---
-  useEffect(() => {
-    const deductXpForPageVisit = async () => {
-      // --- Çift Çalışma Kontrolü ---
-      if (xpDeductionAttemptedRef.current) {
-          console.log("XP deduction already attempted for this visit.");
-          // Eğer işlem zaten denendiyse ve hala yükleniyorsa, bitir.
-          // Bu, StrictMode'un ikinci çalıştırmasında gereksiz bekleme olmasını engeller.
-          if (loading) setLoading(false);
-          return;
-      }
-      // --- Bitiş: Çift Çalışma Kontrolü ---
+    // İlk yükleme
+    useEffect(() => {
+        const loadData = async () => {
+            setLoading(true);
+            await fetchDeyimler();
+            await fetchAllDeyimler();
+            setLoading(false);
+        };
+        if (user) {
+            loadData();
+        }
+    }, [user, fetchDeyimler]);
 
-      if (!user) return;
+    // Arama değiştiğinde
+    useEffect(() => {
+        if (!loading && user) {
+            fetchDeyimler();
+        }
+    }, [searchTerm, currentPage, fetchDeyimler, loading, user]);
 
-      // İşlemin denendiğini işaretle
-      xpDeductionAttemptedRef.current = true;
+    // Oyun: Yeni soru oluştur
+    const generateQuestion = useCallback(() => {
+        if (allDeyimler.length < 4) return;
 
-      console.log(`Checking XP requirement for page: ${currentPagePath}`);
-      setLoading(true);
-      setIsProcessingXP(true);
-      setXpProcessingError(null);
-      setPageRequiredXP(null);
+        const randomIndex = Math.floor(Math.random() * allDeyimler.length);
+        const selectedDeyim = allDeyimler[randomIndex];
 
-      let shouldFetchDeyimler = true;
-
-      try {
-        const { data: requirement, error: reqError } = await supabase
-          .from('xp_requirements')
-          .select('required_xp')
-          .eq('page_path', currentPagePath)
-          .maybeSingle();
-
-        if (reqError) {
-          throw new Error(`XP gereksinimi alınamadı: ${reqError.message}`);
+        // Deyimi kelimelere ayır
+        const words = selectedDeyim.deyim.split(' ').filter(w => w.length > 2);
+        if (words.length === 0) {
+            generateQuestion();
+            return;
         }
 
-        if (!requirement || !requirement.required_xp || requirement.required_xp <= 0) {
-          console.log(`Sayfa ${currentPagePath} için XP azaltma gereksinimi bulunmuyor.`);
+        const missingIndex = Math.floor(Math.random() * words.length);
+        const missing = words[missingIndex];
+        setMissingWord(missing);
+
+        // Diğer deyimlerden yanlış seçenekler
+        const otherWords = allDeyimler
+            .filter(d => d.id !== selectedDeyim.id)
+            .flatMap(d => d.deyim.split(' ').filter(w => w.length > 2))
+            .filter(w => w !== missing);
+
+        const shuffled = otherWords.sort(() => Math.random() - 0.5);
+        const wrongOptions = shuffled.slice(0, 3);
+
+        const options = [...wrongOptions, missing].sort(() => Math.random() - 0.5);
+
+        setGameQuestion(selectedDeyim);
+        setGameOptions(options);
+        setSelectedAnswer(null);
+    }, [allDeyimler]);
+
+    // Oyunu başlat
+    const startGame = () => {
+        setScore(0);
+        setQuestionNumber(1);
+        setGameOver(false);
+        setMode('oyun');
+        generateQuestion();
+    };
+
+    // Cevap seç
+    const handleAnswer = (answer: string) => {
+        if (selectedAnswer) return;
+
+        setSelectedAnswer(answer);
+        const isCorrect = answer === missingWord;
+
+        if (isCorrect) {
+            setScore(prev => prev + 1);
+            toast.success('Doğru! ✅');
         } else {
-          const xpToDeduct = requirement.required_xp;
-          setPageRequiredXP(xpToDeduct);
-          console.log(`Requirement found: ${xpToDeduct} XP for ${currentPagePath}`);
+            toast.error(`Yanlış! Doğru cevap: ${missingWord}`);
+        }
 
-          const { data: profileData, error: profileErr } = await supabase
-            .from('profiles')
-            .select('experience')
-            .eq('id', user.id)
-            .single();
-
-          if (profileErr) throw new Error(`Profil alınamadı: ${profileErr.message}`);
-          if (!profileData) throw new Error(`Profil bulunamadı (ID: ${user.id}).`);
-
-          const currentExperience = profileData.experience ?? 0;
-          setUserXP(currentExperience);
-
-          if (currentExperience < xpToDeduct) {
-            console.warn(`Yetersiz XP (${currentExperience}) for page ${currentPagePath} requiring ${xpToDeduct} XP.`);
-            setXpProcessingError(`Bu sayfayı ziyaret etmek için yeterli XP'niz (${currentExperience}) yok. Gereken: ${xpToDeduct} XP.`);
-            shouldFetchDeyimler = false;
-          } else {
-            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-            const reasonForVisit = `Sayfa ziyareti: ${currentPagePath}`;
-            const { count: recentLogCount, error: recentLogError } = await supabase
-                .from('experience_log')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .eq('change_reason', reasonForVisit)
-                .gte('changed_at', fiveMinutesAgo);
-
-            if (recentLogError){
-                 console.warn("Recent log check failed, proceeding with deduction:", recentLogError.message);
-            } else if (recentLogCount !== null && recentLogCount > 0) {
-                console.log(`Son 5dk içinde ${currentPagePath} ziyareti için XP düşülmüş, tekrar düşülmüyor.`);
+        setTimeout(() => {
+            if (questionNumber < QUESTIONS_PER_GAME) {
+                setQuestionNumber(prev => prev + 1);
+                generateQuestion();
             } else {
-              const newExperience = currentExperience - xpToDeduct;
-              console.log(`Updating XP for user ${user.id}: ${currentExperience} -> ${newExperience}`);
-              const { error: updateErr } = await supabase
-                .from('profiles')
-                .update({ experience: newExperience })
-                .eq('id', user.id);
-
-              if (updateErr) {
-                 if (updateErr.message.includes("violates row-level security policy")) {
-                     console.error("RLS Error updating profile XP.");
-                     throw new Error(`Profil XP güncellenemedi: Yetki Hatası (RLS).`);
-                 } else {
-                     throw new Error(`XP güncellenemedi: ${updateErr.message}`);
-                 }
-              }
-
-              console.log(`Logging XP change for user ${user.id}`);
-              const { error: logErr } = await supabase
-                .from('experience_log')
-                .insert({
-                  user_id: user.id,
-                  change_amount: -xpToDeduct,
-                  old_experience: currentExperience,
-                  new_experience: newExperience,
-                  change_reason: reasonForVisit
-                });
-
-              if (logErr) {
-                console.error("Deneyim loglama hatası (Sayfa Ziyareti):", logErr);
-                 if (logErr.message.includes("violates row-level security policy")) {
-                     setXpProcessingError("XP düşüldü ancak işlem kaydedilemedi (Yetki Hatası).");
-                 } else {
-                     setXpProcessingError("XP düşüldü ancak işlem kaydedilemedi.");
-                 }
-              } else {
-                  console.log(`Successfully deducted ${xpToDeduct} XP and logged for visiting ${currentPagePath}.`);
-                  // --- Toast Mesajı Sadece Başarılı Loglamadan Sonra ---
-                  toast.success(`Sayfa ziyareti için ${xpToDeduct} XP düşüldü.`);
-                  setUserXP(newExperience);
-              }
+                setGameOver(true);
             }
-          }
-        }
-      } catch (error: any) {
-        console.error("Sayfa ziyareti XP azaltma işlemi sırasında hata:", error);
-        setXpProcessingError(error.message || "Bilinmeyen bir hata oluştu.");
-        shouldFetchDeyimler = false;
-      } finally {
-        setIsProcessingXP(false);
-        if (shouldFetchDeyimler) {
-          await fetchDeyimler();
-        }
-        setLoading(false);
-      }
+        }, 3000);
     };
 
-    // Sadece kullanıcı varsa ve XP düşürme işlemi *bu render döngüsünde* henüz denenmediyse başlat
-    if (user && !xpDeductionAttemptedRef.current) {
-        deductXpForPageVisit();
-    } else if (!user) {
-        setLoading(false); // Kullanıcı yoksa yüklemeyi bitir
+    // Deyimi göster (oyunda)
+    const getDisplayDeyim = () => {
+        if (!gameQuestion) return '';
+        return gameQuestion.deyim.split(' ').map(word =>
+            word === missingWord ? '______' : word
+        ).join(' ');
+    };
+
+    // Yükleniyor
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 className="w-12 h-12 text-purple-400 animate-spin mx-auto mb-4" />
+                    <p className="text-slate-400">Yükleniyor...</p>
+                </div>
+            </div>
+        );
     }
 
-    // Component unmount edildiğinde ref'i sıfırlamaya gerek yok,
-    // çünkü sayfa tekrar mount edildiğinde zaten false olarak başlayacak.
+    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, currentPagePath]); // Bağımlılıklar aynı kalmalı
-  // --- Bitiş: Sayfa Ziyareti İçin XP Azaltma useEffect ---
-
-
-  // Oyun modunu başlatma fonksiyonları (startHafizaGame, startTamamlamaGame, startGame)
-  // Bu fonksiyonlar önceki haliyle aynı kalır.
-  const startHafizaGame = async () => {
-    try {
-      if (timer) { clearTimeout(timer); setTimer(null); }
-      const { data: allDeyimler, error } = await supabase.from('deyimler').select('*');
-      if (error) throw error;
-      if (!allDeyimler || allDeyimler.length < 4) { toast.error('Oyun için yeterli deyim bulunmuyor'); return; }
-      const randomDeyim = allDeyimler[Math.floor(Math.random() * allDeyimler.length)];
-      const words = randomDeyim.deyim.split(' ');
-      const randomIndex = Math.floor(Math.random() * words.length);
-      const targetWord = words[randomIndex];
-      const otherWords = allDeyimler.filter(d => d.id !== randomDeyim.id).map(d => d.deyim.split(' ')).flat().filter(word => word.length > 2).sort(() => Math.random() - 0.5).slice(0, 3);
-      const options = [...otherWords, targetWord].sort(() => Math.random() - 0.5);
-      setGameState({ currentDeyim: randomDeyim, options, score: 0, answered: false, selectedAnswer: '', targetWord });
-      setShowingDeyim(true); setMode('hafiza');
-      const newTimer = window.setTimeout(() => { setShowingDeyim(false); }, 5000); setTimer(newTimer);
-    } catch (error) { console.error('Oyun başlatılırken hata:', error); toast.error('Oyun başlatılırken bir hata oluştu'); }
-  };
-  const startTamamlamaGame = async () => {
-    try {
-      const { data: allDeyimler, error } = await supabase.from('deyimler').select('*');
-      if (error) throw error;
-      if (!allDeyimler || allDeyimler.length < 4) { toast.error('Oyun için yeterli deyim bulunmuyor'); return; }
-      const randomDeyim = allDeyimler[Math.floor(Math.random() * allDeyimler.length)];
-      const words = randomDeyim.deyim.split(' ');
-      const randomIndex = Math.floor(Math.random() * words.length);
-      const missingWord = words[randomIndex];
-      const otherWords = allDeyimler.filter(d => d.id !== randomDeyim.id).map(d => d.deyim.split(' ')).flat().filter(word => word.length > 2).sort(() => Math.random() - 0.5).slice(0, 3);
-      const options = [...otherWords, missingWord].sort(() => Math.random() - 0.5);
-      setGameState({ currentDeyim: randomDeyim, options, score: 0, answered: false, selectedAnswer: '', missingWord, deyimWords: words, missingWordIndex: randomIndex });
-      setMode('tamamlama');
-    } catch (error) { console.error('Oyun başlatılırken hata:', error); toast.error('Oyun başlatılırken bir hata oluştu'); }
-  };
-  const startGame = async () => {
-    try {
-      const { data: allDeyimler, error } = await supabase.from('deyimler').select('*');
-      if (error) throw error;
-      if (!allDeyimler || allDeyimler.length < 4) { toast.error('Oyun için yeterli deyim bulunmuyor'); return; }
-      const shuffledDeyimler = [...allDeyimler].sort(() => Math.random() - 0.5).slice(0, QUESTIONS_PER_GAME);
-      setGameDeyimler(shuffledDeyimler);
-      setGameState(prev => ({ ...prev, score: 0, currentDeyim: null })); // Skoru sıfırla ve ilk soruyu null yap
-      setMode('oyun');
-    } catch (error) { console.error('Oyun başlatılırken hata:', error); toast.error('Oyun başlatılırken bir hata oluştu'); }
-  };
-
-
-  // Yeni bir soru yükleme fonksiyonu (loadNewQuestion)
-  // Bu fonksiyon önceki haliyle aynı kalır.
-  const loadNewQuestion = () => {
-    if (gameState.score >= QUESTIONS_PER_GAME) { toast.success(`Tebrikler! ${gameState.score} puan kazandın! 🎉`); setMode('liste'); return; }
-    const currentDeyimIndex = gameState.score; // Mevcut skora göre index al
-    const currentDeyim = gameDeyimler[currentDeyimIndex];
-    if (!currentDeyim) { console.error(`Deyim bulunamadı, index: ${currentDeyimIndex}`); toast.error('Beklenmeyen bir hata oluştu'); setMode('liste'); return; }
-    const otherDeyimler = gameDeyimler.filter(d => d.id !== currentDeyim.id);
-    if (otherDeyimler.length < 3) {
-        supabase.from('deyimler').select('aciklama').neq('id', currentDeyim.id).limit(100)
-        .then(({ data, error }) => {
-            if(error || !data || data.length < 3) {
-                toast.error('Yeterli sayıda farklı deyim açıklaması bulunamadı.');
-                setMode('liste');
-                return;
-            }
-            const wrongOptions = data.map(d => d.aciklama).sort(() => Math.random() - 0.5).slice(0, 3);
-            const options = [...wrongOptions, currentDeyim.aciklama].sort(() => Math.random() - 0.5);
-            setGameState(prev => ({ ...prev, currentDeyim: currentDeyim, options, answered: false, selectedAnswer: '' }));
-        });
-    } else {
-        const wrongOptions = otherDeyimler.sort(() => Math.random() - 0.5).slice(0, 3).map(d => d.aciklama);
-        const options = [...wrongOptions, currentDeyim.aciklama].sort(() => Math.random() - 0.5);
-        setGameState(prev => ({ ...prev, currentDeyim: currentDeyim, options, answered: false, selectedAnswer: '' }));
-    }
-  };
-
-
-  // Cevap kontrolü - XP KAZANMA YOK
-  const handleAnswer = async (answer: string) => {
-    if (gameState.answered) return;
-
-    let isCorrect;
-    if (mode === 'tamamlama') {
-      isCorrect = answer === gameState.missingWord;
-    } else if (mode === 'hafiza') {
-      isCorrect = answer === gameState.targetWord;
-    } else {
-      isCorrect = gameState.currentDeyim ? answer === gameState.currentDeyim.aciklama : false;
-    }
-
-    setGameState(prev => ({
-      ...prev,
-      answered: true,
-      selectedAnswer: answer,
-      score: isCorrect ? prev.score + 1 : prev.score,
-    }));
-
-    if (isCorrect) {
-      toast.success('Doğru cevap! 🎉');
-    } else {
-      toast.error('Yanlış cevap.');
-    }
-
-    if (mode === 'oyun') {
-      const nextScore = isCorrect ? gameState.score + 1 : gameState.score;
-      if (nextScore < QUESTIONS_PER_GAME) {
-        setTimeout(loadNewQuestion, 1500);
-      } else {
-         setTimeout(() => {
-             toast.success(`Oyun bitti! Toplam skorun: ${nextScore} 🎉`);
-             setMode('liste');
-         }, 1500);
-      }
-    }
-  };
-
-  // Arama yapıldığında ilk sayfaya dön
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearchTerm]);
-
-  // Yetersiz XP Durumu Gösterimi
-  if (!loading && xpProcessingError && pageRequiredXP && userXP < pageRequiredXP) {
-     return (
-       <XPWarning
-         title="Deyimler Dünyası"
-         requiredXP={pageRequiredXP}
-         currentXP={userXP}
-       />
-     );
-  }
-
-
-  // Genel Yüklenme durumu
-  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center py-8">
-        <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500 mx-auto mb-4"></div>
-            <p className="text-amber-700">Yükleniyor...</p>
-            {isProcessingXP && <p className="text-sm text-amber-600 animate-pulse">XP durumu kontrol ediliyor...</p>}
-        </div>
-      </div>
-    );
-  }
-
-  // --- JSX (Görünüm) Kısmı ---
-  // Bu kısım öncekiyle aynı kalmalıdır.
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-8">
-      <div className="container mx-auto px-4">
-        {/* Başlık ve Menü */}
-        <header className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            {/* Sol Taraf: Başlık ve Ana Menü */}
-            <div className="flex items-center gap-4 flex-wrap"> {/* flex-wrap eklendi */}
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-3 rounded-xl">
-                <BookOpen className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                Deyimler Dünyası
-              </h1>
-              <button
-                onClick={() => navigate('/')}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors" // ml-4 kaldırıldı
-              >
-                Ana Menü
-              </button>
-               {/* Mevcut XP Göstergesi */}
-               <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                    XP: {userXP}
-               </span>
-            </div>
-            {/* Sağ Taraf: Mod Butonları */}
-            <div className="flex flex-wrap justify-center gap-3">
-              <button
-                onClick={() => setMode('liste')}
-                className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${
-                  mode === 'liste'
-                    ? 'bg-amber-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Deyimler Listesi
-              </button>
-              <button
-                onClick={startGame}
-                className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${
-                  mode === 'oyun'
-                    ? 'bg-orange-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Oyun Modu
-              </button>
-              <button
-                onClick={() => setMode('pdf')}
-                className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${
-                  mode === 'pdf'
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <FileText className="w-4 h-4" />
-                  PDF Oluştur
-                </div>
-              </button>
-              <button
-                onClick={startTamamlamaGame}
-                className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${
-                  mode === 'tamamlama'
-                    ? 'bg-purple-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Kelime Bul
-              </button>
-              <button
-                onClick={startHafizaGame}
-                className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${
-                  mode === 'hafiza'
-                    ? 'bg-emerald-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Hafıza Oyunu
-              </button>
-            </div>
-          </div>
-           {/* XP İşlem Bilgisi (Başlık altında) */}
-           <div className="mt-4 text-center min-h-[24px]"> {/* Hata mesajı için yer ayır */}
-                {isProcessingXP && !loading && (
-                    <p className="text-sm text-blue-600 animate-pulse">XP durumu kontrol ediliyor...</p>
-                )}
-                {xpProcessingError && !isProcessingXP && (
-                    <p className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-md border border-red-200 inline-block">{xpProcessingError}</p>
-                )}
-           </div>
-        </header>
-
-        {/* İçerik Alanı */}
-        <main>
-            {mode === 'liste' ? (
-            <>
-                {/* Arama Alanı */}
-                <div className="relative mb-8">
-                <input
-                    type="text"
-                    placeholder="Deyim veya açıklama ara..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-6 py-4 bg-white rounded-xl shadow-lg focus:ring-2 focus:ring-amber-500 outline-none"
-                />
-                <Search className="absolute right-6 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                </div>
-
-                {/* Deyimler Listesi */}
-                <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {deyimler.map((deyim) => (
-                        <motion.div
-                        key={deyim.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer flex flex-col h-full"
-                        >
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                            {deyim.deyim}
-                        </h3>
-                        <p className="text-gray-600 text-sm flex-grow">{deyim.aciklama}</p>
-                        {deyim.ornek && (
-                            <p className="mt-3 text-xs text-gray-500 italic border-t pt-2">
-                            "{deyim.ornek}"
-                            </p>
-                        )}
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Sayfalama */}
-                {totalCount > ITEMS_PER_PAGE && (
-                    <div className="flex justify-center items-center space-x-2 mt-8">
-                    <button
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                        className={`px-4 py-2 rounded-lg text-sm ${currentPage === 1
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors'}`}
-                    >
-                        Önceki
-                    </button>
-                    <span className="text-gray-600 text-sm">
-                        Sayfa {currentPage} / {Math.ceil(totalCount / ITEMS_PER_PAGE)}
-                    </span>
-                    <button
-                        onClick={() =>
-                        setCurrentPage(prev =>
-                            Math.min(prev + 1, Math.ceil(totalCount / ITEMS_PER_PAGE))
-                        )
-                        }
-                        disabled={currentPage === Math.ceil(totalCount / ITEMS_PER_PAGE)}
-                        className={`px-4 py-2 rounded-lg text-sm ${
-                        currentPage === Math.ceil(totalCount / ITEMS_PER_PAGE)
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors'
-                        }`}
-                    >
-                        Sonraki
-                    </button>
-                    </div>
-                )}
-                </div>
-            </>
-            ) : mode === 'pdf' ? (
-            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-7xl mx-auto">
-                {/* Deyimler PDF bileşeni, ana sayfadan alınan deyimlerle render edilir */}
-                <DeyimlerPDF deyimler={deyimler} />
-            </div>
-            ) : mode === 'hafiza' ? (
-            // Hafıza Oyunu
-            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
-                <div className="mb-8 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-                <h3 className="text-lg font-semibold text-emerald-800 mb-2">
-                    Hafıza Oyunu
-                </h3>
-                <p className="text-emerald-700 text-sm">
-                    {showingDeyim
-                    ? 'Deyimi ezberleyin, 5 saniye sonra bir kelimesi sorulacak!'
-                    : 'Deyimde geçen kelimeyi bulun!'}
-                </p>
-                </div>
-
-                <div className="text-center mb-8 min-h-[150px] flex flex-col justify-center">
-                {showingDeyim ? (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="bg-gradient-to-r from-emerald-100 to-teal-100 rounded-xl p-6 mb-4"
-                    >
-                    <h2 className="text-2xl font-bold text-emerald-800 mb-4">
-                        {gameState.currentDeyim?.deyim}
-                    </h2>
-                    <p className="text-lg text-emerald-700 italic">
-                        "{gameState.currentDeyim?.aciklama}"
-                    </p>
-                    </motion.div>
-                ) : (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                    <h3 className="text-xl font-semibold text-emerald-800">
-                        Deyimde geçen hangi kelime doğru?
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        {gameState.options.map((option, index) => (
-                        <motion.button
-                            key={index}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleAnswer(option)}
-                            disabled={gameState.answered}
-                            className={`p-4 rounded-xl text-center transition-all text-sm md:text-base ${
-                            gameState.answered
-                                ? option === gameState.targetWord
-                                ? 'bg-green-100 border-2 border-green-500 text-green-800 font-semibold'
-                                : option === gameState.selectedAnswer
-                                ? 'bg-red-100 border-2 border-red-500 text-red-800'
-                                : 'bg-gray-100 text-gray-500'
-                                : 'bg-gray-50 hover:bg-emerald-100 border border-gray-200'
-                            }`}
-                        >
-                            {option}
-                        </motion.button>
-                        ))}
-                    </div>
-                    </motion.div>
-                )}
-                </div>
-
-                {gameState.answered && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6 text-center">
-                    <button
-                    onClick={startHafizaGame}
-                    className="px-6 py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors shadow-md"
-                    >
-                    Yeni Soru
-                    </button>
-                </motion.div>
-                )}
-            </div>
-            ) : mode === 'tamamlama' ? (
-            // Kelime Bulma Oyunu
-            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
-                <div className="mb-8 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                <h3 className="text-lg font-semibold text-purple-800 mb-2">
-                    Eksik Kelimeyi Bul
-                </h3>
-                <p className="text-purple-700 text-sm">
-                    Deyimdeki eksik kelimeyi bulun ve doğru seçeneği işaretleyin.
-                </p>
-                </div>
-
-                <div className="text-center mb-8 min-h-[150px] flex flex-col justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 pt-24 pb-12 px-6">
+            <div className="container mx-auto max-w-6xl">
+                {/* Header */}
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-6 mb-4"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-10"
                 >
-                    <h2 className="text-2xl font-bold text-purple-800 mb-4 leading-relaxed">
-                    {gameState.deyimWords?.map((word, index) => (
-                        <span key={index} className={index === gameState.missingWordIndex ? 'bg-yellow-200 px-2 py-1 rounded mx-1 font-mono text-xl' : 'mx-1'}>
-                        {index === gameState.missingWordIndex ? '_____' : word}
-                        </span>
-                    ))}
-                    </h2>
-                    <p className="text-lg text-purple-700 italic">
-                    "{gameState.currentDeyim?.aciklama}"
-                    </p>
-                </motion.div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                {gameState.options.map((option, index) => (
-                    <motion.button
-                    key={index}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleAnswer(option)}
-                    disabled={gameState.answered}
-                    className={`p-4 rounded-xl text-center transition-all text-sm md:text-base ${
-                        gameState.answered
-                        ? option === gameState.missingWord
-                            ? 'bg-green-100 border-2 border-green-500 text-green-800 font-semibold'
-                            : option === gameState.selectedAnswer
-                            ? 'bg-red-100 border-2 border-red-500 text-red-800'
-                            : 'bg-gray-100 text-gray-500'
-                        : 'bg-gray-50 hover:bg-purple-100 border border-gray-200'
-                    }`}
-                    >
-                    {option}
-                    </motion.button>
-                ))}
-                </div>
-
-                {gameState.answered && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6 text-center">
-                    <button
-                    onClick={startTamamlamaGame}
-                    className="px-6 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-colors shadow-md"
-                    >
-                    Yeni Soru
-                    </button>
-                </motion.div>
-                )}
-            </div>
-            ) : (
-            // Oyun Modu (Anlam Bulma)
-            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
-                <div className="mb-8 p-4 bg-amber-50 rounded-xl border border-amber-200">
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">
-                    Anlamını Bul Oyunu
-                </h3>
-                <ul className="space-y-1 text-amber-700 text-sm">
-                    <li>• Verilen deyimin doğru anlamını şıklardan seçin.</li>
-                    <li>• Toplam {QUESTIONS_PER_GAME} soru sorulacaktır.</li>
-                    {/* XP Kazanma bilgisi kaldırıldı */}
-                    {/* <li>• Her doğru cevap için 10 XP kazanırsınız.</li> */}
-                    <li className="font-medium pt-1 border-t border-amber-200 mt-1">• Mevcut Skor: {gameState.score} / {QUESTIONS_PER_GAME}</li>
-                </ul>
-                </div>
-                <div className="text-center mb-8 min-h-[150px] flex flex-col justify-center">
-                    <motion.div
-                        key={gameState.currentDeyim?.id} // Deyim değiştiğinde animasyonu tetikle
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl p-4 inline-block mb-4"
-                    >
-                        <h2 className="text-2xl font-bold text-amber-800">
-                        {gameState.currentDeyim?.deyim}
-                        </h2>
-                    </motion.div>
-                    <p className="text-gray-600 text-sm">Bu deyimin anlamı nedir?</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {gameState.options.map((option, index) => (
-                    <motion.button
-                    key={option + index} // Option metni + index daha güvenli key
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleAnswer(option)}
-                    disabled={gameState.answered}
-                    className={`p-4 rounded-xl text-left transition-all text-sm md:text-base ${
-                        gameState.answered
-                        ? option === gameState.currentDeyim?.aciklama
-                            ? 'bg-green-100 border-2 border-green-500 text-green-800 font-semibold'
-                            : option === gameState.selectedAnswer
-                            ? 'bg-red-100 border-2 border-red-500 text-red-800'
-                            : 'bg-gray-100 text-gray-500'
-                        : 'bg-gray-50 hover:bg-amber-100 border border-gray-200'
-                    }`}
-                    >
-                    {option}
-                    </motion.button>
-                ))}
-                </div>
-                 {/* Oyun bittiğinde veya cevaplandığında gösterilecek alan */}
-                 {gameState.answered && mode === 'oyun' && (
-                    <div className="mt-6 text-center">
-                        {gameState.score >= QUESTIONS_PER_GAME && (
-                             <p className="text-green-600 font-semibold">Oyun Bitti!</p>
-                        )}
+                    <div>
+                        <Link
+                            to="/bilsem"
+                            className="inline-flex items-center gap-2 text-purple-400 font-bold hover:text-purple-300 transition-colors mb-4 uppercase text-xs tracking-widest"
+                        >
+                            <ChevronLeft size={16} />
+                            Ana Sayfa
+                        </Link>
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                                <Languages className="w-7 h-7 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl lg:text-4xl font-black text-white">
+                                    Deyimler <span className="text-purple-400">Atölyesi</span>
+                                </h1>
+                                <p className="text-slate-400 text-sm">Türkçe deyimleri öğren ve pratik yap</p>
+                            </div>
+                        </div>
                     </div>
-                )}
-            </div>
-            )}
-        </main>
+                </motion.div>
 
-      </div>
-    </div>
-  );
+                {/* Mode Tabs */}
+                <div className="flex gap-3 mb-8">
+                    <button
+                        onClick={() => setMode('liste')}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${mode === 'liste'
+                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
+                            : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-white/5'
+                            }`}
+                    >
+                        <BookOpen className="w-5 h-5" />
+                        Deyim Listesi
+                    </button>
+                    <button
+                        onClick={startGame}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${mode === 'oyun'
+                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30'
+                            : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 border border-white/5'
+                            }`}
+                    >
+                        <Brain className="w-5 h-5" />
+                        Kelime Tamamla
+                    </button>
+                </div>
+
+                {/* Liste Modu */}
+                <AnimatePresence mode="wait">
+                    {mode === 'liste' && (
+                        <motion.div
+                            key="liste"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                        >
+                            {/* Arama */}
+                            <div className="relative mb-6">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Deyim ara..."
+                                    value={searchTerm}
+                                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                    className="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-white/10 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                />
+                            </div>
+
+                            {/* Deyim Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                                {deyimler.map((deyim) => (
+                                    <motion.div
+                                        key={deyim.id}
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="bg-slate-800/50 border border-white/5 rounded-2xl p-5 hover:border-purple-500/30 transition-all"
+                                    >
+                                        <h3 className="text-lg font-bold text-white mb-2">{deyim.deyim}</h3>
+                                        <p className="text-slate-400 text-sm mb-3">{deyim.aciklama}</p>
+                                        {deyim.ornek && (
+                                            <p className="text-purple-400 text-xs italic">"{deyim.ornek}"</p>
+                                        )}
+                                    </motion.div>
+                                ))}
+                            </div>
+
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                                <div className="flex justify-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-2 bg-slate-800/50 border border-white/10 rounded-lg disabled:opacity-50"
+                                    >
+                                        <ChevronLeft className="w-5 h-5 text-slate-400" />
+                                    </button>
+                                    <span className="px-4 py-2 text-slate-400">
+                                        {currentPage} / {totalPages}
+                                    </span>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 bg-slate-800/50 border border-white/10 rounded-lg disabled:opacity-50"
+                                    >
+                                        <ChevronRight className="w-5 h-5 text-slate-400" />
+                                    </button>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+
+                    {/* Oyun Modu */}
+                    {mode === 'oyun' && !gameOver && gameQuestion && (
+                        <motion.div
+                            key="oyun"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="max-w-2xl mx-auto"
+                        >
+                            {/* Progress */}
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="text-slate-400">
+                                    Soru <span className="text-white font-bold">{questionNumber}</span> / {QUESTIONS_PER_GAME}
+                                </div>
+                                <div className="flex items-center gap-2 text-amber-400">
+                                    <Trophy className="w-5 h-5" />
+                                    <span className="font-bold">{score}</span>
+                                </div>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="h-2 bg-slate-800 rounded-full mb-8 overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${(questionNumber / QUESTIONS_PER_GAME) * 100}%` }}
+                                />
+                            </div>
+
+                            {/* Question Card */}
+                            <div className="bg-slate-800/50 border border-white/10 rounded-3xl p-8 mb-6">
+                                <p className="text-slate-400 text-sm mb-4">Eksik kelimeyi tamamla:</p>
+                                <h2 className="text-2xl lg:text-3xl font-bold text-white text-center mb-4">
+                                    {selectedAnswer ? gameQuestion.deyim : getDisplayDeyim()}
+                                </h2>
+
+                                {/* Açıklama - cevap verildikten sonra göster */}
+                                <AnimatePresence>
+                                    {selectedAnswer && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="mt-4 pt-4 border-t border-white/10"
+                                        >
+                                            <p className="text-purple-400 text-sm font-medium mb-1">Açıklama:</p>
+                                            <p className="text-slate-300 text-center">{gameQuestion.aciklama}</p>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
+                            {/* Options */}
+                            <div className="grid grid-cols-2 gap-4">
+                                {gameOptions.map((option, idx) => {
+                                    const isSelected = selectedAnswer === option;
+                                    const isCorrect = option === missingWord;
+                                    const showResult = selectedAnswer !== null;
+
+                                    return (
+                                        <motion.button
+                                            key={idx}
+                                            onClick={() => handleAnswer(option)}
+                                            disabled={selectedAnswer !== null}
+                                            whileHover={{ scale: selectedAnswer ? 1 : 1.02 }}
+                                            whileTap={{ scale: selectedAnswer ? 1 : 0.98 }}
+                                            className={`p-5 rounded-2xl font-medium text-lg transition-all ${showResult
+                                                ? isCorrect
+                                                    ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400'
+                                                    : isSelected
+                                                        ? 'bg-red-500/20 border-2 border-red-500 text-red-400'
+                                                        : 'bg-slate-800/50 border border-white/5 text-slate-500'
+                                                : 'bg-slate-800/50 border border-white/10 text-white hover:bg-slate-700/50 hover:border-purple-500/30'
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-center gap-3">
+                                                {showResult && isCorrect && <Check className="w-5 h-5" />}
+                                                {showResult && isSelected && !isCorrect && <X className="w-5 h-5" />}
+                                                {option}
+                                            </div>
+                                        </motion.button>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Game Over */}
+                    {mode === 'oyun' && gameOver && (
+                        <motion.div
+                            key="gameover"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="max-w-md mx-auto text-center"
+                        >
+                            <div className="bg-slate-800/50 border border-white/10 rounded-3xl p-10">
+                                <div className="w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <Trophy className="w-10 h-10 text-white" />
+                                </div>
+                                <h2 className="text-3xl font-black text-white mb-2">Oyun Bitti!</h2>
+                                <p className="text-slate-400 mb-6">
+                                    {QUESTIONS_PER_GAME} sorudan <span className="text-amber-400 font-bold">{score}</span> doğru
+                                </p>
+                                <div className="flex gap-3 justify-center">
+                                    <button
+                                        onClick={startGame}
+                                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl"
+                                    >
+                                        <RotateCcw className="w-5 h-5" />
+                                        Tekrar Oyna
+                                    </button>
+                                    <button
+                                        onClick={() => setMode('liste')}
+                                        className="px-6 py-3 bg-slate-700/50 border border-white/10 text-white font-medium rounded-xl"
+                                    >
+                                        Listeye Dön
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </div>
+    );
 };
 
 export default DeyimlerPage;
-// XPWarning bileşeni (değişiklik yok)
-interface XPWarningProps {
-  requiredXP: number;
-  currentXP: number;
-  title: string;
-  // errorMessage prop'u kaldırıldı
-}
-
-const XPWarning = ({ requiredXP, currentXP, title }: XPWarningProps) => {
-  const progress = Math.min((currentXP / requiredXP) * 100, 100);
-  const hasEnoughXP = currentXP >= requiredXP;
-
-  if (hasEnoughXP) {
-    return null;
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-    <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
-            <p className="text-sm text-gray-600">
-              Bu özelliği kullanmak için en az {requiredXP} XP'ye ihtiyacınız var.
-              Şu anda {currentXP} XP'niz var.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end space-y-1">
-          <div className="w-32 bg-gray-200 rounded-full h-2 overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <span className="text-sm text-gray-600">{currentXP} / {requiredXP} XP</span>
-        </div>
-      </div>
-    </div>
-    </div>
-  );
-};

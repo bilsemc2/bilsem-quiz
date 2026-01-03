@@ -1,34 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Tooltip,
-  CircularProgress,
-  Alert,
-  Chip,
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Group as GroupIcon,
-} from '@mui/icons-material';
+import { useState, useEffect } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Edit, Trash2, Users, X, Loader2, GraduationCap } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface Class {
   id: string;
@@ -44,7 +19,7 @@ interface Student {
   email: string;
 }
 
-const ClassManagement: React.FC = () => {
+const ClassManagement = () => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,10 +27,7 @@ const ClassManagement: React.FC = () => {
   const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
-  const [formData, setFormData] = useState({
-    name: '',
-    grade: '',
-  });
+  const [formData, setFormData] = useState({ name: '', grade: '' });
 
   useEffect(() => {
     fetchClasses();
@@ -87,20 +59,15 @@ const ClassManagement: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    try {
-      if (!formData.name || !formData.grade) {
-        toast.error('Lütfen tüm alanları doldurun');
-        return;
-      }
+    if (!formData.name || !formData.grade) {
+      toast.error('Lütfen tüm alanları doldurun');
+      return;
+    }
 
+    try {
       const { data, error } = await supabase
         .from('classes')
-        .insert([
-          {
-            name: formData.name,
-            grade: parseInt(formData.grade),
-          },
-        ])
+        .insert([{ name: formData.name, grade: parseInt(formData.grade) }])
         .select();
 
       if (error) throw error;
@@ -116,18 +83,15 @@ const ClassManagement: React.FC = () => {
   };
 
   const handleEdit = async () => {
-    try {
-      if (!selectedClass || !formData.name || !formData.grade) {
-        toast.error('Lütfen tüm alanları doldurun');
-        return;
-      }
+    if (!selectedClass || !formData.name || !formData.grade) {
+      toast.error('Lütfen tüm alanları doldurun');
+      return;
+    }
 
+    try {
       const { error } = await supabase
         .from('classes')
-        .update({
-          name: formData.name,
-          grade: parseInt(formData.grade),
-        })
+        .update({ name: formData.name, grade: parseInt(formData.grade) })
         .eq('id', selectedClass.id);
 
       if (error) throw error;
@@ -151,13 +115,8 @@ const ClassManagement: React.FC = () => {
     if (!window.confirm('Bu sınıfı silmek istediğinizden emin misiniz?')) return;
 
     try {
-      const { error } = await supabase
-        .from('classes')
-        .delete()
-        .eq('id', classId);
-
+      const { error } = await supabase.from('classes').delete().eq('id', classId);
       if (error) throw error;
-
       setClasses(classes.filter((cls) => cls.id !== classId));
       toast.success('Sınıf başarıyla silindi');
     } catch (err) {
@@ -186,176 +145,204 @@ const ClassManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
         {error}
-      </Alert>
+      </div>
     );
   }
 
   return (
-    <Box>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h5">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <GraduationCap className="w-6 h-6 text-indigo-500" />
           Sınıf Yönetimi
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
+        </h1>
+        <button
           onClick={() => {
             setSelectedClass(null);
             setFormData({ name: '', grade: '' });
             setDialogOpen(true);
           }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 text-white font-medium rounded-xl hover:bg-indigo-600 transition-colors"
         >
+          <Plus className="w-4 h-4" />
           Yeni Sınıf
-        </Button>
-      </Box>
+        </button>
+      </div>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Sınıf Adı</TableCell>
-              <TableCell align="right">Sınıf Seviyesi</TableCell>
-              <TableCell align="right">Öğrenci Sayısı</TableCell>
-              <TableCell align="center">İşlemler</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {classes.map((cls) => (
-              <TableRow key={cls.id}>
-                <TableCell>{cls.name}</TableCell>
-                <TableCell align="right">{cls.grade}. Sınıf</TableCell>
-                <TableCell align="right">
-                  <Chip
-                    label={`${cls.student_count ?? 0} öğrenci`}
-                    color={cls.student_count && cls.student_count > 0 ? 'primary' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell align="center">
-                  <Tooltip title="Öğrencileri Görüntüle">
-                    <IconButton onClick={() => handleOpenStudents(cls)} size="small">
-                      <GroupIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Düzenle">
-                    <IconButton
-                      onClick={() => {
-                        setSelectedClass(cls);
-                        setFormData({
-                          name: cls.name,
-                          grade: cls.grade.toString(),
-                        });
-                        setDialogOpen(true);
-                      }}
-                      size="small"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Sil">
-                    <IconButton
-                      onClick={() => handleDelete(cls.id)}
-                      size="small"
-                      color="error"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-left py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">Sınıf Adı</th>
+                <th className="text-right py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">Sınıf Seviyesi</th>
+                <th className="text-right py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">Öğrenci Sayısı</th>
+                <th className="text-center py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {classes.map((cls, idx) => (
+                <motion.tr
+                  key={cls.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: idx * 0.03 }}
+                  className="hover:bg-slate-50 transition-colors"
+                >
+                  <td className="py-4 px-6 font-medium text-slate-800">{cls.name}</td>
+                  <td className="py-4 px-6 text-right text-slate-600">{cls.grade}. Sınıf</td>
+                  <td className="py-4 px-6 text-right">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${cls.student_count && cls.student_count > 0
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'bg-slate-100 text-slate-600'
+                      }`}>
+                      {cls.student_count ?? 0} öğrenci
+                    </span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="flex justify-center gap-1">
+                      <button
+                        onClick={() => handleOpenStudents(cls)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Öğrencileri Görüntüle"
+                      >
+                        <Users className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedClass(cls);
+                          setFormData({ name: cls.name, grade: cls.grade.toString() });
+                          setDialogOpen(true);
+                        }}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="Düzenle"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(cls.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Sil"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      {/* Sınıf Ekleme/Düzenleme Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {selectedClass ? 'Sınıf Düzenle' : 'Yeni Sınıf'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Sınıf Adı"
-              fullWidth
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-            />
-            <TextField
-              label="Sınıf Seviyesi"
-              type="number"
-              fullWidth
-              value={formData.grade}
-              onChange={(e) => setFormData((prev) => ({ ...prev, grade: e.target.value }))}
-              inputProps={{ min: 1, max: 12 }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>İptal</Button>
-          <Button
-            onClick={selectedClass ? handleEdit : handleCreate}
-            variant="contained"
-            color="primary"
-          >
-            {selectedClass ? 'Güncelle' : 'Oluştur'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Add/Edit Dialog */}
+      <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md z-50">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-xl font-bold text-slate-800">
+                {selectedClass ? 'Sınıf Düzenle' : 'Yeni Sınıf'}
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
+              </Dialog.Close>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Sınıf Adı</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Sınıf Seviyesi</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={formData.grade}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, grade: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Dialog.Close asChild>
+                <button className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl">İptal</button>
+              </Dialog.Close>
+              <button
+                onClick={selectedClass ? handleEdit : handleCreate}
+                className="px-6 py-2.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600"
+              >
+                {selectedClass ? 'Güncelle' : 'Oluştur'}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
-      {/* Öğrenci Listesi Dialog */}
-      <Dialog
-        open={studentsDialogOpen}
-        onClose={() => setStudentsDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          {selectedClass?.name} - Öğrenci Listesi
-        </DialogTitle>
-        <DialogContent>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Ad Soyad</TableCell>
-                  <TableCell>E-posta</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {students.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>{student.name || '-'}</TableCell>
-                    <TableCell>{student.email}</TableCell>
-                  </TableRow>
-                ))}
-                {students.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={2} align="center">
-                      Bu sınıfta henüz öğrenci bulunmuyor
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setStudentsDialogOpen(false)}>Kapat</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      {/* Students Dialog */}
+      <Dialog.Root open={studentsDialogOpen} onOpenChange={setStudentsDialogOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto z-50">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-xl font-bold text-slate-800">
+                {selectedClass?.name} - Öğrenci Listesi
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
+              </Dialog.Close>
+            </div>
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="text-left py-3 px-4 text-xs font-bold text-slate-600 uppercase">Ad Soyad</th>
+                    <th className="text-left py-3 px-4 text-xs font-bold text-slate-600 uppercase">E-posta</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {students.map((student) => (
+                    <tr key={student.id} className="hover:bg-slate-50">
+                      <td className="py-3 px-4 text-slate-800">{student.name || '-'}</td>
+                      <td className="py-3 px-4 text-slate-600">{student.email}</td>
+                    </tr>
+                  ))}
+                  {students.length === 0 && (
+                    <tr>
+                      <td colSpan={2} className="py-8 text-center text-slate-500">
+                        Bu sınıfta henüz öğrenci bulunmuyor
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-6">
+              <Dialog.Close asChild>
+                <button className="px-6 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200">Kapat</button>
+              </Dialog.Close>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </div>
   );
 };
 

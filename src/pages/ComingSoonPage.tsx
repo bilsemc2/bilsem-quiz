@@ -1,49 +1,42 @@
-import React from 'react';
-import styled from 'styled-components';
-
-const Container = styled.div`
-  min-height: calc(100vh - 64px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  background: linear-gradient(135deg, #f6f8fb 0%, #e9f0f8 100%);
-`;
-
-const Content = styled.div`
-  text-align: center;
-  max-width: 600px;
-  padding: 3rem;
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-`;
-
-const Title = styled.h1`
-  font-size: 2.5rem;
-  color: #2d3748;
-  margin-bottom: 1rem;
-  font-weight: bold;
-`;
-
-const Description = styled.p`
-  font-size: 1.125rem;
-  color: #4a5568;
-  line-height: 1.75;
-`;
+import { motion } from 'framer-motion';
+import { Clock, Sparkles } from 'lucide-react';
 
 const ComingSoonPage: React.FC = () => {
   return (
-    <Container>
-      <Content>
-        <Title>Çok Yakında!</Title>
-        <Description>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 flex flex-col items-center justify-center p-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="text-center max-w-xl p-12 bg-white rounded-3xl shadow-xl border border-slate-100"
+      >
+        <div className="flex justify-center mb-6">
+          <div className="p-4 bg-indigo-100 rounded-2xl">
+            <Clock className="w-12 h-12 text-indigo-600" />
+          </div>
+        </div>
+
+        <h1 className="text-4xl font-black text-slate-800 mb-4 flex items-center justify-center gap-2">
+          Çok Yakında! <Sparkles className="w-8 h-8 text-amber-500" />
+        </h1>
+
+        <p className="text-lg text-slate-600 leading-relaxed">
           Bu özellik şu anda geliştirme aşamasında. Yakında burada uzamsal zeka becerilerinizi
           geliştirebileceğiniz yeni bir aktivite ile karşınızda olacağız!
-        </Description>
-      </Content>
-    </Container>
+        </p>
+
+        <div className="mt-8 flex justify-center gap-2">
+          {[1, 2, 3].map((i) => (
+            <motion.div
+              key={i}
+              className="w-3 h-3 bg-indigo-400 rounded-full"
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+            />
+          ))}
+        </div>
+      </motion.div>
+    </div>
   );
 };
 

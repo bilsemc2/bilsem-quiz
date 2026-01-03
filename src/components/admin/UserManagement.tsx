@@ -1,36 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Switch,
-  IconButton,
-  Tooltip,
-  TablePagination,
-  Chip,
-  CircularProgress,
-  Alert,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
+import { useState, useEffect } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { motion } from 'framer-motion';
+import { Edit, Trash2, X, Loader2, Users, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface User {
   id: string;
@@ -42,16 +15,39 @@ interface User {
   is_active: boolean;
   grade?: number;
   referred_by?: string;
+  yetenek_alani?: string[] | string;
   class_students?: {
-    classes: {
-      id: string;
-      name: string;
-      grade: number;
-    };
+    classes: { id: string; name: string; grade: number };
   }[];
 }
 
-const UserManagement: React.FC = () => {
+const YETENEK_ALANLARI = [
+  { value: 'genel yetenek', label: 'Genel Yetenek' },
+  { value: 'resim', label: 'Resim' },
+  { value: 'müzik', label: 'Müzik' },
+];
+
+// yetenek_alani veritabanında JSON array olarak saklanıyor: ["genel yetenek", "resim"]
+const parseYetenekAlani = (value: unknown): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return [value];
+    }
+  }
+  return [];
+};
+
+const formatYetenekAlani = (value: string[]): string[] | null => {
+  if (!value || value.length === 0) return null;
+  return value;
+};
+
+const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,57 +56,25 @@ const UserManagement: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [classes, setClasses] = useState<{id: string; name: string; grade: number}[]>([]);
   const [editFormData, setEditFormData] = useState({
-    name: '',
-    email: '',
-    points: 0,
-    experience: 0,
-    grade: 0,
-    selectedClasses: [] as string[],
-    referred_by: '',
+    name: '', email: '', points: 0, experience: 0, grade: 0, referred_by: '', yetenek_alani: [] as string[],
   });
   const [filters, setFilters] = useState({
-    name: '',
-    email: '',
-    grade: '',
-    showOnlyVip: false,
-    showOnlyActive: false,
+    name: '', email: '', grade: '', showOnlyVip: false,
   });
 
   useEffect(() => {
     fetchUsers();
-    fetchClasses();
   }, []);
-
-  const fetchClasses = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('classes')
-        .select('id, name, grade')
-        .order('grade', { ascending: true })
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setClasses(data || []);
-    } catch (err) {
-      console.error('Sınıflar yüklenirken hata:', err);
-      toast.error('Sınıflar yüklenirken bir hata oluştu');
-    }
-  };
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data: users, error: usersError } = await supabase
-        .from('profiles')
-        .select('*, class_students(classes(id, name, grade))')
-        .order('created_at', { ascending: false });
-
-      if (usersError) throw usersError;
-
-      setUsers(users || []);
-      setFilteredUsers(users || []);
+      const { data, error } = await supabase
+        .from('profiles').select('*, class_students(classes(id, name, grade))').order('created_at', { ascending: false });
+      if (error) throw error;
+      setUsers(data || []);
+      setFilteredUsers(data || []);
       setError(null);
     } catch (err) {
       console.error('Kullanıcılar yüklenirken hata:', err);
@@ -120,398 +84,290 @@ const UserManagement: React.FC = () => {
     }
   };
 
+  // Filtreleme - users değiştiğinde
   useEffect(() => {
     let result = [...users];
-
-    if (filters.name) {
-      result = result.filter((user) =>
-        user.name?.toLowerCase().includes(filters.name.toLowerCase())
-      );
-    }
-
-    if (filters.email) {
-      result = result.filter((user) =>
-        user.email.toLowerCase().includes(filters.email.toLowerCase())
-      );
-    }
-
-    if (filters.grade) {
-      result = result.filter((user) =>
-        user.grade === parseInt(filters.grade)
-      );
-    }
-
-    if (filters.showOnlyVip) {
-      result = result.filter((user) => user.is_vip);
-    }
-
-    if (filters.showOnlyActive) {
-      result = result.filter((user) => user.is_active);
-    }
-
+    if (filters.name) result = result.filter(u => u.name?.toLowerCase().includes(filters.name.toLowerCase()));
+    if (filters.email) result = result.filter(u => u.email.toLowerCase().includes(filters.email.toLowerCase()));
+    if (filters.grade) result = result.filter(u => u.grade === parseInt(filters.grade));
+    if (filters.showOnlyVip) result = result.filter(u => u.is_vip);
     setFilteredUsers(result);
-    setPage(0);
   }, [users, filters]);
+
+  // Filtre değiştiğinde sayfayı sıfırla (users değiştiğinde değil)
+  useEffect(() => {
+    setPage(0);
+  }, [filters]);
 
   const handleToggleVip = async (userId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_vip: !currentStatus })
-        .eq('id', userId);
-
+      const { error } = await supabase.from('profiles').update({ is_vip: !currentStatus }).eq('id', userId);
       if (error) throw error;
-
-      setUsers(users.map((user) =>
-        user.id === userId ? { ...user, is_vip: !currentStatus } : user
-      ));
-      toast.success('Kullanıcı VIP durumu güncellendi');
+      setUsers(users.map(u => u.id === userId ? { ...u, is_vip: !currentStatus } : u));
+      toast.success('VIP durumu güncellendi');
     } catch (err) {
-      console.error('VIP durumu güncellenirken hata:', err);
-      toast.error('Kullanıcı güncellenirken bir hata oluştu');
-    }
-  };
-
-  const handleToggleActive = async (userId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: !currentStatus })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      setUsers(users.map((user) =>
-        user.id === userId ? { ...user, is_active: !currentStatus } : user
-      ));
-      toast.success('Kullanıcı durumu güncellendi');
-    } catch (err) {
-      console.error('Aktif durumu güncellenirken hata:', err);
-      toast.error('Kullanıcı güncellenirken bir hata oluştu');
+      toast.error('Güncelleme hatası');
     }
   };
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
     setEditFormData({
-      name: user.name || '',
-      email: user.email || '',
-      points: user.points || 0,
-      experience: user.experience || 0,
-      grade: user.grade || 0,
-      selectedClasses: user.class_students?.map(cs => cs.classes.id) || [],
-      referred_by: user.referred_by || '',
+      name: user.name || '', email: user.email || '', points: user.points || 0, experience: user.experience || 0,
+      grade: user.grade || 0, referred_by: user.referred_by || '',
+      yetenek_alani: parseYetenekAlani(user.yetenek_alani),
     });
     setEditDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!editingUser) return;
-
     try {
-      // Profil bilgilerini güncelle
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          name: editFormData.name,
-          email: editFormData.email,
-          points: editFormData.points,
-          experience: editFormData.experience,
-          grade: editFormData.grade,
-          referred_by: editFormData.referred_by,
-        })
-        .eq('id', editingUser.id);
+      const { error } = await supabase.from('profiles').update({
+        name: editFormData.name,
+        email: editFormData.email,
+        points: editFormData.points,
+        experience: editFormData.experience,
+        grade: editFormData.grade,
+        referred_by: editFormData.referred_by || null,
+        yetenek_alani: formatYetenekAlani(editFormData.yetenek_alani),
+      }).eq('id', editingUser.id);
 
-      if (profileError) throw profileError;
+      if (error) throw error;
 
-      // Mevcut sınıf atamalarını sil
-      const { error: deleteError } = await supabase
-        .from('class_students')
-        .delete()
-        .eq('student_id', editingUser.id);
+      // Optimistik güncelleme: Sadece düzenlenen kullanıcıyı local state'de güncelle
+      setUsers(prev => prev.map(u =>
+        u.id === editingUser.id
+          ? {
+            ...u,
+            name: editFormData.name,
+            email: editFormData.email,
+            points: editFormData.points,
+            experience: editFormData.experience,
+            grade: editFormData.grade,
+            referred_by: editFormData.referred_by,
+            yetenek_alani: editFormData.yetenek_alani,
+          }
+          : u
+      ));
 
-      if (deleteError) throw deleteError;
-
-      // Yeni sınıf atamalarını ekle
-      if (editFormData.selectedClasses.length > 0) {
-        const { error: insertError } = await supabase
-          .from('class_students')
-          .insert(
-            editFormData.selectedClasses.map(classId => ({
-              student_id: editingUser.id,
-              class_id: classId,
-            }))
-          );
-
-        if (insertError) throw insertError;
-      }
-
-      // Kullanıcı listesini güncelle
-      await fetchUsers(); // Tüm kullanıcıları yeniden çek
-      
       setEditDialogOpen(false);
-      toast.success('Kullanıcı başarıyla güncellendi');
+      toast.success('Kullanıcı güncellendi');
     } catch (err) {
-      console.error('Kullanıcı güncellenirken hata:', err);
-      toast.error('Kullanıcı güncellenirken bir hata oluştu');
+      console.error('Güncelleme hatası:', err);
+      toast.error('Güncelleme hatası');
     }
   };
 
   const handleDelete = async (userId: string) => {
     if (!window.confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
-
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      setUsers(users.filter((user) => user.id !== userId));
-      toast.success('Kullanıcı başarıyla silindi');
+      await supabase.from('profiles').delete().eq('id', userId);
+      setUsers(users.filter(u => u.id !== userId));
+      toast.success('Kullanıcı silindi');
     } catch (err) {
-      console.error('Kullanıcı silinirken hata:', err);
-      toast.error('Kullanıcı silinirken bir hata oluştu');
+      toast.error('Silme hatası');
     }
   };
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const handleResetAllXP = async () => {
+    if (!window.confirm('TÜM KULLANICILARIN XP değerlerini sıfırlamak istediğinizden emin misiniz? Bu işlem geri alınamaz!')) return;
+    if (!window.confirm('Bu işlemi ONAYLIYOR musunuz? Tüm XP\'ler 0 olacak!')) return;
+    try {
+      const { error } = await supabase.from('profiles').update({ experience: 0 }).gte('experience', 0);
+      if (error) throw error;
+      setUsers(users.map(u => ({ ...u, experience: 0 })));
+      toast.success('Tüm XP değerleri sıfırlandı');
+    } catch (err) {
+      console.error('XP sıfırlama hatası:', err);
+      toast.error('XP sıfırlama hatası');
+    }
+  };
 
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    );
-  }
+  const paginatedUsers = filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
+
+  const ToggleSwitch = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
+    <button
+      type="button"
+      onClick={onChange}
+      className={`relative w-10 h-5 rounded-full transition-colors ${checked ? 'bg-indigo-500' : 'bg-slate-300'}`}
+    >
+      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0.5'}`} />
+    </button>
+  );
+
+  if (loading) return <div className="flex justify-center items-center min-h-[400px]"><Loader2 className="w-10 h-10 text-indigo-500 animate-spin" /></div>;
+  if (error) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">{error}</div>;
 
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+        <Users className="w-6 h-6 text-indigo-500" />
         Kullanıcı Yönetimi
-      </Typography>
+      </h1>
 
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <TextField
-          label="İsim Ara"
-          variant="outlined"
-          size="small"
-          value={filters.name}
-          onChange={(e) => setFilters((prev) => ({ ...prev, name: e.target.value }))}
-        />
-        <TextField
-          label="E-posta Ara"
-          variant="outlined"
-          size="small"
-          value={filters.email}
-          onChange={(e) => setFilters((prev) => ({ ...prev, email: e.target.value }))}
-        />
-        <TextField
-          label="Sınıf"
-          variant="outlined"
-          size="small"
-          type="number"
-          value={filters.grade}
-          onChange={(e) => setFilters((prev) => ({ ...prev, grade: e.target.value }))}
-        />
-        <FormControl size="small">
-          <InputLabel>VIP</InputLabel>
-          <Select
-            value={filters.showOnlyVip ? 'true' : 'false'}
-            label="VIP"
-            onChange={(e) => setFilters((prev) => ({ ...prev, showOnlyVip: e.target.value === 'true' }))}
-          >
-            <MenuItem value="false">Tümü</MenuItem>
-            <MenuItem value="true">Sadece VIP</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size="small">
-          <InputLabel>Durum</InputLabel>
-          <Select
-            value={filters.showOnlyActive ? 'true' : 'false'}
-            label="Durum"
-            onChange={(e) => setFilters((prev) => ({ ...prev, showOnlyActive: e.target.value === 'true' }))}
-          >
-            <MenuItem value="false">Tümü</MenuItem>
-            <MenuItem value="true">Sadece Aktif</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 bg-white rounded-xl p-4 shadow-sm items-center">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input type="text" placeholder="İsim ara..." value={filters.name} onChange={(e) => setFilters(p => ({ ...p, name: e.target.value }))}
+            className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none w-40" />
+        </div>
+        <input type="text" placeholder="E-posta ara..." value={filters.email} onChange={(e) => setFilters(p => ({ ...p, email: e.target.value }))}
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none w-40" />
+        <input type="number" placeholder="Sınıf" value={filters.grade} onChange={(e) => setFilters(p => ({ ...p, grade: e.target.value }))}
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none w-20" />
+        <select value={filters.showOnlyVip ? 'true' : 'false'} onChange={(e) => setFilters(p => ({ ...p, showOnlyVip: e.target.value === 'true' }))}
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
+          <option value="false">Tüm VIP</option>
+          <option value="true">Sadece VIP</option>
+        </select>
+        <div className="flex-1" />
+        <button
+          onClick={handleResetAllXP}
+          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Tüm XP Sıfırla
+        </button>
+      </div>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Ad Soyad</TableCell>
-              <TableCell>E-posta</TableCell>
-              <TableCell align="right">Puan</TableCell>
-              <TableCell align="right">XP</TableCell>
-              <TableCell align="right">Sınıf</TableCell>
-              <TableCell>Sınıflar</TableCell>
-              <TableCell align="center">VIP</TableCell>
-              <TableCell align="center">Aktif</TableCell>
-              <TableCell align="center">İşlemler</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredUsers
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.name || '-'}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell align="right">{user.points}</TableCell>
-                  <TableCell align="right">{user.experience}</TableCell>
-                  <TableCell align="right">{user.grade || '-'}</TableCell>
-                  <TableCell>
-                    {user.class_students?.map((cs) => (
-                      <Chip
-                        key={cs.classes.id}
-                        label={`${cs.classes.name} (${cs.classes.grade}. Sınıf)`}
-                        size="small"
-                        sx={{ m: 0.5 }}
-                      />
-                    )) || '-'}
-                  </TableCell>
-                  <TableCell align="center">
-                    <Switch
-                      checked={user.is_vip}
-                      onChange={() => handleToggleVip(user.id, user.is_vip)}
-                      color="primary"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Switch
-                      checked={user.is_active}
-                      onChange={() => handleToggleActive(user.id, user.is_active)}
-                      color="primary"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="Düzenle">
-                      <IconButton onClick={() => handleEdit(user)} size="small">
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Sil">
-                      <IconButton onClick={() => handleDelete(user.id)} size="small" color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-left py-3 px-4 font-bold text-slate-600 uppercase text-xs">Ad Soyad</th>
+                <th className="text-left py-3 px-4 font-bold text-slate-600 uppercase text-xs">E-posta</th>
+                <th className="text-right py-3 px-4 font-bold text-slate-600 uppercase text-xs">Puan</th>
+                <th className="text-right py-3 px-4 font-bold text-slate-600 uppercase text-xs">XP</th>
+                <th className="text-center py-3 px-4 font-bold text-slate-600 uppercase text-xs">VIP</th>
+                <th className="text-center py-3 px-4 font-bold text-slate-600 uppercase text-xs">İşlem</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {paginatedUsers.map((user, idx) => (
+                <motion.tr key={user.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.02 }} className="hover:bg-slate-50">
+                  <td className="py-3 px-4 font-medium text-slate-800">{user.name || '-'}</td>
+                  <td className="py-3 px-4 text-slate-600">{user.email}</td>
+                  <td className="py-3 px-4 text-right"><span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded font-bold">{user.points}</span></td>
+                  <td className="py-3 px-4 text-right"><span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded font-bold">{user.experience}</span></td>
+                  <td className="py-3 px-4 text-center"><ToggleSwitch checked={user.is_vip} onChange={() => handleToggleVip(user.id, user.is_vip)} /></td>
+                  <td className="py-3 px-4">
+                    <div className="flex justify-center gap-1">
+                      <button onClick={() => handleEdit(user)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"><Edit className="w-4 h-4" /></button>
+                      <button onClick={() => handleDelete(user.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </td>
+                </motion.tr>
               ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </tbody>
+          </table>
+        </div>
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <span>Sayfa:</span>
+            <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
+              className="px-2 py-1 border border-slate-300 rounded text-sm">
+              {[5, 10, 25].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">{page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, filteredUsers.length)} / {filteredUsers.length}</span>
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-1 rounded hover:bg-slate-200 disabled:opacity-50"><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="p-1 rounded hover:bg-slate-200 disabled:opacity-50"><ChevronRight className="w-5 h-5" /></button>
+          </div>
+        </div>
+      </div>
 
-      <TablePagination
-        component="div"
-        count={filteredUsers.length}
-        page={page}
-        onPageChange={(_, newPage) => setPage(newPage)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => {
-          setRowsPerPage(parseInt(e.target.value, 10));
-          setPage(0);
-        }}
-        labelRowsPerPage="Sayfa başına satır:"
-      />
+      {/* Edit Dialog */}
+      <Dialog.Root open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto z-50">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-xl font-bold text-slate-800">Kullanıcı Düzenle</Dialog.Title>
+              <Dialog.Close asChild><button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button></Dialog.Close>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Ad Soyad</label>
+                  <input type="text" value={editFormData.name} onChange={(e) => setEditFormData(p => ({ ...p, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">E-posta</label>
+                  <input type="email" value={editFormData.email} onChange={(e) => setEditFormData(p => ({ ...p, email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Puan</label>
+                  <input type="number" value={editFormData.points} onChange={(e) => setEditFormData(p => ({ ...p, points: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">XP</label>
+                  <input type="number" value={editFormData.experience} onChange={(e) => setEditFormData(p => ({ ...p, experience: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Sınıf</label>
+                  <input type="number" value={editFormData.grade} onChange={(e) => setEditFormData(p => ({ ...p, grade: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none" />
+                </div>
+              </div>
 
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Kullanıcı Düzenle</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Ad Soyad"
-              fullWidth
-              value={editFormData.name}
-              onChange={(e) => setEditFormData((prev) => ({ ...prev, name: e.target.value }))}
-            />
-            <TextField
-              label="E-posta"
-              fullWidth
-              value={editFormData.email}
-              onChange={(e) => setEditFormData((prev) => ({ ...prev, email: e.target.value }))}
-            />
-            <TextField
-              label="Puan"
-              type="number"
-              fullWidth
-              value={editFormData.points}
-              onChange={(e) => setEditFormData((prev) => ({ ...prev, points: parseInt(e.target.value) || 0 }))}
-            />
-            <TextField
-              label="XP"
-              type="number"
-              fullWidth
-              value={editFormData.experience}
-              onChange={(e) => setEditFormData((prev) => ({ ...prev, experience: parseInt(e.target.value) || 0 }))}
-            />
-            <TextField
-              label="Sınıf Seviyesi"
-              type="number"
-              fullWidth
-              value={editFormData.grade}
-              onChange={(e) => setEditFormData((prev) => ({ ...prev, grade: parseInt(e.target.value) || 0 }))}
-            />
-            <FormControl fullWidth>
-              <InputLabel>Kayıtlı Olduğu Sınıflar</InputLabel>
-              <Select
-                multiple
-                value={editFormData.selectedClasses}
-                onChange={(e) => setEditFormData((prev) => ({ 
-                  ...prev, 
-                  selectedClasses: typeof e.target.value === 'string' 
-                    ? [e.target.value] 
-                    : e.target.value 
-                }))}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((classId) => {
-                      const classInfo = classes.find(c => c.id === classId);
-                      return (
-                        <Chip
-                          key={classId}
-                          label={classInfo ? `${classInfo.name} (${classInfo.grade}. Sınıf)` : classId}
-                          size="small"
-                        />
-                      );
-                    })}
-                  </Box>
-                )}
-              >
-                {classes.map((cls) => (
-                  <MenuItem key={cls.id} value={cls.id}>
-                    {cls.name} ({cls.grade}. Sınıf)
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="Referans Kodu"
-              fullWidth
-              value={editFormData.referred_by}
-              onChange={(e) => setEditFormData((prev) => ({ ...prev, referred_by: e.target.value }))}
-              helperText="Kullanıcıyı davet eden kişinin referans kodu"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>İptal</Button>
-          <Button onClick={handleSave} variant="contained" color="primary">
-            Kaydet
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Yetenek Alanları</label>
+                <div className="flex flex-wrap gap-3">
+                  {YETENEK_ALANLARI.map(opt => (
+                    <label key={opt.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition border ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-50 border-indigo-300' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <input
+                        type="checkbox"
+                        checked={editFormData.yetenek_alani.includes(opt.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setEditFormData(p => ({ ...p, yetenek_alani: [...p.yetenek_alani, opt.value] }));
+                          } else {
+                            setEditFormData(p => ({ ...p, yetenek_alani: p.yetenek_alani.filter(v => v !== opt.value) }));
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300'}`}>
+                        {editFormData.yetenek_alani.includes(opt.value) && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-sm">{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Referans Kodu</label>
+                <input type="text" value={editFormData.referred_by} onChange={(e) => setEditFormData(p => ({ ...p, referred_by: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-indigo-500 outline-none" placeholder="Referans kodu" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Dialog.Close asChild><button className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">İptal</button></Dialog.Close>
+              <button onClick={handleSave} className="px-6 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">Kaydet</button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </div>
   );
 };
 

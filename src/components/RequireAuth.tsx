@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import XPWarning from './XPWarning';
+import { showXPDeduct } from './XPToast';
 
 interface RequireAuthProps {
     children: React.ReactNode;
@@ -18,6 +19,14 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
     const [userXP, setUserXP] = useState(0);
     const [requiredXP, setRequiredXP] = useState(0);
     const [hasAccess, setHasAccess] = useState(false);
+
+    // XP düşürme işleminin bu ziyaret için yapılıp yapılmadığını takip et
+    const xpDeductionAttemptedRef = useRef(false);
+
+    useEffect(() => {
+        // Sayfa değiştiğinde ref'i sıfırla
+        xpDeductionAttemptedRef.current = false;
+    }, [location.pathname]);
 
     useEffect(() => {
         const checkAccess = async () => {
@@ -90,7 +99,54 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
                 setRequiredXP(requiredAmount);
 
                 // XP kontrolü
-                setHasAccess(profile.experience >= requiredAmount);
+                const userHasAccess = profile.experience >= requiredAmount;
+                setHasAccess(userHasAccess);
+
+                // XP düşürme işlemi (sadece erişim varsa ve gereksinim > 0 ise)
+                if (userHasAccess && requiredAmount > 0 && !xpDeductionAttemptedRef.current) {
+                    xpDeductionAttemptedRef.current = true;
+
+                    // Son 5 dakika içinde bu sayfa için XP düşürülmüş mü kontrol et
+                    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+                    const reasonForVisit = `Sayfa ziyareti: ${location.pathname}`;
+
+                    const { count: recentLogCount, error: recentLogError } = await supabase
+                        .from('experience_log')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('user_id', user.id)
+                        .eq('change_reason', reasonForVisit)
+                        .gte('changed_at', fiveMinutesAgo);
+
+                    if (recentLogError) {
+                        console.warn('Recent log check failed:', recentLogError.message);
+                    } else if (recentLogCount === null || recentLogCount === 0) {
+                        // XP düşür
+                        const newExperience = profile.experience - requiredAmount;
+
+                        const { error: updateErr } = await supabase
+                            .from('profiles')
+                            .update({ experience: newExperience })
+                            .eq('id', user.id);
+
+                        if (!updateErr) {
+                            // Log kaydet
+                            await supabase.from('experience_log').insert({
+                                user_id: user.id,
+                                change_amount: -requiredAmount,
+                                old_experience: profile.experience,
+                                new_experience: newExperience,
+                                change_reason: reasonForVisit
+                            });
+
+                            // Modern toast göster
+                            showXPDeduct(requiredAmount, 'Oyun erişimi');
+                            setUserXP(newExperience);
+                        } else {
+                            console.error('XP güncelleme hatası:', updateErr);
+                        }
+                    }
+                }
+
                 setLoading(false);
 
             } catch (error) {
@@ -118,17 +174,14 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
 
     if (!hasAccess) {
         return (
-            <div className="min-h-screen bg-gray-50 py-8">
-                <div className="flex items-center justify-center min-h-[80vh]">
-                    <XPWarning
-                        requiredXP={requiredXP}
-                        currentXP={userXP}
-                        title="Bu Sayfaya Erişmek için XP Yetersiz"
-                    />
-                </div>
-            </div>
+            <XPWarning
+                requiredXP={requiredXP}
+                currentXP={userXP}
+                title="Bu Sayfaya Erişmek için XP Yetersiz"
+            />
         );
     }
 
     return <>{children}</>;
 }
+

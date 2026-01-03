@@ -1,18 +1,8 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Switch,
-  FormControlLabel,
-  TextField,
-  Button,
-  Alert,
-  Grid,
-} from '@mui/material';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Settings, Save, Info, ToggleLeft, ToggleRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface Settings {
   allowRegistration: boolean;
@@ -24,7 +14,7 @@ interface Settings {
   pageXpRequirement: number;
 }
 
-const AdminSettings: React.FC = () => {
+const AdminSettings = () => {
   const [settings, setSettings] = useState<Settings>({
     allowRegistration: true,
     maintenanceMode: false,
@@ -34,169 +24,152 @@ const AdminSettings: React.FC = () => {
     quizTimeLimit: 60,
     pageXpRequirement: 10,
   });
+  const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
+    setSaving(true);
     try {
       const { error } = await supabase
         .from('settings')
-        .upsert([
-          {
-            id: 1,
-            ...settings,
-          },
-        ]);
+        .upsert([{ id: 1, ...settings }]);
 
       if (error) throw error;
-
       toast.success('Ayarlar başarıyla kaydedildi');
     } catch (err) {
       console.error('Ayarlar kaydedilirken hata:', err);
       toast.error('Ayarlar kaydedilirken bir hata oluştu');
+    } finally {
+      setSaving(false);
     }
   };
 
+  const ToggleSwitch = ({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) => (
+    <label className="flex items-center justify-between cursor-pointer group">
+      <span className="text-slate-700 font-medium">{label}</span>
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className={`relative w-12 h-6 rounded-full transition-colors ${checked ? 'bg-indigo-500' : 'bg-slate-300'}`}
+      >
+        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-7' : 'translate-x-1'}`} />
+      </button>
+    </label>
+  );
+
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+        <Settings className="w-6 h-6 text-indigo-500" />
         Sistem Ayarları
-      </Typography>
+      </h1>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Genel Ayarlar
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.allowRegistration}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          allowRegistration: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="Yeni Kayıtlara İzin Ver"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.maintenanceMode}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          maintenanceMode: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="Bakım Modu"
-                />
-                <TextField
-                  label="Bildirim E-postası"
-                  type="email"
-                  fullWidth
-                  value={settings.notificationEmail}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      notificationEmail: e.target.value,
-                    }))
-                  }
-                  helperText="Sistem bildirimleri bu e-posta adresine gönderilecek"
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Genel Ayarlar */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-lg p-6"
+        >
+          <h2 className="text-lg font-bold text-slate-800 mb-4">Genel Ayarlar</h2>
+          <div className="space-y-5">
+            <ToggleSwitch
+              checked={settings.allowRegistration}
+              onChange={(v) => setSettings(prev => ({ ...prev, allowRegistration: v }))}
+              label="Yeni Kayıtlara İzin Ver"
+            />
+            <ToggleSwitch
+              checked={settings.maintenanceMode}
+              onChange={(v) => setSettings(prev => ({ ...prev, maintenanceMode: v }))}
+              label="Bakım Modu"
+            />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Bildirim E-postası</label>
+              <input
+                type="email"
+                value={settings.notificationEmail}
+                onChange={(e) => setSettings(prev => ({ ...prev, notificationEmail: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+                placeholder="admin@example.com"
+              />
+              <p className="text-xs text-slate-500 mt-1">Sistem bildirimleri bu e-posta adresine gönderilecek</p>
+            </div>
+          </div>
+        </motion.div>
 
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Sınıf ve Quiz Ayarları
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <TextField
-                  label="Maksimum Sınıf Mevcudu"
-                  type="number"
-                  fullWidth
-                  value={settings.maxClassSize}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      maxClassSize: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  inputProps={{ min: 1 }}
-                />
-                <TextField
-                  label="Maksimum Quiz Deneme Sayısı"
-                  type="number"
-                  fullWidth
-                  value={settings.maxQuizAttempts}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      maxQuizAttempts: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  inputProps={{ min: 1 }}
-                />
-                <TextField
-                  label="Quiz Zaman Sınırı (dakika)"
-                  type="number"
-                  fullWidth
-                  value={settings.quizTimeLimit}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      quizTimeLimit: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  inputProps={{ min: 1 }}
-                />
-                <TextField
-                  label="Sayfa XP Gereksinimi"
-                  type="number"
-                  fullWidth
-                  value={settings.pageXpRequirement}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      pageXpRequirement: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  inputProps={{ min: 0 }}
-                  helperText="Bir sayfaya girmek için gereken minimum XP miktarı"
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+        {/* Sınıf ve Quiz Ayarları */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white rounded-2xl shadow-lg p-6"
+        >
+          <h2 className="text-lg font-bold text-slate-800 mb-4">Sınıf ve Quiz Ayarları</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Maksimum Sınıf Mevcudu</label>
+              <input
+                type="number"
+                min={1}
+                value={settings.maxClassSize}
+                onChange={(e) => setSettings(prev => ({ ...prev, maxClassSize: parseInt(e.target.value) || 0 }))}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Maksimum Quiz Deneme Sayısı</label>
+              <input
+                type="number"
+                min={1}
+                value={settings.maxQuizAttempts}
+                onChange={(e) => setSettings(prev => ({ ...prev, maxQuizAttempts: parseInt(e.target.value) || 0 }))}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Quiz Zaman Sınırı (dakika)</label>
+              <input
+                type="number"
+                min={1}
+                value={settings.quizTimeLimit}
+                onChange={(e) => setSettings(prev => ({ ...prev, quizTimeLimit: parseInt(e.target.value) || 0 }))}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Sayfa XP Gereksinimi</label>
+              <input
+                type="number"
+                min={0}
+                value={settings.pageXpRequirement}
+                onChange={(e) => setSettings(prev => ({ ...prev, pageXpRequirement: parseInt(e.target.value) || 0 }))}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+              />
+              <p className="text-xs text-slate-500 mt-1">Bir sayfaya girmek için gereken minimum XP miktarı</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
 
-        <Grid item xs={12}>
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSave}
-            >
-              Ayarları Kaydet
-            </Button>
-          </Box>
-        </Grid>
-      </Grid>
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-indigo-500 text-white font-medium rounded-xl hover:bg-indigo-600 transition-colors disabled:opacity-50"
+        >
+          <Save className="w-4 h-4" />
+          {saving ? 'Kaydediliyor...' : 'Ayarları Kaydet'}
+        </button>
+      </div>
 
-      <Alert severity="info" sx={{ mt: 4 }}>
-        Not: Bazı ayarlar değiştirildikten sonra sistemin yeniden başlatılması gerekebilir.
-      </Alert>
-    </Box>
+      {/* Info Alert */}
+      <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+        <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-blue-700">
+          Not: Bazı ayarlar değiştirildikten sonra sistemin yeniden başlatılması gerekebilir.
+        </p>
+      </div>
+    </div>
   );
 };
 

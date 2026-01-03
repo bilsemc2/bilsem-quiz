@@ -19,7 +19,12 @@
     @apply min-h-full flex flex-col;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-bold tracking-tight text-gray-900;
   }
 
@@ -34,9 +39,7 @@
   }
 
   .quiz-option {
-    @apply cursor-pointer border-2 border-gray-200 rounded-xl p-4 
-           transition-all duration-300 hover:scale-102 hover:shadow-lg
-           bg-white/80 backdrop-blur-sm;
+    @apply cursor-pointer border-2 border-gray-200 rounded-xl p-4 transition-all duration-300 hover:scale-102 hover:shadow-lg bg-white/80 backdrop-blur-sm;
   }
 
   .quiz-option-selected {
@@ -52,27 +55,19 @@
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold
-           shadow-md hover:shadow-lg hover:bg-primary-700
-           transition-all duration-200 transform hover:-translate-y-0.5
-           disabled:opacity-50 disabled:cursor-not-allowed
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg hover:bg-primary-700 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
   }
 
   .card {
-    @apply bg-white/90 rounded-2xl shadow-md hover:shadow-xl transition-shadow
-           p-6 backdrop-blur-sm;
+    @apply bg-white/90 rounded-2xl shadow-md hover:shadow-xl transition-shadow p-6 backdrop-blur-sm;
   }
 
   .input-field {
-    @apply w-full px-4 py-2 rounded-lg border border-gray-300
-           focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-           transition-all duration-200;
+    @apply w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200;
   }
 
   .nav-link {
-    @apply text-gray-600 hover:text-primary-600 transition-colors duration-200
-           font-medium px-4 py-2 rounded-lg hover:bg-primary-50;
+    @apply text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium px-4 py-2 rounded-lg hover:bg-primary-50;
   }
 
   .section-title {
@@ -102,23 +97,69 @@
 
 /* Custom Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.1); opacity: 1; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes float-blob {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.animate-float-blob {
+  animation: float-blob 7s infinite;
 }
 
 /* Dolu-Boş Şekil Bulmacası Stilleri */
 .text-shadow-cyan {
-  text-shadow: 0 0 25px rgba(34, 211, 238, 0.4); /* Cyan */
+  text-shadow: 0 0 25px rgba(34, 211, 238, 0.4);
+  /* Cyan */
 }
 
 /* SVG stilleri */
@@ -144,7 +185,9 @@
 }
 
 /* Yükleme/Hata Ekranı Stilleri */
-.loading-screen, .error-screen, .xp-warning-screen {
+.loading-screen,
+.error-screen,
+.xp-warning-screen {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -158,4 +201,61 @@
 .loading-text {
   font-size: 1.5rem;
   font-weight: 600;
+}
+
+/* Brand Colors and Backgrounds */
+.bg-purple-brand {
+  background-color: #7E30E1;
+}
+
+.text-purple-brand {
+  color: #7E30E1;
+}
+
+.border-purple-brand {
+  border-color: #7E30E1;
+}
+
+/* Modern Global Toast Styles */
+.modern-toast {
+  @apply !rounded-2xl !px-6 !py-4 !shadow-2xl !border !border-white/20 !backdrop-blur-xl;
+  background: rgba(255, 255, 255, 0.85) !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.modern-toast-success {
+  @apply !border-emerald-500/20;
+  background: rgba(236, 253, 245, 0.9) !important;
+  color: #065f46 !important;
+}
+
+.modern-toast-error {
+  @apply !border-red-500/20;
+  background: rgba(254, 242, 242, 0.9) !important;
+  color: #991b1b !important;
+}
+
+.modern-toast-info {
+  @apply !border-purple-500/20;
+  background: rgba(250, 245, 255, 0.9) !important;
+  color: #581c87 !important;
+}
+
+/* Toast Animation */
+.modern-toast-enter {
+  animation: toast-enter 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
+@keyframes toast-enter {
+  0% {
+    transform: translateY(-20px) scale(0.9);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }

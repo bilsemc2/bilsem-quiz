@@ -1,26 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Grid,
-  Paper,
-  Typography,
-  CircularProgress,
-  Alert,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Divider,
-} from '@mui/material';
-import {
-  People as PeopleIcon,
-  School as SchoolIcon,
-  QuestionAnswer as QuizIcon,
-  TrendingUp as TrendingUpIcon,
-  Person as PersonIcon,
-  Check as CheckIcon,
-} from '@mui/icons-material';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Users, School, FileQuestion, TrendingUp, User, Check, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface DashboardStats {
@@ -32,7 +12,7 @@ interface DashboardStats {
   recentQuizzes: any[];
 }
 
-const AdminDashboard: React.FC = () => {
+const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
@@ -52,29 +32,24 @@ const AdminDashboard: React.FC = () => {
     try {
       setLoading(true);
 
-      // Kullanıcı istatistikleri
       const { data: users, error: usersError } = await supabase
         .from('profiles')
         .select('*');
 
       if (usersError) throw usersError;
 
-      // Aktif kullanıcılar
       const activeUsers = users?.filter(user => user.is_active).length || 0;
 
-      // Son kayıt olan kullanıcılar
       const recentUsers = users
         ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 5) || [];
 
-      // Sınıf sayısı
       const { count: classCount, error: classError } = await supabase
         .from('classes')
         .select('*', { count: 'exact' });
 
       if (classError) throw classError;
 
-      // Quiz istatistikleri
       const { data: quizzes, error: quizError } = await supabase
         .from('assignments')
         .select('*')
@@ -102,177 +77,111 @@ const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4">
         {error}
-      </Alert>
+      </div>
     );
   }
 
+  const statCards = [
+    { title: 'Toplam Kullanıcı', value: stats.totalUsers, sub: `${stats.activeUsers} aktif kullanıcı`, icon: Users, color: 'indigo' },
+    { title: 'Toplam Sınıf', value: stats.totalClasses, icon: School, color: 'purple' },
+    { title: 'Toplam Quiz', value: stats.totalQuizzes, icon: FileQuestion, color: 'emerald' },
+    { title: 'Aktif Oran', value: `${stats.totalUsers ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}%`, icon: TrendingUp, color: 'amber' },
+  ];
+
+  const colorClasses: Record<string, string> = {
+    indigo: 'bg-indigo-500',
+    purple: 'bg-purple-500',
+    emerald: 'bg-emerald-500',
+    amber: 'bg-amber-500',
+  };
+
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom>
-        Dashboard
-      </Typography>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
 
       {/* İstatistik Kartları */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              bgcolor: 'primary.light',
-              color: 'white',
-            }}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((card, idx) => (
+          <motion.div
+            key={card.title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            className={`${colorClasses[card.color]} rounded-2xl p-6 text-white shadow-lg`}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <PeopleIcon sx={{ mr: 1 }} />
-              <Typography variant="h6">Toplam Kullanıcı</Typography>
-            </Box>
-            <Typography variant="h3" component="div">
-              {stats.totalUsers}
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 'auto' }}>
-              {stats.activeUsers} aktif kullanıcı
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              bgcolor: 'secondary.light',
-              color: 'white',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <SchoolIcon sx={{ mr: 1 }} />
-              <Typography variant="h6">Toplam Sınıf</Typography>
-            </Box>
-            <Typography variant="h3" component="div">
-              {stats.totalClasses}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              bgcolor: 'success.light',
-              color: 'white',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <QuizIcon sx={{ mr: 1 }} />
-              <Typography variant="h6">Toplam Quiz</Typography>
-            </Box>
-            <Typography variant="h3" component="div">
-              {stats.totalQuizzes}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 140,
-              bgcolor: 'warning.light',
-              color: 'white',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <TrendingUpIcon sx={{ mr: 1 }} />
-              <Typography variant="h6">Aktif Oran</Typography>
-            </Box>
-            <Typography variant="h3" component="div">
-              {stats.totalUsers ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}%
-            </Typography>
-          </Paper>
-        </Grid>
-      </Grid>
+            <div className="flex items-center gap-3 mb-4">
+              <card.icon className="w-6 h-6" />
+              <span className="font-semibold">{card.title}</span>
+            </div>
+            <div className="text-4xl font-bold">{card.value}</div>
+            {card.sub && <div className="text-sm opacity-80 mt-2">{card.sub}</div>}
+          </motion.div>
+        ))}
+      </div>
 
       {/* Son Aktiviteler */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Son Kayıt Olan Kullanıcılar
-            </Typography>
-            <List>
-              {stats.recentUsers.map((user, index) => (
-                <React.Fragment key={user.id}>
-                  <ListItem>
-                    <PersonIcon sx={{ mr: 2 }} />
-                    <ListItemText
-                      primary={user.name || user.email}
-                      secondary={new Date(user.created_at).toLocaleDateString('tr-TR')}
-                    />
-                    <ListItemSecondaryAction>
-                      {user.is_active && (
-                        <IconButton edge="end" color="success">
-                          <CheckIcon />
-                        </IconButton>
-                      )}
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  {index < stats.recentUsers.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
-          </Paper>
-        </Grid>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Son Kullanıcılar */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Son Kayıt Olan Kullanıcılar</h2>
+          <ul className="divide-y divide-slate-100">
+            {stats.recentUsers.map((user) => (
+              <li key={user.id} className="py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <User className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <div className="font-medium text-slate-700">{user.name || user.email}</div>
+                    <div className="text-sm text-slate-500">
+                      {new Date(user.created_at).toLocaleDateString('tr-TR')}
+                    </div>
+                  </div>
+                </div>
+                {user.is_active && (
+                  <span className="p-1 bg-emerald-100 rounded-full">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
 
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Son Eklenen Quizler
-            </Typography>
-            <List>
-              {stats.recentQuizzes.map((quiz, index) => (
-                <React.Fragment key={quiz.id}>
-                  <ListItem>
-                    <QuizIcon sx={{ mr: 2 }} />
-                    <ListItemText
-                      primary={quiz.title}
-                      secondary={`${quiz.grade}. Sınıf - ${quiz.subject}`}
-                    />
-                    <ListItemSecondaryAction>
-                      {quiz.is_active && (
-                        <IconButton edge="end" color="success">
-                          <CheckIcon />
-                        </IconButton>
-                      )}
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                  {index < stats.recentQuizzes.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+        {/* Son Quizler */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Son Eklenen Quizler</h2>
+          <ul className="divide-y divide-slate-100">
+            {stats.recentQuizzes.map((quiz) => (
+              <li key={quiz.id} className="py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileQuestion className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <div className="font-medium text-slate-700">{quiz.title}</div>
+                    <div className="text-sm text-slate-500">
+                      {quiz.grade}. Sınıf - {quiz.subject}
+                    </div>
+                  </div>
+                </div>
+                {quiz.is_active && (
+                  <span className="p-1 bg-emerald-100 rounded-full">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 };
 
