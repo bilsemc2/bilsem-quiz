@@ -57,11 +57,7 @@ const HomePage: React.FC = () => {
               className="max-w-4xl"
             >
               <div className="flex items-center justify-center gap-6">
-                <img
-                  src="images/beyni.webp"
-                  alt="Beyin"
-                  className="w-32 lg:w-48 drop-shadow-[0_20px_50px_rgba(126,48,225,0.4)] animate-float-blob"
-                />
+
                 <img
                   src="images/logo2.webp"
                   alt="Beynini Kullan!"
@@ -252,8 +248,8 @@ const HomePage: React.FC = () => {
               whileHover={{ y: -8, scale: 1.02 }}
               className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-purple-500/30 flex flex-col items-center text-center"
             >
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
-                <span className="text-4xl">🧠</span>
+              <div className="w-32 h-40 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
+                <img src="/images/bsm.webp" alt="Bilsem Sınavı" className="w-full h-full object-cover" />
               </div>
               <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
                 Bilsem Sınavı
@@ -277,8 +273,8 @@ const HomePage: React.FC = () => {
               whileHover={{ y: -8, scale: 1.02 }}
               className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-blue-500/30 flex flex-col items-center text-center"
             >
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-                <span className="text-4xl">🔍</span>
+              <div className="w-32 h-40 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+                <img src="/images/ga.webp" alt="Görsel Analoji" className="w-full h-full object-cover" />
               </div>
               <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
                 Görsel Analoji
@@ -302,8 +298,8 @@ const HomePage: React.FC = () => {
               whileHover={{ y: -8, scale: 1.02 }}
               className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-amber-500/30 flex flex-col items-center text-center"
             >
-              <div className="w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
-                <span className="text-4xl">📖</span>
+              <div className="w-32 h-40 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
+                <img src="/images/td.webp" alt="Türkçe Deyimler" className="w-full h-full object-cover" />
               </div>
               <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
                 Türkçe Deyimler
