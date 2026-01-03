@@ -218,13 +218,14 @@ const NavBar = () => {
 
   const menuItems = [
     { name: "Bilsem", path: "/bilsem" },
-    { name: "İletişim", path: "/contact", showWhenNotAuth: true },
+    { name: "Hakkımızda", path: "/about" },
+    { name: "İletişim", path: "/contact" },
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
     { name: "Fiyatlandırma", path: "/pricing", hideWhenVip: true },
   ];
 
   const shouldShowItem = (item: typeof menuItems[0]) => {
-    if (item.showWhenNotAuth && user) return false;
+
     if (item.showWhenAuth && !user) return false;
     if (item.adminOnly && !isAdmin) return false;
     if (item.hideWhenVip && isVip) return false;
@@ -250,7 +251,7 @@ const NavBar = () => {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Link to="/" className="flex items-center gap-2">
-              <img src="/images/logo2.webp" alt="Bilsemc2" className="h-12 w-auto" />
+              <img src="/images/beyninikullan.webp" alt="Bilsemc2" className="h-12 w-auto" />
             </Link>
           </div>
 

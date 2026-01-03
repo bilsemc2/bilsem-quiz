@@ -1,154 +1,241 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Lightbulb, Brain, Target, Zap, Rocket, Play } from 'lucide-react';
+import { Lightbulb, Brain, Target, Zap, Rocket, Tablet, ChevronRight, Trophy, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const GenelYetenekPage: React.FC = () => {
     const features = [
-        { icon: <Brain />, title: "Mantık ve Muhakeme", desc: "Karmaşık problemleri çözme yeteneğinizi geliştirin." },
-        { icon: <Target />, title: "Stratejik Düşünme", desc: "Oyunlar ve bulmacalarla strateji kurmayı öğrenin." },
-        { icon: <Zap />, title: "Hızlı Analiz", desc: "Verileri hızla işleme ve sonuç çıkarma becerisi kazanın." },
+        { icon: <Brain />, title: "Mantık ve Muhakeme", desc: "Karmaşık problemleri çözme yeteneğinizi geliştirin.", color: "purple" },
+        { icon: <Target />, title: "Stratejik Düşünme", desc: "Oyunlar ve bulmacalarla strateji kurmayı öğrenin.", color: "blue" },
+        { icon: <Zap />, title: "Hızlı Analiz", desc: "Verileri hızla işleme ve sonuç çıkarma becerisi kazanın.", color: "amber" },
+    ];
+
+    const stages = [
+        {
+            stage: "1. Aşama",
+            title: "Tablet Değerlendirme",
+            highlight: "Ön Eleme",
+            desc: "Bilsem sürecinin ilk adımı olan tablet uygulaması, öğrencilerin zihinsel yeteneklerini, görsel algılarını ve mantık yürütme hızlarını ölçer.",
+            tags: ["Bilişsel Testler", "Görsel Hafıza", "Matematiksel Mantık", "Hızlı Düşünme"],
+            link: "/atolyeler/tablet-degerlendirme",
+            btnText: "Simülatöre Git",
+            icon: <Tablet size={48} />,
+            color: "purple"
+        },
+        {
+            stage: "2. Aşama",
+            title: "Bireysel Değerlendirme",
+            highlight: "Zeka Ölçeği",
+            desc: "İkinci aşamada uluslararası standartlardaki zeka testleri uygulanır. Sözsel, sayısal ve performans tabanlı yetenekler değerlendirilir.",
+            tags: ["WISC-R Hazırlık", "ASIS Analizi", "Sözsel Yetenek", "Performans Görevleri"],
+            link: "/atolyeler/bireysel-degerlendirme",
+            btnText: "Hazırlık Merkezi",
+            icon: <Brain size={48} />,
+            color: "indigo"
+        }
+    ];
+
+    const stats = [
+        { value: "2.5k+", label: "Aktif Öğrenci" },
+        { value: "Gelecekte 50+", label: "Simülasyon" },
+        { value: "4.9", label: "Kullanıcı Puanı" }
     ];
 
     return (
-        <div className="min-h-screen bg-[#F8F6FF] pt-24 pb-12 px-6">
-            <div className="container mx-auto max-w-6xl">
+        <div className="min-h-screen bg-slate-950 pt-24 pb-16 px-6 overflow-hidden relative">
+            {/* Arka Plan Efektleri */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[150px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-600/15 rounded-full blur-[150px]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] bg-indigo-600/10 rounded-full blur-[100px]" />
+            </div>
+
+            <div className="container mx-auto max-w-6xl relative z-10">
+                {/* Hero Section */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center space-y-8"
+                    className="text-center space-y-8 mb-20"
                 >
-                    <div className="inline-block p-4 bg-purple-100 rounded-3xl text-purple-brand">
-                        <Lightbulb size={48} />
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm font-bold uppercase tracking-widest">
+                        <Sparkles size={16} /> Premium Atölye
                     </div>
-                    <h1 className="text-5xl lg:text-7xl font-poppins font-black text-gray-900">
-                        Bilsem <span className="text-purple-brand">Genel Yetenek</span>
+
+                    <div className="flex items-center justify-center gap-6">
+                        <motion.div
+                            animate={{ y: [0, -10, 0] }}
+                            transition={{ repeat: Infinity, duration: 4 }}
+                            className="p-6 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-3xl border border-purple-500/30 backdrop-blur-xl"
+                        >
+                            <Lightbulb size={48} className="text-purple-400" />
+                        </motion.div>
+                    </div>
+
+                    <h1 className="text-5xl lg:text-7xl font-black text-white leading-tight">
+                        Bilsem <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-indigo-400 to-blue-400">Genel Yetenek</span>
                     </h1>
-                    <p className="text-xl lg:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
-                        Zekanı keşfetmeye hazır mısın? Genel yetenek atölyemizde mantık, analiz ve problem çözme becerilerini en üst seviyeye taşıyoruz.
+
+                    <p className="text-xl lg:text-2xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-medium">
+                        Zekanı keşfetmeye hazır mısın? Mantık, analiz ve problem çözme becerilerini en üst seviyeye taşıyoruz.
                     </p>
+
+                    {/* Stats */}
+                    <div className="flex items-center justify-center gap-12 pt-8">
+                        {stats.map((stat, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 + i * 0.1 }}
+                                className="text-center"
+                            >
+                                <div className="text-3xl font-black text-white">{stat.value}</div>
+                                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">{stat.label}</div>
+                            </motion.div>
+                        ))}
+                    </div>
                 </motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20">
+                {/* Features Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
                     {features.map((feature, i) => (
                         <motion.div
                             key={i}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.2 }}
-                            className="bg-white p-10 rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-4 border-transparent hover:border-purple-brand/20"
+                            transition={{ delay: 0.5 + i * 0.1 }}
+                            className="group bg-slate-900/50 backdrop-blur-xl p-8 rounded-[2rem] border border-slate-800/50 hover:border-purple-500/30 transition-all duration-500 relative overflow-hidden"
                         >
-                            <div className="w-16 h-16 bg-purple-brand text-white rounded-2xl flex items-center justify-center mb-6 text-3xl">
-                                {feature.icon}
+                            <div className={`absolute top-0 right-0 w-24 h-24 bg-${feature.color}-500/10 rounded-full blur-2xl group-hover:bg-${feature.color}-500/20 transition-colors`} />
+
+                            <div className="relative z-10 space-y-4">
+                                <div className={`w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center text-${feature.color}-400 text-2xl group-hover:bg-${feature.color}-500 group-hover:text-white transition-all duration-500`}>
+                                    {feature.icon}
+                                </div>
+                                <h3 className="text-xl font-black text-white">{feature.title}</h3>
+                                <p className="text-slate-500 font-medium leading-relaxed">{feature.desc}</p>
                             </div>
-                            <h3 className="text-2xl font-black mb-4">{feature.title}</h3>
-                            <p className="text-gray-600 font-medium leading-relaxed">{feature.desc}</p>
                         </motion.div>
                     ))}
                 </div>
 
                 {/* Değerlendirme Aşamaları */}
-                <div className="mt-32 space-y-16">
-                    <motion.div
-                        initial={{ opacity: 0, x: -50 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        className="bg-white rounded-[4rem] p-12 shadow-2xl border border-white flex flex-col md:flex-row items-center gap-12 group"
-                    >
-                        <div className="w-full md:w-1/3 aspect-square bg-purple-50 rounded-[3rem] flex items-center justify-center text-purple-brand group-hover:scale-105 transition-transform duration-500">
-                            <motion.div
-                                animate={{ y: [0, -10, 0] }}
-                                transition={{ repeat: Infinity, duration: 4 }}
-                            >
-                                <Zap size={120} className="drop-shadow-2xl" />
-                            </motion.div>
-                        </div>
-                        <div className="flex-1 space-y-6">
-                            <div className="inline-block px-4 py-1 bg-purple-100 text-purple-700 rounded-full font-bold text-sm uppercase tracking-wider">
-                                1. Aşama
-                            </div>
-                            <h2 className="text-4xl font-black text-gray-900 leading-tight">Ön Değerlendirme <span className="text-purple-brand">(Tablet Uygulaması)</span></h2>
-                            <p className="text-lg text-gray-600 font-medium leading-relaxed">
-                                Bilsem sürecinin ilk adımı olan tablet uygulaması, öğrencilerin zindi yeteneklerini, görsel algılarını ve mantık yürütme hızlarını ölçer. Atölyemizde binlerce benzer soru tipiyle bu sürece en iyi şekilde hazırlanıyoruz.
-                            </p>
-                            <div className="flex flex-wrap gap-4 pt-4">
-                                <Link
-                                    to="/atolyeler/tablet-degerlendirme"
-                                    className="px-8 py-3 bg-purple-brand text-white font-black rounded-2xl shadow-lg hover:scale-105 transition-all flex items-center gap-2 group"
-                                >
-                                    Sınav Simülatörü <Play size={18} fill="currentColor" className="group-hover:translate-x-1 transition-transform" />
-                                </Link>
-                                <div className="flex-1 grid grid-cols-2 gap-4">
-                                    {["Bilişsel Testler", "Görsel Hafıza", "Matematiksel Mantık", "Hızlı Düşünme"].map(tag => (
-                                        <div key={tag} className="flex items-center gap-2 text-gray-500 font-bold">
-                                            <div className="w-2 h-2 bg-purple-brand rounded-full" /> {tag}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                <div className="space-y-8">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl lg:text-4xl font-black text-white mb-4">
+                            Değerlendirme <span className="text-purple-400">Aşamaları</span>
+                        </h2>
+                        <p className="text-slate-500 font-medium max-w-2xl mx-auto">
+                            Bilsem sınavı iki aşamadan oluşur. Her aşama için özel hazırlık simülatörlerimiz mevcut.
+                        </p>
+                    </div>
 
-                    <motion.div
-                        initial={{ opacity: 0, x: 50 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        className="bg-gray-900 rounded-[4rem] p-12 shadow-2xl border border-gray-800 flex flex-col md:flex-row-reverse items-center gap-12 group text-white"
-                    >
-                        <div className="w-full md:w-1/3 aspect-square bg-white/10 rounded-[3rem] flex items-center justify-center text-white group-hover:scale-105 transition-transform duration-500 backdrop-blur-3xl">
-                            <motion.div
-                                animate={{ scale: [1, 1.1, 1] }}
-                                transition={{ repeat: Infinity, duration: 5 }}
-                            >
-                                <Brain size={120} className="drop-shadow-2xl" />
-                            </motion.div>
-                        </div>
-                        <div className="flex-1 space-y-6">
-                            <div className="inline-block px-4 py-1 bg-white/10 text-white/80 rounded-full font-bold text-sm uppercase tracking-wider">
-                                2. Aşama
-                            </div>
-                            <h2 className="text-4xl font-black text-gray-900 leading-tight">Bireysel Değerlendirme <span className="text-purple-brand">(Zeka Ölçeği)</span></h2>
-                            <p className="text-lg text-gray-600 font-medium leading-relaxed">
-                                İkinci aşama olan bireysel değerlendirmede uluslararası standartlardaki zeka testleri uygulanır. Öğrencilerimizin sözsel, sayısal ve performans tabanlı yeteneklerini parlatıyor, mülakat heyecanını yenmelerini sağlıyoruz.
-                            </p>
-                            <div className="flex flex-wrap gap-4 pt-4">
-                                <Link
-                                    to="/atolyeler/bireysel-degerlendirme"
-                                    className="px-8 py-3 bg-white/10 text-white font-black rounded-2xl shadow-lg hover:bg-white/20 border border-white/20 transition-all flex items-center gap-2 group backdrop-blur-xl"
-                                >
-                                    Hazırlık Merkezi <Rocket size={18} fill="currentColor" className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                </Link>
-                                <div className="flex-1 grid grid-cols-2 gap-4">
-                                    {["WISC-R Hazırlık", "ASIS Analizi", "Sözsel Yetenek", "Performans Görevleri"].map(tag => (
-                                        <div key={tag} className="flex items-center gap-2 text-white/60 font-bold">
-                                            <div className="w-2 h-2 bg-purple-400 rounded-full" /> {tag}
+                    {stages.map((stage, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: i % 2 === 0 ? -50 : 50 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            viewport={{ once: true }}
+                            className={`bg-slate-900/40 backdrop-blur-xl rounded-[3rem] p-10 border border-slate-800/50 hover:border-${stage.color}-500/30 transition-all duration-500 relative overflow-hidden group`}
+                        >
+                            {/* Glow Effect */}
+                            <div className={`absolute top-0 ${i % 2 === 0 ? 'right-0' : 'left-0'} w-64 h-64 bg-${stage.color}-500/10 rounded-full blur-[100px] group-hover:bg-${stage.color}-500/20 transition-colors`} />
+
+                            <div className={`flex flex-col ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} items-center gap-10 relative z-10`}>
+                                {/* Icon Section */}
+                                <div className={`w-full md:w-1/4 aspect-square bg-gradient-to-br from-${stage.color}-500/20 to-${stage.color}-600/10 rounded-[2rem] flex items-center justify-center text-${stage.color}-400 border border-${stage.color}-500/20 group-hover:scale-105 transition-transform duration-500`}>
+                                    <motion.div
+                                        animate={{ y: [0, -8, 0] }}
+                                        transition={{ repeat: Infinity, duration: 3 }}
+                                    >
+                                        {stage.icon}
+                                    </motion.div>
+                                </div>
+
+                                {/* Content Section */}
+                                <div className="flex-1 space-y-6">
+                                    <div className={`inline-block px-4 py-1.5 bg-${stage.color}-500/10 text-${stage.color}-400 rounded-full font-bold text-xs uppercase tracking-widest border border-${stage.color}-500/20`}>
+                                        {stage.stage}
+                                    </div>
+
+                                    <h3 className="text-3xl lg:text-4xl font-black text-white leading-tight">
+                                        {stage.title} <span className={`text-${stage.color}-400`}>({stage.highlight})</span>
+                                    </h3>
+
+                                    <p className="text-lg text-slate-400 font-medium leading-relaxed">
+                                        {stage.desc}
+                                    </p>
+
+                                    <div className="flex flex-wrap gap-6 pt-2">
+                                        <Link
+                                            to={stage.link}
+                                            className={`px-8 py-3 bg-${stage.color}-500 text-white font-black rounded-2xl hover:bg-${stage.color}-400 transition-all flex items-center gap-2 group/btn shadow-[0_0_30px_rgba(147,51,234,0.3)]`}
+                                        >
+                                            {stage.btnText} <Rocket size={18} className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
+                                        </Link>
+
+                                        <div className="flex-1 grid grid-cols-2 gap-3">
+                                            {stage.tags.map(tag => (
+                                                <div key={tag} className="flex items-center gap-2 text-slate-500 font-bold text-sm">
+                                                    <div className={`w-2 h-2 bg-${stage.color}-500 rounded-full`} /> {tag}
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    ))}
                 </div>
 
+                {/* CTA Section */}
                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8 }}
-                    className="mt-20 bg-purple-brand rounded-[4rem] p-12 lg:p-20 text-white relative overflow-hidden text-center"
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="mt-24 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-[3rem] p-12 lg:p-16 text-white relative overflow-hidden"
                 >
-                    <div className="relative z-10 space-y-8">
-                        <h2 className="text-4xl lg:text-5xl font-black">Hemen Antremanlara Başla!</h2>
-                        <p className="text-xl opacity-90 max-w-2xl mx-auto">Binlerce özgün soru ve interaktif içerikle Bilsem sınavlarına en iyi şekilde hazırlan.</p>
-                        <Link
-                            to="/beyin-antrenoru-merkezi"
-                            className="inline-flex items-center gap-3 px-12 py-5 bg-white text-purple-brand font-black text-xl rounded-full hover:bg-gray-100 transition-all transform hover:scale-105"
-                        >
-                            Beyin Antrenörü'ne Git <Rocket />
-                        </Link>
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml,...')] opacity-10" />
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/3" />
+
+                    <div className="relative z-10 text-center space-y-8">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full text-white/80 text-sm font-bold uppercase tracking-widest border border-white/20">
+                            <Trophy size={16} /> Hemen Başla
+                        </div>
+
+                        <h2 className="text-4xl lg:text-5xl font-black">
+                            Beynini Antrenmana Al!
+                        </h2>
+
+                        <p className="text-xl text-white/80 max-w-2xl mx-auto">
+                            Binlerce özgün soru ve interaktif içerikle Bilsem sınavlarına en iyi şekilde hazırlan.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                            <Link
+                                to="/atolyeler/tablet-degerlendirme"
+                                className="px-10 py-4 bg-white text-purple-600 font-black text-lg rounded-2xl hover:bg-white/90 transition-all flex items-center gap-3 shadow-2xl"
+                            >
+                                1. Aşama Simülatörü <ChevronRight size={20} />
+                            </Link>
+                            <Link
+                                to="/atolyeler/bireysel-degerlendirme"
+                                className="px-10 py-4 bg-white/10 text-white font-black text-lg rounded-2xl hover:bg-white/20 transition-all flex items-center gap-3 border border-white/20 backdrop-blur-xl"
+                            >
+                                2. Aşama Hazırlık <ChevronRight size={20} />
+                            </Link>
+                        </div>
                     </div>
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                 </motion.div>
             </div>
+
+            {/* Global Glow Style */}
+            <style>{`
+                .text-glow {
+                    text-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+                }
+            `}</style>
         </div>
     );
 };

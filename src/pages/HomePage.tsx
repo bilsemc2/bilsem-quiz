@@ -6,7 +6,7 @@ import { Rocket, Star, Users, Palette, Music, Lightbulb } from 'lucide-react';
 const HomePage: React.FC = () => {
   const stats = [
     { label: "Aktif Öğrenci", value: "1000+", color: "text-purple-600", icon: <Users size={20} /> },
-    { label: "Eğlenceli Aktivite", value: "50+", color: "text-purple-600", icon: <Star size={20} /> },
+    { label: "Eğlenceli Aktivite", value: "Gelecekte 50+", color: "text-purple-600", icon: <Star size={20} /> },
     { label: "Kullanıcı Puanı", value: "4.9", color: "text-purple-600", icon: <Rocket size={20} /> },
   ];
 
@@ -63,7 +63,7 @@ const HomePage: React.FC = () => {
                   className="w-32 lg:w-48 drop-shadow-[0_20px_50px_rgba(126,48,225,0.4)] animate-float-blob"
                 />
                 <img
-                  src="images/beyninikullan.webp"
+                  src="images/logo2.webp"
                   alt="Beynini Kullan!"
                   className="w-full max-w-[600px] drop-shadow-[0_20px_50px_rgba(126,48,225,0.3)]"
                 />
@@ -220,6 +220,104 @@ const HomePage: React.FC = () => {
                 </div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* DİJİTAL KAYNAKLAR - Google Play Books */}
+      <section className="py-24 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-10 left-10 w-40 h-40 bg-orange-300 rounded-full opacity-30 blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-56 h-56 bg-amber-300 rounded-full opacity-30 blur-3xl" />
+
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="text-center mb-16 space-y-4">
+            <span className="inline-block px-4 py-1 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 text-sm font-bold rounded-full uppercase tracking-wider">
+              📚 E-Kitaplar
+            </span>
+            <h2 className="text-4xl lg:text-5xl font-poppins font-black text-gray-900 dark:text-white">
+              Dijital <span className="text-orange-500">Kaynaklar</span>
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Google Play'de yayınlanan eğitim kitaplarımızla her an her yerde öğrenmeye devam et!
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Bilsem Sınavı Kitabı */}
+            <motion.a
+              href="https://play.google.com/store/books/series?id=P8CnGwAAABCZ2M"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-purple-500/30 flex flex-col items-center text-center"
+            >
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
+                <span className="text-4xl">🧠</span>
+              </div>
+              <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
+                Bilsem Sınavı
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 font-medium mb-4 text-sm">
+                Bilim ve Sanat Merkezi sınavlarına kapsamlı hazırlık kaynağı
+              </p>
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-bold rounded-full text-sm group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
+                </svg>
+                Google Play'de İncele
+              </span>
+            </motion.a>
+
+            {/* Görsel Analoji Kitabı */}
+            <motion.a
+              href="https://play.google.com/store/books/series?id=l5yQHAAAABAGgM"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-blue-500/30 flex flex-col items-center text-center"
+            >
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+                <span className="text-4xl">🔍</span>
+              </div>
+              <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
+                Görsel Analoji
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 font-medium mb-4 text-sm">
+                Görsel düşünme ve analoji kurma becerilerini geliştir
+              </p>
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold rounded-full text-sm group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
+                </svg>
+                Google Play'de İncele
+              </span>
+            </motion.a>
+
+            {/* Türkçe Deyimler Kitabı */}
+            <motion.a
+              href="https://play.google.com/store/books/series?id=XIDDGwAAABCemM"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-amber-500/30 flex flex-col items-center text-center"
+            >
+              <div className="w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
+                <span className="text-4xl">📖</span>
+              </div>
+              <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
+                Türkçe Deyimler
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 font-medium mb-4 text-sm">
+                Türkçe deyimleri eğlenceli bir şekilde öğren ve pekiştir
+              </p>
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-bold rounded-full text-sm group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
+                </svg>
+                Google Play'de İncele
+              </span>
+            </motion.a>
           </div>
         </div>
       </section>

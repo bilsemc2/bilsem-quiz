@@ -38,6 +38,7 @@ const HowItWorksPage = React.lazy(() => import('./pages/HowItWorksPage'));
 const FAQPage = React.lazy(() => import('./pages/FAQPage'));
 const ContactPage = React.lazy(() => import('./pages/ContactPage'));
 const PricingPage = React.lazy(() => import('./pages/PricingPage'));
+const AboutPage = React.lazy(() => import('./pages/AboutPage'));
 
 // Story Pages
 const StoryListPage = React.lazy(() => import('./pages/Story/StoryListPage'));
@@ -118,6 +119,7 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/bilsem" element={<BilsemPage />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/:slug" element={<BlogPage />} />
