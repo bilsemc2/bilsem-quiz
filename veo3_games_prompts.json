@@ -1,0 +1,158 @@
+{
+    "video_prompts_games": [
+        {
+            "game": "Parça Bütün",
+            "route": "/games/parca-butun",
+            "prompt": "Fütüristik bir stüdyoda mavi ve pembe ombre saçlı, şık siyah elbiseli güzel bir kadın sunucu. Arkasında neon 'BilsemC2' tabelası parlıyor. Kadın Türkçe konuşuyor: 'Parça Bütün oyunumuza hoş geldiniz! Bu oyunda parçaları birleştirerek bütünü bulacaksınız. Görsel zekânızı ve uzamsal algınızı geliştirin. Hadi başlayalım!' Havada holografik puzzle parçaları uçuşuyor. 4K sinematik çekim.",
+            "speech": "Parça Bütün oyunumuza hoş geldiniz! Bu oyunda parçaları birleştirerek bütünü bulacaksınız. Görsel zekânızı ve uzamsal algınızı geliştirin. Hadi başlayalım!",
+            "duration": "8s"
+        },
+        {
+            "game": "Rotasyon Matrisi",
+            "route": "/games/rotasyon-matrisi",
+            "prompt": "Modern bir laboratuvar ortamında mavi ve pembe saçlı profesyonel kadın. Arkasında 'BilsemC2' logosu ve dönen 3D şekiller. Türkçe konuşuyor: 'Rotasyon Matrisi ile tanışın! Şekillerin nasıl döndüğünü analiz edin ve doğru sonucu tahmin edin. Uzamsal zekânızı test edin!' Etrafında yavaşça dönen geometrik şekil hologramları. Mor ve mavi ışıklar.",
+            "speech": "Rotasyon Matrisi ile tanışın! Şekillerin nasıl döndüğünü analiz edin ve doğru sonucu tahmin edin. Uzamsal zekânızı test edin!",
+            "duration": "7s"
+        },
+        {
+            "game": "Sihirli Küpler",
+            "route": "/games/sihirli-kupler",
+            "prompt": "Karanlık stüdyoda spot ışık altında mavi ve pembe saçlı kadın. Etrafında havada süzülen renkli 3D küpler. Arkada parlayan 'BilsemC2' yazısı. Türkçe heyecanla konuşuyor: 'Sihirli Küpler oyununa hazır mısınız? Küpleri sayın, yüzeyleri hesaplayın ve üç boyutlu düşünme becerinizi geliştirin! Bu oyun gerçekten sihirli!' Küpler ışıldıyor ve dönüyor.",
+            "speech": "Sihirli Küpler oyununa hazır mısınız? Küpleri sayın, yüzeyleri hesaplayın ve üç boyutlu düşünme becerinizi geliştirin! Bu oyun gerçekten sihirli!",
+            "duration": "8s"
+        },
+        {
+            "game": "Kozmik Hafıza",
+            "route": "/games/kozmik-hafiza",
+            "prompt": "Uzay temalı stüdyoda yıldızlar ve galaksiler arka planda. Mavi ve pembe saçlı kadın sunucu gözleri parlayarak kameraya bakıyor. 'BilsemC2' logosu yıldızlar arasında. Türkçe konuşuyor: 'Kozmik Hafıza ile beyninizi uzaya taşıyın! Görsel dizileri ezberleyin ve hafıza kapasitenizi genişletin. Kozmosun derinliklerinde zekânızı test edin!' Yıldız parçacıkları etrafında uçuşuyor.",
+            "speech": "Kozmik Hafıza ile beyninizi uzaya taşıyın! Görsel dizileri ezberleyin ve hafıza kapasitenizi genişletin. Kozmosun derinliklerinde zekânızı test edin!",
+            "duration": "8s"
+        },
+        {
+            "game": "N-Geri Şifresi",
+            "route": "/games/n-geri-sifresi",
+            "prompt": "Dijital matris temalı arka planda mavi ve pembe saçlı kadın. Etrafında sayılar ve semboller akıyor. 'BilsemC2' holografik logo arkada. Türkçe konuşuyor: 'N-Geri Şifresi çalışan belleğinizi test ediyor! Önceki adımları hatırlayın ve doğru eşleşmeleri bulun. Bu oyun beyin gücünüzü artıracak!' Yeşil dijital karakterler akıyor.",
+            "speech": "N-Geri Şifresi çalışan belleğinizi test ediyor! Önceki adımları hatırlayın ve doğru eşleşmeleri bulun. Bu oyun beyin gücünüzü artıracak!",
+            "duration": "7s"
+        },
+        {
+            "game": "Gölge Dedektifi",
+            "route": "/games/golge-dedektifi",
+            "prompt": "Siyah beyaz tonlarında gizemli stüdyo. Mavi ve pembe saçlı kadın dedektif şapkasıyla. Arkada 'BilsemC2' neon tabelası ve gölge siluetleri. Türkçe konuşuyor: 'Gölge Dedektifi olun! Nesnelerin gölgelerini inceleyin ve hangi şekle ait olduğunu bulun. Görsel analiz yeteneğinizi keskinleştirin!' Dramatik ışık gölge oyunları.",
+            "speech": "Gölge Dedektifi olun! Nesnelerin gölgelerini inceleyin ve hangi şekle ait olduğunu bulun. Görsel analiz yeteneğinizi keskinleştirin!",
+            "duration": "7s"
+        },
+        {
+            "game": "Çapraz Eşleşme",
+            "route": "/games/capraz-eslesme",
+            "prompt": "Geometrik desenlerle dolu modern oda. Mavi ve pembe saçlı şık kadın. Arkada 'BilsemC2' logosu ve kesişen çizgiler. Türkçe konuşuyor: 'Çapraz Eşleşme ile mantık becerilerinizi zorlayın! Satır ve sütunlardaki ilişkileri bulun, doğru eşleşmeyi keşfedin. Analitik düşünce burada başlıyor!' Çapraz ışık efektleri.",
+            "speech": "Çapraz Eşleşme ile mantık becerilerinizi zorlayın! Satır ve sütunlardaki ilişkileri bulun, doğru eşleşmeyi keşfedin. Analitik düşünce burada başlıyor!",
+            "duration": "7s"
+        },
+        {
+            "game": "Sinyal Toplamı",
+            "route": "/games/sinyal-toplami",
+            "prompt": "Fütüristik kontrol paneli önünde mavi ve pembe saçlı kadın. Ekranlarda sinyal grafikleri. 'BilsemC2' hologram arkada. Türkçe konuşuyor: 'Sinyal Toplamı ile matematiksel zekânızı geliştirin! Sinyalleri analiz edin, sayıları toplayın ve doğru sonuca ulaşın. Hızlı düşünün, doğru hesaplayın!' Dijital sinyal dalgaları ekranda.",
+            "speech": "Sinyal Toplamı ile matematiksel zekânızı geliştirin! Sinyalleri analiz edin, sayıları toplayın ve doğru sonuca ulaşın. Hızlı düşünün, doğru hesaplayın!",
+            "duration": "7s"
+        },
+        {
+            "game": "Hedef Sayı",
+            "route": "/games/hedef-sayi",
+            "prompt": "Nişancı gibi odaklanmış mavi ve pembe saçlı kadın. Arkada 'BilsemC2' tabelası ve hedef tahtaları. Türkçe konuşuyor: 'Hedef Sayı oyununda amaç belli: Doğru sayıyı bulun! Grid üzerindeki ipuçlarını takip edin ve hedefe kilitlerin. Matematiksel mantık burada devreye giriyor!' Neon hedef grafikleri.",
+            "speech": "Hedef Sayı oyununda amaç belli: Doğru sayıyı bulun! Grid üzerindeki ipuçlarını takip edin ve hedefe kilitlerin. Matematiksel mantık burada devreye giriyor!",
+            "duration": "7s"
+        },
+        {
+            "game": "Akışkan Toplam",
+            "route": "/games/akiskan-toplam",
+            "prompt": "Su temalı mavi tonlarında stüdyo. Mavi ve pembe saçlı kadın akan su efektleri arasında. 'BilsemC2' logosu su dalgaları üzerinde. Türkçe konuşuyor: 'Akışkan Toplam ile sayılar bir nehir gibi akıyor! Akan sayıları takip edin, toplayın ve sonucu bulun. Hız ve dikkat bu oyunun anahtarı!' Su parçacıkları efekti.",
+            "speech": "Akışkan Toplam ile sayılar bir nehir gibi akıyor! Akan sayıları takip edin, toplayın ve sonucu bulun. Hız ve dikkat bu oyunun anahtarı!",
+            "duration": "7s"
+        },
+        {
+            "game": "Görünmez Kule",
+            "route": "/games/gorunmez-kule",
+            "prompt": "Gizemli sisli ortamda mavi ve pembe saçlı kadın. Arkada yarı görünür kule siluetleri ve 'BilsemC2' yazısı. Türkçe fısıldar gibi konuşuyor: 'Görünmez Kule... Gizli yapıları zihninde canlandır! Verilere bakarak görünmeyen kuleyi hayal et ve doğru yapıyı bul. Uzamsal hayal gücün sınırlarını zorla!' Sisli kule efektleri.",
+            "speech": "Görünmez Kule... Gizli yapıları zihninde canlandır! Verilere bakarak görünmeyen kuleyi hayal et ve doğru yapıyı bul. Uzamsal hayal gücün sınırlarını zorla!",
+            "duration": "8s"
+        },
+        {
+            "game": "Matris Yankısı",
+            "route": "/games/matris-yankisi",
+            "prompt": "Eko efektli stüdyoda mavi ve pembe saçlı kadın. Arkada çoğalan matris görüntüleri ve 'BilsemC2' logosu. Türkçe konuşuyor: 'Matris Yankısı ile desenleri yakalayın! Matristeki örüntülerin yankısını bulun ve seriyi tamamlayın. Örüntü tanıma beceriniz burada test ediliyor!' Çoğalan holografik matrisler.",
+            "speech": "Matris Yankısı ile desenleri yakalayın! Matristeki örüntülerin yankısını bulun ve seriyi tamamlayın. Örüntü tanıma beceriniz burada test ediliyor!",
+            "duration": "7s"
+        },
+        {
+            "game": "Yansıma Toplamı",
+            "route": "/games/yansima-toplami",
+            "prompt": "Aynalı stüdyoda mavi ve pembe saçlı kadın. Yansımalar ve simetrik görüntüler etrafında. 'BilsemC2' logosu aynada yansıyor. Türkçe konuşuyor: 'Yansıma Toplamı simetri ve matematik bir arada! Ayna görüntülerindeki sayıları bulun ve toplayın. Simetrik düşünce gücünüzü açığa çıkarın!' Ayna yansıma efektleri.",
+            "speech": "Yansıma Toplamı simetri ve matematik bir arada! Ayna görüntülerindeki sayıları bulun ve toplayın. Simetrik düşünce gücünüzü açığa çıkarın!",
+            "duration": "7s"
+        },
+        {
+            "game": "Labirent",
+            "route": "/games/labirent",
+            "prompt": "3D labirent hologramı içinde duran mavi ve pembe saçlı kadın. Arkada 'BilsemC2' logosu labirent duvarlarında. Türkçe konuşuyor: 'Labirent oyununa hoş geldiniz! Yolu bulun, çıkışa ulaşın! Stratejik düşünme ve yön bulma becerilerinizi geliştirin. Bu labirentten siz çıkabilir misiniz?' Labirent koridorları ışıldıyor.",
+            "speech": "Labirent oyununa hoş geldiniz! Yolu bulun, çıkışa ulaşın! Stratejik düşünme ve yön bulma becerilerinizi geliştirin. Bu labirentten siz çıkabilir misiniz?",
+            "duration": "8s"
+        },
+        {
+            "game": "Stroop Testi",
+            "route": "/games/stroop",
+            "prompt": "Renkli ışıklar altında mavi ve pembe saçlı kadın. Arkada farklı renklerde yazılmış renk isimleri ve 'BilsemC2' logosu. Türkçe konuşuyor: 'Stroop Testi beyninizi şaşırtacak! Yazının rengini söyleyin, yazıyı değil! Bu klasik bilişsel test dikkat ve odaklanma gücünüzü ölçer. Hazır mısınız?' Renk geçişleri efekti.",
+            "speech": "Stroop Testi beyninizi şaşırtacak! Yazının rengini söyleyin, yazıyı değil! Bu klasik bilişsel test dikkat ve odaklanma gücünüzü ölçer. Hazır mısınız?",
+            "duration": "8s"
+        },
+        {
+            "game": "Yön Stroop",
+            "route": "/games/yon-stroop",
+            "prompt": "Ok işaretleri ve yön sembolleri arasında mavi ve pembe saçlı kadın. 'BilsemC2' logosu arkada. Türkçe konuşuyor: 'Yön Stroop beyin karıştırıcı! Okların gösterdiği yönü değil, bulundukları konumu söyleyin. Bilişsel esnekliğinizi test eden bu oyun sizi zorlayacak!' Dönen ok animasyonları.",
+            "speech": "Yön Stroop beyin karıştırıcı! Okların gösterdiği yönü değil, bulundukları konumu söyleyin. Bilişsel esnekliğinizi test eden bu oyun sizi zorlayacak!",
+            "duration": "7s"
+        },
+        {
+            "game": "Şekil Hafızası",
+            "route": "/games/sekil-hafizasi",
+            "prompt": "Geometrik şekillerle dolu renkli stüdyo. Mavi ve pembe saçlı kadın şekillere işaret ediyor. 'BilsemC2' logosu şekiller arasında. Türkçe konuşuyor: 'Şekil Hafızası oyununda renkleri ve şekilleri eşleştirin! Görsel hafızanızı güçlendirin, sembolleri hatırlayın. Hafıza şampiyonu olmaya hazır mısınız?' Renkli şekil animasyonları.",
+            "speech": "Şekil Hafızası oyununda renkleri ve şekilleri eşleştirin! Görsel hafızanızı güçlendirin, sembolleri hatırlayın. Hafıza şampiyonu olmaya hazır mısınız?",
+            "duration": "7s"
+        },
+        {
+            "game": "Çift Mod Hafıza",
+            "route": "/games/cift-mod-hafiza",
+            "prompt": "İki bölümlü ekran arkasında mavi ve pembe saçlı kadın. Bir tarafta görsel, diğer tarafta sesler. 'BilsemC2' logosu ortada. Türkçe konuşuyor: 'Çift Mod Hafıza hem gördüğünüzü hem duyduğunuzu hatırlamanızı istiyor! İki kanalı aynı anda kullanın, çoklu görev becerinizi geliştirin!' Split screen efekti.",
+            "speech": "Çift Mod Hafıza hem gördüğünüzü hem duyduğunuzu hatırlamanızı istiyor! İki kanalı aynı anda kullanın, çoklu görev becerinizi geliştirin!",
+            "duration": "7s"
+        },
+        {
+            "game": "Emoji Stroop",
+            "route": "/games/emoji-stroop",
+            "prompt": "Dev emojiler arasında mavi ve pembe saçlı neşeli kadın. 'BilsemC2' logosu emoji yüzleriyle süslü. Türkçe gülerek konuşuyor: 'Emoji Stroop eğlenceli ama aldatıcı! Emojinin ifadesini değil, yazıyı takip edin. Duygusal zekânız ve dikkatiniz aynı anda test ediliyor!' Uçuşan emoji animasyonları.",
+            "speech": "Emoji Stroop eğlenceli ama aldatıcı! Emojinin ifadesini değil, yazıyı takip edin. Duygusal zekânız ve dikkatiniz aynı anda test ediliyor!",
+            "duration": "7s"
+        },
+        {
+            "game": "Renkli Kalemler",
+            "route": "/games/renkli-kalemler",
+            "prompt": "Sanat atölyesi ortamında mavi ve pembe saçlı kadın elinde renkli kalemler. 'BilsemC2' logosu arkadaki tuval üzerinde. Türkçe konuşuyor: 'Renkli Kalemler ile yaratıcılık ve dikkat buluşuyor! Kalemin rengini mi yoksa yazısını mı takip edeceksiniz? Görsel işleme hızınızı test edin!' Renkli kalem çizimleri animasyonu.",
+            "speech": "Renkli Kalemler ile yaratıcılık ve dikkat buluşuyor! Kalemin rengini mi yoksa yazısını mı takip edeceksiniz? Görsel işleme hızınızı test edin!",
+            "duration": "7s"
+        }
+    ],
+    "presenter": {
+        "appearance": "Mavi ve pembe ombre saçlı, şık giyimli güzel kadın sunucu",
+        "background": "Her videoda 'BilsemC2' tabelası/logosu görünür",
+        "language": "Türkçe konuşmalı (Turkish speech required)",
+        "style": "Enerjik, samimi, profesyonel"
+    },
+    "technical": {
+        "model": "Google Veo 3.1",
+        "resolution": "4K",
+        "aspect_ratio": "16:9",
+        "audio": "Türkçe seslendirme zorunlu"
+    },
+    "total_games": 20,
+    "generated_at": "2026-01-04T01:04:37+03:00"
+}
