@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Play, Star, Trophy, Brain, Sparkles, Smile } from 'lucide-react';
+import { ChevronLeft, RotateCcw, Play, Trophy, Brain, Sparkles, Smile } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 
 // ------------------ Tip Tanımları ------------------
@@ -289,27 +289,32 @@ const PartWholeGame: React.FC = () => {
 
     if (!gameStarted) {
         return (
-            <div className="min-h-screen bg-indigo-50 flex items-center justify-center p-6 relative overflow-hidden">
-                <div className="absolute top-10 left-10 text-pink-200"><Star size={100} fill="currentColor" /></div>
-                <div className="absolute bottom-10 right-10 text-yellow-200 rotate-12"><Sparkles size={120} fill="currentColor" /></div>
+            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-6 pt-24 relative overflow-hidden">
+                {/* Background Effects */}
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[150px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-pink-600/15 rounded-full blur-[150px]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] bg-indigo-600/10 rounded-full blur-[100px]" />
 
                 <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="bg-white/80 backdrop-blur-md p-12 rounded-[4rem] border-8 border-white text-center max-w-xl shadow-2xl relative z-10"
+                    className="bg-slate-800/50 backdrop-blur-xl p-12 rounded-[3rem] border border-white/10 text-center max-w-xl shadow-2xl relative z-10"
                 >
-                    <div className="w-24 h-24 bg-yellow-400 text-white rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner animate-pulse">
-                        <Smile size={60} />
+                    <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-purple-500/30">
+                        <Brain size={48} className="text-white" />
                     </div>
-                    <h1 className="text-5xl font-black text-indigo-600 mb-6 tracking-tight">Sonsuz Desenler</h1>
-                    <p className="text-gray-500 font-bold mb-10 leading-relaxed text-xl">
-                        Milyarlarca farklı desenden eksik parçayı bulmaya hazır mısın? <br />Zihnini çalıştır ve resimleri tamamla!
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm font-bold uppercase tracking-widest mb-6">
+                        <Sparkles size={16} /> Beyin Egzersizi
+                    </div>
+                    <h1 className="text-4xl lg:text-5xl font-black text-white mb-4">Parça <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Bütün</span></h1>
+                    <p className="text-slate-400 font-medium mb-10 leading-relaxed text-lg">
+                        Milyarlarca farklı desenden eksik parçayı bulmaya hazır mısın?<br />Zihnini çalıştır ve resimleri tamamla!
                     </p>
                     <button
                         onClick={() => setGameStarted(true)}
-                        className="px-12 py-6 bg-pink-500 text-white font-black text-2xl rounded-3xl hover:scale-110 transition-all shadow-[0_10px_0_#d81b60] border-b-4 border-pink-700 active:translate-y-2 active:shadow-none flex items-center gap-4 mx-auto group"
+                        className="px-10 py-5 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 flex items-center gap-4 mx-auto"
                     >
-                        Maceraya Başla! <Play fill="currentColor" />
+                        <Play fill="currentColor" size={24} /> Oyuna Başla
                     </button>
                 </motion.div>
             </div>
@@ -317,73 +322,74 @@ const PartWholeGame: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-sky-50 p-6 pt-24 relative overflow-hidden flex flex-col items-center">
-            <div className="absolute top-[-5%] left-[-5%] w-[30%] h-[30%] bg-pink-200/40 rounded-full blur-[100px]" />
-            <div className="absolute bottom-[-5%] right-[-5%] w-[30%] h-[30%] bg-yellow-200/40 rounded-full blur-[100px]" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-6 pt-24 relative overflow-hidden flex flex-col items-center">
+            {/* Background Effects */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/15 rounded-full blur-[150px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-600/10 rounded-full blur-[150px]" />
 
-            <div className="container mx-auto max-w-5xl relative z-10 flex flex-col gap-10">
-                <div className="flex items-center justify-between bg-white/90 backdrop-blur-sm p-8 rounded-[3.5rem] shadow-xl border-4 border-white text-indigo-900">
-                    <Link to="/atolyeler/tablet-degerlendirme" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-600 font-black transition-all">
-                        <ChevronLeft size={28} /> Çıkış
+            <div className="container mx-auto max-w-5xl relative z-10 flex flex-col gap-8">
+                {/* Header Bar */}
+                <div className="flex items-center justify-between bg-slate-800/50 backdrop-blur-xl p-6 rounded-2xl border border-white/10">
+                    <Link to="/atolyeler/tablet-degerlendirme" className="flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold transition-all">
+                        <ChevronLeft size={24} /> Geri
                     </Link>
-                    <div className="flex items-center gap-10">
+                    <div className="flex items-center gap-8">
                         <div className="flex flex-col items-center">
-                            <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1">Seviye</span>
-                            <div className="text-3xl font-black text-pink-500">{level}<span className="text-gray-200 text-lg">/20</span></div>
+                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Seviye</span>
+                            <div className="text-2xl font-black text-white">{level}<span className="text-slate-600 text-sm">/20</span></div>
                         </div>
                         <div className="flex flex-col items-center">
-                            <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1">Puan</span>
-                            <div className="text-3xl font-black text-emerald-500">{score}</div>
+                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Puan</span>
+                            <div className="text-2xl font-black text-emerald-400">{score}</div>
                         </div>
-                        <div className="flex flex-col items-center min-w-[80px]">
-                            <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1">Süre</span>
-                            <div className={`text-4xl font-black ${timeLeft < 10 ? 'text-red-500 scale-110' : 'text-amber-500'} transition-all font-mono`}>
+                        <div className="flex flex-col items-center min-w-[70px]">
+                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Süre</span>
+                            <div className={`text-3xl font-black font-mono ${timeLeft < 10 ? 'text-red-400 animate-pulse' : 'text-amber-400'} transition-all`}>
                                 {timeLeft}
                             </div>
                         </div>
                     </div>
-                    <button onClick={restart} className="p-4 bg-indigo-100 text-indigo-500 hover:bg-indigo-200 rounded-[2rem] transition-all shadow-md active:scale-90">
-                        <RotateCcw size={28} />
+                    <button onClick={restart} className="p-3 bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-600/50 rounded-xl transition-all border border-white/5">
+                        <RotateCcw size={24} />
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                {/* Game Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white/60 p-12 rounded-[5rem] border-8 border-white shadow-2xl space-y-8 flex flex-col items-center"
+                        className="bg-slate-800/50 backdrop-blur-xl p-10 rounded-3xl border border-white/10 space-y-6 flex flex-col items-center"
                     >
-                        <div className="bg-indigo-50 px-8 py-3 rounded-full text-indigo-600 font-black text-sm flex items-center gap-3 shadow-sm">
-                            <Brain size={24} className="animate-bounce" /> MATEMATİKSEL DESENİ İNCELE!
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm font-bold">
+                            <Brain size={20} /> Deseni İncele
                         </div>
-                        <div className="relative p-6 bg-indigo-100/50 rounded-[3.5rem] shadow-inner border-2 border-indigo-100/30">
+                        <div className="relative p-6 bg-slate-900/50 rounded-2xl border border-white/5">
                             <PatternSVG pattern={gamePattern} size={svgSize} isMain={true} />
                         </div>
                     </motion.div>
 
-                    <div className="bg-white/60 p-12 rounded-[5rem] border-8 border-white shadow-2xl flex flex-col items-center gap-10">
-                        <h2 className="text-3xl font-black text-indigo-900 flex items-center gap-3">
-                            DOĞRU PARÇAYI BUL! <Sparkles className="text-yellow-400" />
+                    <div className="bg-slate-800/50 backdrop-blur-xl p-10 rounded-3xl border border-white/10 flex flex-col items-center gap-8">
+                        <h2 className="text-2xl font-black text-white flex items-center gap-3">
+                            Doğru Parçayı Bul <Sparkles className="text-amber-400" size={24} />
                         </h2>
-                        <div className="grid grid-cols-2 gap-8 w-full">
+                        <div className="grid grid-cols-2 gap-6 w-full">
                             {options.map((option, idx) => (
                                 <motion.button
                                     key={idx}
-                                    whileHover={!isCorrecting && !showSuccess ? { scale: 1.08, y: -8, rotate: idx % 2 === 0 ? 2 : -2 } : {}}
-                                    whileTap={!isCorrecting && !showSuccess ? { scale: 0.95 } : {}}
+                                    whileHover={!isCorrecting && !showSuccess ? { scale: 1.05, y: -4 } : {}}
+                                    whileTap={!isCorrecting && !showSuccess ? { scale: 0.98 } : {}}
                                     onClick={() => handleOptionSelect(option)}
-                                    className={`bg-white rounded-[3rem] p-4 shadow-xl transition-all border-8 relative group overflow-hidden ${isCorrecting && option.isCorrect
-                                            ? 'border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.4)] scale-105'
-                                            : 'border-transparent'
-                                        } ${!isCorrecting && !showSuccess ? 'hover:border-pink-300' : ''
-                                        }`}
+                                    className={`bg-slate-700/50 rounded-2xl p-4 transition-all border-2 relative group overflow-hidden ${isCorrecting && option.isCorrect
+                                        ? 'border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.3)] scale-105'
+                                        : 'border-white/5'
+                                        } ${!isCorrecting && !showSuccess ? 'hover:border-purple-500/50 hover:bg-slate-600/50' : ''}`}
                                 >
                                     <PatternSVG
                                         pattern={option.pattern}
                                         size={140}
                                         viewBox={`${targetPos.x} ${targetPos.y} ${pieceSize} ${pieceSize}`}
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-pink-500/0 to-purple-500/0 group-hover:from-pink-500/5 group-hover:to-purple-500/5 transition-all pointer-events-none" />
                                 </motion.button>
                             ))}
                         </div>
@@ -394,12 +400,12 @@ const PartWholeGame: React.FC = () => {
                     {showSuccess && (
                         <motion.div
                             initial={{ opacity: 0, scale: 0.3, y: 100 }}
-                            animate={{ opacity: 1, scale: 1.2, y: 0 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.5, y: -100 }}
                             className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
                         >
-                            <div className="bg-emerald-400 text-white px-20 py-12 rounded-[5rem] font-black text-6xl shadow-2xl flex items-center gap-8 border-8 border-white animate-pulse">
-                                <Smile size={80} fill="currentColor" /> HARİKA!
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-16 py-10 rounded-3xl font-black text-5xl shadow-2xl flex items-center gap-6 border border-white/20">
+                                <Smile size={60} fill="currentColor" /> Harika!
                             </div>
                         </motion.div>
                     )}
@@ -408,33 +414,35 @@ const PartWholeGame: React.FC = () => {
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-white/60 backdrop-blur-3xl"
+                            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl"
                         >
                             <motion.div
-                                initial={{ scale: 0.8, opacity: 0, rotate: -5 }}
-                                animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                                className="bg-white rounded-[6rem] p-20 border-8 border-white text-center max-w-2xl w-full shadow-[0_30px_100px_-20px_rgba(0,0,0,0.1)] relative"
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="bg-slate-800/90 backdrop-blur-xl rounded-3xl p-16 border border-white/10 text-center max-w-lg w-full shadow-2xl relative"
                             >
-                                <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-40 h-40 bg-yellow-400 text-white rounded-full flex items-center justify-center shadow-2xl border-8 border-white">
-                                    <Trophy size={90} />
+                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-28 h-28 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-amber-500/30">
+                                    <Trophy size={56} />
                                 </div>
-                                <h2 className="text-7xl font-black text-indigo-600 mb-8 mt-12 tracking-tighter">BİTTİ!</h2>
-                                <p className="text-gray-400 font-bold text-3xl mb-14 leading-relaxed px-10">
+                                <h2 className="text-5xl font-black text-white mb-6 mt-8">Oyun Bitti!</h2>
+                                <p className="text-slate-400 font-medium text-xl mb-4">
                                     {score > 0 ? "Milyarlarca desen içinden doğru yolu buldun!" : "Üzülme, bir sonraki sefer kesin yapacaksın!"}
-                                    <br /><span className="text-6xl text-pink-500 mt-10 block font-black animate-bounce">SKOR: {score}</span>
                                 </p>
-                                <div className="space-y-6">
+                                <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-10">
+                                    Skor: {score}
+                                </div>
+                                <div className="space-y-4">
                                     <button
                                         onClick={restart}
-                                        className="w-full py-10 bg-pink-500 text-white font-black rounded-4xl flex items-center justify-center gap-6 shadow-[0_15px_0_#d81b60] border-b-4 border-pink-700 hover:scale-105 transition-all text-3xl active:translate-y-3 active:shadow-none"
+                                        className="w-full py-5 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-2xl flex items-center justify-center gap-4 shadow-lg shadow-purple-500/30 hover:scale-105 transition-all text-xl"
                                     >
-                                        <RotateCcw size={40} /> TEKRAR DENE
+                                        <RotateCcw size={28} /> Tekrar Oyna
                                     </button>
                                     <Link
                                         to="/atolyeler/tablet-degerlendirme"
-                                        className="text-indigo-300 font-black text-2xl hover:text-indigo-400 transition-colors block mt-12 underline decoration-4 underline-offset-8"
+                                        className="block py-4 text-slate-400 font-bold text-lg hover:text-white transition-colors"
                                     >
-                                        KONTROL MERKEZİNE DÖN
+                                        Kontrol Merkezine Dön
                                     </Link>
                                 </div>
                             </motion.div>
