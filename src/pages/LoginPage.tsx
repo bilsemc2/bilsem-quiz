@@ -21,7 +21,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -31,12 +31,6 @@ export default function LoginPage() {
           throw new Error('Email veya şifre hatalı');
         }
         throw new Error('Giriş yapılamadı: ' + error.message);
-      }
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-      if (userError) {
-        throw userError;
       }
 
       navigate('/bilsem');
@@ -226,7 +220,7 @@ export default function LoginPage() {
         >
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>150+ Oyun</span>
+            <span>Gelecekte 150+ Oyun</span>
           </div>
           <div className="flex items-center gap-2">
             <Brain className="w-4 h-4 text-purple-400" />

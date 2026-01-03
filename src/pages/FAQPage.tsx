@@ -27,7 +27,7 @@ const FAQPage: React.FC = () => {
         {
             category: 'Genel',
             question: 'BilsemC2 nedir?',
-            answer: 'BilsemC2, Bilim ve Sanat Merkezleri (BİLSEM) sınavlarına hazırlanan öğrenciler için özel olarak tasarlanmış bir online eğitim platformudur. Görsel-uzamsal zeka, mantıksal düşünme ve problem çözme becerilerini geliştirmeye yönelik 150+ interaktif oyun ve alıştırma sunar.'
+            answer: 'BilsemC2, Bilim ve Sanat Merkezleri (BİLSEM) sınavlarına hazırlanan öğrenciler için özel olarak tasarlanmış bir online eğitim platformudur. Görsel-uzamsal zeka, mantıksal düşünme ve problem çözme becerilerini geliştirmeye yönelik gelecekte 150+ interaktif oyun ve alıştırma sunar.'
         },
         {
             category: 'Genel',
@@ -130,8 +130,8 @@ const FAQPage: React.FC = () => {
                                     key={category.name}
                                     onClick={() => { setActiveCategory(category.name); setOpenItem(null); }}
                                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 ${activeCategory === category.name
-                                            ? `bg-gradient-to-r ${category.color} text-white shadow-lg`
-                                            : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-white border border-white/5'
+                                        ? `bg-gradient-to-r ${category.color} text-white shadow-lg`
+                                        : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-white border border-white/5'
                                         }`}
                                 >
                                     <Icon className="w-4 h-4" />
@@ -163,8 +163,8 @@ const FAQPage: React.FC = () => {
                                     animate={{ rotate: openItem === index ? 180 : 0 }}
                                     transition={{ duration: 0.2 }}
                                     className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${openItem === index
-                                            ? 'bg-blue-500/20 text-blue-400'
-                                            : 'bg-slate-700/50 text-slate-400'
+                                        ? 'bg-blue-500/20 text-blue-400'
+                                        : 'bg-slate-700/50 text-slate-400'
                                         }`}
                                 >
                                     <ChevronDown className="w-5 h-5" />

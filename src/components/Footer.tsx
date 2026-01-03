@@ -6,7 +6,7 @@ export default function Footer() {
         <footer className="bg-purple-brand text-white/90">
             <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
                 <div className="mb-10">
-                    <img src="/images/logo2.webp" alt="Bilsemc2 Logo" className="h-24 w-auto drop-shadow-lg" />
+                    <img src="/images/beyninikullan.webp" alt="Bilsemc2 Logo" className="h-24 w-auto drop-shadow-lg" />
                 </div>
 
                 <nav className="flex flex-wrap justify-center gap-x-12 gap-y-4 mb-10 font-bold">
