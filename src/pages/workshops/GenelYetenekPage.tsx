@@ -27,7 +27,7 @@ const GenelYetenekPage: React.FC = () => {
             title: "Bireysel Değerlendirme",
             highlight: "Zeka Ölçeği",
             desc: "İkinci aşamada uluslararası standartlardaki zeka testleri uygulanır. Sözsel, sayısal ve performans tabanlı yetenekler değerlendirilir.",
-            tags: ["WISC-R Hazırlık", "ASIS Analizi", "Sözsel Yetenek", "Performans Görevleri"],
+            tags: ["Bilsem Mülakat", "Bireysel Değerlendirme", "Zeka Ölçeği", "Performans Görevleri"],
             link: "/atolyeler/bireysel-degerlendirme",
             btnText: "Hazırlık Merkezi",
             icon: <Brain size={48} />,
