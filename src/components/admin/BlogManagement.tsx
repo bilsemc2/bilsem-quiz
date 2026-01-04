@@ -1,25 +1,18 @@
 import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, X, Loader2, FileText, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Loader2, FileText, Eye, EyeOff, Wand2, Bot } from 'lucide-react';
 import slugify from 'slugify';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
-
-interface BlogPost {
-  id: string;
-  title: string;
-  content: string;
-  published: boolean;
-  created_at: string;
-  updated_at: string;
-  author_id: string;
-  slug: string;
-}
+import BlogRichTextEditor from './BlogRichTextEditor';
+import ImageUploader from './ImageUploader';
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
+import AIBlogWriterModal from './AIBlogWriterModal';
 
 const createSlug = (title: string) => {
   return slugify(title, {
@@ -30,16 +23,41 @@ const createSlug = (title: string) => {
   });
 };
 
+interface BlogPost {
+  id: string;
+  title: string;
+  content: string;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
+  author_id: string;
+  slug: string;
+  image_url?: string;
+  category?: string;
+}
+
+interface BlogFormData {
+  title: string;
+  content: string;
+  published: boolean;
+  image_url: string;
+  category: string;
+}
+
 const BlogManagement = () => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isAIWriterOpen, setIsAIWriterOpen] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<BlogFormData>({
     title: '',
     content: '',
     published: false,
+    image_url: '',
+    category: '',
   });
 
   useEffect(() => {
@@ -69,10 +87,12 @@ const BlogManagement = () => {
         title: post.title,
         content: post.content,
         published: post.published,
+        image_url: post.image_url || '',
+        category: post.category || '',
       });
     } else {
       setEditingPost(null);
-      setFormData({ title: '', content: '', published: false });
+      setFormData({ title: '', content: '', published: false, image_url: '', category: '' });
     }
     setOpenDialog(true);
   };
@@ -80,11 +100,19 @@ const BlogManagement = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingPost(null);
-    setFormData({ title: '', content: '', published: false });
+    setFormData({ title: '', content: '', published: false, image_url: '', category: '' });
   };
 
   const handleSave = async () => {
+    if (!formData.title.trim()) {
+      toast.error('Lütfen bir başlık girin');
+      return;
+    }
+
     try {
+      setIsSaving(true);
+      // Slug sadece yeni yazılarda veya başlık değiştiğinde güncellensin (SEO için opsiyonel ama burada basitlik için her seferinde yapıyoruz)
+      // Ancak mevcut yazının slug'ını değiştirmek linkleri kırabilir.
       const slug = createSlug(formData.title);
 
       if (editingPost) {
@@ -96,6 +124,8 @@ const BlogManagement = () => {
             published: formData.published,
             updated_at: new Date().toISOString(),
             slug,
+            image_url: formData.image_url,
+            category: formData.category,
           })
           .eq('id', editingPost.id);
         if (error) throw error;
@@ -109,6 +139,8 @@ const BlogManagement = () => {
             published: formData.published,
             author_id: user?.id,
             slug,
+            image_url: formData.image_url,
+            category: formData.category,
           });
         if (error) throw error;
         toast.success('Blog yazısı oluşturuldu');
@@ -116,9 +148,11 @@ const BlogManagement = () => {
 
       handleCloseDialog();
       fetchPosts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Blog yazısı kaydedilirken hata:', error);
-      toast.error('Blog yazısı kaydedilemedi');
+      toast.error('Blog yazısı kaydedilemedi: ' + (error.message || 'Hata oluştu'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -139,6 +173,28 @@ const BlogManagement = () => {
     }
   };
 
+  const handleFixMarkdown = async (post: BlogPost) => {
+    try {
+      // Markdown'dan HTML'e dönüştür
+      const htmlContent = marked.parse(post.content);
+
+      const { error } = await supabase
+        .from('blog_posts')
+        .update({
+          content: htmlContent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', post.id);
+
+      if (error) throw error;
+      toast.success('Görünüm düzeltildi (HTML\'e dönüştürüldü)');
+      fetchPosts();
+    } catch (error: any) {
+      console.error('Dönüştürme hatası:', error);
+      toast.error('Düzeltme yapılamadı: ' + (error.message || 'Bilinmeyen hata'));
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[200px]">
@@ -154,13 +210,22 @@ const BlogManagement = () => {
           <FileText className="w-6 h-6 text-indigo-500" />
           Blog Yönetimi
         </h1>
-        <button
-          onClick={() => handleOpenDialog()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 text-white font-medium rounded-xl hover:bg-indigo-600 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Yeni Blog Yazısı
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <button
+            onClick={() => setIsAIWriterOpen(true)}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all active:scale-95"
+          >
+            <Bot className="w-5 h-5" />
+            AI ile Yazı Yaz
+          </button>
+          <button
+            onClick={() => handleOpenDialog()}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-indigo-600 border-2 border-indigo-600 px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-50 transition-all active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            Yeni Yazı Ekle
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -199,6 +264,15 @@ const BlogManagement = () => {
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex justify-center gap-1">
+                      {!post.content.includes('<p') && !post.content.includes('<div') && (
+                        <button
+                          onClick={() => handleFixMarkdown(post)}
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          title="Markdown Yazımını Düzelt"
+                        >
+                          <Wand2 className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleOpenDialog(post)}
                         className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
@@ -225,10 +299,23 @@ const BlogManagement = () => {
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto z-50">
-            <div className="flex items-center justify-between mb-6">
-              <Dialog.Title className="text-xl font-bold text-slate-900">
-                {editingPost ? 'Blog Yazısını Düzenle' : 'Yeni Blog Yazısı'}
-              </Dialog.Title>
+            <div className="flex items-center justify-between mb-6 sticky top-0 bg-white py-2 z-20 border-b border-slate-100 -mx-6 px-6">
+              <div className="flex items-center gap-4">
+                <Dialog.Title className="text-xl font-bold text-slate-900">
+                  {editingPost ? 'Blog Yazısını Düzenle' : 'Yeni Blog Yazısı'}
+                </Dialog.Title>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="px-4 py-1.5 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isSaving && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Kaydet
+                </button>
+              </div>
+              <Dialog.Description className="sr-only">
+                Blog yazısı içerik ve ayarlarını buradan yönetebilirsiniz.
+              </Dialog.Description>
               <Dialog.Close asChild>
                 <button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-600" /></button>
               </Dialog.Close>
@@ -245,16 +332,52 @@ const BlogManagement = () => {
                   placeholder="Yazı başlığı"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-900 mb-1.5">Kategori</label>
+                  <input
+                    type="text"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none placeholder:text-slate-400"
+                    placeholder="Örn: BİLSEM, Eğitim"
+                  />
+                </div>
+                <div>
+                  <ImageUploader
+                    label="Kapak Görseli"
+                    value={formData.image_url}
+                    onChange={(url) => setFormData({ ...formData, image_url: url })}
+                    suggestedTitle={formData.title}
+                  />
+                </div>
+              </div>
               <div>
-                <label className="block text-sm font-bold text-slate-900 mb-1.5">İçerik (Markdown)</label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  rows={10}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 outline-none resize-none font-sans text-sm placeholder:text-slate-400"
-                  placeholder="Blog içeriğini buraya yazın..."
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-bold text-slate-900">İçerik</label>
+                  {formData.content && !formData.content.includes('<p') && !formData.content.includes('<div') && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const html = await marked.parse(formData.content);
+                        setFormData({ ...formData, content: html });
+                        toast.success('Markdown HTML\'e dönüştürüldü');
+                      }}
+                      className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 hover:text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 transition-colors uppercase tracking-tight"
+                      title="Markdown'ı HTML'e Çevir"
+                    >
+                      <Wand2 className="w-3 h-3" />
+                      Görünümü Düzelt
+                    </button>
+                  )}
+                </div>
+                <BlogRichTextEditor
+                  key={editingPost?.id || 'new'}
+                  content={formData.content}
+                  onChange={(content) => setFormData({ ...formData, content })}
                 />
-                <p className="text-xs text-slate-500 mt-1">Markdown formatında yazabilirsiniz</p>
+                <p className="text-xs text-slate-500 mt-1">Zengin metin editörü ile yazılarınızı düzenleyebilirsiniz</p>
               </div>
 
               {/* Toggle */}
@@ -273,24 +396,45 @@ const BlogManagement = () => {
               {formData.content && (
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 mb-2">Önizleme:</h3>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-300 prose prose-sm max-w-none prose-headings:text-slate-900 prose-p:text-slate-900 prose-li:text-slate-900 prose-strong:text-slate-900">
-                    <ReactMarkdown>{formData.content}</ReactMarkdown>
-                  </div>
+                  <div
+                    className="p-6 bg-slate-50 rounded-xl border border-slate-300 shadow-inner prose prose-slate max-w-none"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formData.content) }}
+                  />
                 </div>
               )}
             </div>
 
             <div className="flex justify-end gap-3 mt-8">
               <Dialog.Close asChild>
-                <button className="px-5 py-2.5 text-slate-700 font-medium hover:bg-slate-100 rounded-xl transition-colors">İptal</button>
+                <button disabled={isSaving} className="px-5 py-2.5 text-slate-700 font-medium hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50">İptal</button>
               </Dialog.Close>
-              <button onClick={handleSave} className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-95">
-                Kaydet
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
               </button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+      {/* AI Blog Writer Modal */}
+      <AIBlogWriterModal
+        isOpen={isAIWriterOpen}
+        onClose={() => setIsAIWriterOpen(false)}
+        onApplyDraft={(data) => {
+          setFormData({
+            title: data.title,
+            category: data.category,
+            content: data.content,
+            image_url: '',
+            published: false
+          });
+          setOpenDialog(true);
+        }}
+      />
     </div>
   );
 };
