@@ -15,6 +15,7 @@ export interface UserProfile {
   referral_code?: string;
   referral_count?: number;
   classes?: ClassInfo[];
+  yetenek_alani?: string | string[];
 }
 
 export interface ClassStudent {

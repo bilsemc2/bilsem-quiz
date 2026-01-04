@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import XPWarning from './XPWarning';
@@ -10,15 +11,18 @@ interface RequireAuthProps {
     requireAdmin?: boolean;
     requireTeacher?: boolean;
     skipXPCheck?: boolean;
+    requiredTalent?: string;
 }
 
-export default function RequireAuth({ children, requireAdmin = false, requireTeacher = false, skipXPCheck = false }: RequireAuthProps) {
+export default function RequireAuth({ children, requireAdmin = false, requireTeacher = false, skipXPCheck = false, requiredTalent }: RequireAuthProps) {
     const { user, loading: authLoading } = useAuth();
     const location = useLocation();
     const [loading, setLoading] = useState(true);
     const [userXP, setUserXP] = useState(0);
     const [requiredXP, setRequiredXP] = useState(0);
     const [hasAccess, setHasAccess] = useState(false);
+    const [accessDeniedReason, setAccessDeniedReason] = useState<'xp' | 'talent' | 'role' | null>(null);
+    const [userTalent, setUserTalent] = useState<string | string[] | null>(null);
 
     // XP düşürme işleminin bu ziyaret için yapılıp yapılmadığını takip et
     const xpDeductionAttemptedRef = useRef(false);
@@ -38,10 +42,10 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
             }
 
             try {
-                // Kullanıcının XP'sini ve rolünü al
+                // Kullanıcının XP'sini, rolünü ve yetenek alanını al
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
-                    .select('experience, is_admin, role')
+                    .select('experience, is_admin, role, yetenek_alani')
                     .eq('id', user.id)
                     .maybeSingle();
 
@@ -62,6 +66,7 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
                 // Admin veya öğretmen kontrolü
                 if (requireAdmin && !profile.is_admin && profile.role !== 'teacher') {
                     setHasAccess(false);
+                    setAccessDeniedReason('role');
                     setLoading(false);
                     return;
                 }
@@ -69,12 +74,44 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
                 // Sadece öğretmen gerektiren sayfalar için kontrol
                 if (requireTeacher && !profile.is_admin && profile.role !== 'teacher') {
                     setHasAccess(false);
+                    setAccessDeniedReason('role');
                     setLoading(false);
                     return;
                 }
 
                 // Admin ise veya XP kontrolü atlanacaksa direkt erişim ver
-                if (profile.is_admin || profile.role === 'teacher' || skipXPCheck) {
+                if (profile.is_admin || profile.role === 'teacher') {
+                    setHasAccess(true);
+                    setLoading(false);
+                    return;
+                }
+
+                // Yetenek alanı kontrolü
+                if (requiredTalent) {
+                    const talentsInput = profile.yetenek_alani;
+                    let talents: string[] = [];
+
+                    if (Array.isArray(talentsInput)) {
+                        talents = talentsInput;
+                    } else if (typeof talentsInput === 'string') {
+                        // Virgül veya noktalı virgül ile ayrılmış olabilir
+                        talents = talentsInput.split(/[,,;]/).map(t => t.trim()).filter(Boolean);
+                    }
+
+                    const hasRequiredTalent = talents.some(t =>
+                        t.toLowerCase() === requiredTalent.toLowerCase()
+                    );
+
+                    if (!hasRequiredTalent) {
+                        setHasAccess(false);
+                        setAccessDeniedReason('talent');
+                        setUserTalent(talents.length > 0 ? talents : (talentsInput || null));
+                        setLoading(false);
+                        return;
+                    }
+                }
+
+                if (skipXPCheck) {
                     setHasAccess(true);
                     setLoading(false);
                     return;
@@ -101,6 +138,7 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
                 // XP kontrolü
                 const userHasAccess = profile.experience >= requiredAmount;
                 setHasAccess(userHasAccess);
+                if (!userHasAccess) setAccessDeniedReason('xp');
 
                 // XP düşürme işlemi (sadece erişim varsa ve gereksinim > 0 ise)
                 if (userHasAccess && requiredAmount > 0 && !xpDeductionAttemptedRef.current) {
@@ -173,6 +211,29 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
     }
 
     if (!hasAccess) {
+        if (accessDeniedReason === 'talent') {
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-rose-900 to-slate-900 p-4">
+                    <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-8 max-w-md w-full text-center">
+                        <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Lock className="w-10 h-10 text-rose-500" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-white mb-4">Bu Atölye Profilinize Uygun Değil</h1>
+                        <p className="text-white/70 mb-8 leading-relaxed">
+                            Müzik Atölyesi sadece yetenek alanı <strong>Müzik</strong> olan öğrencilerimiz içindir.
+                            Sizin yetenek alanınız: <strong>{Array.isArray(userTalent) ? userTalent.join(', ') : (userTalent || 'Belirtilmemiş')}</strong>.
+                        </p>
+                        <button
+                            onClick={() => window.history.back()}
+                            className="w-full py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all border border-white/10"
+                        >
+                            Geri Dön
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <XPWarning
                 requiredXP={requiredXP}
