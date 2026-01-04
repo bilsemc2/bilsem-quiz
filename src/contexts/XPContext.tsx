@@ -13,8 +13,14 @@ const XPContext = createContext<XPContextType>({
 
 export const XPProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, handleXPGain } = useAuth();
-    const [secondsActive, setSecondsActive] = useState(0);
-    const [lastXPGainAt, setLastXPGainAt] = useState(0);
+    const [secondsActive, setSecondsActive] = useState(() => {
+        const saved = localStorage.getItem('xp_seconds_active');
+        return saved ? parseInt(saved, 10) : 0;
+    });
+    const [lastXPGainAt, setLastXPGainAt] = useState(() => {
+        const saved = localStorage.getItem('xp_last_gain_at');
+        return saved ? parseInt(saved, 10) : 0;
+    });
     const XP_INTERVAL = 60;
 
     useEffect(() => {
@@ -36,10 +42,13 @@ export const XPProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         return () => clearInterval(timer);
     }, [user]);
 
-    // Initialize lastXPGainAt to now on mount so it doesn't fire immediately
+    // Save secondsActive and lastXPGainAt to localStorage
     useEffect(() => {
-        setLastXPGainAt(Date.now());
-    }, []);
+        if (user) {
+            localStorage.setItem('xp_seconds_active', secondsActive.toString());
+            localStorage.setItem('xp_last_gain_at', lastXPGainAt.toString());
+        }
+    }, [secondsActive, lastXPGainAt, user]);
 
     // Side effect to handle XP gain when secondsActive resets to 0
     useEffect(() => {

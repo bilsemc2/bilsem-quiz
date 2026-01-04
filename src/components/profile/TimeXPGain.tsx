@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,12 +14,17 @@ const TimeXPGain = ({ onGain }: TimeXPGainProps) => {
     const [showAnimation, setShowAnimation] = useState(false);
     const XP_INTERVAL = 60;
 
+    const prevLastGain = useRef(lastXPGainAt);
+
     useEffect(() => {
-        if (lastXPGainAt > 0) {
+        if (lastXPGainAt > 0 && lastXPGainAt > prevLastGain.current) {
             setShowAnimation(true);
             const timer = setTimeout(() => setShowAnimation(false), 2000);
             if (onGain && profile?.experience) onGain(profile.experience);
+            prevLastGain.current = lastXPGainAt;
             return () => clearTimeout(timer);
+        } else {
+            prevLastGain.current = lastXPGainAt;
         }
     }, [lastXPGainAt, onGain, profile?.experience]);
 

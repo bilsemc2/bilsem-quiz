@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Search, ChevronLeft, Languages, Brain, Check, X, Loader2, ChevronRight, Trophy, RotateCcw } from 'lucide-react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Deyim {
