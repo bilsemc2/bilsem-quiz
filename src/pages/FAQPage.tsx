@@ -7,11 +7,8 @@ import {
     MessageCircle,
     HelpCircle,
     Zap,
-    CreditCard,
-    BookOpen,
     Wrench,
     Headphones,
-    Sparkles,
     Crown,
     Rocket,
     Gift,
@@ -150,8 +147,8 @@ const FAQPage: React.FC = () => {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => { setActiveCategory(category.name); setOpenItem(null); }}
                                 className={`relative p-4 rounded-2xl transition-all duration-300 border h-full flex flex-col items-center justify-center gap-3 ${isActive
-                                        ? `bg-gradient-to-br ${category.color} border-transparent shadow-xl shadow-blue-500/20 text-white`
-                                        : 'bg-slate-900/40 border-white/5 text-slate-400 hover:border-white/10 hover:bg-slate-800/60'
+                                    ? `bg-gradient-to-br ${category.color} border-transparent shadow-xl shadow-blue-500/20 text-white`
+                                    : 'bg-slate-900/40 border-white/5 text-slate-400 hover:border-white/10 hover:bg-slate-800/60'
                                     }`}
                             >
                                 <Icon className={`w-6 h-6 ${isActive ? 'text-white' : 'text-slate-300'}`} />
@@ -184,8 +181,8 @@ const FAQPage: React.FC = () => {
                                 <div
                                     key={index}
                                     className={`group rounded-3xl border transition-all duration-300 overflow-hidden ${openItem === index
-                                            ? 'bg-slate-900/80 border-blue-500/30'
-                                            : 'bg-slate-900/40 border-white/5 hover:border-white/10'
+                                        ? 'bg-slate-900/80 border-blue-500/30'
+                                        : 'bg-slate-900/40 border-white/5 hover:border-white/10'
                                         }`}
                                 >
                                     <button
