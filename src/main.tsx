@@ -11,10 +11,16 @@ if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.match
 }
 
 import App from './App.tsx'
+import { AuthProvider } from './contexts/AuthContext'
+import { XPProvider } from './contexts/XPContext'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <XPProvider>
+        <App />
+      </XPProvider>
+    </AuthProvider>
   </React.StrictMode>,
 )
 

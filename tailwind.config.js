@@ -11,6 +11,8 @@ export default {
         sans: ['Nunito', 'sans-serif'],
         poppins: ['Poppins', 'sans-serif'],
         'open-sans': ['Open Sans', 'sans-serif'],
+        outfit: ['Outfit', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
       },
       colors: {
         primary: {
@@ -101,5 +103,7 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

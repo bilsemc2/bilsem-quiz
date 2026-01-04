@@ -8,6 +8,7 @@ import { SoundProvider } from './contexts/SoundContext';
 import RequireAuth from './components/RequireAuth';
 import { Toaster } from 'react-hot-toast';
 import AdminMessageNotification from './components/AdminMessageNotification';
+import GlobalXPTimer from './components/GlobalXPTimer';
 import toast from 'react-hot-toast';
 
 // ============================================
@@ -180,7 +181,6 @@ function App() {
   return (
     <AuthProvider>
       <SoundProvider>
-        <AdminMessageNotification />
         <Toaster
           position="top-center"
           toastOptions={{
@@ -197,6 +197,8 @@ function App() {
           }}
         />
         <Router>
+          <AdminMessageNotification />
+          <GlobalXPTimer />
           <LocationAwareRouter />
         </Router>
       </SoundProvider>

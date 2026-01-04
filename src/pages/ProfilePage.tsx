@@ -6,11 +6,14 @@ import EditProfileModal from '../components/EditProfileModal';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import {
-    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2
+    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail
 } from 'lucide-react';
 import { UserProfile, QuizStats, ClassStudent } from '@/types/profile';
 import { calculateLevelInfo, getLevelBadge, getLevelTitle } from '@/utils/levelCalculator';
 import ReferralSystem from '@/components/profile/ReferralSystem';
+import UserMessages from '@/components/UserMessages';
+import TimeXPGain from '@/components/profile/TimeXPGain';
+
 
 // Hızlı Erişim Butonları
 const QUICK_ACCESS_BUTTONS = [
@@ -41,7 +44,7 @@ const QUICK_ACCESS_BUTTONS = [
 ];
 
 export const ProfilePage: React.FC = () => {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showReferral, setShowReferral] = useState(false);
@@ -114,6 +117,26 @@ export const ProfilePage: React.FC = () => {
             setIsLoading(false);
         }
     };
+
+    // Keep stats in sync with global profile XP (from AuthContext)
+    useEffect(() => {
+        if (profile?.experience !== undefined) {
+            const levelInfo = calculateLevelInfo(profile.experience);
+            const levelBadge = getLevelBadge(levelInfo.currentLevel);
+            const levelTitle = getLevelTitle(levelInfo.currentLevel);
+
+            setUserData(prev => ({ ...prev, experience: profile.experience }));
+            setQuizStats(prev => ({
+                ...prev,
+                currentLevel: levelInfo.currentLevel,
+                levelProgress: levelInfo.levelProgress,
+                currentXP: levelInfo.currentXP,
+                nextLevelXP: levelInfo.nextLevelXP,
+                levelBadge,
+                levelTitle
+            }));
+        }
+    }, [profile?.experience]);
 
     const generateReferralCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -250,6 +273,25 @@ export const ProfilePage: React.FC = () => {
                     ))}
                 </motion.div>
 
+                {/* Mesajlarım Bölümü */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="mb-8"
+                >
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                            <Mail className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-white">Mesajlarım</h2>
+                            <p className="text-white/50 text-sm">Öğretmenlerinden gelen önemli duyurular</p>
+                        </div>
+                    </div>
+                    <UserMessages userId={user?.id} />
+                </motion.div>
+
                 {/* DersimVar.com Reklamı */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -298,6 +340,10 @@ export const ProfilePage: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="lg:col-span-2">
+                            <TimeXPGain />
+                        </div>
+
                         {/* Arkadaş Davet Et Kartı */}
                         <div className="bg-slate-800/50 border border-pink-500/20 rounded-2xl p-5">
                             <button

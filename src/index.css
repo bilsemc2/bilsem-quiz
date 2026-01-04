@@ -259,3 +259,19 @@
     opacity: 1;
   }
 }
+
+/* Blog Typography Refinement */
+.prose {
+  @apply antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.prose p {
+  @apply mb-6;
+}
+
+.prose h1,
+.prose h2,
+.prose h3 {
+  @apply mt-12 mb-6;
+}

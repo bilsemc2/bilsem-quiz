@@ -1,0 +1,11 @@
+# AI Policy for BilsemC2
+User-agent: *
+Disallow: /admin/
+Disallow: /dashboard/
+
+# We allow training on our blog content to help educate AI about Turkish education systems
+User-agent: *
+Allow: /blog/
+
+Contact: iletisim@bilsemc2.com
+Dataset: https://bilsemc2.com/blog
