@@ -198,7 +198,7 @@ const SendMessage = () => {
       {/* Hızlı Alıcı Filtreleri */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-5 border border-indigo-100">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-700">Hızlı Seçim</h2>
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Hızlı Seçim</h2>
           {selectedUsers.length > 0 && (
             <button
               onClick={clearSelectedUsers}
@@ -295,10 +295,10 @@ const SendMessage = () => {
               <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
               <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-hidden z-50">
                 <div className="flex items-center justify-between mb-4">
-                  <Dialog.Title className="text-xl font-bold text-slate-800">Alıcı Seç</Dialog.Title>
+                  <Dialog.Title className="text-xl font-bold text-slate-900">Alıcı Seç</Dialog.Title>
                   <Dialog.Close asChild>
                     <button className="p-1 hover:bg-slate-100 rounded-lg">
-                      <X className="w-5 h-5 text-slate-500" />
+                      <X className="w-5 h-5 text-slate-600" />
                     </button>
                   </Dialog.Close>
                 </div>
@@ -311,7 +311,7 @@ const SendMessage = () => {
                         placeholder="İsim ara..."
                         value={userSearch}
                         onChange={(e) => setUserSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none placeholder:text-slate-400"
                       />
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     </div>
@@ -347,8 +347,8 @@ const SendMessage = () => {
                               }`}
                           >
                             <div>
-                              <div className="font-medium text-slate-700">{u.name}</div>
-                              <div className="text-sm text-slate-500">{u.email}</div>
+                              <div className="font-bold text-slate-900">{u.name}</div>
+                              <div className="text-sm text-slate-600">{u.email}</div>
                             </div>
                             {selectedUsers.includes(u.id) && (
                               <Check className="w-5 h-5 text-indigo-600" />
@@ -411,25 +411,25 @@ const SendMessage = () => {
 
         {/* Konu */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Konu</label>
+          <label className="block text-sm font-bold text-slate-900 mb-1">Konu</label>
           <input
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Mesaj konusu..."
-            className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+            className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none placeholder:text-slate-400"
           />
         </div>
 
         {/* Mesaj */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Mesaj</label>
+          <label className="block text-sm font-bold text-slate-900 mb-1">Mesaj</label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Mesajınızı yazın..."
             rows={6}
-            className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none resize-none"
+            className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none resize-none placeholder:text-slate-400"
           />
         </div>
 
@@ -451,7 +451,7 @@ const SendMessage = () => {
         <button
           onClick={handleSendMessage}
           disabled={sending || !message.trim() || selectedUsers.length === 0}
-          className="w-full sm:w-auto px-6 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+          className="w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-bold"
         >
           {sending ? (
             <>
