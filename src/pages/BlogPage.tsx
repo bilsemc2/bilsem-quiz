@@ -178,7 +178,7 @@ const BlogPage: React.FC = () => {
 
             {/* Content */}
             <div className="p-6 md:p-8">
-              <div className="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-a:text-purple-400 prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-white">
+              <div className="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-a:text-purple-400 prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-p:text-slate-100 prose-li:text-slate-100 prose-strong:text-white">
                 <ReactMarkdown>{selectedPost.content}</ReactMarkdown>
               </div>
             </div>
@@ -247,7 +247,7 @@ const BlogPage: React.FC = () => {
 
                   <div className="p-5 flex flex-col h-full">
                     {/* Date */}
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
                       <Calendar className="w-3.5 h-3.5" />
                       <span>{formatDate(post.created_at)}</span>
                       <span className="mx-1">•</span>
@@ -261,7 +261,7 @@ const BlogPage: React.FC = () => {
                     </h2>
 
                     {/* Preview */}
-                    <p className="text-slate-400 text-sm leading-relaxed line-clamp-3 flex-1">
+                    <p className="text-slate-300 text-sm leading-relaxed line-clamp-3 flex-1">
                       {getPreviewContent(post.content)}
                     </p>
 

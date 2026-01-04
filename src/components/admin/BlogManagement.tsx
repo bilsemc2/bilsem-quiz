@@ -273,7 +273,7 @@ const BlogManagement = () => {
               {formData.content && (
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 mb-2">Önizleme:</h3>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 prose prose-sm max-w-none">
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-300 prose prose-sm max-w-none prose-headings:text-slate-900 prose-p:text-slate-900 prose-li:text-slate-900 prose-strong:text-slate-900">
                     <ReactMarkdown>{formData.content}</ReactMarkdown>
                   </div>
                 </div>

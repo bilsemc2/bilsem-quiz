@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Edit, X, Loader2, Zap } from 'lucide-react';
+import { Plus, Trash2, Edit, X, Loader2, Zap, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { XPRequirement } from '../../types/xpRequirements';
 import { useAuth } from '../../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export default function XPRequirementsManagement() {
@@ -176,42 +177,53 @@ export default function XPRequirementsManagement() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-        <Zap className="w-6 h-6 text-amber-500" />
-        XP Gereksinimleri Yönetimi
-      </h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link
+            to="/admin"
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors group"
+            title="Geri Dön"
+          >
+            <ArrowLeft className="w-6 h-6 text-slate-600 group-hover:text-indigo-600" />
+          </Link>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Zap className="w-6 h-6 text-amber-500" />
+            XP Gereksinimleri Yönetimi
+          </h1>
+        </div>
+      </div>
 
       {/* Add New Requirement */}
       <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
-        <h2 className="font-bold text-slate-700">Yeni Gereksinim Ekle</h2>
+        <h2 className="font-bold text-slate-900 uppercase tracking-tight text-sm">Yeni Gereksinim Ekle</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Sayfa Yolu</label>
+            <label className="block text-sm font-bold text-slate-900 mb-1.5">Sayfa Yolu</label>
             <input
               type="text"
               value={newRequirement.page_path}
               onChange={(e) => setNewRequirement({ ...newRequirement, page_path: e.target.value })}
               placeholder="/quiz/123"
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Gereken XP</label>
+            <label className="block text-sm font-bold text-slate-900 mb-1.5">Gereken XP</label>
             <input
               type="number"
               min={0}
               value={newRequirement.required_xp}
               onChange={(e) => setNewRequirement({ ...newRequirement, required_xp: parseInt(e.target.value) || 0 })}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Açıklama</label>
+            <label className="block text-sm font-bold text-slate-900 mb-1.5">Açıklama</label>
             <input
               type="text"
               value={newRequirement.description}
               onChange={(e) => setNewRequirement({ ...newRequirement, description: e.target.value })}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none"
             />
           </div>
         </div>
