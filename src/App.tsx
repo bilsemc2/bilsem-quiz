@@ -22,7 +22,6 @@ const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
 
 // Admin Pages
 const AdminPage = React.lazy(() => import('./pages/AdminPage'));
-const XPRequirementsPage = React.lazy(() => import('./pages/admin/XPRequirementsPage'));
 
 // Content Pages
 const CreatePdfPage = React.lazy(() => import('./pages/CreatePdfPage'));
@@ -43,7 +42,6 @@ const AboutPage = React.lazy(() => import('./pages/AboutPage'));
 // Story Pages
 const StoryListPage = React.lazy(() => import('./pages/Story/StoryListPage'));
 const StoryDetailPage = React.lazy(() => import('./pages/Story/StoryDetailPage'));
-const StoryGeneratorPage = React.lazy(() => import('./pages/Story/StoryGeneratorPage'));
 
 // Workshop Pages
 const GenelYetenekPage = React.lazy(() => import('./pages/workshops/GenelYetenekPage'));
@@ -133,8 +131,6 @@ const LocationAwareRouter: React.FC = () => {
 
             {/* Admin Routes */}
             <Route path="/admin/*" element={<RequireAuth requireAdmin><AdminPage /></RequireAuth>} />
-            <Route path="/admin/xp-requirements" element={<RequireAuth requireAdmin><XPRequirementsPage /></RequireAuth>} />
-            <Route path="/admin/stories/create" element={<RequireAuth requireAdmin><StoryGeneratorPage /></RequireAuth>} />
 
             {/* Story Routes */}
             <Route path="/stories" element={<RequireAuth><StoryListPage /></RequireAuth>} />

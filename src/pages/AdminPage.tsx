@@ -37,6 +37,7 @@ import AdminSettings from '../components/admin/AdminSettings';
 import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
 import BlogManagement from '../components/admin/BlogManagement';
 import SendMessage from '../components/admin/SendMessage';
+import StoryGeneratorPage from './Story/StoryGeneratorPage';
 import { toast } from 'react-hot-toast';
 
 interface Notification {
@@ -84,7 +85,7 @@ const AdminPage: React.FC = () => {
       id: 'stories',
       title: 'Hikayeler',
       icon: <BookIcon />,
-      component: null,
+      component: <StoryGeneratorPage />,
       path: '/admin/stories/create',
     },
     {
