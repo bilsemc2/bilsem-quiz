@@ -11,6 +11,9 @@ import AdminMessageNotification from './components/AdminMessageNotification';
 import GlobalXPTimer from './components/GlobalXPTimer';
 import toast from 'react-hot-toast';
 
+// Muzik Workshop Routes (Lazy)
+const MuzikWorkshopRoutes = React.lazy(() => import('./pages/workshops/muzik/MuzikWorkshopRoutes'));
+
 // ============================================
 // LAZY LOADED PAGES - Code Splitting
 // ============================================
@@ -47,9 +50,10 @@ const StoryDetailPage = React.lazy(() => import('./pages/Story/StoryDetailPage')
 // Workshop Pages
 const GenelYetenekPage = React.lazy(() => import('./pages/workshops/GenelYetenekPage'));
 const ResimPage = React.lazy(() => import('./pages/workshops/ResimPage'));
-const MuzikPage = React.lazy(() => import('./pages/workshops/MuzikPage'));
 const TabletAssessmentPage = React.lazy(() => import('./pages/workshops/TabletAssessmentPage'));
 const IndividualAssessmentPage = React.lazy(() => import('./pages/workshops/IndividualAssessmentPage'));
+
+// Music Workshop Sub-pages are now handled in MuzikWorkshopRoutes.tsx
 
 // Games
 const BallGame = React.lazy(() => import('./pages/BallGame'));
@@ -140,7 +144,8 @@ const LocationAwareRouter: React.FC = () => {
             {/* Workshop Routes */}
             <Route path="/atolyeler/genel-yetenek" element={<RequireAuth><GenelYetenekPage /></RequireAuth>} />
             <Route path="/atolyeler/resim" element={<RequireAuth><ResimPage /></RequireAuth>} />
-            <Route path="/atolyeler/muzik" element={<RequireAuth><MuzikPage /></RequireAuth>} />
+
+            <Route path="/atolyeler/muzik/*" element={<RequireAuth requiredTalent="Müzik"><MuzikWorkshopRoutes /></RequireAuth>} />
             <Route path="/atolyeler/tablet-degerlendirme" element={<RequireAuth><TabletAssessmentPage /></RequireAuth>} />
             <Route path="/atolyeler/bireysel-degerlendirme" element={<RequireAuth><IndividualAssessmentPage /></RequireAuth>} />
 

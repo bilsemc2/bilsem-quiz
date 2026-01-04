@@ -74,6 +74,22 @@ const AdminMessageNotification = () => {
     }
   };
 
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('admin_messages')
+        .update({ read: true })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Local state'i hemen güncelle
+      setMessages(prev => prev.filter(msg => msg.id !== id));
+    } catch (err) {
+      console.error('Error marking as read:', err);
+    }
+  };
+
   const currentMessage = messages[0];
 
   if (!isVisible || !currentMessage) return null;
@@ -121,6 +137,7 @@ const AdminMessageNotification = () => {
 
                 <Link
                   to="/profile"
+                  onClick={() => handleMarkAsRead(currentMessage.id)}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-all"
                 >
                   Mesajı Oku
@@ -130,7 +147,7 @@ const AdminMessageNotification = () => {
 
               {/* Close Button */}
               <button
-                onClick={() => setIsVisible(false)}
+                onClick={() => handleMarkAsRead(currentMessage.id)}
                 className="absolute -top-1 -right-1 p-1 text-slate-500 hover:text-white transition-colors"
                 title="Kapat"
               >

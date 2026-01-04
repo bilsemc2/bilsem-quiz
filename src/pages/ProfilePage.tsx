@@ -6,7 +6,7 @@ import EditProfileModal from '../components/EditProfileModal';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import {
-    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail
+    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail, Music, Palette
 } from 'lucide-react';
 import { UserProfile, QuizStats, ClassStudent } from '@/types/profile';
 import { calculateLevelInfo, getLevelBadge, getLevelTitle } from '@/utils/levelCalculator';
@@ -24,14 +24,6 @@ const QUICK_ACCESS_BUTTONS = [
         icon: Tablet,
         color: 'from-blue-500 to-cyan-500',
         link: '/atolyeler/tablet-degerlendirme'
-    },
-    {
-        id: 'bireysel',
-        title: 'Bireysel Değerlendirme',
-        description: 'İleri seviye oyunlar',
-        icon: Brain,
-        color: 'from-purple-500 to-indigo-500',
-        link: '/atolyeler/bireysel-degerlendirme'
     },
     {
         id: 'quizizz',
@@ -58,7 +50,8 @@ export const ProfilePage: React.FC = () => {
         experience: 0,
         referral_code: "",
         referral_count: 0,
-        classes: []
+        classes: [],
+        yetenek_alani: ""
     });
 
     const [quizStats, setQuizStats] = useState<QuizStats>({
@@ -213,6 +206,28 @@ export const ProfilePage: React.FC = () => {
                                 >
                                     Profili Düzenle
                                 </button>
+                                {userData.yetenek_alani && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {(() => {
+                                            const talentsInput = userData.yetenek_alani;
+                                            let talents: string[] = [];
+                                            if (Array.isArray(talentsInput)) {
+                                                talents = talentsInput;
+                                            } else if (typeof talentsInput === 'string') {
+                                                talents = talentsInput.split(/[,,;]/).map(t => t.trim()).filter(Boolean);
+                                            } else if (talentsInput) {
+                                                talents = [String(talentsInput)];
+                                            }
+
+                                            return talents.map((talent, index) => (
+                                                <span key={index} className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-white/20">
+                                                    <Sparkles className="w-3 h-3 text-yellow-300" />
+                                                    {talent}
+                                                </span>
+                                            ));
+                                        })()}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -247,6 +262,90 @@ export const ProfilePage: React.FC = () => {
                         </div>
                     </div>
                 </motion.div>
+
+                {/* Yetenek Alanına Göre Atölye Kısayolları */}
+                {(userData.yetenek_alani) && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="mb-8"
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+                                <Sparkles className="w-4 h-4 text-yellow-400" />
+                            </div>
+                            <h2 className="text-lg font-bold text-white">Yetenek Atölyelerim</h2>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {(() => {
+                                const talentsInput = userData.yetenek_alani;
+                                let talents: string[] = [];
+                                if (Array.isArray(talentsInput)) {
+                                    talents = talentsInput;
+                                } else if (typeof talentsInput === 'string') {
+                                    talents = talentsInput.split(/[,,;]/).map(t => t.trim()).filter(Boolean);
+                                } else if (talentsInput) {
+                                    talents = [String(talentsInput)];
+                                }
+
+                                const hasMusic = talents.some(t => t.toLowerCase().includes('müzik'));
+                                const hasArt = talents.some(t => t.toLowerCase().includes('resim'));
+                                const hasGeneral = talents.some(t => t.toLowerCase().includes('genel yetenek') || t.toLowerCase().includes('genel zihinsel'));
+
+                                return (
+                                    <>
+                                        {hasGeneral && (
+                                            <Link
+                                                to="/atolyeler/bireysel-degerlendirme"
+                                                className="group flex items-center gap-4 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-2xl p-5 transition-all"
+                                            >
+                                                <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-indigo-500/20">
+                                                    <Brain className="w-7 h-7 text-white" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-white text-lg">Bireysel Değerlendirme</h3>
+                                                    <p className="text-indigo-400/70 text-sm">2. Aşama simülasyonları</p>
+                                                </div>
+                                                <ChevronRight className="w-6 h-6 text-indigo-500/50 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
+                                            </Link>
+                                        )}
+                                        {hasMusic && (
+                                            <Link
+                                                to="/atolyeler/muzik"
+                                                className="group flex items-center gap-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-2xl p-5 transition-all"
+                                            >
+                                                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/20">
+                                                    <Music className="w-7 h-7 text-white" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-white text-lg">Müzik Atölyesi</h3>
+                                                    <p className="text-emerald-400/70 text-sm">Yetenek parkuruna katıl</p>
+                                                </div>
+                                                <ChevronRight className="w-6 h-6 text-emerald-500/50 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+                                            </Link>
+                                        )}
+                                        {hasArt && (
+                                            <Link
+                                                to="/atolyeler/resim"
+                                                className="group flex items-center gap-4 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 rounded-2xl p-5 transition-all"
+                                            >
+                                                <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-pink-500/20">
+                                                    <Palette className="w-7 h-7 text-white" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-white text-lg">Resim Atölyesi</h3>
+                                                    <p className="text-pink-400/70 text-sm">Yaratıcılığını sergile</p>
+                                                </div>
+                                                <ChevronRight className="w-6 h-6 text-pink-500/50 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
+                                            </Link>
+                                        )}
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Hızlı Erişim Butonları */}
                 <motion.div

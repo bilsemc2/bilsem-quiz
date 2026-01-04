@@ -1,0 +1,72 @@
+/* src/pages/workshops/bireysel.css */
+
+.bireysel-workshop-container {
+    min-height: 100vh;
+    background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 50%, #020617 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+    font-family: 'Poppins', sans-serif;
+}
+
+.bireysel-bg-blobs {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.bireysel-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.3;
+    animation: bireyselBlobFloat 30s infinite alternate ease-in-out;
+}
+
+.bireysel-blob-1 {
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, rgba(99, 102, 241, 0) 70%);
+    top: -250px;
+    left: -200px;
+}
+
+.bireysel-blob-2 {
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0) 70%);
+    bottom: -200px;
+    right: -100px;
+    animation-delay: -10s;
+}
+
+.bireysel-blob-3 {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, rgba(79, 70, 229, 0) 70%);
+    top: 40%;
+    right: 10%;
+    animation-delay: -20s;
+}
+
+@keyframes bireyselBlobFloat {
+    0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+
+    33% {
+        transform: translate(60px, 120px) scale(1.05) rotate(8deg);
+    }
+
+    66% {
+        transform: translate(-30px, 40px) scale(0.9) rotate(-10deg);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+}

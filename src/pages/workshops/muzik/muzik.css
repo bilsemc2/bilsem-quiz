@@ -1,0 +1,337 @@
+/* src/pages/workshops/muzik/muzik.css */
+
+:root {
+    --muzik-glass-bg: rgba(15, 23, 42, 0.7);
+    --muzik-glass-border: rgba(255, 255, 255, 0.1);
+    --muzik-text-primary: #f8fafc;
+    --muzik-text-secondary: #94a3b8;
+    --muzik-accent-glow: rgba(16, 185, 129, 0.2);
+    --muzik-card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.muzik-section-box {
+    background: var(--muzik-glass-bg);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-radius: 40px;
+    padding: 40px;
+    margin-bottom: 30px;
+    box-shadow: var(--muzik-card-shadow);
+    width: 100%;
+    max-width: 1100px;
+    border: 1px solid var(--muzik-glass-border);
+    position: relative;
+    z-index: 10;
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.muzik-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+.muzik-modal-container {
+    max-width: 450px;
+    width: 100%;
+    background: var(--muzik-glass-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--muzik-glass-border);
+    box-shadow: var(--muzik-card-shadow);
+    border-radius: 24px;
+    padding: 32px;
+    text-align: center;
+}
+
+.muzik-modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--muzik-text-primary);
+    margin-bottom: 16px;
+}
+
+.muzik-modal-message {
+    font-size: 1.1rem;
+    color: var(--muzik-text-secondary);
+    line-height: 1.6;
+    margin-bottom: 28px;
+}
+
+.muzik-btn {
+    padding: 12px 28px;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+}
+
+.muzik-btn-confirm {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+
+.muzik-btn-cancel {
+    background: transparent;
+    color: var(--muzik-text-secondary);
+    border: 1px solid var(--muzik-glass-border);
+}
+
+.muzik-scale-in {
+    animation: muzikModalScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes muzikModalScaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Sidebar Styles */
+.muzik-sidebar {
+    position: sticky;
+    top: 100px;
+    width: 280px;
+    max-height: calc(100vh - 120px);
+    background: var(--muzik-glass-bg);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    padding: 32px 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--muzik-card-shadow);
+    z-index: 50;
+    border-radius: 32px;
+    border: 1px solid var(--muzik-glass-border);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+}
+
+.muzik-sidebar-header {
+    margin-bottom: 24px;
+}
+
+.muzik-sidebar-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.muzik-sidebar-title {
+    color: var(--muzik-text-primary);
+    font-size: 20px;
+    margin: 0;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+.muzik-progress-count {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.muzik-sidebar-progress-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.muzik-sidebar-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #059669, #10b981);
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.muzik-sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.muzik-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: transparent;
+    border-radius: 16px;
+    color: var(--muzik-text-secondary);
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.muzik-sidebar-item:hover:not(.locked) {
+    background: rgba(16, 185, 129, 0.08);
+    color: #059669;
+    transform: translateX(8px);
+}
+
+.muzik-sidebar-item.active {
+    background: rgba(255, 255, 255, 0.05);
+    color: #10b981;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.muzik-sidebar-item.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.muzik-sidebar-item-icon {
+    font-size: 20px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.muzik-sidebar-item-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.muzik-sidebar-item-name {
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.muzik-sidebar-item-badge {
+    font-size: 9px;
+    color: #10b981;
+    margin-top: 2px;
+    font-weight: 700;
+}
+
+.muzik-sidebar-footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--muzik-glass-border);
+}
+
+.muzik-reset-button {
+    width: 100%;
+    padding: 12px;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.muzik-reset-button:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* Premium Workshop Background */
+.muzik-workshop-container {
+    min-height: 100vh;
+    background: radial-gradient(circle at top right, #064e3b 0%, #0f172a 50%, #020617 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    z-index: 1;
+}
+
+.muzik-bg-blobs {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.muzik-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.4;
+    animation: muzikBlobFloat 30s infinite alternate ease-in-out;
+}
+
+.dark .muzik-blob {
+    opacity: 0.2;
+}
+
+.muzik-blob-1 {
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0) 70%);
+    top: -250px;
+    left: -200px;
+}
+
+.muzik-blob-2 {
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(5, 150, 105, 0.2) 0%, rgba(5, 150, 105, 0) 70%);
+    bottom: -200px;
+    right: -100px;
+    animation-delay: -10s;
+}
+
+.muzik-blob-3 {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(15, 118, 110, 0.15) 0%, rgba(15, 118, 110, 0) 70%);
+    top: 40%;
+    right: 10%;
+    animation-delay: -20s;
+}
+
+@keyframes muzikBlobFloat {
+    0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+
+    33% {
+        transform: translate(60px, 120px) scale(1.05) rotate(8deg);
+    }
+
+    66% {
+        transform: translate(-30px, 40px) scale(0.9) rotate(-10deg);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+}
+
+.muzik-content-wrapper {
+    flex: 1;
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+}
