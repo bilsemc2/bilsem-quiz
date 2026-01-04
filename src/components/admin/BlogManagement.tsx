@@ -190,8 +190,8 @@ const BlogManagement = () => {
                   </td>
                   <td className="py-4 px-6 text-center">
                     <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${post.published
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-slate-100 text-slate-600'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-100 text-slate-600'
                       }`}>
                       {post.published ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                       {post.published ? 'Yayında' : 'Taslak'}
@@ -226,31 +226,33 @@ const BlogManagement = () => {
           <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto z-50">
             <div className="flex items-center justify-between mb-6">
-              <Dialog.Title className="text-xl font-bold text-slate-800">
+              <Dialog.Title className="text-xl font-bold text-slate-900">
                 {editingPost ? 'Blog Yazısını Düzenle' : 'Yeni Blog Yazısı'}
               </Dialog.Title>
               <Dialog.Close asChild>
-                <button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
+                <button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-600" /></button>
               </Dialog.Close>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Başlık</label>
+                <label className="block text-sm font-bold text-slate-900 mb-1.5">Başlık</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none placeholder:text-slate-400"
+                  placeholder="Yazı başlığı"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">İçerik (Markdown)</label>
+                <label className="block text-sm font-bold text-slate-900 mb-1.5">İçerik (Markdown)</label>
                 <textarea
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   rows={10}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none resize-none font-mono text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 outline-none resize-none font-sans text-sm placeholder:text-slate-400"
+                  placeholder="Blog içeriğini buraya yazın..."
                 />
                 <p className="text-xs text-slate-500 mt-1">Markdown formatında yazabilirsiniz</p>
               </div>
@@ -264,13 +266,13 @@ const BlogManagement = () => {
                 >
                   <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${formData.published ? 'translate-x-7' : 'translate-x-1'}`} />
                 </button>
-                <span className="text-slate-700 font-medium">Yayınla</span>
+                <span className="text-slate-900 font-bold">Yayınla</span>
               </label>
 
               {/* Preview */}
               {formData.content && (
                 <div>
-                  <h3 className="text-sm font-medium text-slate-700 mb-2">Önizleme:</h3>
+                  <h3 className="text-sm font-bold text-slate-900 mb-2">Önizleme:</h3>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 prose prose-sm max-w-none">
                     <ReactMarkdown>{formData.content}</ReactMarkdown>
                   </div>
@@ -278,11 +280,11 @@ const BlogManagement = () => {
               )}
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3 mt-8">
               <Dialog.Close asChild>
-                <button className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl">İptal</button>
+                <button className="px-5 py-2.5 text-slate-700 font-medium hover:bg-slate-100 rounded-xl transition-colors">İptal</button>
               </Dialog.Close>
-              <button onClick={handleSave} className="px-6 py-2.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600">
+              <button onClick={handleSave} className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-95">
                 Kaydet
               </button>
             </div>
