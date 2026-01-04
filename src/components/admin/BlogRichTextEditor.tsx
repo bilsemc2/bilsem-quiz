@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -84,9 +85,9 @@ const MenuBar = ({ editor }: { editor: any }) => {
                         btn.action();
                     }}
                     disabled={btn.disabled}
-                    className={`p-2 rounded-lg transition-colors ${btn.active && editor.isActive(btn.active)
-                        ? 'bg-indigo-100 text-indigo-600'
-                        : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    className={`p - 2 rounded - lg transition - colors ${btn.active && editor.isActive(btn.active)
+                            ? 'bg-indigo-100 text-indigo-600'
+                            : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                         } ${btn.disabled ? 'opacity-30 cursor-not-allowed' : ''} `}
                 >
                     <btn.icon className="w-4 h-4" />
@@ -118,15 +119,22 @@ const BlogRichTextEditor = ({ content, onChange }: BlogRichTextEditorProps) => {
             }),
         ],
         content: content,
-        onUpdate: ({ editor }) => {
-            onChange(editor.getHTML());
-        },
         editorProps: {
             attributes: {
                 class: 'prose prose-sm max-w-none focus:outline-none min-h-[300px] p-4 text-slate-800',
             },
         },
+        onUpdate: ({ editor }) => {
+            onChange(editor.getHTML());
+        },
     });
+
+    // Content prop değiştiğinde editor'ü güncelle (AI Writer gibi dış müdahaleler için)
+    useEffect(() => {
+        if (editor && content !== editor.getHTML()) {
+            editor.commands.setContent(content);
+        }
+    }, [content, editor]);
 
     return (
         <div className="border border-slate-300 rounded-xl overflow-hidden bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">

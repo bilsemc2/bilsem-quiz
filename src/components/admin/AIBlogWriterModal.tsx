@@ -7,6 +7,8 @@ interface AIBlogWriterModalProps {
     isOpen: boolean;
     onClose: () => void;
     onApplyDraft: (data: { title: string; content: string; category: string }) => void;
+    initialContent?: string;
+    mode?: 'generate' | 'beautify';
 }
 
 const TONES = [
@@ -16,19 +18,37 @@ const TONES = [
     { id: 'technical', label: 'Teknik Özellikler', icon: MessageSquareText, color: 'text-purple-400' },
 ];
 
-const AIBlogWriterModal: React.FC<AIBlogWriterModalProps> = ({ isOpen, onClose, onApplyDraft }) => {
+const AIBlogWriterModal: React.FC<AIBlogWriterModalProps> = ({ isOpen, onClose, onApplyDraft, initialContent = '', mode = 'generate' }) => {
     const [topic, setTopic] = useState('');
     const [tone, setTone] = useState('educational');
     const [copied, setCopied] = useState(false);
     const [importedContent, setImportedContent] = useState('');
 
     const generatePrompt = () => {
+        const selectedTone = TONES.find(t => t.id === tone)?.label;
+
+        if (mode === 'beautify') {
+            return `Lütfen aşağıda paylaştığım metni, "${selectedTone}" tonunda profesyonel ve SEO uyumlu bir blog yazısına dönüştürerek GÜZELLEŞTİR.
+Yazı şu kurallara uymalı:
+1. Başlık çok çarpıcı ve SEO uyumlu olmalı.
+2. İçerik HTML formatında (TipTap/ProseMirror uyumlu) olmalı; <h1>, <h2>, <p>, <strong>, <ul>, <li> etiketlerini kullan. 
+3. Modern, akıcı ve bilgilendirici bir dil kullan. 
+4. Metindeki anahtar noktaları <strong> etiketleri ile vurgula.
+5. Yazı sonunda bir özet cümlesi bulundur.
+
+GÜZELLEŞTİRİLECEK METİN:
+"${initialContent}"
+
+Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokları ayırarak):
+[TITLE]: Yazı Başlığı
+[CATEGORY]: Kategori Adı
+[CONTENT]: <h1>Başlık</h1><p>İçerik...</p>...`;
+        }
+
         if (!topic.trim()) {
             toast.error('Lütfen bir konu girin');
             return '';
         }
-
-        const selectedTone = TONES.find(t => t.id === tone)?.label;
 
         return `Lütfen "${topic}" konusu üzerine, "${selectedTone}" tonunda profesyonel bir blog yazısı yaz. 
 Yazı şu kurallara uymalı:
@@ -48,7 +68,7 @@ Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokla
         if (prompt) {
             navigator.clipboard.writeText(prompt);
             setCopied(true);
-            toast.success('İstem kopyalandı! Şimdi bunu asistanına gönder.');
+            toast.success('İstem kopyalandı! Şimdi bunu Antigravity\'ye gönder.');
             setTimeout(() => setCopied(false), 2000);
         }
     };
@@ -70,7 +90,7 @@ Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokla
                     category: categoryMatch ? categoryMatch[1].trim() : 'BİLSEM',
                     content: contentMatch[1].trim(),
                 });
-                toast.success('Yazı taslağı başarıyla uygulandı!');
+                toast.success('Yazı başarıyla güncellendi!');
                 onClose();
             }
         } catch (error) {
@@ -89,8 +109,14 @@ Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokla
                                 <Bot className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <Dialog.Title className="text-xl font-black text-white">AI Blog Yazarı</Dialog.Title>
-                                <p className="text-xs text-slate-400 font-medium">Asistanınız ile birlikte yazılarınızı dakikalar içinde hazırlayın.</p>
+                                <Dialog.Title className="text-xl font-black text-white">
+                                    {mode === 'beautify' ? 'AI Yazı Güzelleştirici' : 'AI Blog Yazarı'}
+                                </Dialog.Title>
+                                <p className="text-xs text-slate-400 font-medium">
+                                    {mode === 'beautify'
+                                        ? 'Mevcut metninizi profesyonel bir blog yazısına dönüştürün.'
+                                        : 'Asistanınız ile birlikte yazılarınızı dakikalar içinde hazırlayın.'}
+                                </p>
                             </div>
                         </div>
                         <Dialog.Close className="p-2 hover:bg-white/5 rounded-full transition-colors">
@@ -103,23 +129,25 @@ Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokla
                         <section className="space-y-4">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">1</span>
-                                <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest">Temel Bilgiler</h3>
+                                <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest">Özellikler</h3>
                             </div>
 
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">Konu / Tema</label>
-                                    <input
-                                        type="text"
-                                        value={topic}
-                                        onChange={(e) => setTopic(e.target.value)}
-                                        placeholder="Örn: Yapay Zeka ve Çocuk Eğitimi..."
-                                        className="w-full px-5 py-3 bg-slate-800/50 border border-white/10 rounded-xl text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
-                                    />
-                                </div>
+                                {mode === 'generate' && (
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">Konu / Tema</label>
+                                        <input
+                                            type="text"
+                                            value={topic}
+                                            onChange={(e) => setTopic(e.target.value)}
+                                            placeholder="Örn: Yapay Zeka ve Çocuk Eğitimi..."
+                                            className="w-full px-5 py-3 bg-slate-800/50 border border-white/10 rounded-xl text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
+                                        />
+                                    </div>
+                                )}
 
                                 <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">Yazım Tonu</label>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">Hedef Yazım Tonu</label>
                                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                                         {TONES.map((t) => (
                                             <button
@@ -141,10 +169,10 @@ Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokla
                                     onClick={copyPrompt}
                                     className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-indigo-900/20"
                                 >
-                                    {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                                    {copied ? 'İstem Kopyalandı!' : 'Antigravity İçin İstemi Kopyala'}
+                                    {copied ? <Check className="w-5 h-5" /> : (mode === 'beautify' ? <Rocket className="w-5 h-5" /> : <Copy className="w-5 h-5" />)}
+                                    {copied ? 'İstem Kopyalandı!' : (mode === 'beautify' ? 'Güzelleştirme İstemini Kopyala' : 'Antigravity İçin İstemi Kopyala')}
                                 </button>
-                                <p className="text-[10px] text-slate-500 text-center font-medium">Bu butona basıp kopyalanan metni sohbete yapıştırarak asistanınızın yazıyı hazırlamasını sağlayın.</p>
+                                <p className="text-[10px] text-slate-500 text-center font-medium">Bu butona basıp kopyalanan metni sohbete yapıştırarak asistanın yazıyı hazırlamasını sağlayın.</p>
                             </div>
                         </section>
 
@@ -169,7 +197,7 @@ Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokla
                                     className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-emerald-900/20"
                                 >
                                     <Import className="w-5 h-5" />
-                                    Yazıyı Taslağa Uygula
+                                    {mode === 'beautify' ? 'Güzelleştirilmiş Hali Uygula' : 'Yazıyı Taslağa Uygula'}
                                 </button>
                             </div>
                         </section>

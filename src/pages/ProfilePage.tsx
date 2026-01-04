@@ -3,14 +3,16 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import EditProfileModal from '../components/EditProfileModal';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import {
-    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail, Music, Palette
+    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail, Music, Palette, Ticket
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { UserProfile, QuizStats, ClassStudent } from '@/types/profile';
 import { calculateLevelInfo, getLevelBadge, getLevelTitle } from '@/utils/levelCalculator';
 import ReferralSystem from '@/components/profile/ReferralSystem';
+import { showXPEarn } from '@/components/XPToast';
 import UserMessages from '@/components/UserMessages';
 import TimeXPGain from '@/components/profile/TimeXPGain';
 
@@ -36,10 +38,12 @@ const QUICK_ACCESS_BUTTONS = [
 ];
 
 export const ProfilePage: React.FC = () => {
-    const { user, profile } = useAuth();
+    const { user, profile, refreshProfile } = useAuth();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showReferral, setShowReferral] = useState(false);
+    const [promoCode, setPromoCode] = useState('');
+    const [isRedeeming, setIsRedeeming] = useState(false);
     const [userData, setUserData] = useState<UserProfile>({
         name: "",
         email: user?.email || "",
@@ -73,7 +77,7 @@ export const ProfilePage: React.FC = () => {
         try {
             const { data: profileData } = await supabase
                 .from('profiles')
-                .select(`*, class_students!left (classes:class_id (id, name, grade))`)
+                .select(`*, class_students!left(classes: class_id(id, name, grade))`)
                 .eq('id', user.id)
                 .single();
 
@@ -142,6 +146,91 @@ export const ProfilePage: React.FC = () => {
             toast.success('Yeni referans kodunuz oluşturuldu!');
         } catch (error) {
             toast.error('Referans kodu oluşturulamadı.');
+        }
+    };
+
+    const handleRedeemCode = async () => {
+        if (!user || !promoCode.trim()) return;
+        setIsRedeeming(true);
+
+        try {
+            // 1. Kodu kontrol et
+            const { data: codeData, error: codeError } = await supabase
+                .from('promo_codes')
+                .select('*')
+                .eq('code', promoCode.trim().toUpperCase())
+                .maybeSingle();
+
+            if (codeError || !codeData) {
+                toast.error('Bu kod galiba paralel evrenden gelmiş, bizim sistemde kaydı yok! 🛸');
+                return;
+            }
+            // 2. Süre kontrolü
+            if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
+                toast.error('Tüh! Bu kodun son kullanma tarihi geçmiş, antika olmuş! 🏺');
+                return;
+            }
+            // 3. Kullanım limiti kontrolü
+            if (codeData.current_uses >= codeData.max_uses) {
+                toast.error('Hızlı olan kazanır! Bu kodun tüm ödülleri çoktan kapışılmış... 🏃‍♂️💨');
+                return;
+            }
+            // 4. Daha önce kullanılmış mı kontrol et
+            const { data: usageData } = await supabase
+                .from('promo_code_usage')
+                .select('*')
+                .eq('promo_code_id', codeData.id)
+                .eq('student_id', user.id)
+                .maybeSingle();
+
+            if (usageData) {
+                toast.error('Hafızan harika ama bu kodu zaten cebe indirdin! Başka maceralara yelken açma zamanı... 🏴‍☠️✨');
+                return;
+            }
+            // 5. İşlemi gerçekleştir
+            // Transaction benzeri bir akış (yetenek_alani'na göre XP ekleme)
+            const { error: usageError } = await supabase
+                .from('promo_code_usage')
+                .insert([{ promo_code_id: codeData.id, student_id: user.id }]);
+
+            if (usageError) throw usageError;
+
+            // XP'yi güncelle
+            const newXP = (profile?.experience || 0) + codeData.xp_reward;
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ experience: newXP })
+                .eq('id', user.id);
+
+            if (profileError) throw profileError;
+
+            // Kullanım sayısını artır
+            await supabase
+                .from('promo_codes')
+                .update({ current_uses: codeData.current_uses + 1 })
+                .eq('id', codeData.id);
+
+            // Global state'i tazele
+            await refreshProfile();
+
+            // Eğlenceli geri bildirim: Konfeti patlat!
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#6366f1', '#ec4899', '#8b5cf6', '#FACC15']
+            });
+
+            // Gerçek XP miktarını gösteren şık toast
+            showXPEarn(codeData.xp_reward, `${codeData.code} Promo Kodu Bonusunuz!`);
+
+            setPromoCode('');
+            // local state update triggers level animation etc if handled by context
+        } catch (error) {
+            console.error('Promo code redemption error:', error);
+            toast.error('Kod kullanılırken bir teknik sorun oluştu. 🛠️');
+        } finally {
+            setIsRedeeming(false);
         }
     };
 
@@ -443,6 +532,39 @@ export const ProfilePage: React.FC = () => {
                             <TimeXPGain />
                         </div>
 
+                        {/* Promo Kodu Gir Kartı */}
+                        <div className="bg-slate-800/50 border border-violet-500/20 rounded-2xl p-5">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                                    <Ticket className="w-6 h-6 text-white" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-white">Promo Kodu Gir</h3>
+                                    <p className="text-white/50 text-sm">Hediye kodunu kullan</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={promoCode}
+                                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                                    placeholder="KODU BURAYA YAZIN"
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500 transition-colors uppercase"
+                                />
+                                <button
+                                    onClick={handleRedeemCode}
+                                    disabled={isRedeeming || !promoCode.trim()}
+                                    className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-50 disabled:scale-100"
+                                >
+                                    {isRedeeming ? '...' : 'Gönder'}
+                                </button>
+                            </div>
+                            <p className="mt-3 text-[10px] text-white/30 text-center">
+                                Sosyal medya üzerinden paylaştığımız kodları burada değerlendirebilirsiniz.
+                            </p>
+                        </div>
+
                         {/* Arkadaş Davet Et Kartı */}
                         <div className="bg-slate-800/50 border border-pink-500/20 rounded-2xl p-5">
                             <button
@@ -471,49 +593,6 @@ export const ProfilePage: React.FC = () => {
                                     />
                                 </div>
                             )}
-                        </div>
-
-                        {/* Sosyal Medyadan XP Kazan Kartı */}
-                        <div className="bg-slate-800/50 border border-indigo-500/20 rounded-2xl p-5">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl flex items-center justify-center">
-                                    <Zap className="w-6 h-6 text-white" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="font-bold text-white">Sosyal Medyadan XP Kazan</h3>
-                                    <p className="text-white/50 text-sm">Takip et, beğen, paylaş</p>
-                                </div>
-                                <span className="text-emerald-400 font-bold flex items-center gap-1">
-                                    <Zap className="w-4 h-4" /> +50 XP
-                                </span>
-                            </div>
-
-                            <div className="space-y-3">
-                                <a href="https://youtube.com/@bilsemce" target="_blank" rel="noopener noreferrer"
-                                    className="flex items-center gap-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl p-3 transition-all">
-                                    <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                                        </svg>
-                                    </div>
-                                    <span className="text-white font-medium">@bilsemce</span>
-                                </a>
-                                <a href="https://instagram.com/bilsemce" target="_blank" rel="noopener noreferrer"
-                                    className="flex items-center gap-3 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/20 rounded-xl p-3 transition-all">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-lg flex items-center justify-center">
-                                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                                        </svg>
-                                    </div>
-                                    <span className="text-white font-medium">@bilsemc2</span>
-                                </a>
-                            </div>
-
-                            <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
-                                <p className="text-white/70 text-xs">
-                                    <strong className="text-emerald-400">Nasıl?</strong> Beğen → Telefon son 4 hane yorum yaz → Paylaş → WhatsApp <strong className="text-emerald-400">0541 615 07 21</strong>'e e-postanı bildir
-                                </p>
-                            </div>
                         </div>
                     </div>
                 </motion.div>

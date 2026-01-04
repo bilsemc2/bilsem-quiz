@@ -26,6 +26,7 @@ import {
   AccountCircle,
   People as PeopleIcon,
   Book as BookIcon,
+  ConfirmationNumber as TicketIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -36,6 +37,7 @@ import AdminSettings from '../components/admin/AdminSettings';
 
 import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
 import BlogManagement from '../components/admin/BlogManagement';
+import PromoCodeManagement from '../components/admin/PromoCodeManagement';
 import SendMessage from '../components/admin/SendMessage';
 import StoryGeneratorPage from './Story/StoryGeneratorPage';
 import { toast } from 'react-hot-toast';
@@ -108,6 +110,13 @@ const AdminPage: React.FC = () => {
       icon: <SchoolIcon />,
       component: <XPRequirementsManagement />,
       path: '/admin/xp-requirements',
+    },
+    {
+      id: 'promo-codes',
+      title: 'Promo Kodlar',
+      icon: <TicketIcon />,
+      component: <PromoCodeManagement />,
+      path: '/admin/promo-codes',
     },
     {
       id: 'messages',

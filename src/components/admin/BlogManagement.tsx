@@ -59,6 +59,8 @@ const BlogManagement = () => {
     image_url: '',
     category: '',
   });
+  const [aiWriterMode, setAIWriterMode] = useState<'generate' | 'beautify'>('generate');
+  const [aiWriterInitialContent, setAIWriterInitialContent] = useState('');
 
   useEffect(() => {
     fetchPosts();
@@ -212,7 +214,11 @@ const BlogManagement = () => {
         </h1>
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <button
-            onClick={() => setIsAIWriterOpen(true)}
+            onClick={() => {
+              setAIWriterMode('generate');
+              setAIWriterInitialContent('');
+              setIsAIWriterOpen(true);
+            }}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all active:scale-95"
           >
             <Bot className="w-5 h-5" />
@@ -356,21 +362,38 @@ const BlogManagement = () => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-sm font-bold text-slate-900">İçerik</label>
-                  {formData.content && !formData.content.includes('<p') && !formData.content.includes('<div') && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const html = await marked.parse(formData.content);
-                        setFormData({ ...formData, content: html });
-                        toast.success('Markdown HTML\'e dönüştürüldü');
-                      }}
-                      className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 hover:text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 transition-colors uppercase tracking-tight"
-                      title="Markdown'ı HTML'e Çevir"
-                    >
-                      <Wand2 className="w-3 h-3" />
-                      Görünümü Düzelt
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {formData.content && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAIWriterMode('beautify');
+                          setAIWriterInitialContent(formData.content);
+                          setIsAIWriterOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100 transition-colors uppercase tracking-tight"
+                        title="AI ile Yazıyı Güzelleştir"
+                      >
+                        <Bot className="w-3 h-3" />
+                        AI ile Güzelleştir
+                      </button>
+                    )}
+                    {formData.content && !formData.content.includes('<p') && !formData.content.includes('<div') && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const html = await marked.parse(formData.content);
+                          setFormData({ ...formData, content: html });
+                          toast.success('Markdown HTML\'e dönüştürüldü');
+                        }}
+                        className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 hover:text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 transition-colors uppercase tracking-tight"
+                        title="Markdown'ı HTML'e Çevir"
+                      >
+                        <Wand2 className="w-3 h-3" />
+                        Görünümü Düzelt
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <BlogRichTextEditor
                   key={editingPost?.id || 'new'}
@@ -424,12 +447,14 @@ const BlogManagement = () => {
       <AIBlogWriterModal
         isOpen={isAIWriterOpen}
         onClose={() => setIsAIWriterOpen(false)}
+        mode={aiWriterMode}
+        initialContent={aiWriterInitialContent}
         onApplyDraft={(data) => {
           setFormData({
+            ...formData,
             title: data.title,
             category: data.category,
             content: data.content,
-            image_url: '',
             published: false
           });
           setOpenDialog(true);
