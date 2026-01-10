@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, School, FileQuestion, TrendingUp, User, Check, Loader2 } from 'lucide-react';
+import { Users, TrendingUp, User, Check, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface DashboardStats {
   totalUsers: number;
   activeUsers: number;
-  totalClasses: number;
-  totalQuizzes: number;
   recentUsers: any[];
-  recentQuizzes: any[];
 }
 
 const AdminDashboard = () => {
@@ -18,10 +15,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     activeUsers: 0,
-    totalClasses: 0,
-    totalQuizzes: 0,
     recentUsers: [],
-    recentQuizzes: [],
   });
 
   useEffect(() => {
@@ -44,26 +38,10 @@ const AdminDashboard = () => {
         ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 5) || [];
 
-      const { count: classCount, error: classError } = await supabase
-        .from('classes')
-        .select('*', { count: 'exact' });
-
-      if (classError) throw classError;
-
-      const { data: quizzes, error: quizError } = await supabase
-        .from('assignments')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (quizError) throw quizError;
-
       setStats({
         totalUsers: users?.length || 0,
         activeUsers,
-        totalClasses: classCount || 0,
-        totalQuizzes: quizzes?.length || 0,
         recentUsers,
-        recentQuizzes: quizzes?.slice(0, 5) || [],
       });
 
       setError(null);
@@ -93,15 +71,11 @@ const AdminDashboard = () => {
 
   const statCards = [
     { title: 'Toplam Kullanıcı', value: stats.totalUsers, sub: `${stats.activeUsers} aktif kullanıcı`, icon: Users, color: 'indigo' },
-    { title: 'Toplam Sınıf', value: stats.totalClasses, icon: School, color: 'purple' },
-    { title: 'Toplam Quiz', value: stats.totalQuizzes, icon: FileQuestion, color: 'emerald' },
     { title: 'Aktif Oran', value: `${stats.totalUsers ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}%`, icon: TrendingUp, color: 'amber' },
   ];
 
   const colorClasses: Record<string, string> = {
     indigo: 'bg-indigo-500',
-    purple: 'bg-purple-500',
-    emerald: 'bg-emerald-500',
     amber: 'bg-amber-500',
   };
 
@@ -110,7 +84,7 @@ const AdminDashboard = () => {
       <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
 
       {/* İstatistik Kartları */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {statCards.map((card, idx) => (
           <motion.div
             key={card.title}
@@ -129,60 +103,33 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Son Aktiviteler */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Son Kullanıcılar */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Son Kayıt Olan Kullanıcılar</h2>
-          <ul className="divide-y divide-slate-100">
-            {stats.recentUsers.map((user) => (
-              <li key={user.id} className="py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <User className="w-5 h-5 text-slate-400" />
-                  <div>
-                    <div className="font-medium text-slate-700">{user.name || user.email}</div>
-                    <div className="text-sm text-slate-500">
-                      {new Date(user.created_at).toLocaleDateString('tr-TR')}
-                    </div>
+      {/* Son Kayıt Olan Kullanıcılar */}
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        <h2 className="text-lg font-semibold text-slate-800 mb-4">Son Kayıt Olan Kullanıcılar</h2>
+        <ul className="divide-y divide-slate-100">
+          {stats.recentUsers.map((user) => (
+            <li key={user.id} className="py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5 text-slate-400" />
+                <div>
+                  <div className="font-medium text-slate-700">{user.name || user.email}</div>
+                  <div className="text-sm text-slate-500">
+                    {new Date(user.created_at).toLocaleDateString('tr-TR')}
                   </div>
                 </div>
-                {user.is_active && (
-                  <span className="p-1 bg-emerald-100 rounded-full">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Son Quizler */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Son Eklenen Quizler</h2>
-          <ul className="divide-y divide-slate-100">
-            {stats.recentQuizzes.map((quiz) => (
-              <li key={quiz.id} className="py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FileQuestion className="w-5 h-5 text-slate-400" />
-                  <div>
-                    <div className="font-medium text-slate-700">{quiz.title}</div>
-                    <div className="text-sm text-slate-500">
-                      {quiz.grade}. Sınıf - {quiz.subject}
-                    </div>
-                  </div>
-                </div>
-                {quiz.is_active && (
-                  <span className="p-1 bg-emerald-100 rounded-full">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
+              </div>
+              {user.is_active && (
+                <span className="p-1 bg-emerald-100 rounded-full">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
 };
 
 export default AdminDashboard;
+

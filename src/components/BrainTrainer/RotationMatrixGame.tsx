@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Play, Trophy, Rocket, Sparkles, Compass } from 'lucide-react';
+import { ChevronLeft, RotateCcw, Play, Trophy, Rocket, Sparkles, Compass, Heart, Clock } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // ------------------ Tip Tanımları ------------------
 type Stick = {
@@ -29,6 +30,7 @@ const COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#A29BFE', '#55E6C1'
 
 const RotationMatrixGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [sequence, setSequence] = useState<Shape[]>([]);
@@ -40,6 +42,9 @@ const RotationMatrixGame: React.FC = () => {
     const [isCorrecting, setIsCorrecting] = useState(false);
     const [isLevelLoading, setIsLevelLoading] = useState(false);
     const [timeLeft, setTimeLeft] = useState(30);
+    const [lives, setLives] = useState(5);
+    const [totalTime, setTotalTime] = useState(180); // 3 dakika
+    const gameStartTimeRef = useRef<number>(0);
 
     const svgSize = 100;
 
@@ -148,10 +153,19 @@ const RotationMatrixGame: React.FC = () => {
                     clearInterval(timer);
                     playSound('complete');
                     setIsCorrecting(true);
-                    setTimeout(() => {
-                        if (level === 15) setGameOver(true);
-                        else setLevel(l => l + 1);
-                    }, 2000);
+                    setLives(l => {
+                        const newLives = l - 1;
+                        if (newLives <= 0) {
+                            setTimeout(() => setGameOver(true), 1500);
+                        } else {
+                            setTimeout(() => {
+                                setIsCorrecting(false);
+                                if (level === 15) setGameOver(true);
+                                else setLevel(lv => lv + 1);
+                            }, 1500);
+                        }
+                        return newLives;
+                    });
                     return 0;
                 }
                 return prev - 1;
@@ -159,6 +173,22 @@ const RotationMatrixGame: React.FC = () => {
         }, 1000);
         return () => clearInterval(timer);
     }, [gameStarted, gameOver, showSuccess, isCorrecting, playSound, level]);
+
+    // Toplam süre zamanlayıcısı
+    useEffect(() => {
+        if (!gameStarted || gameOver) return;
+        const totalTimer = setInterval(() => {
+            setTotalTime(prev => {
+                if (prev <= 1) {
+                    clearInterval(totalTimer);
+                    setGameOver(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(totalTimer);
+    }, [gameStarted, gameOver]);
 
     const handleOptionSelect = (option: GameOption) => {
         if (isCorrecting || showSuccess || isLevelLoading) return;
@@ -180,10 +210,19 @@ const RotationMatrixGame: React.FC = () => {
             playSound('incorrect');
             setScore(s => Math.max(0, s - 10));
             setIsCorrecting(true);
-            setTimeout(() => {
-                if (level === 15) setGameOver(true);
-                else setLevel(l => l + 1);
-            }, 2000);
+            setLives(l => {
+                const newLives = l - 1;
+                if (newLives <= 0) {
+                    setTimeout(() => setGameOver(true), 1500);
+                } else {
+                    setTimeout(() => {
+                        setIsCorrecting(false);
+                        if (level === 15) setGameOver(true);
+                        else setLevel(lv => lv + 1);
+                    }, 1500);
+                }
+                return newLives;
+            });
         }
     };
 
@@ -216,6 +255,29 @@ const RotationMatrixGame: React.FC = () => {
             </svg>
         );
     };
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (gameStarted && !gameOver) {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [gameStarted, gameOver]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (gameOver && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'rotasyon-matrisi',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    game_name: 'Rotasyon Matrisi',
+                }
+            });
+        }
+    }, [gameOver, score, level, saveGamePlay]);
 
     if (!gameStarted) {
         return (
@@ -266,24 +328,45 @@ const RotationMatrixGame: React.FC = () => {
                     <Link to="/atolyeler/tablet-degerlendirme" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 font-black transition-all">
                         <ChevronLeft size={28} /> MERKEZ
                     </Link>
-                    <div className="flex items-center gap-10">
-                        <div className="flex flex-col items-center px-6 border-r border-white/10">
+                    <div className="flex items-center gap-6">
+                        {/* Canlar */}
+                        <div className="flex flex-col items-center px-4">
+                            <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1">Can</span>
+                            <div className="flex gap-1">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Heart
+                                        key={i}
+                                        size={18}
+                                        className={`transition-all ${i < lives ? 'text-red-500 fill-red-500' : 'text-slate-700'}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center px-4 border-r border-white/10">
                             <span className="text-blue-300/60 text-xs font-black uppercase tracking-widest mb-1 italic">Rota</span>
-                            <div className="text-3xl font-black text-blue-400">{level}<span className="text-blue-900 text-lg">/15</span></div>
+                            <div className="text-2xl font-black text-blue-400">{level}<span className="text-blue-900 text-lg">/15</span></div>
                         </div>
-                        <div className="flex flex-col items-center px-6 border-r border-white/10">
+                        <div className="flex flex-col items-center px-4 border-r border-white/10">
                             <span className="text-purple-300/60 text-xs font-black uppercase tracking-widest mb-1 italic">Enerji</span>
-                            <div className="text-3xl font-black text-purple-400">{score}</div>
+                            <div className="text-2xl font-black text-purple-400">{score}</div>
                         </div>
-                        <div className="min-w-[80px] text-center">
+                        <div className="flex flex-col items-center px-4 border-r border-white/10">
                             <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1 italic">Oksijen</span>
-                            <div className={`text-4xl font-black ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-amber-400'} transition-all font-mono`}>
+                            <div className={`text-2xl font-black ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-amber-400'} transition-all font-mono`}>
                                 {timeLeft}s
+                            </div>
+                        </div>
+                        {/* Toplam Süre */}
+                        <div className="flex flex-col items-center min-w-[70px]">
+                            <span className="text-cyan-300/60 text-xs font-black uppercase tracking-widest mb-1">Toplam</span>
+                            <div className={`flex items-center gap-1 text-xl font-black font-mono ${totalTime < 30 ? 'text-red-400 animate-pulse' : 'text-cyan-400'} transition-all`}>
+                                <Clock size={16} />
+                                {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}
                             </div>
                         </div>
                     </div>
                     <button
-                        onClick={() => { setLevel(1); setScore(0); generateLevel(); }}
+                        onClick={() => { setLevel(1); setScore(0); setLives(5); setTotalTime(180); generateLevel(); }}
                         className="p-4 bg-white/5 text-blue-300 hover:bg-white/10 rounded-2xl transition-all border border-white/10 active:scale-95"
                     >
                         <RotateCcw size={28} />

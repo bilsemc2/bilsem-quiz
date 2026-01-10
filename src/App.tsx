@@ -77,6 +77,16 @@ const EmojiStroopGame = React.lazy(() => import('./components/BrainTrainer/Emoji
 const PencilStroopGame = React.lazy(() => import('./components/BrainTrainer/PencilStroopGame'));
 const SymbolMatchGame = React.lazy(() => import('./components/BrainTrainer/SymbolMatchGame'));
 const DualBindGame = React.lazy(() => import('./components/BrainTrainer/DualBindGame'));
+const NumberSequenceGame = React.lazy(() => import('./components/BrainTrainer/NumberSequenceGame'));
+const VerbalAnalogyGame = React.lazy(() => import('./components/BrainTrainer/VerbalAnalogyGame'));
+const SynonymGame = React.lazy(() => import('./components/BrainTrainer/SynonymGame'));
+const SentenceSynonymGame = React.lazy(() => import('./components/BrainTrainer/SentenceSynonymGame'));
+const DigitSymbolGame = React.lazy(() => import('./components/BrainTrainer/DigitSymbolGame'));
+const VisualScanningGame = React.lazy(() => import('./components/BrainTrainer/VisualScanningGame'));
+const AuditoryMemoryGame = React.lazy(() => import('./components/BrainTrainer/AuditoryMemoryGame'));
+const ReactionTimeGame = React.lazy(() => import('./components/BrainTrainer/ReactionTimeGame'));
+const FaceExpressionGame = React.lazy(() => import('./components/BrainTrainer/FaceExpressionGame'));
+const KnowledgeCardGame = React.lazy(() => import('./components/BrainTrainer/KnowledgeCardGame'));
 
 // ============================================
 // LOADING FALLBACK COMPONENT
@@ -171,6 +181,16 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/games/cift-mod-hafiza" element={<RequireAuth><DualBindGame /></RequireAuth>} />
             <Route path="/games/emoji-stroop" element={<RequireAuth><EmojiStroopGame /></RequireAuth>} />
             <Route path="/games/renkli-kalemler" element={<RequireAuth><PencilStroopGame /></RequireAuth>} />
+            <Route path="/games/sayisal-dizi" element={<RequireAuth><NumberSequenceGame /></RequireAuth>} />
+            <Route path="/games/sozel-analoji" element={<RequireAuth><VerbalAnalogyGame /></RequireAuth>} />
+            <Route path="/games/es-anlam" element={<RequireAuth><SynonymGame /></RequireAuth>} />
+            <Route path="/games/cumle-ici-es-anlam" element={<RequireAuth><SentenceSynonymGame /></RequireAuth>} />
+            <Route path="/games/simge-kodlama" element={<RequireAuth><DigitSymbolGame /></RequireAuth>} />
+            <Route path="/games/gorsel-tarama" element={<RequireAuth><VisualScanningGame /></RequireAuth>} />
+            <Route path="/games/isitsel-hafiza" element={<RequireAuth><AuditoryMemoryGame /></RequireAuth>} />
+            <Route path="/games/tepki-suresi" element={<RequireAuth><ReactionTimeGame /></RequireAuth>} />
+            <Route path="/games/yuz-ifadesi" element={<RequireAuth><FaceExpressionGame /></RequireAuth>} />
+            <Route path="/games/bilgi-kartlari" element={<RequireAuth><KnowledgeCardGame /></RequireAuth>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" />} />

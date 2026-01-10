@@ -1,15 +1,95 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft } from 'lucide-react';
+import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ResimGame from '../../components/Workshops/Resim/ResimGame';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import './resim/resim.css';
 
 const ResimPage: React.FC = () => {
+    const [isActive, setIsActive] = useState(false);
+    const { user } = useAuth();
+    const [hasTalentAccess, setHasTalentAccess] = useState<boolean | null>(null);
+    const [userTalents, setUserTalents] = useState<string[]>([]);
+    const [analysisQuota, setAnalysisQuota] = useState<number | null>(null);
+    const [isTeacher, setIsTeacher] = useState(false);
+
+    useEffect(() => {
+        const checkTalentAccess = async () => {
+            if (!user) {
+                setHasTalentAccess(false);
+                return;
+            }
+
+            try {
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('yetenek_alani, role, is_admin, resim_analiz_hakki')
+                    .eq('id', user.id)
+                    .maybeSingle();
+
+                if (error || !profile) {
+                    setHasTalentAccess(false);
+                    return;
+                }
+
+                // Admin veya öğretmen ise direkt erişim ver
+                if (profile.is_admin || profile.role === 'teacher') {
+                    setHasTalentAccess(true);
+                    setIsTeacher(true);
+                    setAnalysisQuota(999); // Sınırsız
+                    return;
+                }
+
+                // Analiz hakkını set et
+                setAnalysisQuota(profile.resim_analiz_hakki ?? 3);
+
+                // yetenek_alani kontrolü
+                const talentsInput = profile.yetenek_alani;
+                let talents: string[] = [];
+
+                if (Array.isArray(talentsInput)) {
+                    talents = talentsInput;
+                } else if (typeof talentsInput === 'string') {
+                    talents = talentsInput.split(/[,,;]/).map(t => t.trim()).filter(Boolean);
+                }
+
+                setUserTalents(talents);
+
+                // Sadece "resim" yeteneği olması gerekiyor
+                const hasAccess = talents.some(t =>
+                    t.toLowerCase() === 'resim'
+                );
+
+                setHasTalentAccess(hasAccess);
+            } catch (error) {
+                console.error('Yetenek kontrolü hatası:', error);
+                setHasTalentAccess(false);
+            }
+        };
+
+        checkTalentAccess();
+    }, [user]);
+
     const steps = [
         { icon: <Eye />, title: "Görsel Algı", desc: "Detayları fark etme ve görsel hafızayı güçlendirme." },
         { icon: <Layout />, title: "Kompozisyon", desc: "Dengeli ve etkileyici sahneler kurgulama yeteneği." },
         { icon: <PenTool />, title: "Yaratıcı Çizim", desc: "Hayal gücünü kağıda dökme ve özgünlük geliştirme." },
     ];
+
+    if (isActive) {
+        return (
+            <div className="resim-workshop-container pt-24 pb-12 px-6 min-h-screen">
+                <div className="resim-bg-blobs">
+                    <div className="resim-blob resim-blob-1" />
+                    <div className="resim-blob resim-blob-2" />
+                    <div className="resim-blob resim-blob-3" />
+                </div>
+                <ResimGame onBack={() => setIsActive(false)} />
+            </div>
+        );
+    }
 
     return (
         <div className="resim-workshop-container pt-24 pb-12 px-6">
@@ -93,17 +173,56 @@ const ResimPage: React.FC = () => {
 
                             <p className="text-slate-400 text-lg max-w-2xl mx-auto font-medium">
                                 Hayal gücünü gerçeğe dönüştürmek için ihtiyacın olan her şey burada.
-                                Uzman eğitmenlerimizle sanatsal gelişimini destekliyoruz.
+                                Yapay zeka destekli öğretmenimizle sanatsal gelişimini destekliyoruz.
                             </p>
 
-                            <Link
-                                to="/contact"
-                                className="group relative inline-flex items-center justify-center gap-4 px-16 py-6 bg-gradient-to-r from-pink-600 to-purple-700 text-white font-black text-2xl rounded-full hover:shadow-2xl hover:shadow-pink-500/40 transition-all duration-300 transform hover:-translate-y-1 active:scale-95 overflow-hidden"
-                            >
-                                <span className="relative flex items-center gap-3">
-                                    Bize Ulaşın <Rocket className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                </span>
-                            </Link>
+                            {hasTalentAccess === null ? (
+                                <div className="flex items-center justify-center gap-3 py-6">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500"></div>
+                                    <span className="text-slate-300">Kontrol ediliyor...</span>
+                                </div>
+                            ) : hasTalentAccess ? (
+                                <div className="flex flex-col items-center gap-4">
+                                    {/* Kalan Analiz Hakkı Göstergesi */}
+                                    {!isTeacher && analysisQuota !== null && (
+                                        <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20">
+                                            <p className="text-slate-300 text-sm">
+                                                Kalan Analiz Hakkı:
+                                                <span className={`ml-2 font-black text-xl ${analysisQuota > 0 ? 'text-pink-400' : 'text-rose-500'}`}>
+                                                    {analysisQuota}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => setIsActive(true)}
+                                        className="group relative inline-flex items-center justify-center gap-4 px-16 py-6 bg-gradient-to-r from-pink-600 to-purple-700 text-white font-black text-2xl rounded-full hover:shadow-2xl hover:shadow-pink-500/40 transition-all duration-300 transform hover:-translate-y-1 active:scale-95 overflow-hidden"
+                                    >
+                                        <span className="relative flex items-center gap-3">
+                                            Atölyeye Gir <Rocket className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                        </span>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <button
+                                        disabled
+                                        className="group relative inline-flex items-center justify-center gap-4 px-16 py-6 bg-slate-600/50 text-slate-400 font-black text-2xl rounded-full cursor-not-allowed overflow-hidden"
+                                    >
+                                        <span className="relative flex items-center gap-3">
+                                            <Lock className="w-6 h-6" /> Atölyeye Gir
+                                        </span>
+                                    </button>
+                                    <p className="text-rose-400 text-sm font-medium">
+                                        Bu atölye sadece yetenek alanı <strong>Resim</strong> olan öğrenciler içindir.
+                                        {userTalents.length > 0 && (
+                                            <span className="block mt-1 text-slate-400">
+                                                Sizin yetenek alanınız: <strong>{userTalents.join(', ')}</strong>
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </motion.div>

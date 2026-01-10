@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // Şekil tanımlamaları
 const SHAPES = [
@@ -22,6 +23,7 @@ type GameState = 'waiting' | 'playing' | 'result' | 'gameover';
 
 const NBackGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [gameState, setGameState] = useState<GameState>('waiting');
     const [history, setHistory] = useState<any[]>([]);
@@ -33,6 +35,7 @@ const NBackGame: React.FC = () => {
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [trials, setTrials] = useState(0);
     const [correctCount, setCorrectCount] = useState(0);
+    const gameStartTimeRef = useRef<number>(0);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const shapeIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -97,6 +100,32 @@ const NBackGame: React.FC = () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
     }, [gameState, timeLeft]);
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (gameState === 'playing') {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [gameState]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (gameState === 'gameover' && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'n-geri-sifresi',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    n_value: nValue,
+                    level: level,
+                    correct_count: correctCount,
+                    trials: trials,
+                    game_name: 'N-Geri Şifresi',
+                }
+            });
+        }
+    }, [gameState, score, nValue, level, correctCount, trials, saveGamePlay]);
 
     // Otomatik şekil akışı
     useEffect(() => {

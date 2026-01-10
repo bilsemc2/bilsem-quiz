@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, RefreshCw, Trophy, Rocket, Timer,
@@ -7,12 +7,14 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // --- Tipler ---
 type GameStatus = 'waiting' | 'display' | 'input_sequence' | 'input_sum' | 'result' | 'gameover';
 
 const ReflectionSumGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
@@ -24,6 +26,7 @@ const ReflectionSumGame: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState(30);
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [isMirrored, setIsMirrored] = useState(false);
+    const gameStartTimeRef = useRef<number>(0);
 
     // --- Oyun Mantığı ---
     const generateSequence = useCallback((lvl: number) => {
@@ -87,6 +90,29 @@ const ReflectionSumGame: React.FC = () => {
         }
         return () => clearInterval(interval);
     }, [status, timeLeft]);
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (status === 'display') {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [status]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (status === 'gameover' && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'yansima-toplami',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    game_name: 'Yansıma Toplamı',
+                }
+            });
+        }
+    }, [status, score, level, saveGamePlay]);
 
     const handleDigitClick = (digit: number) => {
         if (status !== 'input_sequence') return;

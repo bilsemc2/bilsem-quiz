@@ -19,26 +19,26 @@ import {
 import { Link, useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import {
   Menu as MenuIcon,
-  Settings as SettingsIcon,
   School as SchoolIcon,
   QuestionAnswer as QuizIcon,
   Dashboard as DashboardIcon,
   AccountCircle,
   People as PeopleIcon,
   Book as BookIcon,
-  ConfirmationNumber as TicketIcon
+  ConfirmationNumber as TicketIcon,
+  Psychology as BrainIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useTheme, useMediaQuery } from '@mui/material';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserManagement from '../components/admin/UserManagement';
-import AdminSettings from '../components/admin/AdminSettings';
 
 import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
 import BlogManagement from '../components/admin/BlogManagement';
 import PromoCodeManagement from '../components/admin/PromoCodeManagement';
 import SendMessage from '../components/admin/SendMessage';
+import TalentAnalytics from '../components/admin/TalentAnalytics';
 import StoryGeneratorPage from './Story/StoryGeneratorPage';
 import { toast } from 'react-hot-toast';
 
@@ -98,13 +98,6 @@ const AdminPage: React.FC = () => {
       path: '/admin/blog',
     },
     {
-      id: 'settings',
-      title: 'Ayarlar',
-      icon: <SettingsIcon />,
-      component: <AdminSettings />,
-      path: '/admin/settings',
-    },
-    {
       id: 'xp-requirements',
       title: 'XP Gereksinimleri',
       icon: <SchoolIcon />,
@@ -124,6 +117,13 @@ const AdminPage: React.FC = () => {
       icon: <MenuIcon />,
       component: <SendMessage />,
       path: '/admin/messages',
+    },
+    {
+      id: 'talent-analytics',
+      title: 'Yetenek Analizi',
+      icon: <BrainIcon />,
+      component: <TalentAnalytics />,
+      path: '/admin/talent-analytics',
     },
   ]);
 

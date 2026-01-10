@@ -6,7 +6,7 @@ import EditProfileModal from '../components/EditProfileModal';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import {
-    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail, Music, Palette, Ticket
+    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail, Music, Palette, Ticket, BarChart3
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { UserProfile, QuizStats, ClassStudent } from '@/types/profile';
@@ -15,6 +15,7 @@ import ReferralSystem from '@/components/profile/ReferralSystem';
 import { showXPEarn } from '@/components/XPToast';
 import UserMessages from '@/components/UserMessages';
 import TimeXPGain from '@/components/profile/TimeXPGain';
+import UserGameStats from '@/components/profile/UserGameStats';
 
 
 // Hızlı Erişim Butonları
@@ -426,6 +427,15 @@ export const ProfilePage: React.FC = () => {
                                                     <h3 className="font-bold text-white text-lg">Resim Atölyesi</h3>
                                                     <p className="text-pink-400/70 text-sm">Yaratıcılığını sergile</p>
                                                 </div>
+                                                {/* Analiz Hakkı Göstergesi */}
+                                                {(userData as any).resim_analiz_hakki !== undefined && (
+                                                    <div className="bg-pink-500/20 px-3 py-1.5 rounded-xl border border-pink-500/30">
+                                                        <span className="text-xs text-pink-300">Analiz: </span>
+                                                        <span className={`font-bold ${(userData as any).resim_analiz_hakki > 0 ? 'text-pink-400' : 'text-rose-400'}`}>
+                                                            {(userData as any).resim_analiz_hakki}
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 <ChevronRight className="w-6 h-6 text-pink-500/50 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
                                             </Link>
                                         )}
@@ -595,6 +605,25 @@ export const ProfilePage: React.FC = () => {
                             )}
                         </div>
                     </div>
+                </motion.div>
+
+                {/* Oyun İstatistiklerim */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 }}
+                    className="mb-8"
+                >
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                            <BarChart3 className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-white">Oyun İstatistiklerim</h2>
+                            <p className="text-white/50 text-sm">Zeka türü analizleri ve performans</p>
+                        </div>
+                    </div>
+                    <UserGameStats />
                 </motion.div>
 
 

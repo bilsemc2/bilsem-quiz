@@ -76,7 +76,7 @@ const EditProfileModal = ({
         .update({
           name: formData.name,
           school: formData.school,
-          grade: formData.grade,
+          // grade alanı kullanıcı tarafından düzenlenmez, sadece öğretmen/admin değiştirebilir
         })
         .eq('id', user.id);
 
@@ -164,9 +164,10 @@ const EditProfileModal = ({
                 type="text"
                 name="grade"
                 value={formData.grade}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                disabled
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed"
               />
+              <p className="text-xs text-slate-400 mt-1">Sınıf bilgisi sadece öğretmen tarafından değiştirilebilir</p>
             </div>
           </div>
 

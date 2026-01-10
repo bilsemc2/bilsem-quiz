@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, RefreshCw, Trophy, Rocket, Timer,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // --- Types ---
 interface Card {
@@ -20,6 +21,7 @@ type GameStatus = 'waiting' | 'preview' | 'playing' | 'solved' | 'gameover';
 
 const TargetGridGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
@@ -31,6 +33,7 @@ const TargetGridGame: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState(60);
     const [previewTimer, setPreviewTimer] = useState(3);
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const gameStartTimeRef = useRef<number>(0);
 
     // --- Grid Generation Logic ---
     const generateGrid = useCallback((lvl: number) => {
@@ -107,6 +110,29 @@ const TargetGridGame: React.FC = () => {
         }
         return () => clearInterval(interval);
     }, [status, timeLeft]);
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (status === 'preview') {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [status]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (status === 'gameover' && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'hedef-sayi',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    game_name: 'Bak ve Bul',
+                }
+            });
+        }
+    }, [status, score, level, saveGamePlay]);
 
     // --- Interaction ---
     const handleCardClick = (idx: number) => {

@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
     ChevronLeft, RotateCcw, Play, Trophy, Sparkles,
     Square, Circle, Triangle, Star, Heart, Diamond,
-    Box, Layers, Zap
+    Box, Layers, Zap, Clock
 } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // ------------------ Tip Tanımları ------------------
 type FaceName = 'FRONT' | 'BACK' | 'LEFT' | 'RIGHT' | 'TOP' | 'BOTTOM';
@@ -63,6 +64,7 @@ const NET_LAYOUTS: CubeNet[] = [
 
 const MagicCubeGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [gameStarted, setGameStarted] = useState(false);
@@ -71,6 +73,9 @@ const MagicCubeGame: React.FC = () => {
     const [isFolding, setIsFolding] = useState(false);
     const [isCorrecting, setIsCorrecting] = useState(false);
     const [timeLeft, setTimeLeft] = useState(45);
+    const [lives, setLives] = useState(5);
+    const [totalTime, setTotalTime] = useState(180); // 3 dakika
+    const gameStartTimeRef = useRef<number>(0);
 
     // Mevcut Seviye Verileri
     const [currentNet, setCurrentNet] = useState<CubeNet>(NET_LAYOUTS[0]);
@@ -133,10 +138,19 @@ const MagicCubeGame: React.FC = () => {
                     clearInterval(timer);
                     playSound('complete');
                     setIsCorrecting(true);
-                    setTimeout(() => {
-                        if (level === 10) setGameOver(true);
-                        else setLevel(l => l + 1);
-                    }, 3000);
+                    setLives(l => {
+                        const newLives = l - 1;
+                        if (newLives <= 0) {
+                            setTimeout(() => setGameOver(true), 2000);
+                        } else {
+                            setTimeout(() => {
+                                setIsCorrecting(false);
+                                if (level === 10) setGameOver(true);
+                                else setLevel(lv => lv + 1);
+                            }, 2000);
+                        }
+                        return newLives;
+                    });
                     return 0;
                 }
                 return prev - 1;
@@ -144,6 +158,22 @@ const MagicCubeGame: React.FC = () => {
         }, 1000);
         return () => clearInterval(timer);
     }, [gameStarted, gameOver, showSuccess, isCorrecting, playSound, level]);
+
+    // Toplam süre zamanlayıcısı
+    useEffect(() => {
+        if (!gameStarted || gameOver) return;
+        const totalTimer = setInterval(() => {
+            setTotalTime(prev => {
+                if (prev <= 1) {
+                    clearInterval(totalTimer);
+                    setGameOver(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(totalTimer);
+    }, [gameStarted, gameOver]);
 
     const handleSelect = (option: GameOption) => {
         if (isCorrecting || showSuccess) return;
@@ -165,10 +195,19 @@ const MagicCubeGame: React.FC = () => {
             setScore(s => Math.max(0, s - 20));
             setIsFolding(true);
             setIsCorrecting(true);
-            setTimeout(() => {
-                if (level === 10) setGameOver(true);
-                else setLevel(l => l + 1);
-            }, 3500);
+            setLives(l => {
+                const newLives = l - 1;
+                if (newLives <= 0) {
+                    setTimeout(() => setGameOver(true), 2500);
+                } else {
+                    setTimeout(() => {
+                        setIsCorrecting(false);
+                        if (level === 10) setGameOver(true);
+                        else setLevel(lv => lv + 1);
+                    }, 2500);
+                }
+                return newLives;
+            });
         }
     };
 
@@ -232,6 +271,29 @@ const MagicCubeGame: React.FC = () => {
         );
     };
 
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (gameStarted && !gameOver) {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [gameStarted, gameOver]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (gameOver && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'sihirli-kupler',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    game_name: '3B Görselleştirme (Sihirli Küpler)',
+                }
+            });
+        }
+    }, [gameOver, score, level, saveGamePlay]);
+
     if (!gameStarted) {
         return (
             <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-6 text-white relative overflow-hidden">
@@ -282,24 +344,45 @@ const MagicCubeGame: React.FC = () => {
                     <Link to="/atolyeler/tablet-degerlendirme" className="flex items-center gap-2 text-amber-400 hover:text-amber-300 font-black transition-all">
                         <ChevronLeft size={28} /> MERKEZ
                     </Link>
-                    <div className="flex items-center gap-10">
-                        <div className="flex flex-col items-center px-6 border-r border-white/10">
+                    <div className="flex items-center gap-6">
+                        {/* Canlar */}
+                        <div className="flex flex-col items-center px-4">
+                            <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1">Can</span>
+                            <div className="flex gap-1">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Heart
+                                        key={i}
+                                        size={18}
+                                        className={`transition-all ${i < lives ? 'text-red-500 fill-red-500' : 'text-slate-700'}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center px-4 border-r border-white/10">
                             <span className="text-amber-300/60 text-xs font-black uppercase tracking-widest mb-1">Blok</span>
-                            <div className="text-3xl font-black text-amber-400">{level}<span className="text-amber-900 text-lg">/10</span></div>
+                            <div className="text-2xl font-black text-amber-400">{level}<span className="text-amber-900 text-lg">/10</span></div>
                         </div>
-                        <div className="flex flex-col items-center px-6 border-r border-white/10">
+                        <div className="flex flex-col items-center px-4 border-r border-white/10">
                             <span className="text-orange-300/60 text-xs font-black uppercase tracking-widest mb-1">Puan</span>
-                            <div className="text-3xl font-black text-orange-400">{score}</div>
+                            <div className="text-2xl font-black text-orange-400">{score}</div>
                         </div>
-                        <div className="min-w-[80px] text-center">
+                        <div className="flex flex-col items-center px-4 border-r border-white/10">
                             <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1">Süre</span>
-                            <div className={`text-4xl font-black ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-amber-400'} transition-all font-mono`}>
+                            <div className={`text-2xl font-black ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-amber-400'} transition-all font-mono`}>
                                 {timeLeft}s
+                            </div>
+                        </div>
+                        {/* Toplam Süre */}
+                        <div className="flex flex-col items-center min-w-[70px]">
+                            <span className="text-cyan-300/60 text-xs font-black uppercase tracking-widest mb-1">Toplam</span>
+                            <div className={`flex items-center gap-1 text-xl font-black font-mono ${totalTime < 30 ? 'text-red-400 animate-pulse' : 'text-cyan-400'} transition-all`}>
+                                <Clock size={16} />
+                                {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}
                             </div>
                         </div>
                     </div>
                     <button
-                        onClick={() => { setLevel(1); setScore(0); generateLevel(); }}
+                        onClick={() => { setLevel(1); setScore(0); setLives(5); setTotalTime(180); generateLevel(); }}
                         className="p-4 bg-white/5 text-amber-300 hover:bg-white/10 rounded-2xl transition-all border border-white/10 active:scale-95"
                     >
                         <RotateCcw size={28} />
@@ -316,8 +399,8 @@ const MagicCubeGame: React.FC = () => {
                             <button
                                 onClick={() => setIsFolding(!isFolding)}
                                 className={`p-2 rounded-xl transition-all border-2 flex items-center gap-2 font-black text-xs uppercase tracking-tighter ${isFolding
-                                        ? 'bg-amber-500/20 border-amber-500 text-amber-400'
-                                        : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30'
+                                    ? 'bg-amber-500/20 border-amber-500 text-amber-400'
+                                    : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30'
                                     }`}
                             >
                                 {isFolding ? <RotateCcw size={16} /> : <Play size={16} />}

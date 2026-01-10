@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Shield, Eye, Timer, Trophy,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // --- Şekil ve Renk Havuzu ---
 const SHAPE_ICONS = [Circle, Square, Triangle, Hexagon, Star, Pentagon, Cross, Moon, Heart];
@@ -45,6 +46,7 @@ type GameStatus = 'waiting' | 'preview' | 'deciding' | 'result' | 'gameover';
 
 const ShadowDetectiveGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
@@ -56,6 +58,7 @@ const ShadowDetectiveGame: React.FC = () => {
     const [previewTimer, setPreviewTimer] = useState(3);
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [feedbackMsg, setFeedbackMsg] = useState("");
+    const gameStartTimeRef = useRef<number>(0);
 
     // --- Uniklik İmzası Üretme ---
     const getPatternSignature = (items: PatternItem[]) => {
@@ -221,6 +224,29 @@ const ShadowDetectiveGame: React.FC = () => {
             startApp();
         }
     }, [location.state, status, startApp]);
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (status === 'preview') {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [status]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (status === 'gameover' && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'golge-dedektifi',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    game_name: 'Gölge Dedektifi',
+                }
+            });
+        }
+    }, [status, score, level, saveGamePlay]);
 
     const renderPattern = (items: PatternItem[], size: number = 300) => (
         <div className="relative overflow-hidden rounded-3xl bg-slate-900 shadow-inner border border-white/5" style={{ width: size, height: size }}>
