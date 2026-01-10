@@ -133,6 +133,29 @@ const ResimPage: React.FC = () => {
                     </p>
                 </motion.div>
 
+                {/* YouTube Video Section */}
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="mb-16"
+                >
+                    <div className="bg-white/5 backdrop-blur-xl p-6 lg:p-10 rounded-[3rem] border border-white/10 shadow-2xl max-w-4xl mx-auto">
+                        <h3 className="text-2xl font-black text-white mb-6 text-center">
+                            🎨 Atölyemizi Tanıyın
+                        </h3>
+                        <div className="relative w-full aspect-video rounded-2xl overflow-hidden">
+                            <iframe
+                                src="https://www.youtube.com/embed/Xe-Fwr5t9Fg"
+                                title="Resim Atölyesi Tanıtım"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="absolute inset-0 w-full h-full"
+                            />
+                        </div>
+                    </div>
+                </motion.div>
+
                 {/* Feature Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
                     {steps.map((step, i) => (
