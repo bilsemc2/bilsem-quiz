@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getStories } from '../services/stories';
 import { Story, Question, themeTranslations } from './types';
-import { ChevronRight, Download, GamepadIcon, Check, X } from 'lucide-react';
+import { ChevronRight, Download, GamepadIcon, Check, X, Trophy } from 'lucide-react';
 import { PDFPreview } from './PDFPreview';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { WordGamesPDF } from './WordGamesPDF';
@@ -9,15 +10,16 @@ import { WordGames } from './WordGames';
 // toast artık kullanılmadığı için import kaldırıldı
 
 export function StoriesList() {
+  const navigate = useNavigate();
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [showGames, setShowGames] = useState(false);
-  const [userAnswers, setUserAnswers] = useState<{[key: string]: number}>({});
+  const [userAnswers, setUserAnswers] = useState<{ [key: string]: number }>({});
   const [showAllResults, setShowAllResults] = useState(false);
-  const [finalScore, setFinalScore] = useState<{correct: number, total: number} | null>(null);
+  const [finalScore, setFinalScore] = useState<{ correct: number, total: number } | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,6 +59,34 @@ export function StoriesList() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Quiz Game Banner */}
+      {!selectedStory && (
+        <div className="mb-8 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 left-0 w-20 h-20 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+            <div className="absolute bottom-0 right-0 w-32 h-32 bg-white rounded-full translate-x-1/2 translate-y-1/2"></div>
+          </div>
+          <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
+                <Trophy className="w-8 h-8 text-yellow-300" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-white">🎮 Hikaye Quiz Oyunu</h3>
+                <p className="text-purple-100">Rastgele hikaye oku, süreyle yarış, puan kazan!</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/stories/quiz-game')}
+              className="px-6 py-3 bg-white text-purple-700 font-bold rounded-xl hover:bg-purple-100 transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+            >
+              <GamepadIcon className="w-5 h-5" />
+              Oyuna Başla
+            </button>
+          </div>
+        </div>
+      )}
+
       <h2 className="text-3xl font-bold text-purple-900 mb-8">Tüm Hikayeler</h2>
       {selectedStory ? (
         <div className="bg-white rounded-xl p-6 shadow-lg space-y-6">
@@ -105,10 +135,10 @@ export function StoriesList() {
             {(selectedStory.questions || []).map((question: Question, index: number) => {
               const questionId = `${selectedStory.id}-${index}`;
               const isCorrect = userAnswers[questionId] === question.correctAnswer;
-              
+
               return (
-                <div 
-                  key={`question-${questionId}`} 
+                <div
+                  key={`question-${questionId}`}
                   data-question-id={questionId}
                   className={`question-item bg-purple-50 rounded-lg p-4 space-y-3 ${userAnswers[questionId] === undefined && validationError ? 'border-2 border-red-400' : ''}`}>
                   <p className="font-medium">{question.text}</p>
@@ -116,11 +146,11 @@ export function StoriesList() {
                     {question.options.map((option: string, optionIndex: number) => {
                       const isSelected = userAnswers[questionId] === optionIndex;
                       let optionClass = "p-3 rounded-lg cursor-pointer transition-colors border-2 ";
-                      
+
                       if (!showAllResults) {
                         // Sonuç gösterilmeden önceki görünüm
-                        optionClass += isSelected 
-                          ? "bg-purple-100 border-purple-500" 
+                        optionClass += isSelected
+                          ? "bg-purple-100 border-purple-500"
                           : "bg-gray-100 hover:bg-gray-200 border-transparent";
                       } else {
                         // Sonuç gösterilirken
@@ -132,7 +162,7 @@ export function StoriesList() {
                           optionClass += "bg-gray-100 border-transparent";
                         }
                       }
-                      
+
                       return (
                         <div
                           key={`option-${questionId}-${optionIndex}`}
@@ -163,10 +193,10 @@ export function StoriesList() {
                       );
                     })}
                   </div>
-                  
+
                   {showAllResults && (
                     <div className="mt-3 text-sm font-medium">
-                      {isCorrect 
+                      {isCorrect
                         ? <p className="text-green-600">{question.feedback.correct}</p>
                         : <p className="text-red-600">{question.feedback.incorrect}</p>
                       }
@@ -175,20 +205,20 @@ export function StoriesList() {
                 </div>
               );
             })}
-            
+
             {validationError && (
               <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded" role="alert">
                 <p className="font-medium">{validationError}</p>
                 <p className="text-sm mt-1">Yanlış olan soruyu yukarıda kırmızı çerçeve ile işaretledim.</p>
               </div>
             )}
-            
+
             <div className="flex items-center justify-center mt-6">
               {!showAllResults ? (
                 <button
                   onClick={() => {
                     const questions = selectedStory?.questions || [];
-                    
+
                     // Her bir soru için isAnswered kontrolü yap
                     let unansweredCount = 0;
                     questions.forEach((_, index) => {
@@ -196,9 +226,9 @@ export function StoriesList() {
                       const isAnswered = userAnswers[qId] !== undefined;
                       if (!isAnswered) unansweredCount++;
                     });
-                    
+
                     const totalAnswered = questions.length - unansweredCount;
-                    
+
                     if (unansweredCount > 0) {
                       setValidationError(`Lütfen tüm soruları cevaplayın. ${totalAnswered}/${questions.length} soru cevaplandı.`);
                       // Cevaplanmamış sorulara otomatik kaydır
@@ -215,7 +245,7 @@ export function StoriesList() {
                     }
                     // Hata mesajını kaldır
                     setValidationError(null);
-                    
+
                     // Doğru cevapları sayalım
                     let correctCount = 0;
                     questions.forEach((question, index) => {
@@ -224,13 +254,13 @@ export function StoriesList() {
                         correctCount++;
                       }
                     });
-                    
+
                     setShowAllResults(true);
                     setFinalScore({
                       correct: correctCount,
                       total: questions.length
                     });
-                    
+
                     // Toast bildirimlerini kaldırdık, sonuçlar sadece sayfada gösterilecek
                     // Sonuçları zaten sayfada gösterdiğimiz için burada toast'a gerek yok
                   }}
@@ -263,25 +293,25 @@ export function StoriesList() {
                           </div>
                         )}
                       </div>
-                      
+
                       <p className="text-2xl font-bold mb-2">Puanınız: {finalScore.correct}/{finalScore.total}</p>
-                      
+
                       <p className="text-lg mb-2">
-                        {finalScore.correct === finalScore.total 
-                          ? "Tebrikler! Tüm soruları doğru cevapladınız! 🎉" 
-                          : finalScore.correct > finalScore.total / 2 
-                            ? `İyi iş! ${finalScore.correct}/${finalScore.total} soruyu doğru cevapladınız.` 
+                        {finalScore.correct === finalScore.total
+                          ? "Tebrikler! Tüm soruları doğru cevapladınız! 🎉"
+                          : finalScore.correct > finalScore.total / 2
+                            ? `İyi iş! ${finalScore.correct}/${finalScore.total} soruyu doğru cevapladınız.`
                             : `${finalScore.correct}/${finalScore.total} soruyu doğru cevapladınız.`}
                       </p>
-                      
+
                       {finalScore.correct < finalScore.total && (
                         <p className="text-sm">
-                          {finalScore.correct > finalScore.total / 2 
-                            ? "Daha da geliştirebilirsiniz! Yanlış cevapladığınız soruları inceleyebilirsiniz." 
+                          {finalScore.correct > finalScore.total / 2
+                            ? "Daha da geliştirebilirsiniz! Yanlış cevapladığınız soruları inceleyebilirsiniz."
                             : "Hikayeyi yeniden okuyabilir ve ardından soruları tekrar çözebilirsiniz."}
                         </p>
                       )}
-                      
+
                       {finalScore.correct < finalScore.total / 2 && (
                         <div className="mt-4 p-3 bg-purple-100 rounded-lg">
                           <p className="font-medium text-purple-800">Endişelenmeyin! Herkes farklı hızlarda öğrenir. Hikayeyi tekrar okumak ve ana fikirleri kavramak için biraz daha zaman ayırabilirsiniz.</p>
@@ -336,14 +366,14 @@ export function StoriesList() {
           ))}
         </div>
       )}
-      
+
       {showPDFPreview && selectedStory && (
         <PDFPreview
           story={selectedStory}
           onClose={() => setShowPDFPreview(false)}
         />
       )}
-      
+
       {showGames && selectedStory && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col">

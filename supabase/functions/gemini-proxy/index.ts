@@ -18,9 +18,9 @@ Deno.serve(async (req) => {
             throw new Error('GEMINI_API_KEY is not configured');
         }
 
-        const { action, mode, promptData, drawingBase64 } = await req.json();
+        const { action, mode, promptData, drawingBase64, theme, story } = await req.json();
 
-        let result: string;
+        let result: string | object;
 
         switch (action) {
             case 'generatePrompt':
@@ -28,6 +28,12 @@ Deno.serve(async (req) => {
                 break;
             case 'analyzeDrawing':
                 result = await analyzeDrawing(GEMINI_API_KEY, mode, promptData, drawingBase64);
+                break;
+            case 'generateStory':
+                result = await generateStory(GEMINI_API_KEY, theme);
+                break;
+            case 'generateQuestions':
+                result = await generateQuestions(GEMINI_API_KEY, story);
                 break;
             default:
                 throw new Error(`Unknown action: ${action}`);
@@ -111,4 +117,182 @@ async function analyzeDrawing(
 
     const data = await response.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Analiz yapılamadı.';
+}
+
+// Story generation types
+type StoryTheme = 'animals' | 'adventure' | 'fantasy' | 'science' | 'friendship' | 'life-lessons';
+
+interface StoryData {
+    title: string;
+    content: string;
+    summary: string;
+    questions: Array<{
+        text: string;
+        options: string[];
+        correctAnswer: number;
+        feedback: {
+            correct: string;
+            incorrect: string;
+        };
+    }>;
+}
+
+async function generateStory(apiKey: string, theme: StoryTheme): Promise<StoryData> {
+    const themeSpecificContent: Record<StoryTheme, string> = {
+        animals: 'Hayvanın özellikleri ve arkadaşlıkları hakkında',
+        adventure: 'Macera dolu bir keşif yolculuğu hakkında',
+        fantasy: 'Sihirli yaratıklar ve büyülü dünyalar hakkında',
+        science: 'Bilimsel keşifler ve merak uyandıran deneyler hakkında',
+        friendship: 'Arkadaşlığın önemi ve birlikte çalışmak hakkında',
+        'life-lessons': 'Günlük hayattan öğrenilen dersler hakkında'
+    };
+
+    const prompt = `
+7-12 yaş arası çocuklar için ${themeSpecificContent[theme] || 'eğlenceli bir konu'} bir hikaye yaz (100-200 kelime).
+Hikaye şu özelliklere sahip olmalı:
+
+- Açık ve net bir başlangıç, gelişme ve sonuç bölümü olmalı
+- Olumlu mesajlar ve öğretici unsurlar içermeli
+- Çocuk dostu bir dil kullanılmalı
+- İlgi çekici ve betimleyici olmalı
+- Türkçe karakterler doğru kullanılmalı (ç, ş, ı, ğ, ü, ö, İ)
+- Hikaye için ÖZELLİKLE çarpıcı, ilgi çekici ve hikayeyi yansıtan bir başlık oluştur
+- Başlık kısa, akılda kalıcı ve hikayeye uygun olmalı
+- Başlık 2-6 kelime arasında olmalı
+- Karakterlerin isimleri ve özellikleri net olmalı
+- Hayvan karakterler varsa özellikleri ve rolleri açıkça belirtilmeli
+
+Ayrıca hikaye için 5 adet çoktan seçmeli soru oluştur:
+- Hikayeyi anlamaya ve kelime anlamlarına yönelik olmalı
+- Karakterlerin özelliklerini ve rollerini sorgulayan sorular içermeli
+- Hikayedeki olayların sırasını kontrol eden sorular olmalı
+- Her soru için 4 seçenek olmalı
+- Doğru cevap için olumlu, yanlış cevap için yapıcı geri bildirim içermeli
+
+Yanıtı aşağıdaki JSON yapısında formatla (sadece JSON döndür, başka metin ekleme):
+{
+  "title": "Hikaye Başlığı",
+  "content": "Hikaye içeriği...",
+  "summary": "Resim oluşturma için detaylı sahne özeti (karakterler, ortam ve eylemler)",
+  "questions": [
+    {
+      "text": "Soru metni",
+      "options": ["Seçenek 1", "Seçenek 2", "Seçenek 3", "Seçenek 4"],
+      "correctAnswer": 0,
+      "feedback": {
+        "correct": "Doğru cevap için açıklama",
+        "incorrect": "Yanlış cevap için açıklama"
+      }
+    }
+  ]
+}`;
+
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                systemInstruction: {
+                    parts: [{ text: 'Sen yetenekli bir çocuk hikayesi yazarısın. Eğlenceli, eğitici ve çarpıcı başlıkları olan yaşa uygun hikayeler yarat. Başlıklar kısa, akılda kalıcı ve hikayenin özünü yansıtan nitelikte olmalı. Yanıtını sadece JSON formatında ver.' }]
+                },
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 2000,
+                    responseMimeType: 'application/json'
+                }
+            }),
+        }
+    );
+
+    const data = await response.json();
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textContent) {
+        throw new Error('Gemini API geçersiz yanıt döndürdü');
+    }
+
+    // Parse JSON response
+    const storyData = JSON.parse(textContent);
+
+    // Validate required fields
+    if (!storyData.title || !storyData.content || !storyData.summary) {
+        throw new Error('Hikaye verilerinde gerekli alanlar eksik');
+    }
+
+    return storyData;
+}
+
+async function generateQuestions(
+    apiKey: string,
+    story: { title: string; content: string }
+): Promise<Array<{
+    text: string;
+    options: string[];
+    correctAnswer: number;
+    feedback: { correct: string; incorrect: string };
+}>> {
+    const prompt = `
+Bu hikaye için 5 adet çoktan seçmeli soru oluştur:
+
+Başlık: ${story.title}
+Hikaye: ${story.content}
+
+Sorular şu özelliklere sahip olmalı:
+- Hikayeyi anlamaya ve kelime anlamlarına yönelik olmalı
+- Karakterlerin özelliklerini ve rollerini sorgulayan sorular içermeli
+- Hikayedeki olayların sırasını kontrol eden sorular olmalı
+- Hikayedeki karakterin özelliklerini ve eylemlerini sorgulayan sorular eklenmeli
+- Her soru için 4 seçenek olmalı
+- Doğru cevap için olumlu, yanlış cevap için yapıcı geri bildirim içermeli
+
+Yanıtı aşağıdaki JSON yapısında formatla (sadece JSON döndür):
+{
+  "questions": [
+    {
+      "text": "Soru metni",
+      "options": ["Seçenek 1", "Seçenek 2", "Seçenek 3", "Seçenek 4"],
+      "correctAnswer": 0,
+      "feedback": {
+        "correct": "Doğru cevap için açıklama",
+        "incorrect": "Yanlış cevap için açıklama"
+      }
+    }
+  ]
+}`;
+
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                systemInstruction: {
+                    parts: [{ text: 'Sen bir eğitim uzmanısın. Çocuklar için uygun, eğitici ve eğlenceli sorular hazırla. Yanıtını sadece JSON formatında ver.' }]
+                },
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 1500,
+                    responseMimeType: 'application/json'
+                }
+            }),
+        }
+    );
+
+    const data = await response.json();
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textContent) {
+        throw new Error('Sorular için Gemini API geçersiz yanıt döndürdü');
+    }
+
+    const questionsData = JSON.parse(textContent);
+
+    if (!questionsData.questions || !Array.isArray(questionsData.questions)) {
+        throw new Error('Sorular için geçersiz format');
+    }
+
+    return questionsData.questions;
 }
