@@ -307,6 +307,15 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "emerald",
             difficulty: "Orta",
             link: "/games/bilgi-kartlari"
+        },
+        {
+            id: 'story-quiz',
+            title: "Hikaye Quiz",
+            desc: "Rastgele bir hikaye oku, sorulara cevap ver ve puan kazan! Sözel zeka ve okuduğunu anlama testi.",
+            icon: <BookText />,
+            color: "purple",
+            difficulty: "Orta",
+            link: "/stories/quiz-game"
         }
     ];
 

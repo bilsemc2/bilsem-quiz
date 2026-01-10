@@ -46,6 +46,7 @@ const AboutPage = React.lazy(() => import('./pages/AboutPage'));
 // Story Pages
 const StoryListPage = React.lazy(() => import('./pages/Story/StoryListPage'));
 const StoryDetailPage = React.lazy(() => import('./pages/Story/StoryDetailPage'));
+const StoryQuizGame = React.lazy(() => import('./pages/Story/StoryQuizGame'));
 
 // Workshop Pages
 const GenelYetenekPage = React.lazy(() => import('./pages/workshops/GenelYetenekPage'));
@@ -150,6 +151,7 @@ const LocationAwareRouter: React.FC = () => {
             {/* Story Routes */}
             <Route path="/stories" element={<RequireAuth><StoryListPage /></RequireAuth>} />
             <Route path="/stories/:id" element={<RequireAuth><StoryDetailPage /></RequireAuth>} />
+            <Route path="/stories/quiz-game" element={<RequireAuth><StoryQuizGame /></RequireAuth>} />
 
             {/* Workshop Routes */}
             <Route path="/atolyeler/genel-yetenek" element={<RequireAuth><GenelYetenekPage /></RequireAuth>} />

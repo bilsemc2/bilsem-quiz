@@ -59,6 +59,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'tepki-suresi': ZEKA_TURLERI.ISLEME_HIZI,
     'yuz-ifadesi': ZEKA_TURLERI.GORSEL_ALGI,
     'bilgi-kartlari-bosluk-doldur': ZEKA_TURLERI.SOZEL_ZEKA,
+    'hikaye-quiz': ZEKA_TURLERI.SOZEL_ZEKA,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -97,6 +98,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'tepki-suresi': 'bireysel',
     'yuz-ifadesi': 'bireysel',
     'bilgi-kartlari-bosluk-doldur': 'bireysel',
+    'hikaye-quiz': 'bireysel',
 };
 
 // Workshop türü etiketleri
