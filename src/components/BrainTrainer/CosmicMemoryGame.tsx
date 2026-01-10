@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import {
     ChevronLeft, RotateCcw, Play, Trophy, Sparkles,
-    Star, Zap, Brain, Rocket, Eye, FastForward
+    Star, Zap, Brain, Rocket, Eye, FastForward, Heart, Clock
 } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // ------------------ Tip Tanımları ------------------
 type GameMode = 'NORMAL' | 'REVERSE';
@@ -23,8 +24,10 @@ interface GameState {
 
 const CosmicMemoryGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [gameStarted, setGameStarted] = useState(false);
+    const gameStartTimeRef = useRef<number>(0);
 
     const [state, setState] = useState<GameState>({
         level: 1,
@@ -36,6 +39,8 @@ const CosmicMemoryGame: React.FC = () => {
         gridSize: 3,
         mode: 'NORMAL'
     });
+    const [lives, setLives] = useState(5);
+    const [totalTime, setTotalTime] = useState(180); // 3 dakika
 
     // ------------------ Oyun Mantığı ------------------
 
@@ -127,10 +132,25 @@ const CosmicMemoryGame: React.FC = () => {
             }
         } else {
             playSound('cosmic_fail');
-            setState(prev => ({ ...prev, status: 'FAILURE' }));
-            setTimeout(() => {
-                setState(prev => ({ ...prev, status: 'GAMEOVER' }));
-            }, 1500);
+            setLives(l => {
+                const newLives = l - 1;
+                if (newLives <= 0) {
+                    setState(prev => ({ ...prev, status: 'FAILURE' }));
+                    setTimeout(() => {
+                        setState(prev => ({ ...prev, status: 'GAMEOVER' }));
+                    }, 1500);
+                } else {
+                    setState(prev => ({ ...prev, status: 'FAILURE' }));
+                    setTimeout(() => {
+                        if (state.level === 10) {
+                            setState(prev => ({ ...prev, status: 'GAMEOVER' }));
+                        } else {
+                            setState(prev => ({ ...prev, level: prev.level + 1, status: 'WAITING' }));
+                        }
+                    }, 1500);
+                }
+                return newLives;
+            });
         }
     };
 
@@ -151,6 +171,8 @@ const CosmicMemoryGame: React.FC = () => {
             gridSize: 3,
             mode: 'NORMAL'
         });
+        setLives(5);
+        setTotalTime(180);
         setGameStarted(true);
     }, []);
 
@@ -160,6 +182,47 @@ const CosmicMemoryGame: React.FC = () => {
             restartGame();
         }
     }, [location.state, gameStarted, restartGame]);
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (gameStarted && state.status !== 'GAMEOVER') {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [gameStarted, state.status]);
+
+    // Toplam süre zamanlayıcısı
+    useEffect(() => {
+        if (!gameStarted || state.status === 'GAMEOVER') return;
+        const totalTimer = setInterval(() => {
+            setTotalTime(prev => {
+                if (prev <= 1) {
+                    clearInterval(totalTimer);
+                    setState(p => ({ ...p, status: 'GAMEOVER' }));
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(totalTimer);
+    }, [gameStarted, state.status]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (state.status === 'GAMEOVER' && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'kozmik-hafiza',
+                score_achieved: state.score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: state.level,
+                    game_name: 'Kozmik Hafıza',
+                    mode: state.mode,
+                    grid_size: state.gridSize,
+                }
+            });
+        }
+    }, [state.status, state.score, state.level, state.mode, state.gridSize, saveGamePlay]);
 
     // ------------------ Render ------------------
 
@@ -215,22 +278,43 @@ const CosmicMemoryGame: React.FC = () => {
                     <Link to="/atolyeler/tablet-degerlendirme" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-black transition-all">
                         <ChevronLeft size={28} /> MERKEZ
                     </Link>
-                    <div className="flex items-center gap-10">
-                        <div className="flex flex-col items-center px-6 border-r border-white/10">
+                    <div className="flex items-center gap-6">
+                        {/* Canlar */}
+                        <div className="flex flex-col items-center px-4">
+                            <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1">Can</span>
+                            <div className="flex gap-1">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Heart
+                                        key={i}
+                                        size={18}
+                                        className={`transition-all ${i < lives ? 'text-red-500 fill-red-500' : 'text-slate-700'}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center px-4 border-r border-white/10">
                             <span className="text-indigo-300/60 text-xs font-black uppercase tracking-widest mb-1">Sektör</span>
-                            <div className="text-3xl font-black text-indigo-400">{state.level}<span className="text-indigo-900 text-lg">/10</span></div>
+                            <div className="text-2xl font-black text-indigo-400">{state.level}<span className="text-indigo-900 text-lg">/10</span></div>
                         </div>
-                        <div className="flex flex-col items-center px-6 border-r border-white/10">
+                        <div className="flex flex-col items-center px-4 border-r border-white/10">
                             <span className="text-purple-300/60 text-xs font-black uppercase tracking-widest mb-1">Veri</span>
-                            <div className="text-3xl font-black text-purple-400">{state.score}</div>
+                            <div className="text-2xl font-black text-purple-400">{state.score}</div>
                         </div>
-                        <div className="min-w-[120px] text-center">
+                        <div className="flex flex-col items-center px-4 border-r border-white/10">
                             <span className="text-pink-300/60 text-xs font-black uppercase tracking-widest mb-1">Mod</span>
-                            <div className={`text-xl font-black px-4 py-1 rounded-full border-2 transition-all ${state.mode === 'REVERSE'
+                            <div className={`text-lg font-black px-3 py-1 rounded-full border-2 transition-all ${state.mode === 'REVERSE'
                                 ? 'bg-pink-500/20 border-pink-500 text-pink-400'
                                 : 'bg-indigo-500/20 border-indigo-500 text-indigo-400'
                                 }`}>
                                 {state.mode}
+                            </div>
+                        </div>
+                        {/* Toplam Süre */}
+                        <div className="flex flex-col items-center min-w-[70px]">
+                            <span className="text-cyan-300/60 text-xs font-black uppercase tracking-widest mb-1">Toplam</span>
+                            <div className={`flex items-center gap-1 text-xl font-black font-mono ${totalTime < 30 ? 'text-red-400 animate-pulse' : 'text-cyan-400'} transition-all`}>
+                                <Clock size={16} />
+                                {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}
                             </div>
                         </div>
                     </div>

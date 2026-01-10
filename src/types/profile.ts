@@ -16,6 +16,7 @@ export interface UserProfile {
   referral_count?: number;
   classes?: ClassInfo[];
   yetenek_alani?: string | string[];
+  resim_analiz_hakki?: number;
 }
 
 export interface ClassStudent {

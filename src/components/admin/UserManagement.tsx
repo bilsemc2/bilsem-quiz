@@ -16,15 +16,18 @@ interface User {
   grade?: number;
   referred_by?: string;
   yetenek_alani?: string[] | string;
+  resim_analiz_hakki?: number;
   class_students?: {
     classes: { id: string; name: string; grade: number };
   }[];
 }
 
 const YETENEK_ALANLARI = [
-  { value: 'genel yetenek', label: 'Genel Yetenek' },
-  { value: 'resim', label: 'Resim' },
-  { value: 'müzik', label: 'Müzik' },
+  { value: 'genel yetenek', label: 'Genel Yetenek', isParent: true },
+  { value: 'genel yetenek - tablet', label: '↳ Tablet Değerlendirme (1. Aşama)', parent: 'genel yetenek' },
+  { value: 'genel yetenek - bireysel', label: '↳ Bireysel Değerlendirme (2. Aşama)', parent: 'genel yetenek' },
+  { value: 'resim', label: 'Resim', isParent: true },
+  { value: 'müzik', label: 'Müzik', isParent: true },
 ];
 
 // yetenek_alani veritabanında JSON array olarak saklanıyor: ["genel yetenek", "resim"]
@@ -57,7 +60,7 @@ const UserManagement = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    name: '', email: '', points: 0, experience: 0, grade: 0, referred_by: '', yetenek_alani: [] as string[],
+    name: '', email: '', points: 0, experience: 0, grade: 0, referred_by: '', yetenek_alani: [] as string[], resim_analiz_hakki: 3,
   });
   const [filters, setFilters] = useState({
     name: '', email: '', grade: '', showOnlyVip: false,
@@ -116,6 +119,7 @@ const UserManagement = () => {
       name: user.name || '', email: user.email || '', points: user.points || 0, experience: user.experience || 0,
       grade: user.grade || 0, referred_by: user.referred_by || '',
       yetenek_alani: parseYetenekAlani(user.yetenek_alani),
+      resim_analiz_hakki: user.resim_analiz_hakki ?? 3,
     });
     setEditDialogOpen(true);
   };
@@ -131,6 +135,7 @@ const UserManagement = () => {
         grade: editFormData.grade,
         referred_by: editFormData.referred_by || null,
         yetenek_alani: formatYetenekAlani(editFormData.yetenek_alani),
+        resim_analiz_hakki: editFormData.resim_analiz_hakki,
       }).eq('id', editingUser.id);
 
       if (error) throw error;
@@ -289,7 +294,7 @@ const UserManagement = () => {
       <Dialog.Root open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto z-50">
+          <Dialog.Content aria-describedby={undefined} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto z-50">
             <div className="flex items-center justify-between mb-6">
               <Dialog.Title className="text-xl font-bold text-slate-900">Kullanıcı Düzenle</Dialog.Title>
               <Dialog.Close asChild><button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-600" /></button></Dialog.Close>
@@ -307,7 +312,7 @@ const UserManagement = () => {
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-indigo-500 text-slate-900 font-medium outline-none placeholder:text-slate-400" placeholder="Email adresi" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-900 mb-1">Puan</label>
                   <input type="number" value={editFormData.points} onChange={(e) => setEditFormData(p => ({ ...p, points: parseInt(e.target.value) || 0 }))}
@@ -322,6 +327,11 @@ const UserManagement = () => {
                   <label className="block text-sm font-bold text-slate-900 mb-1">Sınıf</label>
                   <input type="number" value={editFormData.grade} onChange={(e) => setEditFormData(p => ({ ...p, grade: parseInt(e.target.value) || 0 }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-indigo-500 text-slate-900 font-bold outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-pink-600 mb-1">🎨 Analiz Hakkı</label>
+                  <input type="number" value={editFormData.resim_analiz_hakki} onChange={(e) => setEditFormData(p => ({ ...p, resim_analiz_hakki: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-pink-300 rounded-lg focus:border-pink-500 text-slate-900 font-bold outline-none bg-pink-50" />
                 </div>
               </div>
 

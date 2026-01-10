@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, RefreshCw, Trophy, Rocket, Timer,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // --- Tipler ---
 interface CellData {
@@ -20,6 +21,7 @@ type GameStatus = 'waiting' | 'display' | 'shuffle' | 'hide' | 'question' | 'res
 
 const MatrixEchoGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
@@ -29,7 +31,8 @@ const MatrixEchoGame: React.FC = () => {
     const [options, setOptions] = useState<number[]>([]);
     const [timeLeft, setTimeLeft] = useState(30);
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [isReveille, setIsReveille] = useState(false); // Shuffling sonrası sayıların açık olup olmadığı
+    const [isReveille, setIsReveille] = useState(false);
+    const gameStartTimeRef = useRef<number>(0);
 
     // --- Oyun Mantığı ---
     const generateGame = useCallback((lvl: number) => {
@@ -159,6 +162,29 @@ const MatrixEchoGame: React.FC = () => {
             startApp();
         }
     }, [location.state, status, startApp]);
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (status === 'display') {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [status]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (status === 'gameover' && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'matris-yankisi',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    game_name: 'Matris Yankısı',
+                }
+            });
+        }
+    }, [status, score, level, saveGamePlay]);
 
     return (
         <div className="min-h-screen pt-24 pb-12 px-6 relative overflow-hidden font-mono text-blue-400" style={{ background: '#020617' }}>

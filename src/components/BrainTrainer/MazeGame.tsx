@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Timer, Target, CheckCircle2, XCircle, Pencil, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 interface Cell {
     x: number;
@@ -16,6 +17,7 @@ interface Point {
 }
 
 const MazeGame: React.FC = () => {
+    const { saveGamePlay } = useGamePersistence();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'won' | 'lost'>('idle');
     const [maze, setMaze] = useState<Cell[][]>([]);
     const [level, setLevel] = useState(1);
@@ -29,6 +31,7 @@ const MazeGame: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const startImageRef = useRef<HTMLImageElement | null>(null);
     const exitImageRef = useRef<HTMLImageElement | null>(null);
+    const gameStartTimeRef = useRef<number>(0);
     const startPos = { x: 0, y: 0 };
     const [exitPos, setExitPos] = useState({ x: 4, y: 4 });
 
@@ -418,6 +421,31 @@ const MazeGame: React.FC = () => {
 
         return () => clearInterval(timer);
     }, [gameState]);
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (gameState === 'playing') {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [gameState]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if ((gameState === 'won' || gameState === 'lost') && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'labirent',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    maze_size: mazeSize,
+                    game_name: 'Labirent Ustası',
+                    result: gameState,
+                }
+            });
+        }
+    }, [gameState, score, level, mazeSize, saveGamePlay]);
 
     // Draw on canvas
     useEffect(() => {

@@ -7,12 +7,14 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // --- Types ---
 type GameStatus = 'waiting' | 'playing' | 'gameover';
 
 const StreamSumGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
@@ -23,6 +25,7 @@ const StreamSumGame: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState(60);
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [combo, setCombo] = useState(0);
+    const gameStartTimeRef = useRef<number>(0);
 
     // Config
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -79,6 +82,30 @@ const StreamSumGame: React.FC = () => {
             return () => clearInterval(timer);
         }
     }, [status]);
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (status === 'playing') {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [status]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (status === 'gameover' && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'akiskan-toplam',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    combo: combo,
+                    game_name: 'Akışkan Toplam',
+                }
+            });
+        }
+    }, [status, score, level, combo, saveGamePlay]);
 
     // Stream Loop
     useEffect(() => {

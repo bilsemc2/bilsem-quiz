@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Search, ChevronLeft, Languages, Brain, Check, X, Loader2, ChevronRight, Trophy, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { useGamePersistence } from '../hooks/useGamePersistence';
 
 interface Deyim {
     id: number;
@@ -20,7 +21,9 @@ const QUESTIONS_PER_GAME = 10;
 
 const DeyimlerPage = () => {
     const { user } = useAuth();
+    const { saveGamePlay } = useGamePersistence();
     const navigate = useNavigate();
+    const gameStartTimeRef = useRef<number>(0);
 
     // State
     const [deyimler, setDeyimler] = useState<Deyim[]>([]);
@@ -137,8 +140,27 @@ const DeyimlerPage = () => {
         setQuestionNumber(1);
         setGameOver(false);
         setMode('oyun');
+        gameStartTimeRef.current = Date.now();
         generateQuestion();
     };
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (gameOver && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'deyimler',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    correct_count: score,
+                    total_questions: QUESTIONS_PER_GAME,
+                    accuracy: Math.round((score / QUESTIONS_PER_GAME) * 100),
+                    game_name: 'Deyimler - Kelime Tamamla',
+                }
+            });
+        }
+    }, [gameOver, score, saveGamePlay]);
 
     // Cevap seç
     const handleAnswer = (answer: string) => {

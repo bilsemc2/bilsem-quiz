@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Timer, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Smile } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 interface Round {
     emoji: string;
@@ -22,6 +23,7 @@ const EMOTIONS = [
 ];
 
 const EmojiStroopGame: React.FC = () => {
+    const { saveGamePlay } = useGamePersistence();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [currentRound, setCurrentRound] = useState<Round | null>(null);
     const [roundNumber, setRoundNumber] = useState(0);
@@ -34,6 +36,8 @@ const EmojiStroopGame: React.FC = () => {
     const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
+    const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
     const totalRounds = 15;
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -78,10 +82,37 @@ const EmojiStroopGame: React.FC = () => {
         setReactionTimes([]);
         setStreak(0);
         setBestStreak(0);
+        gameStartTimeRef.current = Date.now();
+        hasSavedRef.current = false;
         const round = generateRound();
         setCurrentRound(round);
         setRoundStartTime(Date.now());
     }, [generateRound]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            const avgReaction = reactionTimes.length > 0
+                ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
+                : 0;
+            saveGamePlay({
+                game_id: 'stroop-emoji',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    correct_count: correctCount,
+                    wrong_count: wrongCount,
+                    best_streak: bestStreak,
+                    average_reaction_ms: avgReaction,
+                    total_rounds: totalRounds,
+                    accuracy: Math.round((correctCount / (correctCount + wrongCount)) * 100),
+                    game_name: 'Emoji Stroop',
+                }
+            });
+        }
+    }, [gameState]);
 
     // Handle answer
     const handleAnswer = useCallback((answer: string) => {
@@ -251,8 +282,8 @@ const EmojiStroopGame: React.FC = () => {
                                     animate={{ opacity: 1, scale: 1, rotate: 0 }}
                                     exit={{ opacity: 0, scale: 0.5, rotate: 10 }}
                                     className={`bg-white/90 dark:bg-slate-800/80 border-4 rounded-3xl p-8 w-full text-center shadow-xl ${showFeedback === 'correct' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' :
-                                            showFeedback === 'wrong' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' :
-                                                'border-pink-300 dark:border-white/10'
+                                        showFeedback === 'wrong' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' :
+                                            'border-pink-300 dark:border-white/10'
                                         } transition-all`}
                                 >
                                     <p className="text-gray-500 dark:text-slate-400 text-sm mb-4">Bu emoji ne hissediyor?</p>
@@ -283,10 +314,10 @@ const EmojiStroopGame: React.FC = () => {
                                         onClick={() => handleAnswer(option)}
                                         disabled={showFeedback !== null}
                                         className={`py-5 px-4 text-xl font-bold rounded-2xl transition-all shadow-md ${showFeedback && option === currentRound.correctAnswer
-                                                ? 'bg-emerald-500 text-white scale-105'
-                                                : showFeedback === 'wrong' && option !== currentRound.correctAnswer
-                                                    ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-slate-500'
-                                                    : 'bg-white dark:bg-slate-800 border-2 border-pink-200 dark:border-white/10 text-gray-800 dark:text-white hover:bg-pink-50 dark:hover:bg-slate-700 hover:border-pink-400 dark:hover:border-pink-500/50 active:scale-95'
+                                            ? 'bg-emerald-500 text-white scale-105'
+                                            : showFeedback === 'wrong' && option !== currentRound.correctAnswer
+                                                ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-slate-500'
+                                                : 'bg-white dark:bg-slate-800 border-2 border-pink-200 dark:border-white/10 text-gray-800 dark:text-white hover:bg-pink-50 dark:hover:bg-slate-700 hover:border-pink-400 dark:hover:border-pink-500/50 active:scale-95'
                                             }`}
                                     >
                                         {option}

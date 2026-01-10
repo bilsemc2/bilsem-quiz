@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, X, Loader2, FileText, Eye, EyeOff, Wand2, Bot } from 'lucide-react';
-import slugify from 'slugify';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -15,12 +14,27 @@ import { marked } from 'marked';
 import AIBlogWriterModal from './AIBlogWriterModal';
 
 const createSlug = (title: string) => {
-  return slugify(title, {
-    lower: true,
-    strict: true,
-    locale: 'tr',
-    trim: true
+  if (!title) return '';
+
+  const map: { [key: string]: string } = {
+    'ç': 'c', 'Ç': 'c', 'ğ': 'g', 'Ğ': 'g', 'ı': 'i', 'İ': 'i',
+    'ö': 'o', 'Ö': 'o', 'ş': 's', 'Ş': 's', 'ü': 'u', 'Ü': 'u'
+  };
+
+  let result = title.toLowerCase();
+  Object.keys(map).forEach(key => {
+    result = result.split(key).join(map[key]);
   });
+
+  // Harf ve rakam dışındaki karakterleri temizle, boşlukları tire yap
+  result = result
+    .replace(/[^a-z0-9\s-]/g, '') // Özel karakterleri sil
+    .trim()
+    .replace(/\s+/g, '-')        // Boşlukları tire yap
+    .replace(/-+/g, '-');        // Birden fazla tireyi teke indir
+
+  console.log('New Manual Slugified:', result);
+  return result;
 };
 
 interface BlogPost {

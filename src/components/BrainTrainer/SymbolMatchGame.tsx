@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Eye, Shapes } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 interface SymbolColor {
     symbol: string;
@@ -30,6 +31,7 @@ const COLORS = [
 ];
 
 const SymbolMatchGame = () => {
+    const { saveGamePlay } = useGamePersistence();
     const [gameState, setGameState] = useState<'idle' | 'memorize' | 'question' | 'finished'>('idle');
     const [symbolColors, setSymbolColors] = useState<SymbolColor[]>([]);
     const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -42,6 +44,8 @@ const SymbolMatchGame = () => {
     const [countdown, setCountdown] = useState(5);
     const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
 
     const totalRounds = 15;
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,8 +130,31 @@ const SymbolMatchGame = () => {
         setWrongCount(0);
         setRoundNumber(1);
         setLevel(1);
+        gameStartTimeRef.current = Date.now();
+        hasSavedRef.current = false;
         startRound();
     }, [startRound]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'sekil-hafizasi',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    correct_count: correctCount,
+                    wrong_count: wrongCount,
+                    total_rounds: totalRounds,
+                    accuracy: Math.round((correctCount / (correctCount + wrongCount)) * 100),
+                    game_name: 'Şekil Hafızası',
+                }
+            });
+        }
+    }, [gameState]);
 
     // Ezberleme geri sayımı
     useEffect(() => {
@@ -354,14 +381,14 @@ const SymbolMatchGame = () => {
                                             whileTap={{ scale: showFeedback ? 1 : 0.98 }}
                                             style={currentQuestion.type === 'symbol' ? optionStyle : {}}
                                             className={`p-5 rounded-2xl font-bold text-xl transition-all ${showResult
-                                                    ? isCorrect
-                                                        ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400'
-                                                        : isSelected
-                                                            ? 'bg-red-500/20 border-2 border-red-500 text-red-400'
-                                                            : 'bg-slate-800/50 border border-white/5 text-slate-500'
-                                                    : currentQuestion.type === 'symbol'
-                                                        ? 'border-2 border-white/20 text-white hover:border-white/50'
-                                                        : 'bg-slate-800/50 border border-white/10 text-white hover:bg-slate-700/50 hover:border-violet-500/30'
+                                                ? isCorrect
+                                                    ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400'
+                                                    : isSelected
+                                                        ? 'bg-red-500/20 border-2 border-red-500 text-red-400'
+                                                        : 'bg-slate-800/50 border border-white/5 text-slate-500'
+                                                : currentQuestion.type === 'symbol'
+                                                    ? 'border-2 border-white/20 text-white hover:border-white/50'
+                                                    : 'bg-slate-800/50 border border-white/10 text-white hover:bg-slate-700/50 hover:border-violet-500/30'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-center gap-2">

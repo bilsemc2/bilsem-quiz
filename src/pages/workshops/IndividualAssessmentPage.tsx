@@ -1,10 +1,60 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, ShieldX } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import './bireysel.css';
+import { useAuth } from '../../contexts/AuthContext';
+
+// yetenek_alani erişim kontrolü
+const hasIndividualAccess = (yetenekAlani: string[] | string | null | undefined): boolean => {
+    if (!yetenekAlani) return false;
+    const skills = Array.isArray(yetenekAlani) ? yetenekAlani : [yetenekAlani];
+    // 'genel yetenek' tüm alt kategorilere erişim sağlar
+    // 'genel yetenek - bireysel' sadece bireysel'e erişim sağlar
+    return skills.some(s => s === 'genel yetenek' || s === 'genel yetenek - bireysel');
+};
 
 const IndividualAssessmentPage: React.FC = () => {
+    const { profile, loading } = useAuth();
+    const navigate = useNavigate();
+
+    // Erişim kontrolü
+    const canAccess = hasIndividualAccess(profile?.yetenek_alani);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (!canAccess) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-slate-900/80 backdrop-blur-xl rounded-3xl p-12 border border-red-500/30 max-w-lg text-center"
+                >
+                    <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <ShieldX className="w-10 h-10 text-red-400" />
+                    </div>
+                    <h2 className="text-2xl font-black text-white mb-4">Erişim İzni Gerekli</h2>
+                    <p className="text-slate-400 mb-8 leading-relaxed">
+                        Bu modüle erişim için <strong className="text-emerald-400">Genel Yetenek - Bireysel Değerlendirme</strong> yetkisine sahip olmanız gerekmektedir.
+                    </p>
+                    <button
+                        onClick={() => navigate('/atolyeler/genel-yetenek')}
+                        className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors"
+                    >
+                        Genel Yetenek Sayfasına Dön
+                    </button>
+                </motion.div>
+            </div>
+        );
+    }
+
     const modules = [
         {
             id: 'cosmic-memory',
@@ -167,6 +217,96 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "rose",
             difficulty: "Zor",
             link: "/games/cift-mod-hafiza"
+        },
+        {
+            id: 'number-sequence',
+            title: "Sayısal Dizi Tamamlama",
+            desc: "Sayı dizisindeki örüntüyü bul ve sıradaki sayıyı tahmin et! Sayısal zeka ve mantıksal çıkarım testi.",
+            icon: <Hash />,
+            color: "blue",
+            difficulty: "Orta",
+            link: "/games/sayisal-dizi"
+        },
+        {
+            id: 'verbal-analogy',
+            title: "Sözel Analoji",
+            desc: "Kavramlar arasındaki ilişkiyi bul! Anne:Baba gibi Kız:? Sözel akıl yürütme testi.",
+            icon: <BookOpen />,
+            color: "pink",
+            difficulty: "Orta",
+            link: "/games/sozel-analoji"
+        },
+        {
+            id: 'synonym',
+            title: "Eş Anlam Bulmaca",
+            desc: "Kelimelerin eş anlamlılarını bul! Kelime hazineni test et ve geliştir.",
+            icon: <BookText />,
+            color: "teal",
+            difficulty: "Orta",
+            link: "/games/es-anlam"
+        },
+        {
+            id: 'sentence-synonym',
+            title: "Cümle İçi Eş Anlam",
+            desc: "Cümledeki kelimenin eş anlamlısını bul! Kelime hazineni ve cümle anlayışını geliştir.",
+            icon: <MessageSquareText />,
+            color: "violet",
+            difficulty: "Orta",
+            link: "/games/cumle-ici-es-anlam"
+        },
+        {
+            id: 'digit-symbol',
+            title: "Simge Kodlama",
+            desc: "Sayı-sembol eşleştirme! İşlem hızını ve dikkatini test et.",
+            icon: <Binary />,
+            color: "cyan",
+            difficulty: "Orta",
+            link: "/games/simge-kodlama"
+        },
+        {
+            id: 'visual-scanning',
+            title: "Görsel Tarama",
+            desc: "Hedef sembolü bul! Dikkat ve görsel tarama hızını test et.",
+            icon: <ScanEye />,
+            color: "rose",
+            difficulty: "Orta",
+            link: "/games/gorsel-tarama"
+        },
+        {
+            id: 'auditory-memory',
+            title: "İşitsel Hafıza",
+            desc: "Ses dizisini dinle ve tekrarla! İşitsel hafızanı test et.",
+            icon: <Headphones />,
+            color: "indigo",
+            difficulty: "Zor",
+            link: "/games/isitsel-hafiza"
+        },
+        {
+            id: 'reaction-time',
+            title: "Tepki Süresi",
+            desc: "Ne kadar hızlı tepki verebilirsin? Reflekslerini test et!",
+            icon: <Activity />,
+            color: "amber",
+            difficulty: "Kolay",
+            link: "/games/tepki-suresi"
+        },
+        {
+            id: 'face-expression',
+            title: "Yüz İfadesi Tanıma",
+            desc: "Duyguları yüz ifadesinden tanı! Sosyal zeka testi.",
+            icon: <CircleUser />,
+            color: "pink",
+            difficulty: "Orta",
+            link: "/games/yuz-ifadesi"
+        },
+        {
+            id: 'knowledge-card',
+            title: "Bilgi Kartları",
+            desc: "Genel kültür cümlelerindeki eksik kelimeyi bul! Sözel zeka ve bilgi testi.",
+            icon: <BookOpen />,
+            color: "emerald",
+            difficulty: "Orta",
+            link: "/games/bilgi-kartlari"
         }
     ];
 

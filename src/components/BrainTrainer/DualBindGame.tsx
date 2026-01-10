@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Eye, Link2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 interface SymbolColor {
     symbol: string;
@@ -31,6 +32,7 @@ const COLORS = [
 ];
 
 const DualBindGame = () => {
+    const { saveGamePlay } = useGamePersistence();
     const [gameState, setGameState] = useState<'idle' | 'memorize' | 'question' | 'finished'>('idle');
     const [symbolColors, setSymbolColors] = useState<SymbolColor[]>([]);
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -44,8 +46,10 @@ const DualBindGame = () => {
     const [countdown, setCountdown] = useState(6);
     const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
 
-    const totalRounds = 5; // Her round'da çift soru (renk→şekil + şekil→renk)
+    const totalRounds = 5;
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Zorluk seviyesine göre çift sayısı
@@ -132,8 +136,31 @@ const DualBindGame = () => {
         setWrongCount(0);
         setRound(1);
         setLevel(1);
+        gameStartTimeRef.current = Date.now();
+        hasSavedRef.current = false;
         startRound();
     }, [startRound]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'cift-mod-hafiza',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    correct_count: correctCount,
+                    wrong_count: wrongCount,
+                    total_rounds: totalRounds,
+                    accuracy: Math.round((correctCount / (correctCount + wrongCount)) * 100),
+                    game_name: 'Çift Mod Hafıza',
+                }
+            });
+        }
+    }, [gameState]);
 
     // Ezberleme geri sayımı
     useEffect(() => {
@@ -351,14 +378,14 @@ const DualBindGame = () => {
                             {/* Question Type Indicator */}
                             <div className="flex justify-center gap-2 mb-2">
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${currentQuestionIndex === 0
-                                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                                        : 'bg-slate-700/50 text-slate-500'
+                                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                    : 'bg-slate-700/50 text-slate-500'
                                     }`}>
                                     Renk → Şekil
                                 </span>
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${currentQuestionIndex === 1
-                                        ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30'
-                                        : 'bg-slate-700/50 text-slate-500'
+                                    ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30'
+                                    : 'bg-slate-700/50 text-slate-500'
                                     }`}>
                                     Şekil → Renk
                                 </span>
@@ -398,14 +425,14 @@ const DualBindGame = () => {
                                             whileTap={{ scale: showFeedback ? 1 : 0.98 }}
                                             style={currentQuestion.type === 'symbol-to-color' && colorHex ? { backgroundColor: colorHex } : {}}
                                             className={`p-5 rounded-2xl font-bold text-xl transition-all ${showResult
-                                                    ? isCorrect
-                                                        ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400'
-                                                        : isSelected
-                                                            ? 'bg-red-500/20 border-2 border-red-500 text-red-400'
-                                                            : 'bg-slate-800/50 border border-white/5 text-slate-500'
-                                                    : currentQuestion.type === 'symbol-to-color'
-                                                        ? 'border-2 border-white/20 text-white hover:border-white/50'
-                                                        : 'bg-slate-800/50 border border-white/10 text-white hover:bg-slate-700/50 hover:border-rose-500/30'
+                                                ? isCorrect
+                                                    ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400'
+                                                    : isSelected
+                                                        ? 'bg-red-500/20 border-2 border-red-500 text-red-400'
+                                                        : 'bg-slate-800/50 border border-white/5 text-slate-500'
+                                                : currentQuestion.type === 'symbol-to-color'
+                                                    ? 'border-2 border-white/20 text-white hover:border-white/50'
+                                                    : 'bg-slate-800/50 border border-white/10 text-white hover:bg-slate-700/50 hover:border-rose-500/30'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-center gap-2">

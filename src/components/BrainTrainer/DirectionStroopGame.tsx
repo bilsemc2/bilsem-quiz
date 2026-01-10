@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Timer, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Compass, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 interface Round {
     word: string;
@@ -19,6 +20,7 @@ const DIRECTIONS = [
 
 
 const DirectionStroopGame: React.FC = () => {
+    const { saveGamePlay } = useGamePersistence();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [currentRound, setCurrentRound] = useState<Round | null>(null);
     const [roundNumber, setRoundNumber] = useState(0);
@@ -31,6 +33,8 @@ const DirectionStroopGame: React.FC = () => {
     const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
+    const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
     const totalRounds = 20;
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -67,10 +71,37 @@ const DirectionStroopGame: React.FC = () => {
         setReactionTimes([]);
         setStreak(0);
         setBestStreak(0);
+        gameStartTimeRef.current = Date.now();
+        hasSavedRef.current = false;
         const round = generateRound();
         setCurrentRound(round);
         setRoundStartTime(Date.now());
     }, [generateRound]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            const avgReaction = reactionTimes.length > 0
+                ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
+                : 0;
+            saveGamePlay({
+                game_id: 'stroop-yon',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    correct_count: correctCount,
+                    wrong_count: wrongCount,
+                    best_streak: bestStreak,
+                    average_reaction_ms: avgReaction,
+                    total_rounds: totalRounds,
+                    accuracy: Math.round((correctCount / (correctCount + wrongCount)) * 100),
+                    game_name: 'Yön Stroop',
+                }
+            });
+        }
+    }, [gameState]);
 
     // Handle answer
     const handleAnswer = useCallback((position: string) => {

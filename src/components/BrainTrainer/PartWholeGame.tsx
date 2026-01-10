@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Play, Trophy, Brain, Sparkles, Smile } from 'lucide-react';
+import { ChevronLeft, RefreshCw, Play, Trophy, Brain, Sparkles, Smile, Heart, Clock } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // ------------------ Tip Tanımları ------------------
 type Pattern = {
@@ -28,6 +29,7 @@ const PATTERN_TYPES = ['dots', 'stripes', 'zigzag', 'waves', 'checkerboard', 'cr
 
 const PartWholeGame: React.FC = () => {
     const { playSound } = useSound();
+    const { saveGamePlay } = useGamePersistence();
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [gamePattern, setGamePattern] = useState<Pattern[]>([]);
@@ -38,6 +40,9 @@ const PartWholeGame: React.FC = () => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [isCorrecting, setIsCorrecting] = useState(false);
     const [timeLeft, setTimeLeft] = useState(30);
+    const [lives, setLives] = useState(5);
+    const [totalTime, setTotalTime] = useState(180); // 3 dakika = 180 saniye
+    const gameStartTimeRef = useRef<number>(0);
 
     const svgSize = 300;
     const pieceSize = 100;
@@ -144,7 +149,11 @@ const PartWholeGame: React.FC = () => {
     }, [getPatternDefs]);
 
     // Mikro renk sapması
-    const distortColor = (hex: string, intensity: number = 10): string => {
+    const distortColor = (hex: string | undefined, intensity: number = 10): string => {
+        // Güvenlik kontrolü
+        if (!hex || typeof hex !== 'string' || hex.length < 7) {
+            return '#888888'; // Fallback renk
+        }
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
         const b = parseInt(hex.slice(5, 7), 16);
@@ -190,7 +199,7 @@ const PartWholeGame: React.FC = () => {
         }
     }, [gameStarted, gameOver, level, generateLevel, showSuccess, isCorrecting]);
 
-    // Zamanlayıcı
+    // Soru zamanlayıcısı
     useEffect(() => {
         if (!gameStarted || gameOver || showSuccess || isCorrecting) return;
         const timer = setInterval(() => {
@@ -199,13 +208,22 @@ const PartWholeGame: React.FC = () => {
                     clearInterval(timer);
                     playSound('complete');
                     setIsCorrecting(true);
-                    setTimeout(() => {
-                        if (level === 20) {
-                            setGameOver(true);
+                    setLives(l => {
+                        const newLives = l - 1;
+                        if (newLives <= 0) {
+                            setTimeout(() => setGameOver(true), 1500);
                         } else {
-                            setLevel(l => l + 1);
+                            setTimeout(() => {
+                                setIsCorrecting(false);
+                                if (level === 20) {
+                                    setGameOver(true);
+                                } else {
+                                    setLevel(lv => lv + 1);
+                                }
+                            }, 1500);
                         }
-                    }, 2000);
+                        return newLives;
+                    });
                     return 0;
                 }
                 return prev - 1;
@@ -213,6 +231,22 @@ const PartWholeGame: React.FC = () => {
         }, 1000);
         return () => clearInterval(timer);
     }, [gameStarted, gameOver, showSuccess, isCorrecting, playSound, level]);
+
+    // Toplam süre zamanlayıcısı
+    useEffect(() => {
+        if (!gameStarted || gameOver) return;
+        const totalTimer = setInterval(() => {
+            setTotalTime(prev => {
+                if (prev <= 1) {
+                    clearInterval(totalTimer);
+                    setGameOver(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(totalTimer);
+    }, [gameStarted, gameOver]);
 
     const handleOptionSelect = (option: GameOption) => {
         if (isCorrecting || showSuccess) return;
@@ -233,24 +267,68 @@ const PartWholeGame: React.FC = () => {
             playSound('incorrect');
             setScore(s => Math.max(0, s - 10));
             setIsCorrecting(true);
-            setTimeout(() => {
-                if (level === 20) {
-                    setGameOver(true);
+            setLives(l => {
+                const newLives = l - 1;
+                if (newLives <= 0) {
+                    setTimeout(() => setGameOver(true), 1500);
                 } else {
-                    setLevel(l => l + 1);
+                    setTimeout(() => {
+                        setIsCorrecting(false);
+                        if (level === 20) {
+                            setGameOver(true);
+                        } else {
+                            setLevel(lv => lv + 1);
+                        }
+                    }, 1500);
                 }
-            }, 2000);
+                return newLives;
+            });
         }
     };
 
     const restart = () => {
+        setOptions([]); // Önce seçenekleri temizle
+        setGamePattern([]); // Desenini temizle
         setLevel(1);
         setScore(0);
+        setLives(5);
+        setTotalTime(180);
         setGameOver(false);
         setGameStarted(true);
         setShowSuccess(false);
         setIsCorrecting(false);
+        gameStartTimeRef.current = Date.now();
     };
+
+    // Yeni soru yenileme fonksiyonu
+    const nextQuestion = useCallback(() => {
+        if (isCorrecting || showSuccess || gameOver) return;
+        setScore(s => Math.max(0, s - 15)); // Puan cezası
+        generateLevel();
+    }, [isCorrecting, showSuccess, gameOver, generateLevel]);
+
+    // Oyun başladığında süre başlat
+    useEffect(() => {
+        if (gameStarted && !gameOver) {
+            gameStartTimeRef.current = Date.now();
+        }
+    }, [gameStarted, gameOver]);
+
+    // Oyun bittiğinde verileri kaydet
+    useEffect(() => {
+        if (gameOver && gameStartTimeRef.current > 0) {
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'parca-butun',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                metadata: {
+                    level_reached: level,
+                    game_name: 'Parça Bütün İlişkisi',
+                }
+            });
+        }
+    }, [gameOver, score, level, saveGamePlay]);
 
     // ------------------ Render Component ------------------
     const PatternSVG = ({ pattern, size, viewBox, isMain = false }: { pattern: Pattern[], size: number, viewBox?: string, isMain?: boolean }) => (
@@ -333,7 +411,20 @@ const PartWholeGame: React.FC = () => {
                     <Link to="/atolyeler/tablet-degerlendirme" className="flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold transition-all">
                         <ChevronLeft size={24} /> Geri
                     </Link>
-                    <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-6">
+                        {/* Canlar */}
+                        <div className="flex flex-col items-center">
+                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Can</span>
+                            <div className="flex gap-1">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Heart
+                                        key={i}
+                                        size={20}
+                                        className={`transition-all ${i < lives ? 'text-red-500 fill-red-500' : 'text-slate-700'}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                         <div className="flex flex-col items-center">
                             <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Seviye</span>
                             <div className="text-2xl font-black text-white">{level}<span className="text-slate-600 text-sm">/20</span></div>
@@ -342,15 +433,30 @@ const PartWholeGame: React.FC = () => {
                             <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Puan</span>
                             <div className="text-2xl font-black text-emerald-400">{score}</div>
                         </div>
-                        <div className="flex flex-col items-center min-w-[70px]">
-                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Süre</span>
-                            <div className={`text-3xl font-black font-mono ${timeLeft < 10 ? 'text-red-400 animate-pulse' : 'text-amber-400'} transition-all`}>
+                        {/* Soru Süresi */}
+                        <div className="flex flex-col items-center min-w-[60px]">
+                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Soru</span>
+                            <div className={`text-2xl font-black font-mono ${timeLeft < 10 ? 'text-red-400 animate-pulse' : 'text-amber-400'} transition-all`}>
                                 {timeLeft}
                             </div>
                         </div>
+                        {/* Toplam Süre */}
+                        <div className="flex flex-col items-center min-w-[70px]">
+                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Toplam</span>
+                            <div className={`flex items-center gap-1 text-xl font-black font-mono ${totalTime < 30 ? 'text-red-400 animate-pulse' : 'text-cyan-400'} transition-all`}>
+                                <Clock size={16} />
+                                {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}
+                            </div>
+                        </div>
                     </div>
-                    <button onClick={restart} className="p-3 bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-600/50 rounded-xl transition-all border border-white/5">
-                        <RotateCcw size={24} />
+                    <button
+                        onClick={nextQuestion}
+                        disabled={isCorrecting || showSuccess}
+                        className="p-3 bg-amber-500/20 text-amber-400 hover:text-amber-300 hover:bg-amber-500/30 rounded-xl transition-all border border-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title="Yeni soru (puan cezası)"
+                    >
+                        <RefreshCw size={20} />
+                        <span className="text-sm font-bold hidden sm:inline">Soru Yenile</span>
                     </button>
                 </div>
 
@@ -374,7 +480,7 @@ const PartWholeGame: React.FC = () => {
                             Doğru Parçayı Bul <Sparkles className="text-amber-400" size={24} />
                         </h2>
                         <div className="grid grid-cols-2 gap-6 w-full">
-                            {options.map((option, idx) => (
+                            {options.length > 0 && options.map((option, idx) => (
                                 <motion.button
                                     key={idx}
                                     whileHover={!isCorrecting && !showSuccess ? { scale: 1.05, y: -4 } : {}}
@@ -436,7 +542,7 @@ const PartWholeGame: React.FC = () => {
                                         onClick={restart}
                                         className="w-full py-5 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-2xl flex items-center justify-center gap-4 shadow-lg shadow-purple-500/30 hover:scale-105 transition-all text-xl"
                                     >
-                                        <RotateCcw size={28} /> Tekrar Oyna
+                                        <RefreshCw size={28} /> Tekrar Oyna
                                     </button>
                                     <Link
                                         to="/atolyeler/tablet-degerlendirme"
