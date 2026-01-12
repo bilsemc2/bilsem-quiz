@@ -88,6 +88,11 @@ const AuditoryMemoryGame = React.lazy(() => import('./components/BrainTrainer/Au
 const ReactionTimeGame = React.lazy(() => import('./components/BrainTrainer/ReactionTimeGame'));
 const FaceExpressionGame = React.lazy(() => import('./components/BrainTrainer/FaceExpressionGame'));
 const KnowledgeCardGame = React.lazy(() => import('./components/BrainTrainer/KnowledgeCardGame'));
+const ArcadeHubPage = React.lazy(() => import('./pages/Arcade/ArcadeHubPage'));
+const DarkMaze = React.lazy(() => import('./components/Arcade/Games/DarkMaze/DarkMaze'));
+const RenkliBalon = React.lazy(() => import('./components/Arcade/Games/RenkliBalon/RenkliBalon'));
+const TersNavigator = React.lazy(() => import('./components/Arcade/Games/TersNavigator/TersNavigator'));
+
 
 // ============================================
 // LOADING FALLBACK COMPONENT
@@ -144,6 +149,8 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/profile" element={<RequireAuth skipXPCheck><ProfilePage /></RequireAuth>} />
             <Route path="/homework" element={<RequireAuth><HomeworkPage /></RequireAuth>} />
             <Route path="/quizizz-kodlari" element={<RequireAuth><QuizizzCodesPage /></RequireAuth>} />
+            <Route path="/arcade" element={<RequireAuth><ArcadeHubPage /></RequireAuth>} />
+
 
             {/* Admin Routes */}
             <Route path="/admin/*" element={<RequireAuth requireAdmin><AdminPage /></RequireAuth>} />
@@ -193,6 +200,11 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/games/tepki-suresi" element={<RequireAuth><ReactionTimeGame /></RequireAuth>} />
             <Route path="/games/yuz-ifadesi" element={<RequireAuth><FaceExpressionGame /></RequireAuth>} />
             <Route path="/games/bilgi-kartlari" element={<RequireAuth><KnowledgeCardGame /></RequireAuth>} />
+
+            {/* Arcade Routes */}
+            <Route path="/arcade/karanlik-labirent" element={<RequireAuth><DarkMaze /></RequireAuth>} />
+            <Route path="/arcade/renkli-balon" element={<RequireAuth><RenkliBalon /></RequireAuth>} />
+            <Route path="/arcade/ters-navigator" element={<RequireAuth><TersNavigator /></RequireAuth>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" />} />

@@ -111,7 +111,7 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
                     }
                 }
 
-                if (skipXPCheck) {
+                if (skipXPCheck || location.state?.arcadeMode) {
                     setHasAccess(true);
                     setLoading(false);
                     return;

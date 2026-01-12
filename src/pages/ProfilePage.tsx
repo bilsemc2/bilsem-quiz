@@ -29,10 +29,18 @@ const QUICK_ACCESS_BUTTONS = [
         link: '/atolyeler/tablet-degerlendirme'
     },
     {
+        id: 'arcade',
+        title: 'Zeka Arcade',
+        description: 'Jeton at, oyununa başla!',
+        icon: Gamepad2,
+        color: 'from-purple-500 to-indigo-500',
+        link: '/arcade'
+    },
+    {
         id: 'quizizz',
         title: 'Quizizz Kodları',
         description: 'VIP quiz kodları',
-        icon: Gamepad2,
+        icon: Ticket,
         color: 'from-amber-500 to-orange-500',
         link: '/quizizz-kodlari'
     },
@@ -451,7 +459,7 @@ export const ProfilePage: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"
                 >
                     {QUICK_ACCESS_BUTTONS.map((btn) => (
                         <Link

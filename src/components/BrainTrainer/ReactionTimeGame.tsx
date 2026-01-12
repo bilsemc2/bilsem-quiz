@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, RotateCcw, Star, Timer, CheckCircle2, XCircle, ChevronLeft, Zap, Target, AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 type GameMode = 'simple' | 'selective';
@@ -9,6 +9,7 @@ type RoundState = 'waiting' | 'ready' | 'go' | 'early' | 'result';
 
 const ReactionTimeGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [gameMode, setGameMode] = useState<GameMode>('simple');
     const [roundState, setRoundState] = useState<RoundState>('waiting');
@@ -234,11 +235,11 @@ const ReactionTimeGame: React.FC = () => {
                     className="text-center mb-6"
                 >
                     <Link
-                        to="/atolyeler/bireysel-degerlendirme"
+                        to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"}
                         className="inline-flex items-center gap-2 text-amber-400 font-bold hover:text-amber-300 transition-colors mb-4 uppercase text-xs tracking-widest"
                     >
                         <ChevronLeft size={16} />
-                        Bireysel Değerlendirme
+                        {location.state?.arcadeMode ? "ARCADE HUB" : "Bireysel Değerlendirme"}
                     </Link>
                     <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
                         ⚡ <span className="text-amber-400">Tepki</span> Süresi
@@ -477,7 +478,7 @@ const ReactionTimeGame: React.FC = () => {
                                         Tekrar Oyna
                                     </button>
                                     <Link
-                                        to="/atolyeler/bireysel-degerlendirme"
+                                        to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"}
                                         className="px-6 py-3 bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-600 transition-all"
                                     >
                                         Geri Dön

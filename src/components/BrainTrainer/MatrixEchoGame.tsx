@@ -199,7 +199,7 @@ const MatrixEchoGame: React.FC = () => {
                 {/* HUD */}
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-blue-500/20 pb-8">
                     <div className="flex items-center gap-5">
-                        <Link to="/atolyeler/bireysel-degerlendirme" className="p-3 bg-blue-500/5 rounded-2xl hover:bg-blue-500/10 transition-all text-blue-500 border border-blue-500/20">
+                        <Link to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"} className="p-3 bg-blue-500/5 rounded-2xl hover:bg-blue-500/10 transition-all text-blue-500 border border-blue-500/20">
                             <ChevronLeft />
                         </Link>
                         <div>
@@ -365,7 +365,7 @@ const MatrixEchoGame: React.FC = () => {
                                 <button onClick={startApp} className="w-full py-6 bg-blue-500 text-slate-950 font-black text-2xl rounded-3xl hover:bg-blue-400 transition-all flex items-center justify-center gap-4 shadow-[0_8px_0_#1e3a8a] active:translate-y-2 active:shadow-none mb-4 uppercase italic">
                                     SENSÖRÜ SIFIRLA <RefreshCw />
                                 </button>
-                                <Link to="/atolyeler/bireysel-degerlendirme" className="text-blue-500/40 hover:text-blue-500 font-bold block transition-colors tracking-widest uppercase text-sm underline underline-offset-8">Merkez Ofise Dön</Link>
+                                <Link to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"} className="text-blue-500/40 hover:text-blue-500 font-bold block transition-colors tracking-widest uppercase text-sm underline underline-offset-8">{location.state?.arcadeMode ? "ARCADE HUB'A DÖN" : "Merkez Ofise Dön"}</Link>
                             </div>
                         </motion.div>
                     )}

@@ -25,10 +25,10 @@ export async function saveStory(story: {
     // Supabase bağlantısını başlat
     const currentUser = supabase.auth.getUser();
     const userData = await currentUser;
-    
+
     console.log('Hikaye kaydediliyor:', story);
     console.log('Tema:', story.theme);
-    
+
     // Hikayeyi Supabase'e kaydet ve ID dönmesini gerektirmeden kayıt yapalım
     const { error: insertError } = await supabase
       .from('story')
@@ -47,7 +47,7 @@ export async function saveStory(story: {
       console.error('Supabase hikaye kayıt hatası:', insertError);
       throw insertError;
     }
-    
+
     // İnsert işlemi başarılı olduktan sonra son eklenen hikayeyi sorgula
     const { data: latestStory, error: selectError } = await supabase
       .from('story')
@@ -56,7 +56,7 @@ export async function saveStory(story: {
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
-    
+
     if (selectError) {
       console.error('Kaydedilen hikaye bulunamadı:', selectError);
       // Bu noktada hikaye kaydedildi ama ID bulunamadı, geçici bir ID döndürebiliriz
@@ -72,7 +72,7 @@ export async function saveStory(story: {
         created_at: new Date().toISOString()
       };
     }
-    
+
     if (!latestStory) {
       console.error('Kaydedilen hikaye verisi bulunamadı');
       // Geçici ID oluşturup devam edelim
@@ -87,10 +87,10 @@ export async function saveStory(story: {
         created_at: new Date().toISOString()
       };
     }
-    
+
     console.log('Kaydedilen hikaye bulundu:', latestStory);
     const storyId = latestStory.id;
-    
+
     // Soruları kaydet
     if (story.questions && story.questions.length > 0) {
       // Tüm soruları hazırla
@@ -101,18 +101,18 @@ export async function saveStory(story: {
         correct_option: question.options[question.correctAnswer], // Doğru cevabı indeks yerine string olarak saklıyoruz
         difficulty_level: 'normal' // Varsayılan zorluk seviyesi
       }));
-      
+
       // Soruları toplu olarak ekle
       const { error: questionsError } = await supabase
         .from('story_questions') // Çoğul: story_questions
         .insert(questionInserts);
-        
+
       if (questionsError) {
         console.error('Supabase soru kayıt hatası:', questionsError);
         // Sorular kaydedilemese bile hikaye kaydedildi
       }
     }
-    
+
     // Tam nesneyi oluştur
     const newStory: Story = {
       id: storyId,
@@ -134,10 +134,10 @@ export async function saveStory(story: {
     return newStory;
   } catch (error) {
     console.error('Hikaye kaydedilirken bir hata oluştu:', error);
-    
+
     // Supabase'e kaydedilemezse sadece local storage'a kaydet
     const stories = getStoriesFromLocalStorage();
-    
+
     const newStory: Story = {
       id: crypto.randomUUID(),
       ...story,
@@ -158,13 +158,13 @@ export async function getStories(): Promise<Story[]> {
       .from('story')
       .select('*')
       .order('created_at', { ascending: false });
-      
+
     if (storyError) {
       console.error('Supabase hikaye alma hatası:', storyError);
       // Hata durumunda yerel depolamaya geri dön
       return getStoriesFromLocalStorage();
     }
-    
+
     if (storyData && storyData.length > 0) {
       // Her hikaye için soruları çek
       const stories: Story[] = await Promise.all(
@@ -174,18 +174,18 @@ export async function getStories(): Promise<Story[]> {
             .from('story_questions') // Çoğul: story_questions
             .select('*')
             .eq('story_id', storyItem.id);
-          
+
           let questions: Question[] = [];
-          
+
           if (questionData && !questionError) {
             // Soru verilerini formatla
             questions = questionData.map(q => {
               // options dizisini al
               const options: string[] = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
-              
+
               // Doğru cevabın indeksini bul
               const correctAnswer: number = options.findIndex((option: string) => option === q.correct_option);
-              
+
               return {
                 text: q.question_text,
                 options: options,
@@ -197,24 +197,24 @@ export async function getStories(): Promise<Story[]> {
               };
             });
           }
-          
+
           // Story nesnesini oluştur
           return {
             id: storyItem.id,
             title: storyItem.title,
             content: storyItem.content,
             theme: storyItem.theme as StoryTheme,
-            image_url: storyItem.image_path || '',
+            image_url: storyItem.image_path ? (storyItem.image_path.startsWith('/') ? storyItem.image_path : '/' + storyItem.image_path) : '',
             summary: '', // Veritabanında yok, varsayılan boş değer
             questions,
             created_at: storyItem.created_at
           };
         })
       );
-      
+
       return stories;
     }
-    
+
     // Supabase'den veri gelmediğinde yerel depolamadan al
     return getStoriesFromLocalStorage();
   } catch (error) {
@@ -228,10 +228,10 @@ function getStoriesFromLocalStorage(): Story[] {
   try {
     const storiesJson = localStorage.getItem(STORIES_KEY);
     if (!storiesJson) return [];
-    
+
     const stories = JSON.parse(storiesJson);
     if (!Array.isArray(stories)) return [];
-    
+
     return stories;
   } catch (error) {
     console.error('Hikayeler yüklenirken hata oluştu:', error);
