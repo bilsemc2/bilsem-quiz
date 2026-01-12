@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Timer, Target, CheckCircle2, XCircle, Pencil, ChevronLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 interface Cell {
@@ -18,6 +18,7 @@ interface Point {
 
 const MazeGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'won' | 'lost'>('idle');
     const [maze, setMaze] = useState<Cell[][]>([]);
     const [level, setLevel] = useState(1);
@@ -477,11 +478,11 @@ const MazeGame: React.FC = () => {
                     className="text-center mb-8"
                 >
                     <Link
-                        to="/atolyeler/bireysel-degerlendirme"
-                        className="inline-flex items-center gap-2 text-indigo-400 font-bold hover:text-indigo-300 transition-colors mb-4 uppercase text-xs tracking-widest"
+                        to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"}
+                        className="inline-flex items-center gap-2 text-indigo-400 font-bold hover:text-indigo-300 transition-all mb-4 uppercase text-xs tracking-widest"
                     >
                         <ChevronLeft size={16} />
-                        Bireysel Değerlendirme
+                        {location.state?.arcadeMode ? "ARCADE HUB" : "Bireysel Değerlendirme"}
                     </Link>
                     <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
                         ✏️ <span className="text-indigo-400">Labirent</span> Ustası

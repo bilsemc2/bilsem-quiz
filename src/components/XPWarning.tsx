@@ -6,9 +6,10 @@ interface XPWarningProps {
   requiredXP: number;
   currentXP: number;
   title: string;
+  onBack?: () => void;
 }
 
-const XPWarning = ({ requiredXP, currentXP, title }: XPWarningProps) => {
+const XPWarning = ({ requiredXP, currentXP, title, onBack }: XPWarningProps) => {
   const progress = Math.min((currentXP / requiredXP) * 100, 100);
   const hasEnoughXP = currentXP >= requiredXP;
   const remainingXP = requiredXP - currentXP;
@@ -173,11 +174,11 @@ const XPWarning = ({ requiredXP, currentXP, title }: XPWarningProps) => {
                 XP Kazanmaya Başla
               </Link>
               <button
-                onClick={() => window.history.back()}
+                onClick={onBack || (() => window.history.back())}
                 className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white/10 text-white/80 font-medium rounded-xl hover:bg-white/20 transition-all"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Geri Dön
+                {onBack ? 'Kapat' : 'Geri Dön'}
               </button>
             </motion.div>
           </div>

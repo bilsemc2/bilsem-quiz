@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Sun, Moon, Menu, X, Circle, User, LogOut, Zap, ChevronDown, Crown, Sparkles } from 'lucide-react';
+import { Sun, Moon, Menu, X, User, LogOut, Zap, ChevronDown, Crown, Sparkles, Gamepad2 } from 'lucide-react';
 import { User as AuthUser } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -12,24 +12,12 @@ interface ProfileDropdownProps {
   isActive: (path: string) => boolean;
   handleLogout: () => void;
   user: AuthUser;
+  profile: { name?: string; avatar_url?: string; experience?: number; is_vip?: boolean } | null;
 }
 
-const ProfileDropdown = ({ isActive, handleLogout, user }: ProfileDropdownProps) => {
+const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [profile, setProfile] = useState<{ name?: string; avatar_url?: string; experience?: number; is_vip?: boolean } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('name, avatar_url, experience, is_vip')
-        .eq('id', user.id)
-        .single();
-      setProfile(data);
-    };
-    fetchProfile();
-  }, [user.id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -40,6 +28,7 @@ const ProfileDropdown = ({ isActive, handleLogout, user }: ProfileDropdownProps)
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
 
   const avatarUrl = profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`;
 
@@ -103,6 +92,16 @@ const ProfileDropdown = ({ isActive, handleLogout, user }: ProfileDropdownProps)
                 <span className="font-medium text-white">Profilim</span>
               </Link>
 
+              <Link
+                to="/arcade"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-indigo-500/10 transition-colors group"
+              >
+                <Gamepad2 className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform" />
+                <span className="font-medium text-white">Zeka Arcade</span>
+                <Sparkles className="w-3 h-3 text-yellow-400 animate-pulse" />
+              </Link>
+
               <button
                 onClick={() => { setIsOpen(false); handleLogout(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 transition-colors text-red-400"
@@ -122,8 +121,7 @@ const ProfileDropdown = ({ isActive, handleLogout, user }: ProfileDropdownProps)
 const NavBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [onlineCount, setOnlineCount] = useState(0);
+  const { user, profile } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isVip, setIsVip] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -178,46 +176,13 @@ const NavBar = () => {
 
     checkUser();
 
-    const updateOnlineCount = async () => {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('last_seen');
-      if (profiles) {
-        const now = Date.now();
-        const onlineUsers = profiles.filter(profile =>
-          profile.last_seen &&
-          now - new Date(profile.last_seen).getTime() < 5 * 60 * 1000
-        );
-        setOnlineCount(onlineUsers.length);
-      }
-    };
-
-    updateOnlineCount();
-    const interval = setInterval(updateOnlineCount, 30000);
-
-    const channel = supabase
-      .channel('online-users')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-        },
-        () => {
-          updateOnlineCount();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      clearInterval(interval);
-      channel.unsubscribe();
-    };
+    return () => { };
   }, [user]);
+
 
   const menuItems = [
     { name: "Bilsem", path: "/bilsem" },
+    { name: "Arcade", path: "/arcade", showWhenAuth: true },
     { name: "Hakkımızda", path: "/about" },
     { name: "İletişim", path: "/contact" },
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
@@ -268,6 +233,7 @@ const NavBar = () => {
                 isActive={isActive}
                 handleLogout={handleLogout}
                 user={user}
+                profile={profile}
               />
             ) : (
               <div className="flex items-center gap-2 ml-2">
@@ -282,13 +248,7 @@ const NavBar = () => {
               </div>
             )}
 
-            {/* Online Count Badge */}
-            <div className="hidden sm:flex items-center ml-3">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-xs font-medium">
-                <Circle className="w-2 h-2 fill-emerald-400 text-emerald-400" />
-                {onlineCount} Çevrimiçi
-              </span>
-            </div>
+
 
             {/* Theme Toggle */}
             <button
@@ -382,13 +342,7 @@ const NavBar = () => {
                 </Link>
               </div>
 
-              {/* Online Badge Mobile */}
-              <div className="pt-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-xs font-medium">
-                  <Circle className="w-2 h-2 fill-emerald-400 text-emerald-400" />
-                  {onlineCount} Çevrimiçi
-                </span>
-              </div>
+
             </div>
           </motion.div>
         )}

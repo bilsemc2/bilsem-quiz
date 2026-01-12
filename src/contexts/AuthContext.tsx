@@ -42,20 +42,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!user) return;
 
         try {
-            // Optimistic update
-            const currentXP = profile?.experience || 0;
-            const newXP = currentXP + 1;
-            setProfile((prev: any) => prev ? { ...prev, experience: newXP } : null);
+            // Call secure Edge Function for XP gain
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) return;
 
-            // Persist to DB
-            const { error } = await supabase
-                .from('profiles')
-                .update({ experience: newXP })
-                .eq('id', user.id);
+            const response = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xp-transaction`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ action: 'gain', amount: 1 }),
+                }
+            );
 
-            if (error) throw error;
+            if (response.ok) {
+                const result = await response.json();
+                // Update local state with new XP from server
+                setProfile((prev: any) => prev ? { ...prev, experience: result.newXP } : null);
+            } else if (response.status === 429) {
+                // Rate limited - silently ignore
+                console.log('[XP] Rate limited by server');
+            }
         } catch (err) {
-            console.error('Error in global XP gain:', err);
+            console.error('Error in XP gain:', err);
         }
     };
 
