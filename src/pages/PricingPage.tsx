@@ -149,7 +149,7 @@ export default function PricingPage() {
               </div>
               <div className="bg-white p-4 rounded-xl inline-block mx-auto">
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('https://www.paytr.com/link/fHufWAE')}`}
+                  src="/images/qr_paytr.png"
                   alt="PayTR Ödeme QR Kodu"
                   className="w-32 h-32"
                 />
