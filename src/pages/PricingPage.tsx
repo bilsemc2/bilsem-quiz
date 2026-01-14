@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Crown, Sparkles, Check, MessageCircle, Zap, Shield, Clock, Gift } from 'lucide-react';
+import { ChevronLeft, Crown, Sparkles, Check, MessageCircle, Zap, Shield, Clock, Gift, CreditCard, QrCode } from 'lucide-react';
 
 export default function PricingPage() {
   const whatsappUrl = 'https://api.whatsapp.com/send/?phone=905416150721&text=Merhaba, Profesyonel Plan Paket hakkında bilgi almak istiyorum.';
@@ -104,7 +104,7 @@ export default function PricingPage() {
               ))}
             </div>
 
-            {/* CTA Button */}
+            {/* CTA Button - WhatsApp */}
             <motion.a
               href={whatsappUrl}
               target="_blank"
@@ -118,6 +118,46 @@ export default function PricingPage() {
                 Plan Hakkında Bilgi Al
               </div>
             </motion.a>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-white/20" />
+              <span className="text-purple-200 text-sm font-medium">veya</span>
+              <div className="flex-1 h-px bg-white/20" />
+            </div>
+
+            {/* PayTR Payment Button */}
+            <motion.a
+              href="https://www.paytr.com/link/fHufWAE"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="block w-full py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black text-lg rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all text-center mb-6"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                💳 Hemen Öde
+              </div>
+            </motion.a>
+
+            {/* QR Code Section */}
+            <div className="bg-white/10 rounded-2xl p-6 text-center">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <QrCode className="w-5 h-5 text-purple-200" />
+                <span className="text-purple-200 text-sm font-medium">QR Kod ile Öde</span>
+              </div>
+              <div className="bg-white p-4 rounded-xl inline-block mx-auto">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('https://www.paytr.com/link/fHufWAE')}`}
+                  alt="PayTR Ödeme QR Kodu"
+                  className="w-32 h-32"
+                />
+              </div>
+              <p className="text-purple-200/70 text-xs mt-3">
+                Telefonunuzla tarayarak ödeme yapabilirsiniz
+              </p>
+            </div>
           </div>
         </motion.div>
 
