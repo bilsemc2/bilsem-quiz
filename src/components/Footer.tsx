@@ -45,6 +45,38 @@ export default function Footer() {
                     </div>
                 </div>
 
+                {/* Güvenli Ödeme */}
+                <div className="mt-10 pt-8 border-t border-white/10 flex flex-col items-center">
+                    <p className="text-sm opacity-60 mb-4">Güvenli Ödeme</p>
+                    <div className="flex flex-wrap justify-center items-center gap-3 bg-white/95 rounded-2xl px-6 py-4">
+                        <img
+                            src="https://www.paytr.com/oos-assets/logo/link-page/verified-visa.svg"
+                            alt="Verified by Visa"
+                            className="h-8 w-auto"
+                        />
+                        <img
+                            src="https://www.paytr.com/oos-assets/logo/link-page/mastercard.svg"
+                            alt="Mastercard SecureCode"
+                            className="h-8 w-auto"
+                        />
+                        <img
+                            src="https://www.paytr.com/oos-assets/logo/link-page/troy-gray.svg"
+                            alt="Troy"
+                            className="h-8 w-auto"
+                        />
+                        <img
+                            src="https://www.paytr.com/oos-assets/logo/link-page/pci.svg"
+                            alt="PCI DSS Compliant"
+                            className="h-8 w-auto"
+                        />
+                        <img
+                            src="https://www.paytr.com/oos-assets/logo/paytr-logo-footer-light.svg"
+                            alt="PayTR"
+                            className="h-6 w-auto"
+                        />
+                    </div>
+                </div>
+
                 <div className="mt-16 text-center opacity-60 text-sm">
                     <p>© {new Date().getFullYear()} BilsemC2. Tüm hakları saklıdır.</p>
                 </div>
