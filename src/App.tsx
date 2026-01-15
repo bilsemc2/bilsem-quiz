@@ -92,6 +92,9 @@ const ArcadeHubPage = React.lazy(() => import('./pages/Arcade/ArcadeHubPage'));
 const DarkMaze = React.lazy(() => import('./components/Arcade/Games/DarkMaze/DarkMaze'));
 const RenkliBalon = React.lazy(() => import('./components/Arcade/Games/RenkliBalon/RenkliBalon'));
 const TersNavigator = React.lazy(() => import('./components/Arcade/Games/TersNavigator/TersNavigator'));
+const AynaUstasi = React.lazy(() => import('./components/Arcade/Games/Ayna/AynaUstasi'));
+const KraftOrigami = React.lazy(() => import('./components/Arcade/Games/paper/KraftOrigami'));
+const LabirentUstasi = React.lazy(() => import('./components/Arcade/Games/labirent/LabirentUstasi'));
 
 
 // ============================================
@@ -205,6 +208,9 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/arcade/karanlik-labirent" element={<RequireAuth><DarkMaze /></RequireAuth>} />
             <Route path="/arcade/renkli-balon" element={<RequireAuth><RenkliBalon /></RequireAuth>} />
             <Route path="/arcade/ters-navigator" element={<RequireAuth><TersNavigator /></RequireAuth>} />
+            <Route path="/arcade/ayna-ustasi" element={<RequireAuth><AynaUstasi /></RequireAuth>} />
+            <Route path="/arcade/kraft-origami" element={<RequireAuth><KraftOrigami /></RequireAuth>} />
+            <Route path="/arcade/labirent-ustasi" element={<RequireAuth><LabirentUstasi /></RequireAuth>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" />} />
