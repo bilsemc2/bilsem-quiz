@@ -1,5 +1,5 @@
 import React from 'react';
-import { Focus, Sparkles, Navigation2 } from 'lucide-react';
+import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass } from 'lucide-react';
 
 export interface ArcadeGame {
     id: string;
@@ -38,5 +38,32 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         color: "from-indigo-600 to-purple-700",
         icon: <Navigation2 size={48} className="text-white rotate-45" />,
         link: "/arcade/ters-navigator"
+    },
+    {
+        id: 'ayna-ustasi',
+        title: "Ayna Ustası",
+        description: "Sol tarafta çiz, sağ tarafta ayna görüntüsüyle hedefleri vur!",
+        cost: 35,
+        color: "from-rose-500 to-pink-600",
+        icon: <FlipHorizontal2 size={48} className="text-white" />,
+        link: "/arcade/ayna-ustasi"
+    },
+    {
+        id: 'kraft-origami',
+        title: "Kraft Origami",
+        description: "Kağıdı katla, del ve açtığında simetrik desenleri keşfet!",
+        cost: 40,
+        color: "from-amber-500 to-orange-600",
+        icon: <Scissors size={48} className="text-white" />,
+        link: "/arcade/kraft-origami"
+    },
+    {
+        id: 'labirent-ustasi',
+        title: "Labirent Ustası",
+        description: "Algoritmik labirentlerde yolunu bul! 5 farklı zorluk seviyesi.",
+        cost: 35,
+        color: "from-indigo-500 to-purple-600",
+        icon: <Compass size={48} className="text-white" />,
+        link: "/arcade/labirent-ustasi"
     }
 ];
