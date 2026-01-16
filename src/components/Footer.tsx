@@ -12,6 +12,7 @@ export default function Footer() {
                 <nav className="flex flex-wrap justify-center gap-x-12 gap-y-4 mb-10 font-bold">
                     <Link to="/about" className="hover:text-white transition-colors">Hakkımızda</Link>
                     <Link to="/services" className="hover:text-white transition-colors">Hizmetler</Link>
+                    <Link to="/bilsem-rehberi" className="hover:text-white transition-colors">BİLSEM Rehberi</Link>
                     <Link to="/contact" className="hover:text-white transition-colors">İletişim</Link>
                     <Link to="/faq" className="hover:text-white transition-colors">SSS</Link>
                     <Link to="/blog" className="hover:text-white transition-colors">Blog</Link>
