@@ -1,27 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Ana Sayfa -->
   <url>
     <loc>https://bilsemc2.com/</loc>
-    <lastmod>2026-01-04</lastmod>
+    <lastmod>2026-01-16</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  
+  <!-- Blog -->
   <url>
     <loc>https://bilsemc2.com/blog</loc>
-    <lastmod>2026-01-04</lastmod>
+    <lastmod>2026-01-16</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
+  
+  <!-- BİLSEM Rehberi -->
   <url>
-    <loc>https://bilsemc2.com/faq</loc>
-    <lastmod>2026-01-04</lastmod>
+    <loc>https://bilsemc2.com/bilsem-rehberi</loc>
+    <lastmod>2026-01-16</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.9</priority>
   </url>
+  
+  <!-- Hizmetler -->
+  <url>
+    <loc>https://bilsemc2.com/services</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Fiyatlandırma -->
+  <url>
+    <loc>https://bilsemc2.com/plans</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Hakkımızda -->
   <url>
     <loc>https://bilsemc2.com/about</loc>
-    <lastmod>2026-01-04</lastmod>
+    <lastmod>2026-01-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- SSS -->
+  <url>
+    <loc>https://bilsemc2.com/faq</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- İletişim -->
+  <url>
+    <loc>https://bilsemc2.com/contact</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Atölyeler Ana Sayfa -->
+  <url>
+    <loc>https://bilsemc2.com/atolyeler</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Müzik Atölyesi -->
+  <url>
+    <loc>https://bilsemc2.com/atolyeler/muzik</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Resim Atölyesi -->
+  <url>
+    <loc>https://bilsemc2.com/atolyeler/resim</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Bireysel Değerlendirme -->
+  <url>
+    <loc>https://bilsemc2.com/atolyeler/bireysel-degerlendirme</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Oyunlar -->
+  <url>
+    <loc>https://bilsemc2.com/oyunlar</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Zeka Arcade -->
+  <url>
+    <loc>https://bilsemc2.com/zeka-arcade</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Deyimler -->
+  <url>
+    <loc>https://bilsemc2.com/deyimler</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Hızlı Okuma -->
+  <url>
+    <loc>https://bilsemc2.com/atolyeler/hizli-okuma</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>
