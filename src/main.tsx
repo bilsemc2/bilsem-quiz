@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
+import { HelmetProvider } from 'react-helmet-async'
 
 // Tema başlangıcı: localStorage ve sistem tercihine göre dark sınıfı ekle/çıkar
 const rootElement = document.documentElement;
@@ -16,11 +17,13 @@ import { XPProvider } from './contexts/XPContext'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AuthProvider>
-      <XPProvider>
-        <App />
-      </XPProvider>
-    </AuthProvider>
+    <HelmetProvider>
+      <AuthProvider>
+        <XPProvider>
+          <App />
+        </XPProvider>
+      </AuthProvider>
+    </HelmetProvider>
   </React.StrictMode>,
 )
 
