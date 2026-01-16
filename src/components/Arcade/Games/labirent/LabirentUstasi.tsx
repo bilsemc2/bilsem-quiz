@@ -13,7 +13,6 @@ import { Cell, AlgorithmType } from './types';
 import MazeCanvas from './components/MazeCanvas';
 import {
     Play,
-    RotateCcw,
     Trophy,
     ArrowLeft,
     ArrowUp,
