@@ -30,6 +30,7 @@ const DeyimlerPage = () => {
     const [allDeyimler, setAllDeyimler] = useState<Deyim[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
     const [mode, setMode] = useState<Mode>('liste');
@@ -50,29 +51,49 @@ const DeyimlerPage = () => {
         }
     }, [user, navigate]);
 
-    // Deyimleri yükle
-    const fetchDeyimler = useCallback(async () => {
-        try {
-            let query = supabase.from('deyimler').select('*', { count: 'exact' });
+    // Debounce search term
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+            setCurrentPage(1); // Reset to first page on search
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
-            if (searchTerm) {
-                query = query.ilike('deyim', `%${searchTerm}%`);
+    // Deyimleri yükle
+    const fetchDeyimler = useCallback(async (abortController?: AbortController) => {
+        try {
+            let query = supabase
+                .from('deyimler')
+                .select('*', { count: 'exact' });
+
+            if (debouncedSearchTerm) {
+                query = query.ilike('deyim', `%${debouncedSearchTerm}%`);
             }
 
-            const { count } = await query;
-            setTotalCount(count || 0);
-
-            const { data, error } = await query
+            let finalQuery = query
                 .order('id')
                 .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
 
+            if (abortController?.signal) {
+                finalQuery = finalQuery.abortSignal(abortController.signal);
+            }
+
+            const { data, count, error } = await finalQuery;
+
             if (error) throw error;
+
             setDeyimler(data || []);
-        } catch (error) {
+            setTotalCount(count || 0);
+        } catch (error: any) {
+            // Silently ignore aborted requests
+            if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+                return;
+            }
             console.error('Deyimler yüklenirken hata:', error);
             toast.error('Deyimler yüklenemedi');
         }
-    }, [searchTerm, currentPage]);
+    }, [debouncedSearchTerm, currentPage]);
 
     // Tüm deyimleri yükle (oyun için)
     const fetchAllDeyimler = async () => {
@@ -80,25 +101,25 @@ const DeyimlerPage = () => {
         setAllDeyimler(data || []);
     };
 
-    // İlk yükleme
+    // İlk yükleme ve Arama değiştiğinde
     useEffect(() => {
+        if (!user) return;
+
+        const abortController = new AbortController();
+
         const loadData = async () => {
-            setLoading(true);
-            await fetchDeyimler();
-            await fetchAllDeyimler();
+            if (allDeyimler.length === 0) {
+                setLoading(true);
+                await fetchAllDeyimler();
+            }
+            await fetchDeyimler(abortController);
             setLoading(false);
         };
-        if (user) {
-            loadData();
-        }
-    }, [user, fetchDeyimler]);
 
-    // Arama değiştiğinde
-    useEffect(() => {
-        if (!loading && user) {
-            fetchDeyimler();
-        }
-    }, [searchTerm, currentPage, fetchDeyimler, loading, user]);
+        loadData();
+
+        return () => abortController.abort();
+    }, [user, debouncedSearchTerm, currentPage, fetchDeyimler]);
 
     // Oyun: Yeni soru oluştur
     const generateQuestion = useCallback(() => {

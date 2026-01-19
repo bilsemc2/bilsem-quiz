@@ -115,6 +115,36 @@ const autoStart = location.state?.autoStart === true;
 
 ---
 
+## 🛡️ Veri Kaydı ve Güvenlik (Çifte Kaydı Önleme)
+
+Oyun skorlarının veritabanına çifte kaydedilmesini önlemek için `useEffect` ve `hasSavedRef` kullanımı zorunludur.
+
+**Yanlış İbadet:**
+State setter (`setLives`) içinde kayıt fonksiyonu çağırmayın.
+
+**Doğru Mimari:**
+```tsx
+const hasSavedRef = useRef(false);
+
+useEffect(() => {
+  if (lives <= 0 && phase === 'playing') {
+    if (!hasSavedRef.current) {
+      hasSavedRef.current = true; // Guard
+      saveGamePlay({ ... });
+      setPhase('game_over');
+    }
+  }
+}, [lives, phase]);
+
+// startGame fonksiyonunda ref'i sıfırlayın
+const startGame = () => {
+  hasSavedRef.current = false;
+  // ...
+};
+```
+
+---
+
 ## Referans Oyunlar
 
 - `src/components/Arcade/Games/DarkMaze/`

@@ -97,6 +97,8 @@ const TersNavigator = React.lazy(() => import('./components/Arcade/Games/TersNav
 const AynaUstasi = React.lazy(() => import('./components/Arcade/Games/Ayna/AynaUstasi'));
 const KraftOrigami = React.lazy(() => import('./components/Arcade/Games/paper/KraftOrigami'));
 const LabirentUstasi = React.lazy(() => import('./components/Arcade/Games/labirent/LabirentUstasi'));
+const OruntuluTop = React.lazy(() => import('./components/Arcade/Games/OruntuluTop/OruntuluTop'));
+const KartDedektifi = React.lazy(() => import('./components/Arcade/Games/KartDedektifi/KartDedektifi'));
 
 
 // ============================================
@@ -215,6 +217,8 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/arcade/ayna-ustasi" element={<RequireAuth><AynaUstasi /></RequireAuth>} />
             <Route path="/arcade/kraft-origami" element={<RequireAuth><KraftOrigami /></RequireAuth>} />
             <Route path="/arcade/labirent-ustasi" element={<RequireAuth><LabirentUstasi /></RequireAuth>} />
+            <Route path="/arcade/oruntulu-top" element={<RequireAuth><OruntuluTop /></RequireAuth>} />
+            <Route path="/arcade/kart-dedektifi" element={<RequireAuth><KartDedektifi /></RequireAuth>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" />} />

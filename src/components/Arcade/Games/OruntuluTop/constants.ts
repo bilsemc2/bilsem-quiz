@@ -1,0 +1,12 @@
+export const GAME_CONFIG = {
+    FRICTION: 0.998,
+    BUBBLE_RADIUS: 22,
+    ROW_HEIGHT: 22 * Math.sqrt(3),
+    GRID_COLS: 12,
+    GRID_ROWS: 10,
+    SLINGSHOT_BOTTOM_OFFSET: 120,
+    MAX_DRAG_DIST: 160,
+    MIN_FORCE_MULT: 0.15,
+    MAX_FORCE_MULT: 0.45,
+    XP_COST: 35,
+};

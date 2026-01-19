@@ -1,5 +1,5 @@
 import React from 'react';
-import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass } from 'lucide-react';
+import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search } from 'lucide-react';
 
 export interface ArcadeGame {
     id: string;
@@ -65,5 +65,23 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         color: "from-indigo-500 to-purple-600",
         icon: <Compass size={48} className="text-white" />,
         link: "/arcade/labirent-ustasi"
+    },
+    {
+        id: 'oruntulu-top',
+        title: "Örüntü Avcısı",
+        description: "Sapanla nişan al! Örüntüdeki eksik balonu bul ve doğru renkteki hedefi vur!",
+        cost: 35,
+        color: "from-emerald-500 to-teal-600",
+        icon: <Focus size={48} className="text-white" />,
+        link: "/arcade/oruntulu-top"
+    },
+    {
+        id: 'kart-dedektifi',
+        title: "Kart Dedektifi",
+        description: "Dikkatli ol! Gizli kuralları keşfet ve kartları doğru şekilde eşleştir.",
+        cost: 40,
+        color: "from-sky-400 to-blue-600",
+        icon: <Search size={48} className="text-white" />,
+        link: "/arcade/kart-dedektifi"
     }
 ];
