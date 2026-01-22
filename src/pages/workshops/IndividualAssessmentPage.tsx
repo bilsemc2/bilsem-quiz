@@ -57,6 +57,15 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'puzzle-master',
+            title: "Puzzle Master",
+            desc: "Karmaşık görsel örüntüler içindeki eksik parçayı bulma ve analiz etme simülatörü.",
+            icon: <ScanEye />,
+            color: "indigo",
+            difficulty: "Zor",
+            link: "/games/puzzle-master"
+        },
+        {
             id: 'cosmic-memory',
             title: "Kozmik Hafıza",
             desc: "Görsel-uzamsal hafıza ve çalışma belleği simülatörü.",
