@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 async function generatePrompt(apiKey: string, mode: string): Promise<string> {
     const prompt = mode === 'THREE_WORDS'
         ? "Çocuklar için birbirinden bağımsız, alışılmadık, somut ve çizilmesi eğlenceli 3 adet rastgele kelime üret. 'Robot, Dinozor, Roket' gibi çok yaygın kelimelerden kaçın. Sadece kelimeleri virgülle ayırarak yaz (Örn: Denizaltı, Dev Mantar, Uçan Kaplumbağa)."
-        : "Çocuklar için her seferinde benzersiz, yaratıcı, ucu açık ve görsel olarak devam ettirilebilecek kısa bir hikaye başlangıcı yaz, (Maksimum 3 cümle). Daha önce anlatılmamış özgün senaryolar kurgula. Hikaye heyecanlı bir yerde bitsin.";
+        : "Sadece TEK BİR kısa hikaye başlangıcı yaz. Liste yapma, numara koyma, birden fazla hikaye yazma. Maksimum 3 cümle olsun. Çocuklar için benzersiz, yaratıcı, ucu açık ve görsel olarak devam ettirilebilecek bir senaryo kurgula. Hikaye heyecanlı bir yerde bitsin.";
 
     const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -81,7 +81,7 @@ async function analyzeDrawing(
     let userPrompt = '';
 
     if (mode === 'THREE_WORDS') {
-        systemPrompt = 'Sen nazik bir resim öğretmenisin. Verilen 3 kelime ile çizilen resmi karşılaştır.';
+        systemPrompt = 'Sen nazik bir resim öğretmenisin. Verilen 3 kelime ile çizilen resmi; Oran Orantı 20 puan, Çizgi Yeteneği 20, Perspektif 10, Yaratıcılık 30, Kompozisyon 20 puan üzerinden değerlendirerek puan ver ve çocuğun kendi yorumunu nazikçe değerlendir.';
         userPrompt = `Bu resim şu 3 kelimeye göre yapıldı: ${promptData.words?.join(', ')}. Çocuğun çizimini analiz et, kelimelerin nasıl yansıtıldığını söyle ve motive edici geri bildirim ver.`;
     } else if (mode === 'STORY_CONTINUATION') {
         systemPrompt = 'Sen yaratıcı bir hikaye anlatıcısı ve sanat eleştirmenisin.';
