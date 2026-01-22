@@ -90,6 +90,7 @@ const AuditoryMemoryGame = React.lazy(() => import('./components/BrainTrainer/Au
 const ReactionTimeGame = React.lazy(() => import('./components/BrainTrainer/ReactionTimeGame'));
 const FaceExpressionGame = React.lazy(() => import('./components/BrainTrainer/FaceExpressionGame'));
 const KnowledgeCardGame = React.lazy(() => import('./components/BrainTrainer/KnowledgeCardGame'));
+const PuzzleMasterGame = React.lazy(() => import('./components/BrainTrainer/PuzzleMasterGame'));
 const ArcadeHubPage = React.lazy(() => import('./pages/Arcade/ArcadeHubPage'));
 const DarkMaze = React.lazy(() => import('./components/Arcade/Games/DarkMaze/DarkMaze'));
 const RenkliBalon = React.lazy(() => import('./components/Arcade/Games/RenkliBalon/RenkliBalon'));
@@ -209,6 +210,7 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/games/tepki-suresi" element={<RequireAuth><ReactionTimeGame /></RequireAuth>} />
             <Route path="/games/yuz-ifadesi" element={<RequireAuth><FaceExpressionGame /></RequireAuth>} />
             <Route path="/games/bilgi-kartlari" element={<RequireAuth><KnowledgeCardGame /></RequireAuth>} />
+            <Route path="/games/puzzle-master" element={<RequireAuth><PuzzleMasterGame /></RequireAuth>} />
 
             {/* Arcade Routes */}
             <Route path="/arcade/karanlik-labirent" element={<RequireAuth><DarkMaze /></RequireAuth>} />

@@ -78,23 +78,34 @@ interface WordGamesPDFProps {
 export function WordGamesPDF({ story }: WordGamesPDFProps) {
   const content = decode(story.content);
   const sentences = content.match(/[^.!?]+[.!?]+/g) || [];
-  
+
   const scrambleWords = sentences
     .slice(0, 2)
     .map(sentence => {
-      const words = sentence.trim().split(' ');
-      return words[Math.floor(Math.random() * words.length)]
-        .replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
+      const words = sentence.trim().split(/\s+/);
+      const validWords = words.map(w => w.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '')).filter(w => w.length >= 3);
+      return validWords.length > 0
+        ? validWords[Math.floor(Math.random() * validWords.length)]
+        : words[Math.floor(Math.random() * words.length)].replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
     });
 
   const fillSentences = sentences
     .slice(2, 4)
     .map(sentence => {
-      const words = sentence.trim().split(' ');
-      const wordToRemove = words[Math.floor(Math.random() * words.length)]
-        .replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
+      const cleanSentence = sentence.trim();
+      const words = cleanSentence.split(/\s+/);
+      const validWords = words.map(w => w.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '')).filter(w => w.length >= 3);
+      const wordToRemove = validWords.length > 0
+        ? validWords[Math.floor(Math.random() * validWords.length)]
+        : words[Math.floor(Math.random() * words.length)].replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
+
+      const escapedWord = wordToRemove.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const fillQuestion = cleanSentence.replace(new RegExp(`(\\s|^|["'\\(])${escapedWord}([\\s.,!?;:\\)"']|$)`, 'i'), (_, p1, p2) => {
+        return `${p1}_____${p2}`;
+      });
+
       return {
-        sentence: sentence.trim(),
+        sentence: fillQuestion,
         word: wordToRemove
       };
     });
@@ -128,7 +139,7 @@ export function WordGamesPDF({ story }: WordGamesPDFProps) {
           {fillSentences.map(({ sentence, word }, index) => (
             <View key={`fill-${index}`}>
               <Text style={styles.question}>
-                {sentence.replace(word, '_____')}
+                {sentence}
               </Text>
               <Text style={styles.answer}>Cevap: {word}</Text>
             </View>

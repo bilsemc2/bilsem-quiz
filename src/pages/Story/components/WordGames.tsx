@@ -19,6 +19,12 @@ interface Story {
 import { CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
 import { decode } from 'html-entities';
 
+const normalizeAnswer = (str: string) =>
+  str.toLocaleLowerCase('tr-TR')
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
 type GameType = 'scramble' | 'fill' | 'order';
 
 interface WordGamesProps {
@@ -42,28 +48,42 @@ export function WordGames({ story }: WordGamesProps) {
   useEffect(() => {
     const content = decode(story.content);
     const sentences = content.match(/[^.!?]+[.!?]+/g) || [];
-    
+
     const gameQuestions = sentences.slice(0, 6).map((sentence, index) => {
       const cleanSentence = sentence.trim();
-      const words = cleanSentence.split(' ');
-      
+      const words = cleanSentence.split(/\s+/);
+
       if (index % 3 === 0) {
         // Kelime karıştırma oyunu
-        const word = words[Math.floor(Math.random() * words.length)]
-          .replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
+        const validWords = words.map(w => w.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '')).filter(w => w.length >= 3);
+        const word = validWords.length > 0
+          ? validWords[Math.floor(Math.random() * validWords.length)]
+          : words[Math.floor(Math.random() * words.length)].replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
+
+        const scrambled = shuffleWord(word);
         return {
           type: 'scramble' as GameType,
-          question: `Bu kelimeyi düzelt: ${shuffleWord(word)}`,
+          question: `Bu kelimeyi düzelt: ${scrambled}`,
           answer: word,
-          scrambled: shuffleWord(word)
+          scrambled: scrambled
         };
       } else if (index % 3 === 1) {
         // Boşluk doldurma oyunu
-        const wordToRemove = words[Math.floor(Math.random() * words.length)]
-          .replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
+        const validWords = words.map(w => w.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '')).filter(w => w.length >= 3);
+        const wordToRemove = validWords.length > 0
+          ? validWords[Math.floor(Math.random() * validWords.length)]
+          : words[Math.floor(Math.random() * words.length)].replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, '');
+
+        // Use a safer replacement logic to avoid partial matches
+        // We match the word exactly by wrapping it in non-word character boundaries
+        const escapedWord = wordToRemove.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const fillQuestion = cleanSentence.replace(new RegExp(`(\\s|^|["'\\(])${escapedWord}([\\s.,!?;:\\)"']|$)`, 'i'), (_, p1, p2) => {
+          return `${p1}_____${p2}`;
+        });
+
         return {
           type: 'fill' as GameType,
-          question: cleanSentence.replace(wordToRemove, '_____'),
+          question: fillQuestion,
           answer: wordToRemove,
           options: generateOptions(wordToRemove, words)
         };
@@ -72,7 +92,7 @@ export function WordGames({ story }: WordGamesProps) {
         const shuffledWords = [...words].sort(() => Math.random() - 0.5);
         return {
           type: 'order' as GameType,
-          question: 'Bu cümleyi doğru sıraya koy:\n' + shuffledWords.join(' '),
+          question: 'Bu cümleyi doğru sıraya koy (Noktalama işaretlerini yazmasan da olur):\n' + shuffledWords.join(' '),
           answer: cleanSentence
         };
       }
@@ -90,7 +110,7 @@ export function WordGames({ story }: WordGamesProps) {
     const filteredWords = words
       .map(w => w.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ]/g, ''))
       .filter(w => w.length > 2 && w !== answer);
-    
+
     while (options.length < 4 && filteredWords.length > 0) {
       const randomWord = filteredWords.splice(
         Math.floor(Math.random() * filteredWords.length),
@@ -106,14 +126,14 @@ export function WordGames({ story }: WordGamesProps) {
 
   const handleSubmit = () => {
     const currentQ = questions[currentQuestion];
-    const isCorrect = userAnswer.toLowerCase() === currentQ.answer.toLowerCase();
-    
+    const isCorrect = normalizeAnswer(userAnswer) === normalizeAnswer(currentQ.answer);
+
     if (isCorrect) {
       setScore(score + 1);
     }
-    
+
     setShowFeedback(true);
-    
+
     setTimeout(() => {
       if (currentQuestion < questions.length - 1) {
         setCurrentQuestion(currentQuestion + 1);
@@ -163,11 +183,10 @@ export function WordGames({ story }: WordGamesProps) {
                 <button
                   key={index}
                   onClick={() => setUserAnswer(option)}
-                  className={`p-3 rounded-lg border-2 transition-colors ${
-                    userAnswer === option
-                      ? 'border-purple-600 bg-purple-50'
-                      : 'border-gray-200 hover:border-purple-300'
-                  }`}
+                  className={`p-3 rounded-lg border-2 transition-colors ${userAnswer === option
+                    ? 'border-purple-600 bg-purple-50'
+                    : 'border-gray-200 hover:border-purple-300'
+                    }`}
                 >
                   {option}
                 </button>
@@ -186,12 +205,11 @@ export function WordGames({ story }: WordGamesProps) {
           )}
 
           {showFeedback ? (
-            <div className={`flex items-center gap-3 p-4 rounded-lg ${
-              userAnswer.toLowerCase() === currentQ.answer.toLowerCase()
-                ? 'bg-green-100'
-                : 'bg-red-100'
-            }`}>
-              {userAnswer.toLowerCase() === currentQ.answer.toLowerCase() ? (
+            <div className={`flex items-center gap-3 p-4 rounded-lg ${normalizeAnswer(userAnswer) === normalizeAnswer(currentQ.answer)
+              ? 'bg-green-100'
+              : 'bg-red-100'
+              }`}>
+              {normalizeAnswer(userAnswer) === normalizeAnswer(currentQ.answer) ? (
                 <>
                   <CheckCircle2 className="text-green-600" />
                   <span className="font-medium text-green-800">
@@ -221,10 +239,10 @@ export function WordGames({ story }: WordGamesProps) {
           <div className="mt-8">
             <div className="text-center mb-8">
               <h3 className="text-3xl font-bold text-purple-900 mb-4">
-              Oyun Bitti! 🎉
+                Oyun Bitti! 🎉
               </h3>
               <p className="text-lg mb-4">
-              {questions.length} sorudan {score} tanesini doğru bildin!
+                {questions.length} sorudan {score} tanesini doğru bildin!
               </p>
               <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
@@ -233,14 +251,14 @@ export function WordGames({ story }: WordGamesProps) {
                 />
               </div>
             </div>
-            
+
             <button
               onClick={() => {
                 setCurrentQuestion(0);
                 setScore(0);
                 setShowFeedback(false);
                 setUserAnswer('');
-              }} 
+              }}
               className="flex items-center gap-2 mx-auto mt-8 px-8 py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
               <RefreshCw size={20} />
