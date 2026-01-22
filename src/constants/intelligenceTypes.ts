@@ -58,6 +58,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'isitsel-hafiza': ZEKA_TURLERI.CALISMA_BELLEGI,
     'tepki-suresi': ZEKA_TURLERI.ISLEME_HIZI,
     'yuz-ifadesi': ZEKA_TURLERI.GORSEL_ALGI,
+    'puzzle-master': ZEKA_TURLERI.GORSEL_ALGI,
     'bilgi-kartlari-bosluk-doldur': ZEKA_TURLERI.SOZEL_ZEKA,
     'hikaye-quiz': ZEKA_TURLERI.SOZEL_ZEKA,
 };
@@ -97,6 +98,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'isitsel-hafiza': 'bireysel',
     'tepki-suresi': 'bireysel',
     'yuz-ifadesi': 'bireysel',
+    'puzzle-master': 'bireysel',
     'bilgi-kartlari-bosluk-doldur': 'bireysel',
     'hikaye-quiz': 'bireysel',
 };
