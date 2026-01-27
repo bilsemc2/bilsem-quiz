@@ -39,7 +39,7 @@ export default function Footer() {
                             <a href="https://www.instagram.com/bilsemc2/" className="hover:text-white transition-colors" aria-label="Instagram">
                                 <InstagramOutlined className="text-3xl" aria-hidden="true" />
                             </a>
-                            <a href="https://www.youtube.com/@bilsemce" className="hover:text-white transition-colors" aria-label="Youtube">
+                            <a href="https://www.youtube.com/@ersanicoz" className="hover:text-white transition-colors" aria-label="Youtube">
                                 <YoutubeOutlined className="text-3xl" aria-hidden="true" />
                             </a>
                         </div>
