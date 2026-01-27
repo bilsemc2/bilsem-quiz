@@ -1,5 +1,5 @@
 import React from 'react';
-import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search } from 'lucide-react';
+import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle } from 'lucide-react';
 
 export interface ArcadeGame {
     id: string;
@@ -83,5 +83,14 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         color: "from-sky-400 to-blue-600",
         icon: <Search size={48} className="text-white" />,
         link: "/arcade/kart-dedektifi"
+    },
+    {
+        id: 'neseli-balonlar',
+        title: "Neşeli Balonlar",
+        description: "Balonları izle, patlayan renkli balonları aklında tut ve doğru tahmin et!",
+        cost: 35,
+        color: "from-sky-300 to-blue-500",
+        icon: <Circle size={48} className="text-white animate-bounce" />,
+        link: "/arcade/neseli-balonlar"
     }
 ];
