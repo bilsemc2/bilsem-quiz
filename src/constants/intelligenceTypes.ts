@@ -21,7 +21,7 @@ export const ZEKA_TURLERI = {
 
 export type ZekaTuru = typeof ZEKA_TURLERI[keyof typeof ZEKA_TURLERI];
 
-export type WorkshopType = 'tablet' | 'bireysel';
+export type WorkshopType = 'tablet' | 'bireysel' | 'arcade';
 
 // Oyun ID'si -> Zeka Türü eşleştirmesi
 export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
@@ -61,6 +61,17 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'puzzle-master': ZEKA_TURLERI.GORSEL_ALGI,
     'bilgi-kartlari-bosluk-doldur': ZEKA_TURLERI.SOZEL_ZEKA,
     'hikaye-quiz': ZEKA_TURLERI.SOZEL_ZEKA,
+
+    // Arcade Oyunları
+    'arcade-dark-maze': ZEKA_TURLERI.GORSEL_UZAMSAL,
+    'neseli-balonlar': ZEKA_TURLERI.GORSEL_HAFIZA,
+    'arcade-labirent-ustasi': ZEKA_TURLERI.GORSEL_UZAMSAL,
+    'renkli-balon': ZEKA_TURLERI.SECICI_DIKKAT,
+    'kart-dedektifi': ZEKA_TURLERI.MANTIKSAL_ZEKA,
+    'oruntulu-top': ZEKA_TURLERI.AKICI_ZEKA,
+    'arcade-kraft-origami': ZEKA_TURLERI.GORSEL_UZAMSAL,
+    'arcade-ayna-ustasi': ZEKA_TURLERI.GORSEL_UZAMSAL,
+    'ters-navigator': ZEKA_TURLERI.BILISSEL_ESNEKLIK,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -101,12 +112,24 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'puzzle-master': 'bireysel',
     'bilgi-kartlari-bosluk-doldur': 'bireysel',
     'hikaye-quiz': 'bireysel',
+
+    // Arcade Oyunları
+    'arcade-dark-maze': 'arcade',
+    'neseli-balonlar': 'arcade',
+    'arcade-labirent-ustasi': 'arcade',
+    'renkli-balon': 'arcade',
+    'kart-dedektifi': 'arcade',
+    'oruntulu-top': 'arcade',
+    'arcade-kraft-origami': 'arcade',
+    'arcade-ayna-ustasi': 'arcade',
+    'ters-navigator': 'arcade',
 };
 
 // Workshop türü etiketleri
 export const WORKSHOP_LABELS: Record<WorkshopType, string> = {
     tablet: 'Tablet Değerlendirme (1. Aşama)',
     bireysel: 'Bireysel Değerlendirme (2. Aşama)',
+    arcade: 'Zeka Arcade',
 };
 
 // Zeka türü renkleri (UI için)
