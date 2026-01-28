@@ -39,6 +39,7 @@ import BlogManagement from '../components/admin/BlogManagement';
 import PromoCodeManagement from '../components/admin/PromoCodeManagement';
 import SendMessage from '../components/admin/SendMessage';
 import TalentAnalytics from '../components/admin/TalentAnalytics';
+import StudentStatistics from '../components/admin/StudentStatistics';
 import StoryGeneratorPage from './Story/StoryGeneratorPage';
 import { toast } from 'react-hot-toast';
 
@@ -124,6 +125,13 @@ const AdminPage: React.FC = () => {
       icon: <BrainIcon />,
       component: <TalentAnalytics />,
       path: '/admin/talent-analytics',
+    },
+    {
+      id: 'student-statistics',
+      title: 'Öğrenci İstatistikleri',
+      icon: <PeopleIcon />,
+      component: <StudentStatistics />,
+      path: '/admin/student-statistics',
     },
   ]);
 

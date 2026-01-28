@@ -72,6 +72,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'arcade-kraft-origami': ZEKA_TURLERI.GORSEL_UZAMSAL,
     'arcade-ayna-ustasi': ZEKA_TURLERI.GORSEL_UZAMSAL,
     'ters-navigator': ZEKA_TURLERI.BILISSEL_ESNEKLIK,
+    'chromabreak': ZEKA_TURLERI.GORSEL_HAFIZA,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -123,6 +124,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'arcade-kraft-origami': 'arcade',
     'arcade-ayna-ustasi': 'arcade',
     'ters-navigator': 'arcade',
+    'chromabreak': 'arcade',
 };
 
 // Workshop türü etiketleri
