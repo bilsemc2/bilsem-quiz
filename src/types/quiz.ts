@@ -56,4 +56,4 @@ export interface Answer {
     }[];
 }
 
-export interface Question extends QuizQuestion {}
+export type Question = QuizQuestion;

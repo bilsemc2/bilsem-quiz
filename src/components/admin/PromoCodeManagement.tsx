@@ -36,6 +36,7 @@ export default function PromoCodeManagement() {
     });
 
     const [usageDialogOpen, setUsageDialogOpen] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [usageList, setUsageList] = useState<any[]>([]);
     const [fetchingUsage, setFetchingUsage] = useState(false);
     const [selectedCodeName, setSelectedCodeName] = useState('');
@@ -96,9 +97,9 @@ export default function PromoCodeManagement() {
             setPromoCodes([data, ...promoCodes]);
             setNewCode({ code: '', xp_reward: 50, max_uses: 100, expires_at: '' });
             toast.success('Promo kod başarıyla oluşturuldu');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Kod eklenirken hata:', error);
-            toast.error(`Kod eklenemedi: ${error.message || 'Bir hata oluştu'}`);
+            toast.error(`Kod eklenemedi: ${error instanceof Error ? error.message : 'Bir hata oluştu'}`);
         }
     };
 
@@ -113,7 +114,7 @@ export default function PromoCodeManagement() {
             if (error) throw error;
             setPromoCodes(promoCodes.filter(c => c.id !== id));
             toast.success('Kod silindi');
-        } catch (error) {
+        } catch {
             toast.error('Silme işlemi başarısız');
         }
     };
@@ -153,9 +154,9 @@ export default function PromoCodeManagement() {
 
             toast.success('Kod güncellendi');
             setEditDialogOpen(false);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Kod güncellenirken hata:', error);
-            toast.error(`Güncelleme başarısız: ${error.message || 'Bir hata oluştu'}`);
+            toast.error(`Güncelleme başarısız: ${error instanceof Error ? error.message : 'Bir hata oluştu'}`);
         }
     };
 

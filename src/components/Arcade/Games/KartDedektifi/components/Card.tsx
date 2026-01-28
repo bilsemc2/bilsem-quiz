@@ -1,9 +1,9 @@
 import React from 'react';
-import { Star, Heart, Cloud, Moon } from 'lucide-react';
+import { Star, Heart, Cloud, Moon, LucideIcon } from 'lucide-react';
 import { CardData, Shape } from '../types';
 import { COLORS } from '../constants';
 
-const SHAPE_COMPONENTS: Record<Shape, any> = {
+const SHAPE_COMPONENTS: Record<Shape, LucideIcon> = {
   [Shape.Star]: Star,
   [Shape.Heart]: Heart,
   [Shape.Cloud]: Cloud,

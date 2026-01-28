@@ -87,7 +87,7 @@ const generateOperation = (level: number): { operation: string; result: number }
   const op = settings.operations[Math.floor(Math.random() * settings.operations.length)];
   let num1 = Math.floor(random(1, settings.maxNumber));
   let num2 = Math.floor(random(1, settings.maxNumber));
-  
+
   let result: number;
   switch (op) {
     case '+':
@@ -119,7 +119,7 @@ const createBubble = (id: number, level: number): Bubble => {
   const settings = getLevelSettings(level);
   const size = random(BUBBLE_MIN_SIZE, BUBBLE_MAX_SIZE);
   const { operation, result } = generateOperation(level);
-  
+
   return {
     id,
     x: random(size, GAME_WIDTH - size),
@@ -187,7 +187,7 @@ const BubbleNumbersGame: React.FC = () => {
   }, [isMuted]);
 
   // Güçlendirici kullan
-  const usePowerUp = useCallback((type: PowerUpType) => {
+  const handlePowerUp = useCallback((type: PowerUpType) => {
     if (!powerUpManagerRef.current.canUsePowerUp(type, currentTime)) return;
 
     soundManager.play('pop'); // Güçlendirici sesi
@@ -198,12 +198,12 @@ const BubbleNumbersGame: React.FC = () => {
         setIsPaused(true);
         setTimeout(() => setIsPaused(false), POWER_UPS[type].duration * 1000);
         break;
-      
+
       case 'extraTime':
         setTimeLeft(prev => prev + 10);
         break;
-      
-      case 'hint':
+
+      case 'hint': {
         const correctBubble = bubblesRef.current?.find(b => b.result === targetNumber);
         if (correctBubble) {
           correctBubble.highlighted = true;
@@ -212,18 +212,19 @@ const BubbleNumbersGame: React.FC = () => {
           }, POWER_UPS[type].duration * 1000);
         }
         break;
+      }
     }
   }, [currentTime, targetNumber]);
 
   // Güçlendirici efektlerini uygula
   const applyPowerUpEffects = useCallback((bubble: Bubble) => {
     const active = powerUpManagerRef.current.getActivePowerUps(currentTime);
-    
+
     if (active.includes('slowMotion')) {
       bubble.dx *= 0.5;
       bubble.dy *= 0.5;
     }
-    
+
     return bubble;
   }, [currentTime]);
 
@@ -233,7 +234,7 @@ const BubbleNumbersGame: React.FC = () => {
 
     bubblesRef.current = bubblesRef.current.map(bubble => {
       let newBubble = { ...bubble };
-      
+
       // Güçlendirici efektlerini uygula
       newBubble = applyPowerUpEffects(newBubble);
 
@@ -275,7 +276,7 @@ const BubbleNumbersGame: React.FC = () => {
       if (bubble.popping) {
         // Patlama animasyonu
         if (bubble.popProgress === undefined) bubble.popProgress = 0;
-        
+
         ctx.beginPath();
         ctx.arc(bubble.x, bubble.y, bubble.size * (1 + bubble.popProgress * 0.5), 0, Math.PI * 2);
         ctx.fillStyle = `rgba(33, 150, 243, ${0.3 * (1 - bubble.popProgress)})`;
@@ -284,7 +285,7 @@ const BubbleNumbersGame: React.FC = () => {
         ctx.stroke();
 
         bubble.popProgress += 0.1;
-        
+
         if (bubble.popProgress >= 1) {
           bubblesRef.current = bubblesRef.current.filter(b => b.id !== bubble.id);
           setBubbles([...bubblesRef.current]);
@@ -293,7 +294,7 @@ const BubbleNumbersGame: React.FC = () => {
         // Normal baloncuk
         ctx.beginPath();
         ctx.arc(bubble.x, bubble.y, bubble.size, 0, Math.PI * 2);
-        
+
         // İpucu vurgusu
         if (bubble.highlighted) {
           ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
@@ -302,7 +303,7 @@ const BubbleNumbersGame: React.FC = () => {
           ctx.fillStyle = 'rgba(33, 150, 243, 0.3)';
           ctx.strokeStyle = 'rgba(33, 150, 243, 0.6)';
         }
-        
+
         ctx.fill();
         ctx.stroke();
 
@@ -336,18 +337,18 @@ const BubbleNumbersGame: React.FC = () => {
     if (clickedBubble) {
       if (clickedBubble.result === targetNumber) {
         soundManager.play('pop');
-        
+
         clickedBubble.popping = true;
         clickedBubble.popProgress = 0;
-        
+
         // Çift puan kontrolü
         const scoreMultiplier = powerUpManagerRef.current.isPowerUpActive('doublePop', currentTime) ? 2 : 1;
         setScore(prev => prev + (level * 10 * scoreMultiplier));
 
-        const remainingBubbles = bubblesRef.current.filter(b => 
+        const remainingBubbles = bubblesRef.current.filter(b =>
           b.id !== clickedBubble.id && !b.popping
         );
-        
+
         if (remainingBubbles.length > 0) {
           const newTarget = remainingBubbles[
             Math.floor(Math.random() * remainingBubbles.length)
@@ -357,34 +358,34 @@ const BubbleNumbersGame: React.FC = () => {
           const handleLevelUp = () => {
             // Seviye atlama efekti
             soundManager.play('pop');
-            
+
             setIsPaused(true);
             const newLevel = level + 1;
             const settings = getLevelSettings(newLevel);
-            
+
             // Seviye mesajı - şu anda gösterilmiyor ama ileri aşamalarda kullanılabilir
             // const levelMessage = `Tebrikler! Seviye ${newLevel}\n${
             //   newLevel === 2 ? 'Çıkarma işlemleri eklendi!' :
             //   newLevel === 3 ? 'Çarpma işlemleri eklendi!' :
             //   `Daha hızlı ve daha çok baloncuk!\nBonus Süre: +${settings.timeBonus} saniye`
             // }`;
-            
+
             setTimeout(() => {
               setIsPaused(false);
-              
+
               // Seviyeyi ve süreyi güncelle
               setLevel(newLevel);
               setTimeLeft(prev => prev + settings.timeBonus);
-              
+
               // Yeni baloncukları oluştur
               const initialBubbles = Array.from(
-                { length: settings.bubbleCount }, 
+                { length: settings.bubbleCount },
                 (_, i) => createBubble(i, newLevel)
               );
-              
+
               bubblesRef.current = initialBubbles;
               setBubbles(initialBubbles);
-              
+
               // Yeni hedef sayı belirle
               const randomBubble = initialBubbles[Math.floor(Math.random() * initialBubbles.length)];
               setTargetNumber(randomBubble.result);
@@ -435,13 +436,13 @@ const BubbleNumbersGame: React.FC = () => {
     // İlk baloncukları oluştur
     const settings = getLevelSettings(level);
     const initialBubbles = Array.from(
-      { length: settings.bubbleCount }, 
+      { length: settings.bubbleCount },
       (_, i) => createBubble(i, level)
     );
 
     // Hedef sayıyı belirle
     const randomBubble = initialBubbles[Math.floor(Math.random() * initialBubbles.length)];
-    
+
     // State'leri güncelle
     bubblesRef.current = initialBubbles;
     setBubbles(initialBubbles);
@@ -512,7 +513,7 @@ const BubbleNumbersGame: React.FC = () => {
           </div>
         </div>
         <div className="control-buttons">
-          <button 
+          <button
             onClick={togglePause}
             className={`control-button ${isPaused ? 'paused' : ''}`}
             title={isPaused ? 'Devam Et' : 'Duraklat'}
@@ -535,11 +536,11 @@ const BubbleNumbersGame: React.FC = () => {
           const canUse = powerUpManagerRef.current.canUsePowerUp(type as PowerUpType, currentTime);
           const isActive = powerUpManagerRef.current.isPowerUpActive(type as PowerUpType, currentTime);
           const cooldown = powerUpManagerRef.current.getRemainingCooldown(type as PowerUpType, currentTime);
-          
+
           return (
             <button
               key={type}
-              onClick={() => usePowerUp(type as PowerUpType)}
+              onClick={() => handlePowerUp(type as PowerUpType)}
               className={`power-up-button ${isActive ? 'active' : ''} ${!canUse ? 'cooldown' : ''}`}
               disabled={!canUse || gameOver || isPaused}
               title={`${powerUp.description}${cooldown > 0 ? `\nBekleme: ${cooldown}s` : ''}`}
@@ -560,14 +561,7 @@ const BubbleNumbersGame: React.FC = () => {
         style={{ filter: isPaused ? 'blur(3px)' : 'none' }}
       />
 
-      {/* Seviye geçiş efekti */}
-      {false && (
-        <div className="level-up-overlay">
-          <div className="level-up-message">
-            
-          </div>
-        </div>
-      )}
+      {/* Seviye geçiş efekti - devre dışı */}
 
       {(gameOver || isPaused) && (
         <div className="game-overlay">
@@ -576,18 +570,18 @@ const BubbleNumbersGame: React.FC = () => {
               <h2>Oyun Bitti!</h2>
               <p>Seviye: {level}</p>
               <p>Puanınız: {score}</p>
-              <button 
+              <button
                 onClick={() => {
                   // Quiz ID ve diğer sonuç sayfası bilgilerini koruyarak, orijinal sonuç sayfasına dön
                   const quizId = location.state?.quizId || previousState?.quizId;
                   const quizResultPath = quizId ? `/quiz/${quizId}/result` : '/result';
-                  navigate(quizResultPath, { 
-                    state: { 
-                      ...previousState, 
-                      gameScore: score, 
-                      fromBubbleGame: true 
-                    }, 
-                    replace: true 
+                  navigate(quizResultPath, {
+                    state: {
+                      ...previousState,
+                      gameScore: score,
+                      fromBubbleGame: true
+                    },
+                    replace: true
                   });
                 }}
                 className="mt-4 px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -598,7 +592,7 @@ const BubbleNumbersGame: React.FC = () => {
           ) : (
             <div className="game-paused">
               <h2>Oyun Duraklatıldı</h2>
-              <button 
+              <button
                 onClick={togglePause}
                 className="mt-4 px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
               >

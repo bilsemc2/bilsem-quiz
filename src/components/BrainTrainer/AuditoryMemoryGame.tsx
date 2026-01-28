@@ -40,7 +40,7 @@ const AuditoryMemoryGame: React.FC = () => {
     // Audio Context oluştur
     const getAudioContext = useCallback(() => {
         if (!audioContextRef.current) {
-            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
         }
         return audioContextRef.current;
     }, []);
@@ -306,8 +306,8 @@ const AuditoryMemoryGame: React.FC = () => {
                         >
                             {/* Status */}
                             <div className={`bg-slate-800/70 border-2 rounded-2xl p-4 mb-6 text-center ${gameState === 'listening' ? 'border-indigo-500' :
-                                    gameState === 'feedback' ? (isCorrect ? 'border-emerald-500' : 'border-red-500') :
-                                        'border-amber-500'
+                                gameState === 'feedback' ? (isCorrect ? 'border-emerald-500' : 'border-red-500') :
+                                    'border-amber-500'
                                 }`}>
                                 {gameState === 'listening' && (
                                     <div className="flex items-center justify-center gap-3 text-indigo-400">
@@ -347,8 +347,8 @@ const AuditoryMemoryGame: React.FC = () => {
                                         whileHover={{ scale: gameState === 'answering' ? 1.05 : 1 }}
                                         whileTap={{ scale: gameState === 'answering' ? 0.95 : 1 }}
                                         className={`aspect-square rounded-2xl flex flex-col items-center justify-center text-white font-bold transition-all ${activeNote === index
-                                                ? 'ring-4 ring-white scale-110'
-                                                : ''
+                                            ? 'ring-4 ring-white scale-110'
+                                            : ''
                                             } ${gameState !== 'answering'
                                                 ? 'opacity-60 cursor-not-allowed'
                                                 : 'hover:ring-2 hover:ring-white/50 cursor-pointer'

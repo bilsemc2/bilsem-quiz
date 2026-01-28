@@ -164,9 +164,9 @@ const BlogManagement = () => {
 
       handleCloseDialog();
       fetchPosts();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Blog yazısı kaydedilirken hata:', error);
-      toast.error('Blog yazısı kaydedilemedi: ' + (error.message || 'Hata oluştu'));
+      toast.error('Blog yazısı kaydedilemedi: ' + (error instanceof Error ? error.message : 'Hata oluştu'));
     } finally {
       setIsSaving(false);
     }
@@ -205,9 +205,9 @@ const BlogManagement = () => {
       if (error) throw error;
       toast.success('Görünüm düzeltildi (HTML\'e dönüştürüldü)');
       fetchPosts();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Dönüştürme hatası:', error);
-      toast.error('Düzeltme yapılamadı: ' + (error.message || 'Bilinmeyen hata'));
+      toast.error('Düzeltme yapılamadı: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     }
   };
 

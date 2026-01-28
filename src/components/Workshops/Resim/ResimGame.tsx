@@ -52,7 +52,7 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
     const startTask = async (mode: ActivityMode) => {
         setState({ ...state, mode, status: 'GENERATING', error: undefined });
         try {
-            let data: any = {};
+            const data: { words?: string[]; story?: string; imageUrl?: string } = {};
             if (mode === ActivityMode.THREE_WORDS) {
                 const wordsStr = await generateActivityPrompt(mode);
                 data.words = wordsStr?.split(',').map((w: string) => w.trim()) || [];

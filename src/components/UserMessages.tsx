@@ -84,7 +84,7 @@ const UserMessages: React.FC<UserMessagesProps> = ({ userId }) => {
           sender_id: msg.sender_id,
           created_at: msg.created_at,
           read: msg.read,
-          sender_name: (msg.sender as any)?.name || 'Admin'
+          sender_name: (msg.sender && typeof msg.sender === 'object' && 'name' in msg.sender) ? (msg.sender as { name?: string }).name || 'Admin' : 'Admin'
         }));
         setMessages(formattedMessages);
       }
@@ -110,7 +110,7 @@ const UserMessages: React.FC<UserMessagesProps> = ({ userId }) => {
         )
       );
       toast.success('Mesaj okundu olarak işaretlendi');
-    } catch (error) {
+    } catch {
       toast.error('Mesaj güncellenirken hata oluştu');
     }
   };
@@ -126,7 +126,7 @@ const UserMessages: React.FC<UserMessagesProps> = ({ userId }) => {
 
       setMessages(prev => prev.filter(msg => msg.id !== messageId));
       toast.success('Mesaj silindi');
-    } catch (error) {
+    } catch {
       toast.error('Mesaj silinirken hata oluştu');
     }
   };

@@ -9,7 +9,7 @@ export interface GamePlayData {
     difficulty_played?: string;
     duration_seconds: number;
     lives_remaining?: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 export const useGamePersistence = () => {

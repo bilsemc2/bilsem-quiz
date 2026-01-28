@@ -9,6 +9,12 @@ import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
+interface Shape {
+    id: string;
+    icon: React.ReactNode;
+    color: string;
+}
+
 // Şekil tanımlamaları
 const SHAPES = [
     { id: 'square', icon: <Square />, color: '#6366f1' },
@@ -26,8 +32,8 @@ const NBackGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [gameState, setGameState] = useState<GameState>('waiting');
-    const [history, setHistory] = useState<any[]>([]);
-    const [currentShape, setCurrentShape] = useState<any>(null);
+    const [history, setHistory] = useState<Shape[]>([]);
+    const [currentShape, setCurrentShape] = useState<Shape | null>(null);
     const [score, setScore] = useState(0);
     const [level, setLevel] = useState(1);
     const [nValue, setNValue] = useState(1);

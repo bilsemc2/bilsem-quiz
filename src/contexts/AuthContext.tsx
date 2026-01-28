@@ -2,9 +2,22 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
+export interface Profile {
+    id: string;
+    name: string;
+    email: string;
+    experience: number;
+    is_admin?: boolean;
+    grade?: number;
+    school?: string;
+    avatar_url?: string;
+    last_seen?: string;
+    [key: string]: unknown;
+}
+
 interface AuthContextType {
     user: User | null;
-    profile: any | null;
+    profile: Profile | null;
     loading: boolean;
     signOut: () => Promise<void>;
     refreshProfile: () => Promise<void>;
@@ -22,7 +35,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [profile, setProfile] = useState<any | null>(null);
+    const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
 
 
@@ -61,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (response.ok) {
                 const result = await response.json();
                 // Update local state with new XP from server
-                setProfile((prev: any) => prev ? { ...prev, experience: result.newXP } : null);
+                setProfile((prev) => prev ? { ...prev, experience: result.newXP } : null);
             } else if (response.status === 429) {
                 // Rate limited - silently ignore
                 console.log('[XP] Rate limited by server');

@@ -2,11 +2,11 @@ import { shuffleArray } from './arrayUtils';
 import { MAX_QUESTION_NUMBER } from '../config/constants';
 import { Quiz as BaseQuiz, Question as BaseQuestion, QuizOption } from '../types/quiz';
 
-export interface Quiz extends BaseQuiz {}
+export type Quiz = BaseQuiz;
 
-export interface Question extends BaseQuestion {}
+export type Question = BaseQuestion;
 
-export interface Option extends QuizOption {}
+export type Option = QuizOption;
 
 export function extractFilename(path: string): string {
     const parts = path.split('/');

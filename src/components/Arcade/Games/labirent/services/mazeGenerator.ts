@@ -1,5 +1,5 @@
 
-import { Cell, AlgorithmType } from '../types';
+import { Cell } from '../types';
 
 export const createEmptyGrid = (rows: number, cols: number): Cell[][] => {
   const grid: Cell[][] = [];
@@ -29,10 +29,10 @@ const setupEntryExit = (grid: Cell[][]) => {
 
 const removeWalls = (a: Cell, b: Cell) => {
   const x = a.col - b.col;
-  if (x === 1) { a.walls.left = false; b.walls.right = false; } 
+  if (x === 1) { a.walls.left = false; b.walls.right = false; }
   else if (x === -1) { a.walls.right = false; b.walls.left = false; }
   const y = a.row - b.row;
-  if (y === 1) { a.walls.top = false; b.walls.bottom = false; } 
+  if (y === 1) { a.walls.top = false; b.walls.bottom = false; }
   else if (y === -1) { a.walls.bottom = false; b.walls.top = false; }
 };
 
@@ -85,7 +85,7 @@ export function* generatePrimsMaze(grid: Cell[][]) {
   const cols = grid[0].length;
   const startCell = grid[Math.floor(Math.random() * rows)][Math.floor(Math.random() * cols)];
   startCell.visited = true;
-  
+
   const addNeighborsToWallList = (cell: Cell) => {
     const { row, col } = cell;
     if (row > 0) walls.push({ c1: cell, c2: grid[row - 1][col] });
@@ -250,7 +250,7 @@ export function* generateWilsons(grid: Cell[][]) {
       if (row < rows - 1) neighbors.push(grid[row + 1][col]);
       if (col > 0) neighbors.push(grid[row][col - 1]);
       if (col < cols - 1) neighbors.push(grid[row][col + 1]);
-      
+
       const next = neighbors[Math.floor(Math.random() * neighbors.length)];
       const index = path.indexOf(next);
       if (index !== -1) {
@@ -263,7 +263,7 @@ export function* generateWilsons(grid: Cell[][]) {
 
     for (let i = 0; i < path.length - 1; i++) {
       const c1 = path[i];
-      const c2 = path[i+1];
+      const c2 = path[i + 1];
       removeWalls(c1, c2);
       c1.visited = true;
       unvisited.splice(unvisited.indexOf(c1), 1);
@@ -276,7 +276,7 @@ export function* generateWilsons(grid: Cell[][]) {
 export function* generateRecursiveDivision(grid: Cell[][]) {
   const rows = grid.length;
   const cols = grid[0].length;
-  
+
   // Start by removing all internal walls
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {

@@ -93,7 +93,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
     try {
       setLoading(true);
       console.log('Kullanıcılar yükleniyor...');
-      
+
       // Önce kullanıcıları al
       const { data: users, error: usersError } = await supabase
         .from('profiles')
@@ -101,7 +101,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
         .order('created_at', { ascending: false });
 
       console.log('Kullanıcı verileri:', users);
-      
+
       if (usersError) {
         console.error('Kullanıcı verisi alınırken hata:', usersError);
         throw usersError;
@@ -326,7 +326,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
       }
 
       // Güncellenecek veriyi hazırla
-      const updateData: any = {
+      const updateData: {
+        name: string;
+        email: string;
+        points: number;
+        experience: number;
+        grade: number;
+        referred_by?: string;
+      } = {
         name: editFormData.name,
         email: editFormData.email,
         points: points,
@@ -382,9 +389,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
       setUsers(users.map(user =>
         user.id === editingUser.id
           ? {
-              ...user,
-              ...updateData
-            }
+            ...user,
+            ...updateData
+          }
           : user
       ));
 
@@ -494,7 +501,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ onUserUpdate }) 
                       <TableCell>{user.email}</TableCell>
                       <TableCell>{user.grade || '-'}</TableCell>
                       <TableCell>
-                        {user.class_students?.map((cs: any) => (
+                        {user.class_students?.map((cs) => (
                           <Chip
                             key={cs.classes.id}
                             label={`${cs.classes.name} (${cs.classes.grade}. Sınıf)`}

@@ -28,7 +28,7 @@ const RhythmPage: React.FC = () => {
     const [userTaps, setUserTaps] = useState<number[]>([]);
     const [isListening, setIsListening] = useState(false);
     const [isRepeating, setIsRepeating] = useState(false);
-    const [comparisonResult, setComparisonResult] = useState<any>(null);
+    const [comparisonResult, setComparisonResult] = useState<{ score: number; feedback: string; intervalResults: boolean[] } | null>(null);
     const [activeBeatIndex, setActiveBeatIndex] = useState<number | null>(null);
     const [currentTargetRhythm, setCurrentTargetRhythm] = useState<RhythmTarget | null>(null);
     const [currentTargetIntervals, setCurrentTargetIntervals] = useState<number[]>([]);
@@ -137,7 +137,7 @@ const RhythmPage: React.FC = () => {
     const handleNext = () => {
         if (currentRound < totalRounds) {
             setCurrentRound(prev => prev + 1);
-        } else {
+        } else if (comparisonResult) {
             saveResult('rhythm', {
                 score: comparisonResult.score,
                 totalRounds: totalRounds,

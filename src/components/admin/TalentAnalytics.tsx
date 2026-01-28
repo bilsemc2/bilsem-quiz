@@ -13,6 +13,18 @@ interface AnalyticsData {
     recentActivity: { game_id: string; user_name: string; score: number; created_at: string }[];
 }
 
+interface GamePlayRecord {
+    user_id: string;
+    score_achieved: number;
+    game_id?: string;
+    created_at?: string;
+}
+
+interface ProfileRecord {
+    id: string;
+    name: string | null;
+}
+
 const TalentAnalytics = () => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<AnalyticsData>({
@@ -64,7 +76,7 @@ const TalentAnalytics = () => {
 
             // Player stats hesapla
             const playerStats: Record<string, { plays: number; totalScore: number }> = {};
-            (topPlayersData || []).forEach((p: any) => {
+            (topPlayersData || []).forEach((p: GamePlayRecord) => {
                 const id = p.user_id;
                 if (!playerStats[id]) {
                     playerStats[id] = { plays: 0, totalScore: 0 };
@@ -75,14 +87,14 @@ const TalentAnalytics = () => {
 
             // Profil isimlerini al
             const userIds = Object.keys(playerStats);
-            let profileNames: Record<string, string> = {};
+            const profileNames: Record<string, string> = {};
             if (userIds.length > 0) {
                 const { data: profilesData } = await supabase
                     .from('profiles')
                     .select('id, name')
                     .in('id', userIds);
 
-                (profilesData || []).forEach((p: any) => {
+                (profilesData || []).forEach((p: ProfileRecord) => {
                     profileNames[p.id] = p.name || 'Bilinmiyor';
                 });
             }
@@ -106,7 +118,7 @@ const TalentAnalytics = () => {
 
             console.log('Recent Activity Query:', { data: recentData, error: recentError });
 
-            const recentActivity = (recentData || []).map((r: any) => ({
+            const recentActivity = (recentData || []).map((r: GamePlayRecord & { game_id: string; created_at: string }) => ({
                 game_id: r.game_id,
                 user_name: profileNames[r.user_id] || 'Bilinmiyor',
                 score: r.score_achieved || 0,

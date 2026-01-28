@@ -3,9 +3,11 @@ import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
 
 // jspdf-autotable tiplemeleri için
+import type { UserOptions } from 'jspdf-autotable';
+
 declare module 'jspdf' {
     interface jsPDF {
-        autoTable: (options: any) => any;
+        autoTable: (options: UserOptions) => jsPDF;
         lastAutoTable: {
             finalY: number;
         } | undefined;
@@ -102,7 +104,7 @@ export const generateStudentReport = (student: Student, assignments: Assignment[
         }
 
         // Veliye Not
-        const currentY = (doc as any).lastAutoTable?.finalY || 120;
+        const currentY = doc.lastAutoTable?.finalY || 120;
         doc.setFontSize(14);
         doc.text('Veliye Not', 14, currentY + 10);
 

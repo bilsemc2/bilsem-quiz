@@ -113,9 +113,9 @@ export default function SignUpPage() {
                 toast.success(successMessage);
                 navigate('/bilsem');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Signup error:', err);
-            setError(err.message);
+            setError(err instanceof Error ? err.message : 'Kayıt yapılamadı');
         } finally {
             setLoading(false);
         }

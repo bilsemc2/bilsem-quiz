@@ -138,7 +138,7 @@ const KartDedektifi: React.FC = () => {
       // Rule Shift Logic
       if (nextConsecutive >= CONSECUTIVE_LIMIT) {
         const rules = Object.values(RuleType);
-        let availableRules = rules.filter(r => r !== prev.currentRule);
+        const availableRules = rules.filter(r => r !== prev.currentRule);
         nextRule = availableRules[Math.floor(Math.random() * availableRules.length)];
         setLevel(l => l + 1);
       }

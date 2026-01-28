@@ -53,7 +53,7 @@ export interface DebugInfo {
   rawResponse: string;
   timestamp: string;
   error?: string;
-  parsedResponse?: any;
+  parsedResponse?: StrategicHint | null;
 }
 
 /**

@@ -6,6 +6,13 @@ import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // ------------------ Tip Tanımları ------------------
+interface PatternProps {
+    points?: number;
+    sides?: number;
+    lines?: number;
+    pathData?: string;
+}
+
 type Pattern = {
     defs: string;
     type: string;
@@ -15,7 +22,7 @@ type Pattern = {
     rotation: number;
     opacity: number;
     id: string;
-    props?: any; // Özel geometrik parametreler (kenar sayısı, yol verisi vb.)
+    props?: PatternProps;
 };
 
 interface GameOption {
@@ -122,7 +129,7 @@ const PartWholeGame: React.FC = () => {
         const foregroundColor = COLORS.filter(c => c !== backgroundColor)[Math.floor(Math.random() * (COLORS.length - 1))];
         const size = 30 + Math.random() * 40;
 
-        let props: any = {};
+        const props: PatternProps = {};
         if (type === 'star') props.points = 4 + Math.floor(Math.random() * 5);
         if (type === 'polygon') props.sides = 3 + Math.floor(Math.random() * 6);
         if (type === 'burst') props.lines = 6 + Math.floor(Math.random() * 10);

@@ -14,7 +14,7 @@ type FaceName = 'FRONT' | 'BACK' | 'LEFT' | 'RIGHT' | 'TOP' | 'BOTTOM';
 
 interface FaceContent {
     color: string;
-    icon: any; // Lucide icon
+    icon: React.ElementType;
     name: string;
 }
 
@@ -79,7 +79,7 @@ const MagicCubeGame: React.FC = () => {
 
     // Mevcut Seviye Verileri
     const [currentNet, setCurrentNet] = useState<CubeNet>(NET_LAYOUTS[0]);
-    const [facesData, setFacesData] = useState<Record<FaceName, FaceContent>>({} as any);
+    const [facesData, setFacesData] = useState<Record<FaceName, FaceContent>>({} as Record<FaceName, FaceContent>);
     const [options, setOptions] = useState<GameOption[]>([]);
 
     // ------------------ Küp Verisi Üretici ------------------
@@ -90,7 +90,7 @@ const MagicCubeGame: React.FC = () => {
         setCurrentNet(net);
 
         // Her yüz için benzersiz bir renk/ikon kombinasyonu
-        const newFacesData: any = {};
+        const newFacesData: Partial<Record<FaceName, FaceContent>> = {};
         const shuffledColors = [...COLORS].sort(() => Math.random() - 0.5);
         const shuffledIcons = [...ICONS].sort(() => Math.random() - 0.5);
 
@@ -102,7 +102,7 @@ const MagicCubeGame: React.FC = () => {
                 name: shuffledIcons[i % shuffledIcons.length].name
             };
         });
-        setFacesData(newFacesData);
+        setFacesData(newFacesData as Record<FaceName, FaceContent>);
 
         // Seçenekleri oluştur
         const correctOption: GameOption = {

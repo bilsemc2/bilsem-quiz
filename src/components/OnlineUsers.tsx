@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Box, Typography, Chip, Paper, List, ListItem, ListItemText, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
@@ -68,7 +68,7 @@ const OnlineUsers = () => {
   useEffect(() => {
     updateOnlineStatus();
     const interval = setInterval(updateOnlineStatus, 30000);
-    
+
     const channel = supabase
       .channel('online-users')
       .on(
@@ -79,6 +79,8 @@ const OnlineUsers = () => {
           table: 'profiles'
         },
         (payload) => {
+          // Ignore payload - just trigger refresh on any change
+          void payload;
           updateOnlineStatus();
         }
       )
@@ -182,7 +184,7 @@ const OnlineUsers = () => {
               mb: 0.5
             }}
           >
-            <ListItemText 
+            <ListItemText
               primary={user.name}
               sx={{ fontWeight: 500 }}
             />

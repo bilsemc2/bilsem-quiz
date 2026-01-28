@@ -6,7 +6,7 @@ interface UserProfile {
     email: string;
     name: string;
     experience: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export const useUser = () => {
@@ -17,7 +17,7 @@ export const useUser = () => {
         const getCurrentUser = async () => {
             try {
                 const { data: { user }, error: authError } = await supabase.auth.getUser();
-                
+
                 if (authError) {
                     console.error('Auth hatası:', authError);
                     throw authError;

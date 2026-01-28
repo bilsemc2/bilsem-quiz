@@ -1,43 +1,50 @@
 import { supabase } from './supabase';
 
+export interface GridCell {
+  type?: string;
+  id?: string;
+  svg?: unknown;
+  [key: string]: unknown;
+}
+
 export interface PuzzleData {
   id: string;
   title: string;
-  grid: any[][];
+  grid: GridCell[][];
   created_at: string;
   created_by: string;
   approved: boolean;
 }
 
 export const savePuzzle = async (puzzleData: Partial<PuzzleData>) => {
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            throw new Error('Kullanıcı kimliği doğrulanamadı');
-        }
-
-        // Admin kontrolünü kaldırdık, tüm kullanıcılar bulmaca oluşturabilir
-        // Ancak bulmacalar onay bekleyecek
-
-        const { data, error } = await supabase
-            .from('puzzles')
-            .insert([{
-                grid: puzzleData.grid,
-                title: puzzleData.title,
-                created_by: user.id, // Her zaman mevcut kullanıcı ID'sini kullan
-                approved: false // Varsayılan olarak onaylanmamış
-            }])
-            .select();
-
-        if (error) {
-            throw error;
-        }
-
-        return data;
-    } catch (error) {
-        console.error('Error saving puzzle:', error);
-        throw error;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Kullanıcı kimliği doğrulanamadı');
     }
+
+    // Admin kontrolünü kaldırdık, tüm kullanıcılar bulmaca oluşturabilir
+    // Ancak bulmacalar onay bekleyecek
+
+    const { data, error } = await supabase
+      .from('puzzles')
+      .insert([{
+        grid: puzzleData.grid,
+        title: puzzleData.title,
+        created_by: user.id, // Her zaman mevcut kullanıcı ID'sini kullan
+        approved: false // Varsayılan olarak onaylanmamış
+      }])
+      .select();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error saving puzzle:', error);
+    throw error;
+  }
 };
 
 // Cache configuration
@@ -116,42 +123,42 @@ export const getPuzzles = async (): Promise<PuzzleData[]> => {
 
 // Admin fonksiyonları
 export const getAllPuzzles = async (): Promise<PuzzleData[]> => {
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.is_admin) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { data, error } = await supabase
-            .from('puzzles')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            throw error;
-        }
-
-        return data || [];
-    } catch (error) {
-        console.error('Error getting all puzzles:', error);
-        throw error;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Admin yetkisi gerekli');
     }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      throw new Error('Admin yetkisi gerekli');
+    }
+
+    const { data, error } = await supabase
+      .from('puzzles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error getting all puzzles:', error);
+    throw error;
+  }
 };
 
 export const getUserPuzzles = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       return [];
     }
@@ -195,7 +202,7 @@ export const getPuzzleById = async (id: string) => {
 export const updatePuzzle = async (id: string, puzzleData: Partial<PuzzleData>) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       throw new Error('Bulmaca güncellemek için giriş yapmalısınız');
     }
@@ -219,71 +226,71 @@ export const updatePuzzle = async (id: string, puzzleData: Partial<PuzzleData>) 
 };
 
 export const approvePuzzle = async (id: string): Promise<void> => {
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.is_admin) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { error } = await supabase
-            .from('puzzles')
-            .update({ approved: true })
-            .eq('id', id);
-
-        if (error) {
-            throw error;
-        }
-    } catch (error) {
-        console.error('Error approving puzzle:', error);
-        throw error;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Admin yetkisi gerekli');
     }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      throw new Error('Admin yetkisi gerekli');
+    }
+
+    const { error } = await supabase
+      .from('puzzles')
+      .update({ approved: true })
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error approving puzzle:', error);
+    throw error;
+  }
 };
 
 export const rejectPuzzle = async (id: string): Promise<void> => {
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.is_admin) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { error } = await supabase
-            .from('puzzles')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            throw error;
-        }
-    } catch (error) {
-        console.error('Error rejecting puzzle:', error);
-        throw error;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Admin yetkisi gerekli');
     }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      throw new Error('Admin yetkisi gerekli');
+    }
+
+    const { error } = await supabase
+      .from('puzzles')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error rejecting puzzle:', error);
+    throw error;
+  }
 };
 
 export const deletePuzzle = async (id: string) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       throw new Error('Bulmaca silmek için giriş yapmalısınız');
     }
@@ -306,137 +313,140 @@ export const deletePuzzle = async (id: string) => {
 };
 
 export const togglePuzzleStatus = async (id: string, currentStatus: boolean): Promise<void> => {
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.is_admin) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { error } = await supabase
-            .from('puzzles')
-            .update({ approved: !currentStatus })
-            .eq('id', id);
-
-        if (error) {
-            throw error;
-        }
-    } catch (error) {
-        console.error('Error toggling puzzle status:', error);
-        throw error;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Admin yetkisi gerekli');
     }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      throw new Error('Admin yetkisi gerekli');
+    }
+
+    const { error } = await supabase
+      .from('puzzles')
+      .update({ approved: !currentStatus })
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error toggling puzzle status:', error);
+    throw error;
+  }
 };
 
 export const deletePuzzleByAdmin = async (id: string): Promise<void> => {
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.is_admin) {
-            throw new Error('Admin yetkisi gerekli');
-        }
-
-        const { error } = await supabase
-            .from('puzzles')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            throw error;
-        }
-    } catch (error) {
-        console.error('Error deleting puzzle:', error);
-        throw error;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Admin yetkisi gerekli');
     }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      throw new Error('Admin yetkisi gerekli');
+    }
+
+    const { error } = await supabase
+      .from('puzzles')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error deleting puzzle:', error);
+    throw error;
+  }
 };
 
+
 export const fixProfessionImages = async () => {
-    try {
-        const { data: puzzles, error: fetchError } = await supabase
-            .from('puzzles')
-            .select('*');
+  try {
+    const { data: puzzles, error: fetchError } = await supabase
+      .from('puzzles')
+      .select('*');
 
-        if (fetchError) throw fetchError;
+    if (fetchError) throw fetchError;
 
-        for (const puzzle of puzzles || []) {
-            let updated = false;
-            const newGrid = puzzle.grid.map((row: any[]) => 
-                row.map((cell: any) => {
-                    if (!cell) return null;
-                    if (cell.type === 'profession') {
-                        if (cell.id === 'construction' && cell.svg?.props?.children?.props?.src === '/images/professions/unknown.png') {
-                            updated = true;
-                            return {
-                                ...cell,
-                                svg: {
-                                    ...cell.svg,
-                                    props: {
-                                        ...cell.svg.props,
-                                        children: {
-                                            ...cell.svg.props.children,
-                                            props: {
-                                                ...cell.svg.props.children.props,
-                                                src: '/images/professions/construction.png'
-                                            }
-                                        }
-                                    }
-                                }
-                            };
-                        }
-                        if (cell.id === 'astronaut' && cell.svg?.props?.children?.props?.src === '/images/professions/unknown.png') {
-                            updated = true;
-                            return {
-                                ...cell,
-                                svg: {
-                                    ...cell.svg,
-                                    props: {
-                                        ...cell.svg.props,
-                                        children: {
-                                            ...cell.svg.props.children,
-                                            props: {
-                                                ...cell.svg.props.children.props,
-                                                src: '/images/professions/astronaut.png'
-                                            }
-                                        }
-                                    }
-                                }
-                            };
-                        }
+    for (const puzzle of puzzles || []) {
+      let updated = false;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newGrid = puzzle.grid.map((row: any[]) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        row.map((cell: any) => {
+          if (!cell) return null;
+          if (cell.type === 'profession') {
+            if (cell.id === 'construction' && cell.svg?.props?.children?.props?.src === '/images/professions/unknown.png') {
+              updated = true;
+              return {
+                ...cell,
+                svg: {
+                  ...cell.svg,
+                  props: {
+                    ...cell.svg.props,
+                    children: {
+                      ...cell.svg.props.children,
+                      props: {
+                        ...cell.svg.props.children.props,
+                        src: '/images/professions/construction.png'
+                      }
                     }
-                    return cell;
-                })
-            );
-
-            if (updated) {
-                const { error: updateError } = await supabase
-                    .from('puzzles')
-                    .update({ grid: newGrid })
-                    .eq('id', puzzle.id);
-
-                if (updateError) throw updateError;
+                  }
+                }
+              };
             }
-        }
+            if (cell.id === 'astronaut' && cell.svg?.props?.children?.props?.src === '/images/professions/unknown.png') {
+              updated = true;
+              return {
+                ...cell,
+                svg: {
+                  ...cell.svg,
+                  props: {
+                    ...cell.svg.props,
+                    children: {
+                      ...cell.svg.props.children,
+                      props: {
+                        ...cell.svg.props.children.props,
+                        src: '/images/professions/astronaut.png'
+                      }
+                    }
+                  }
+                }
+              };
+            }
+          }
+          return cell;
+        })
+      );
 
-        return { success: true };
-    } catch (error) {
-        console.error('Error fixing profession images:', error);
-        throw error;
+      if (updated) {
+        const { error: updateError } = await supabase
+          .from('puzzles')
+          .update({ grid: newGrid })
+          .eq('id', puzzle.id);
+
+        if (updateError) throw updateError;
+      }
     }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error fixing profession images:', error);
+    throw error;
+  }
 };

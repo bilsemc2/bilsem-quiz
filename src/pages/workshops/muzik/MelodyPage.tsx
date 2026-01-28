@@ -128,7 +128,7 @@ const MelodyPage: React.FC = () => {
             setAnalysisResult(comparison);
             saveResult('melody', comparison);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Melody Analysis Err:", error);
         } finally {
             setIsAnalyzing(false);

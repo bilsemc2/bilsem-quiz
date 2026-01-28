@@ -93,7 +93,7 @@ Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokla
                 toast.success('Yazı başarıyla güncellendi!');
                 onClose();
             }
-        } catch (error) {
+        } catch {
             toast.error('İşleme sırasında hata oluştu.');
         }
     };

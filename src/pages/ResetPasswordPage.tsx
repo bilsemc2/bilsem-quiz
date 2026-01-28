@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
   Container,
@@ -53,10 +53,10 @@ export default function ResetPasswordPage() {
       if (error) throw error;
 
       setSuccess(true);
-      
+
       // Session'ı temizle
       await supabase.auth.signOut();
-      
+
       // 3 saniye sonra login sayfasına yönlendir
       setTimeout(() => {
         navigate('/login');

@@ -1,8 +1,25 @@
 import { CheckCircle, Trophy, Clock } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+interface ProgressDataItem {
+    date: string;
+    başarı: number;
+    doğru: number;
+    yanlış: number;
+}
+
+interface Stats {
+    completedCount: number;
+    totalCount: number;
+    completionRate: number;
+    averageScore: number;
+    averageTime: number;
+    totalTime?: number;
+    progressData?: ProgressDataItem[];
+}
+
 interface StatsSectionProps {
-    stats: any;
+    stats: Stats | null;
     formatDuration: (minutes: number) => string;
 }
 

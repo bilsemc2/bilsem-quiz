@@ -112,9 +112,9 @@ const TripleNotePage: React.FC = () => {
             const comparison = compareMultiNoteResponse(currentTargetTriad.notes, detectedNotes, 3);
             setAnalysisResult(comparison);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Analysis Err:", error);
-            setAnalysisResult({ match: false, feedback: `Analiz hatası: ${error.message}` });
+            setAnalysisResult({ match: false, feedback: `Analiz hatası: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}` });
         } finally {
             setIsAnalyzing(false);
         }

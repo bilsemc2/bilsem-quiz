@@ -80,14 +80,15 @@ export const useXPEconomy = () => {
 
             return { success: true, newBalance: newExperience };
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Bir hata oluştu';
             console.error('XP Transaction Error:', error);
-            showXPError(error.message || 'Bir hata oluştu');
-            return { success: false, error: error.message };
+            showXPError(message);
+            return { success: false, error: message };
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, refreshProfile]);
 
     return {
         checkBalance,

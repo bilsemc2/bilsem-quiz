@@ -59,7 +59,7 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 confirmText: options.confirmText || 'Tamam',
                 cancelText: 'İptal',
                 type: 'alert',
-                resolve: (val) => resolve(),
+                resolve: () => resolve(),
             });
         });
     }, []);

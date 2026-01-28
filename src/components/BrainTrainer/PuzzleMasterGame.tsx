@@ -117,7 +117,7 @@ const PuzzleMasterGame: React.FC = () => {
     const startTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
 
-    const generateLevel = useCallback((_isNewImage: boolean) => {
+    const generateLevel = useCallback(() => {
         setIsLoading(true);
         setIsCorrect(null);
 
@@ -173,7 +173,7 @@ const PuzzleMasterGame: React.FC = () => {
         setTimeLeft(TIME_LIMIT);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
-        generateLevel(true);
+        generateLevel();
     }, [hasSavedRef, generateLevel]);
 
     const handleGameOver = useCallback(async () => {
@@ -231,7 +231,7 @@ const PuzzleMasterGame: React.FC = () => {
             } else {
                 setTimeout(() => {
                     setLevelNumber(prev => prev + 1);
-                    generateLevel(levelNumber % 10 === 0);
+                    generateLevel();
                 }, 1500);
             }
         } else {

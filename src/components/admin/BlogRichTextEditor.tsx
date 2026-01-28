@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
@@ -28,7 +28,7 @@ interface BlogRichTextEditorProps {
     onChange: (content: string) => void;
 }
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
     if (!editor) return null;
 
     const addLink = () => {
@@ -50,7 +50,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
                     const url = await uploadImage(file);
                     editor.chain().focus().setImage({ src: url }).run();
                     toast.success('Resim yüklendi', { id: toastId });
-                } catch (error) {
+                } catch {
                     toast.error('Yükleme başarısız', { id: toastId });
                 }
             }
@@ -86,8 +86,8 @@ const MenuBar = ({ editor }: { editor: any }) => {
                     }}
                     disabled={btn.disabled}
                     className={`p - 2 rounded - lg transition - colors ${btn.active && editor.isActive(btn.active)
-                            ? 'bg-indigo-100 text-indigo-600'
-                            : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                        ? 'bg-indigo-100 text-indigo-600'
+                        : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                         } ${btn.disabled ? 'opacity-30 cursor-not-allowed' : ''} `}
                 >
                     <btn.icon className="w-4 h-4" />

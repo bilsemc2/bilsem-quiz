@@ -119,7 +119,7 @@ const CreatePdfPage: React.FC = () => {
 
   const generateQuestions = () => {
     const totalQuestions = QUESTIONS_CONFIG.totalQuestions;
-    let questions: number[] = [];
+    const questions: number[] = [];
 
     if (selectionType === 'sequential') {
       for (let i = 0; i < numQuestions; i++) {
