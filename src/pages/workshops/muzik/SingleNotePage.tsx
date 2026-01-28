@@ -132,7 +132,7 @@ const SingleNotePage: React.FC = () => {
             const roundResult: RoundResult = {
                 round: currentRound,
                 targetNote: currentTargetNote.note,
-                detectedNote: (comparison.detectedNote as any)?.noteName || 'Tespit edilemedi',
+                detectedNote: comparison.detectedNote?.noteName || 'Tespit edilemedi',
                 match: comparison.match,
                 feedback: comparison.feedback
             };
@@ -163,9 +163,9 @@ const SingleNotePage: React.FC = () => {
                 }
             }, TRANSITION_DELAY_MS);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Analysis Err:", error);
-            setAnalysisResult(`Analiz hatası: ${error.message}`);
+            setAnalysisResult(`Analiz hatası: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
         } finally {
             setIsAnalyzing(false);
         }
@@ -210,9 +210,9 @@ const SingleNotePage: React.FC = () => {
             };
 
             mediaRecorder.start();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Mic Err:', err);
-            alert(`Mikrofon hatası: ${err.name}`);
+            alert(`Mikrofon hatası: ${err instanceof Error ? err.name : 'Bilinmeyen hata'}`);
             setIsRecording(false);
         }
     }, [analyzeAudio]);

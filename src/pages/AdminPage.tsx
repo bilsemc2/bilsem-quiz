@@ -200,7 +200,7 @@ const AdminPage: React.FC = () => {
     try {
       await auth.signOut();
       navigate('/');
-    } catch (err) {
+    } catch {
       toast.error('Çıkış yapılırken bir hata oluştu');
     }
   };

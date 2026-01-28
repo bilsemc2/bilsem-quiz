@@ -112,10 +112,11 @@ const ShadowDetectiveGame: React.FC = () => {
         const mutationType = Math.floor(Math.random() * 4);
 
         switch (mutationType) {
-            case 0:
+            case 0: {
                 const otherColors = COLORS.filter(c => c !== distractor[targetIdx].color);
                 distractor[targetIdx].color = otherColors[Math.floor(Math.random() * otherColors.length)];
                 break;
+            }
             case 1:
                 if (distractor[targetIdx].iconIdx === 0) {
                     distractor[targetIdx].iconIdx = (distractor[targetIdx].iconIdx + 2) % SHAPE_ICONS.length;
@@ -126,12 +127,13 @@ const ShadowDetectiveGame: React.FC = () => {
             case 2:
                 distractor[targetIdx].iconIdx = (distractor[targetIdx].iconIdx + 3) % SHAPE_ICONS.length;
                 break;
-            case 3:
+            case 3: {
                 const moveX = distractor[targetIdx].x > 50 ? -25 : 25;
                 const moveY = distractor[targetIdx].y > 50 ? -25 : 25;
                 distractor[targetIdx].x = Math.max(15, Math.min(85, distractor[targetIdx].x + moveX));
                 distractor[targetIdx].y = Math.max(15, Math.min(85, distractor[targetIdx].y + moveY));
                 break;
+            }
         }
         return distractor;
     };

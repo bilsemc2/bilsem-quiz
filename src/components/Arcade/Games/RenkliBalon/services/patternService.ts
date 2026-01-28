@@ -4,9 +4,9 @@ const COLORS = ['#FF5F5D', '#3F7C85', '#72F2EB', '#FFD166', '#06D6A0', '#EF476F'
 
 export const generateLocalPattern = (difficulty: Difficulty): Pattern => {
     const length = 5;
-    let start = Math.floor(Math.random() * 10) + 1;
+    const start = Math.floor(Math.random() * 10) + 1;
     let step = Math.floor(Math.random() * 5) + 1;
-    let sequence: (number | string)[] = [];
+    const sequence: (number | string)[] = [];
     let answer: number = 0;
     let rule = "";
 

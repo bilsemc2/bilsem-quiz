@@ -85,9 +85,9 @@ const DeyimlerPage = () => {
 
             setDeyimler(data || []);
             setTotalCount(count || 0);
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Silently ignore aborted requests
-            if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+            if (error instanceof Error && (error.name === 'AbortError' || error.message?.includes('aborted'))) {
                 return;
             }
             console.error('Deyimler yüklenirken hata:', error);

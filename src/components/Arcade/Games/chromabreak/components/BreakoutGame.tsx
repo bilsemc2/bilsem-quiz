@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Block, COLORS, PowerUp, PowerUpType } from '../types';
+import { Block, COLORS, PowerUp, PowerUpType, TIMING, A11Y } from '../types';
 
 interface BreakoutGameProps {
   onGameOver: (history: string[], score: number) => void;
@@ -32,6 +32,8 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
     ballY: 0,
     dx: 3 + level,
     dy: -3 - level,
+    originalDx: 0, // Slow power-up için orijinal hız
+    originalDy: 0,
     blocks: [] as Block[],
     powerUps: [] as PowerUp[],
     score: 0,
@@ -99,6 +101,8 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
       ballY: canvas.height - 40,
       dx: baseSpeed * randomDirection,
       dy: -baseSpeed,
+      originalDx: 0,
+      originalDy: 0,
       blocks: newBlocks,
       powerUps: [],
       score: 0,
@@ -161,6 +165,13 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
     }
     if (state.activePowerUps.slow > 0) {
       state.activePowerUps.slow--;
+      // Süre bittiğinde orijinal hıza dön
+      if (state.activePowerUps.slow === 0 && state.originalDx !== 0) {
+        state.dx = state.originalDx;
+        state.dy = state.originalDy;
+        state.originalDx = 0;
+        state.originalDy = 0;
+      }
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -196,32 +207,63 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
 
       pu.y += POWERUP_SPEED;
 
-      // Logo ile power-up çiz
-      if (logoImageRef.current) {
-        ctx.save();
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = pu.type === PowerUpType.EXTEND ? '#22c55e' : '#3b82f6';
-        ctx.drawImage(logoImageRef.current, pu.x - POWERUP_SIZE / 2, pu.y - POWERUP_SIZE / 2, POWERUP_SIZE, POWERUP_SIZE);
-        ctx.restore();
+      // Her power-up için farklı ikon çiz
+      ctx.save();
+      ctx.shadowBlur = 20;
 
-        // Power-up tipi etiketi
-        ctx.fillStyle = pu.type === PowerUpType.EXTEND ? '#22c55e' : '#3b82f6';
-        ctx.font = 'bold 10px Arial';
+      // Arka plan dairesi ve ikon
+      if (pu.type === PowerUpType.EXTEND) {
+        ctx.shadowColor = '#22c55e';
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+        ctx.beginPath();
+        ctx.arc(pu.x, pu.y, POWERUP_SIZE / 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ok ikonu (↔️)
+        ctx.fillStyle = '#22c55e';
+        ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(pu.type === PowerUpType.EXTEND ? 'UZAT' : 'YAVAŞ', pu.x, pu.y + POWERUP_SIZE / 2 + 12);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('↔', pu.x, pu.y);
+
+        // Etiket
+        ctx.font = 'bold 10px Arial';
+        ctx.fillText('UZAT', pu.x, pu.y + POWERUP_SIZE / 2 + 12);
+      } else if (pu.type === PowerUpType.SLOW) {
+        ctx.shadowColor = '#3b82f6';
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.3)';
+        ctx.beginPath();
+        ctx.arc(pu.x, pu.y, POWERUP_SIZE / 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Kaplumbağa ikonu (🐢)
+        ctx.fillStyle = '#3b82f6';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🐢', pu.x, pu.y);
+
+        // Etiket
+        ctx.font = 'bold 10px Arial';
+        ctx.fillText('YAVAŞ', pu.x, pu.y + POWERUP_SIZE / 2 + 12);
       }
+      ctx.restore();
 
       // Paddle ile çarpışma kontrolü
       if (pu.y + POWERUP_SIZE / 2 > canvas.height - PADDLE_HEIGHT - 10 &&
         pu.x > state.paddleX && pu.x < state.paddleX + state.paddleWidth) {
         // Power-up alındı!
         if (pu.type === PowerUpType.EXTEND) {
-          state.activePowerUps.extend = 600; // ~10 saniye
+          state.activePowerUps.extend = TIMING.POWERUP_EXTEND_FRAMES;
         } else if (pu.type === PowerUpType.SLOW) {
-          state.activePowerUps.slow = 300; // ~5 saniye
-          // Topu yavaşlat
-          state.dx *= 0.6;
-          state.dy *= 0.6;
+          // Sadece ilk kez yavaşlatırken orijinal hızı sakla
+          if (state.activePowerUps.slow === 0) {
+            state.originalDx = state.dx;
+            state.originalDy = state.dy;
+            state.dx *= 0.6;
+            state.dy *= 0.6;
+          }
+          state.activePowerUps.slow = TIMING.POWERUP_SLOW_FRAMES;
         }
         return false;
       }
@@ -387,6 +429,8 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
           ref={canvasRef}
           width={800}
           height={600}
+          aria-label={A11Y.CANVAS_LABEL}
+          role="img"
           className={`max-w-full h-auto block rounded-lg ${isStarted ? 'cursor-none' : 'cursor-pointer'}`}
         />
 

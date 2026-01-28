@@ -9,16 +9,44 @@ export interface Announcement {
     class_id: string;
 }
 
+export interface AssignmentQuestion {
+    id: string;
+    text: string;
+    options: string[];
+    correct_answer: string;
+    image_url?: string;
+}
+
+export interface AssignmentAnswerOption {
+    id: string;
+    imageUrl: string;
+    isSelected?: boolean;
+    isCorrect?: boolean;
+}
+
+export interface AssignmentAnswer {
+    question_id: string;
+    selected_answer: string;
+    is_correct: boolean;
+    // Extended properties used in AssignmentResultsModal
+    isCorrect?: boolean;           // camelCase alias for is_correct
+    questionImage?: string;        // URL of the question image
+    isTimeout?: boolean;           // Whether answer was timeout
+    options?: AssignmentAnswerOption[]; // Answer options with images
+    explanation?: string;          // Explanation for the answer
+    videoEmbedCode?: string;       // Video solution embed code
+}
+
 export interface Assignment {
     id: string;
     title: string;
     description: string;
     assigned_at: string;
-    questions: any[];
+    questions: AssignmentQuestion[];
     status: 'pending' | 'completed';
     score: number | null;
     total_questions?: number;
-    answers?: any[];
+    answers?: AssignmentAnswer[];
     duration_minutes?: number;
 }
 

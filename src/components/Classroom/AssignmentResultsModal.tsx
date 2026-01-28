@@ -85,7 +85,7 @@ const AssignmentResultsModal: React.FC<AssignmentResultsModalProps> = ({
                                                 {answer.isTimeout && <Tag color="warning">Süre Doldu</Tag>}
                                             </div>
                                             <div className="grid grid-cols-4 gap-2 mt-4">
-                                                {answer.options?.map((opt: any) => (
+                                                {answer.options?.map((opt: { id: string; imageUrl: string; isSelected?: boolean; isCorrect?: boolean }) => (
                                                     <div
                                                         key={opt.id}
                                                         className={`relative border-2 rounded p-1 ${opt.isSelected && opt.isCorrect ? 'border-green-500 bg-green-50' :
@@ -116,7 +116,7 @@ const AssignmentResultsModal: React.FC<AssignmentResultsModalProps> = ({
                                                 type="primary"
                                                 ghost
                                                 icon={<PlayCircleOutlined />}
-                                                onClick={() => setSelectedVideo(answer.videoEmbedCode)}
+                                                onClick={() => setSelectedVideo(answer.videoEmbedCode ?? null)}
                                             >
                                                 Video Çözümü İzle
                                             </Button>

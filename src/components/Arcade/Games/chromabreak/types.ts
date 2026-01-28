@@ -7,6 +7,20 @@ export enum GamePhase {
   RESULT = 'RESULT'
 }
 
+// Timing constants (F8: eliminate magic numbers)
+export const TIMING = {
+  QUIZ_PREP_DELAY_MS: 2000,    // Delay before quiz starts
+  QUIZ_RESULT_DELAY_MS: 3500, // Delay after answer before showing result
+  POWERUP_EXTEND_FRAMES: 600, // ~10 seconds at 60fps
+  POWERUP_SLOW_FRAMES: 300,   // ~5 seconds at 60fps
+} as const;
+
+// Accessibility labels (F10)
+export const A11Y = {
+  CANVAS_LABEL: 'ChromaBreak oyun alanı - Mouse veya parmak ile paddle\'ı hareket ettirin',
+  CANVAS_DESCRIPTION: 'Renkli blokları kırıp hafıza testi yapılan bir breakout oyunu',
+} as const;
+
 export enum PowerUpType {
   EXTEND = 'EXTEND',     // Paddle uzatma
   SLOW = 'SLOW',         // Top yavaşlatma

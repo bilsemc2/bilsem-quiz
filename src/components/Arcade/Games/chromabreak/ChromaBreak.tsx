@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, ChevronLeft, Trophy, Star, Zap } from 'lucide-react';
+import { Play, ChevronLeft, Trophy, Zap } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
 import BreakoutGame from './components/BreakoutGame';
 import QuizMode from './components/QuizMode';
-import { GamePhase } from './types';
+import { GamePhase, TIMING } from './types';
 
 const GAME_ID = 'chromabreak';
 
@@ -26,52 +26,7 @@ const ChromaBreak: React.FC = () => {
     const searchParams = new URLSearchParams(location.search);
     const autoStart = searchParams.get('autoStart') === 'true';
 
-    useEffect(() => {
-        if (autoStart && gamePhase === GamePhase.IDLE) {
-            startGame();
-        }
-    }, [autoStart]);
-
-    const startGame = useCallback(() => {
-        setGamePhase(GamePhase.PLAYING);
-        setHistory([]);
-        setScore(0);
-        startTimeRef.current = Date.now();
-        hasSavedRef.current = false;
-    }, []);
-
-    const handleGameOver = useCallback((finalHistory: string[], finalScore: number) => {
-        setHistory(finalHistory);
-        setScore(finalScore);
-
-        if (finalHistory.length >= 3) {
-            setGamePhase(GamePhase.QUIZ_PREP);
-            setTimeout(() => {
-                setGamePhase(GamePhase.QUIZZING);
-            }, 2000);
-        } else {
-            setGamePhase(GamePhase.RESULT);
-            saveResult(finalScore, false);
-        }
-    }, []);
-
-    const handleQuizComplete = useCallback((correct: boolean) => {
-        setLastQuizResult(correct);
-
-        if (correct) {
-            setLevel(prev => prev + 1);
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#06b6d4', '#3b82f6', '#8b5cf6']
-            });
-        }
-
-        saveResult(score, correct);
-        setGamePhase(GamePhase.RESULT);
-    }, [score]);
-
+    // saveResult defined first (used by handleGameOver and handleQuizComplete)
     const saveResult = useCallback(async (finalScore: number, quizCorrect: boolean) => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
@@ -90,12 +45,54 @@ const ChromaBreak: React.FC = () => {
         });
     }, [saveGamePlay, level, history.length]);
 
-    const resetGame = useCallback(() => {
-        setGamePhase(GamePhase.IDLE);
-        setLastQuizResult(null);
+    const handleGameOver = useCallback((finalHistory: string[], finalScore: number) => {
+        setHistory(finalHistory);
+        setScore(finalScore);
+
+        if (finalHistory.length >= 3) {
+            setGamePhase(GamePhase.QUIZ_PREP);
+            setTimeout(() => {
+                setGamePhase(GamePhase.QUIZZING);
+            }, TIMING.QUIZ_PREP_DELAY_MS);
+        } else {
+            setGamePhase(GamePhase.RESULT);
+            saveResult(finalScore, false);
+        }
+    }, [saveResult]);
+
+    const handleQuizComplete = useCallback((correct: boolean) => {
+        setLastQuizResult(correct);
+
+        if (correct) {
+            setLevel(prev => prev + 1);
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#06b6d4', '#3b82f6', '#8b5cf6']
+            });
+        }
+
+        saveResult(score, correct);
+        setGamePhase(GamePhase.RESULT);
+    }, [score, saveResult]);
+
+    const startGame = useCallback(() => {
+        setGamePhase(GamePhase.PLAYING);
+        setHistory([]);
+        setScore(0);
+        startTimeRef.current = Date.now();
+        hasSavedRef.current = false;
     }, []);
 
-    const handleBlockHit = useCallback((colorName: string) => {
+    // autoStart useEffect - must be after startGame definition
+    useEffect(() => {
+        if (autoStart && gamePhase === GamePhase.IDLE) {
+            startGame();
+        }
+    }, [autoStart, gamePhase, startGame]);
+
+    const handleBlockHit = useCallback(() => {
         setScore(prev => prev + 10);
     }, []);
 

@@ -3,10 +3,18 @@ import { motion } from 'framer-motion';
 import { Users, TrendingUp, User, Check, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
+interface RecentUser {
+  id: string;
+  name: string | null;
+  email: string;
+  created_at: string;
+  is_active: boolean;
+}
+
 interface DashboardStats {
   totalUsers: number;
   activeUsers: number;
-  recentUsers: any[];
+  recentUsers: RecentUser[];
 }
 
 const AdminDashboard = () => {

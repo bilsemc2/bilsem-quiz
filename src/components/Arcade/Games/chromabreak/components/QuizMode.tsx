@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { QuizQuestion } from '../types';
+import { QuizQuestion, TIMING } from '../types';
 
 interface QuizModeProps {
   history: string[];
@@ -19,7 +19,7 @@ const generateQuizQuestion = (history: string[], difficulty: number): QuizQuesti
     };
   }
 
-  const colors = ["Kırmızı", "Mavi", "Yeşil", "Sarı", "Mor", "Turuncu", "Pembe", "Cyan"];
+  const colors = ["Kırmızı", "Mavi", "Yeşil", "Sarı", "Mor", "Turuncu", "Pembe", "Turkuaz"];
   const questionTypes = [
     // Tip 1: Son renk
     () => {
@@ -46,10 +46,18 @@ const generateQuizQuestion = (history: string[], difficulty: number): QuizQuesti
     // Tip 3: Toplam blok sayısı
     () => {
       const count = history.length;
-      const wrongOptions = [count - 2, count + 1, count + 3].filter(n => n > 0).map(String);
+      // Fallback değerler ekleyerek her zaman 3 yanlış seçenek garanti et
+      const candidates = [count - 2, count - 1, count + 1, count + 2, count + 3]
+        .filter(n => n > 0 && n !== count);
+      const wrongOptions = candidates.slice(0, 3).map(String);
+      // Eksik seçenek varsa doldur
+      while (wrongOptions.length < 3) {
+        const fallback = count + wrongOptions.length + 4;
+        wrongOptions.push(String(fallback));
+      }
       return {
         question: "Toplam kaç blok vurdun?",
-        options: [String(count), ...wrongOptions.slice(0, 3)].sort(() => Math.random() - 0.5),
+        options: [String(count), ...wrongOptions].sort(() => Math.random() - 0.5),
         correctAnswer: String(count),
         explanation: `Toplamda ${count} blok vurdun.`
       };
@@ -70,10 +78,17 @@ const generateQuizQuestion = (history: string[], difficulty: number): QuizQuesti
     () => {
       const targetColor = history[Math.floor(Math.random() * history.length)];
       const count = history.filter(c => c === targetColor).length;
-      const wrongOptions = [count - 1, count + 1, count + 2].filter(n => n >= 0).map(String);
+      // Fallback değerler ekleyerek her zaman 3 yanlış seçenek garanti et
+      const candidates = [count - 2, count - 1, count + 1, count + 2, count + 3]
+        .filter(n => n >= 0 && n !== count);
+      const wrongOptions = candidates.slice(0, 3).map(String);
+      while (wrongOptions.length < 3) {
+        const fallback = count + wrongOptions.length + 4;
+        wrongOptions.push(String(fallback));
+      }
       return {
         question: `Kaç tane ${targetColor} blok vurdun?`,
-        options: [String(count), ...wrongOptions.slice(0, 3)].sort(() => Math.random() - 0.5),
+        options: [String(count), ...wrongOptions].sort(() => Math.random() - 0.5),
         correctAnswer: String(count),
         explanation: `${count} tane ${targetColor} blok vurdun.`
       };
@@ -83,7 +98,7 @@ const generateQuizQuestion = (history: string[], difficulty: number): QuizQuesti
   // Zorluk seviyesine göre soru tiplerini filtrele
   const availableTypes = questionTypes.slice(0, Math.min(difficulty + 2, questionTypes.length));
   const randomType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-  
+
   return randomType();
 };
 
@@ -102,10 +117,10 @@ const QuizMode: React.FC<QuizModeProps> = ({ history, level, onQuizComplete }) =
     if (showResult) return;
     setSelectedOption(option);
     setShowResult(true);
-    
+
     setTimeout(() => {
       onQuizComplete(option === question?.correctAnswer);
-    }, 3500);
+    }, TIMING.QUIZ_RESULT_DELAY_MS);
   };
 
   if (!question) return null;
@@ -121,7 +136,7 @@ const QuizMode: React.FC<QuizModeProps> = ({ history, level, onQuizComplete }) =
         {question.options.map((option, idx) => {
           const isCorrect = option === question.correctAnswer;
           const isSelected = option === selectedOption;
-          
+
           let buttonClass = "p-4 text-left rounded-xl border transition-all duration-300 transform active:scale-95 ";
           if (showResult) {
             if (isCorrect) buttonClass += "bg-green-500/20 border-green-500 text-green-400 ring-2 ring-green-500/50";

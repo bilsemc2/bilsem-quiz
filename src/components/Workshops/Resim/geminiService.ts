@@ -3,7 +3,7 @@ import { ActivityMode } from "./types";
 
 const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-proxy`;
 
-async function callGeminiProxy(action: string, data: Record<string, any> = {}) {
+async function callGeminiProxy(action: string, data: Record<string, unknown> = {}) {
     const { data: { session } } = await supabase.auth.getSession();
 
     const response = await fetch(FUNCTION_URL, {
@@ -34,7 +34,7 @@ export async function generateStillLifeImage() {
     return "https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop";
 }
 
-export async function analyzeDrawing(mode: ActivityMode, promptData: any, drawingBase64: string) {
+export async function analyzeDrawing(mode: ActivityMode, promptData: unknown, drawingBase64: string) {
     const modeString = mode === ActivityMode.THREE_WORDS
         ? 'THREE_WORDS'
         : mode === ActivityMode.STORY_CONTINUATION

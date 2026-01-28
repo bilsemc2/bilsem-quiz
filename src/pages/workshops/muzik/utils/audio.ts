@@ -26,13 +26,22 @@ export interface RhythmComparison {
     intervalResults: boolean[];
 }
 
+export interface MelodyDetailedResult {
+    target: string;
+    detected: string | null;
+    sequenceMatch: boolean;
+    pitchMatch: boolean;
+    durationMatch: boolean;
+    cents: string | null | undefined;
+}
+
 export interface MelodyComparison {
     overallScore: number;
     pitchScore: number;
     durationScore: number;
     sequenceScore: number;
     feedback: string;
-    detailedResults: any[];
+    detailedResults: MelodyDetailedResult[];
     detectedNotesString?: string;
 }
 
@@ -158,23 +167,22 @@ export function compareSingleNote(
         return { match: false, detectedNote: null, feedback: "Hiç nota tespit edilemedi." };
     }
 
-    let longestNote: DetectedNote | null = null;
-    let maxDuration = 0;
-
-    detected.forEach(note => {
+    // Use reduce to find the longest note with proper type narrowing
+    const longestNote = detected.reduce<DetectedNote | null>((longest, note) => {
         const duration = parseFloat(note.duration);
-        if (note.noteName && duration > maxDuration) {
-            maxDuration = duration;
-            longestNote = note;
+        const longestDuration = longest ? parseFloat(longest.duration) : 0;
+        if (note.noteName && duration > longestDuration) {
+            return note;
         }
-    });
+        return longest;
+    }, null);
 
-    if (!longestNote) {
+    if (!longestNote || !longestNote.noteName) {
         return { match: false, detectedNote: null, feedback: "Anlamlı bir nota tespit edilemedi." };
     }
 
     const targetNoteName = target.note;
-    const detectedNoteName = (longestNote as any).noteName;
+    const detectedNoteName = longestNote.noteName;
     const match = targetNoteName === detectedNoteName;
     const feedback = match
         ? `Doğru! Hedef (${targetNoteName}) ile en belirgin tespit edilen nota (${detectedNoteName}) eşleşti.`
@@ -201,7 +209,7 @@ export function compareMultiNoteResponse(
         };
     }
 
-    const detectedNoteNames = detectedNotesFiltered.slice(0, requiredCount).map(n => (n as any).noteName as string);
+    const detectedNoteNames = detectedNotesFiltered.slice(0, requiredCount).map(n => n.noteName as string);
     const targetNotesSet = new Set(targetNotes);
     const detectedNotesSet = new Set(detectedNoteNames);
 

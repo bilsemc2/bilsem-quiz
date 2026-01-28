@@ -34,7 +34,7 @@ export function PDFPreview({ story, onClose }: PDFPreviewProps) {
               <h1 className="text-2xl font-bold text-center text-[#6B46C1] font-['Roboto']">
                 {decode(story.title)}
               </h1>
-              
+
               {story.image_url && (
                 <div className="h-[400px] flex items-center justify-center">
                   <img
@@ -44,7 +44,7 @@ export function PDFPreview({ story, onClose }: PDFPreviewProps) {
                   />
                 </div>
               )}
-              
+
               <div className="text-justify text-sm leading-relaxed font-['Roboto']">
                 {decode(story.content)}
               </div>
@@ -55,9 +55,9 @@ export function PDFPreview({ story, onClose }: PDFPreviewProps) {
               <h2 className="text-xl font-bold text-center text-[#6B46C1]">
                 Değerlendirme Soruları
               </h2>
-              
+
               <div className="space-y-6">
-                {story.questions.map((question: any, index: number) => (
+                {story.questions.map((question: { text: string; options: string[]; correctAnswer: number }, index: number) => (
                   <div key={index} className="space-y-3">
                     <p className="text-sm font-bold">
                       {index + 1}. {decode(question.text)}
@@ -78,7 +78,7 @@ export function PDFPreview({ story, onClose }: PDFPreviewProps) {
                   Yanıt Anahtarı
                 </h3>
                 <div className="space-y-1">
-                  {story.questions.map((question: any, index: number) => (
+                  {story.questions.map((question: { text: string; options: string[]; correctAnswer: number }, index: number) => (
                     <div key={index} className="text-[11px]">
                       {index + 1}. {String.fromCharCode(65 + question.correctAnswer)}
                     </div>

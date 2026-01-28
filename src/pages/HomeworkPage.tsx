@@ -50,13 +50,20 @@ export default function HomeworkPage() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [isTimeout, setIsTimeout] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
-  const [feedback, setFeedback] = useState<{ message: string; type: FeedbackType; show: boolean }>({ 
-    message: '', 
-    type: 'info', 
-    show: false 
+  const [feedback, setFeedback] = useState<{ message: string; type: FeedbackType; show: boolean }>({
+    message: '',
+    type: 'info',
+    show: false
   });
-  const [userAnswers, setUserAnswers] = useState<Array<{questionId: string, selectedAnswer: string, isCorrect: boolean}>>([]);
-  const [quizResults, setQuizResults] = useState<any[]>([]);
+  const [userAnswers, setUserAnswers] = useState<Array<{ questionId: string, selectedAnswer: string, isCorrect: boolean }>>([]);
+  const [quizResults, setQuizResults] = useState<Array<{
+    id: string;
+    score: number;
+    correct_answers: number;
+    questions_answered: number;
+    completed_at: string;
+    quiz?: { id: string; title: string; description: string; questions: Question[] };
+  }>>([]);
 
   const showFeedback = (message: string, type: FeedbackType) => {
     setFeedback({ message, type, show: true });
@@ -70,7 +77,7 @@ export default function HomeworkPage() {
       try {
         setLoading(true);
         console.log('Fetching data for user:', user.id);
-        
+
         // Load user profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -82,7 +89,7 @@ export default function HomeworkPage() {
           console.error('Profile error:', profileError);
           throw profileError;
         }
-        
+
         console.log('User profile:', profileData);
         // setUserGrade(profileData.grade);
         // setIsAdmin(profileData.is_admin);
@@ -130,7 +137,7 @@ export default function HomeworkPage() {
           .from('quiz_results')
           .select('*')
           .eq('user_id', user.id);
-        
+
         if (resultsError) {
           console.error('Error loading quiz results:', resultsError);
           return;
@@ -160,7 +167,7 @@ export default function HomeworkPage() {
           setQuizResults([]);
         }
       };
-      
+
       loadQuizResults();
     }
   }, [user]);
@@ -198,26 +205,26 @@ export default function HomeworkPage() {
 
   const startQuiz = async (quiz: Quiz) => {
     console.log('Starting quiz:', quiz);
-    
+
     // Soruları doğru resim yollarıyla güncelle ve karıştır
     const questionsWithImages = shuffleArray(quiz.questions.map((question: Question) => {
       const questionNumber = question.id;
-      
+
       // Soru görselinin yolunu oluştur
       const questionImageUrl = `/src/images/questions/Matris/Soru-${questionNumber}.webp`;
-      
+
       // Seçenekleri güncelle ve karıştır
       const updatedOptions = shuffleArray(question.options.map((option: Option) => {
         // Normal ve doğru cevap görsellerinin yollarını oluştur
         const normalPath = `/src/images/options/Matris/${questionNumber}/Soru-${questionNumber}${option.id}.webp`;
         const correctPath = `/src/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${option.id}.webp`;
-        
+
         // Doğru cevap kontrolü
         const isCorrectOption = option.isCorrect;
-        
+
         // Seçenek görseli - doğru cevap için correctPath, diğerleri için normalPath kullan
         const imageUrl = isCorrectOption ? correctPath : normalPath;
-        
+
         return {
           ...option,
           imageUrl
@@ -253,7 +260,7 @@ export default function HomeworkPage() {
 
     const selectedOption = currentQuestion.options.find((opt: Option) => opt.id === optionId);
     const isCorrect = selectedOption?.isCorrect || false;
-    
+
     if (isCorrect) {
       playSound('correct');
       setScore(prev => prev + 1);
@@ -284,7 +291,7 @@ export default function HomeworkPage() {
       // Quiz completed
       try {
         const finalScore = Math.round((score / activeQuiz.questions.length) * 100);
-        
+
         const { error } = await supabase.from('quiz_results').insert({
           user_id: user?.id,
           quiz_id: activeQuiz.id,
@@ -345,9 +352,9 @@ export default function HomeworkPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <CircularProgress 
-          timeLeft={60} 
-          totalTime={60} 
+        <CircularProgress
+          timeLeft={60}
+          totalTime={60}
           progress={100}
         />
       </div>
@@ -402,9 +409,9 @@ export default function HomeworkPage() {
       <div className="container mx-auto px-4">
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <CircularProgress 
-              timeLeft={60} 
-              totalTime={60} 
+            <CircularProgress
+              timeLeft={60}
+              totalTime={60}
               progress={100}
             />
           </div>
@@ -436,8 +443,8 @@ export default function HomeworkPage() {
                       <h2 className="text-2xl font-bold">
                         Soru {currentQuestionIndex + 1}/{activeQuiz.questions.length}
                       </h2>
-                      <CircularProgress 
-                        timeLeft={timeLeft} 
+                      <CircularProgress
+                        timeLeft={timeLeft}
                         totalTime={60}
                         progress={(timeLeft / 60) * 100}
                       />
@@ -479,8 +486,8 @@ export default function HomeworkPage() {
                               ${isAnswered || isTimeout ? 'cursor-default' : 'cursor-pointer hover:scale-105'}
                             `}
                           >
-                            <img 
-                              src={option.imageUrl} 
+                            <img
+                              src={option.imageUrl}
                               alt={`Seçenek ${option.id}`}
                               className="w-full h-auto rounded-md"
                             />

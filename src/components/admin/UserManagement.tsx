@@ -113,7 +113,7 @@ const UserManagement = () => {
       if (error) throw error;
       setUsers(users.map(u => u.id === userId ? { ...u, is_vip: !currentStatus } : u));
       toast.success('VIP durumu güncellendi');
-    } catch (err) {
+    } catch {
       toast.error('Güncelleme hatası');
     }
   };
@@ -163,8 +163,8 @@ const UserManagement = () => {
 
       setEditDialogOpen(false);
       toast.success('Kullanıcı güncellendi');
-    } catch (err) {
-      console.error('Güncelleme hatası:', err);
+    } catch {
+      console.error('Güncelleme hatası');
       toast.error('Güncelleme hatası');
     }
   };
@@ -175,7 +175,7 @@ const UserManagement = () => {
       await supabase.from('profiles').delete().eq('id', userId);
       setUsers(users.filter(u => u.id !== userId));
       toast.success('Kullanıcı silindi');
-    } catch (err) {
+    } catch {
       toast.error('Silme hatası');
     }
   };
@@ -235,9 +235,9 @@ const UserManagement = () => {
       setPasswordDialogOpen(false);
       setNewPassword('');
       setPasswordResetUser(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Şifre sıfırlama hatası:', err);
-      toast.error(err.message || 'Şifre sıfırlama hatası');
+      toast.error(err instanceof Error ? err.message : 'Şifre sıfırlama hatası');
     } finally {
       setResettingPassword(false);
     }
@@ -394,7 +394,7 @@ const UserManagement = () => {
                 <label className="block text-sm font-bold text-slate-900 mb-2">Yetenek Alanları</label>
                 <div className="flex flex-wrap gap-3">
                   {YETENEK_ALANLARI.map(opt => (
-                    <label key={opt.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition border ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-50 border-indigo-300' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <label key={opt.value} className={`flex items - center gap - 2 px - 3 py - 2 rounded - lg cursor - pointer transition border ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-50 border-indigo-300' : 'border-slate-200 hover:bg-slate-50'} `}>
                       <input
                         type="checkbox"
                         checked={editFormData.yetenek_alani.includes(opt.value)}
@@ -407,7 +407,7 @@ const UserManagement = () => {
                         }}
                         className="sr-only"
                       />
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300'}`}>
+                      <div className={`w - 4 h - 4 rounded border flex items - center justify - center ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300'} `}>
                         {editFormData.yetenek_alani.includes(opt.value) && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />

@@ -34,8 +34,8 @@ export default function LoginPage() {
       }
 
       navigate('/bilsem');
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Giriş yapılamadı');
     } finally {
       setLoading(false);
     }

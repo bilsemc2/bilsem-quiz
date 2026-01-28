@@ -179,9 +179,9 @@ const SendMessage = () => {
       setSelectedUsers([]);
       setSubject('');
       setMessage('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Mesaj gönderilirken hata:', err);
-      setError('Mesaj gönderilemedi: ' + err.message);
+      setError('Mesaj gönderilemedi: ' + (err instanceof Error ? err.message : 'Bilinmeyen hata'));
       toast.error('Mesaj gönderilemedi');
     } finally {
       setSending(false);

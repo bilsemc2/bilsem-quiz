@@ -68,7 +68,7 @@ const AdminMessageNotification = () => {
     if (data) {
       const formattedMessages = data.map(msg => ({
         ...msg,
-        sender_name: (msg.sender as any)?.name
+        sender_name: (msg.sender && typeof msg.sender === 'object' && 'name' in msg.sender) ? (msg.sender as { name?: string }).name : undefined
       }));
       setMessages(formattedMessages);
     }

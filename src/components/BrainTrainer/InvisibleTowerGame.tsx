@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, RefreshCw, Trophy, Rocket, Timer,
     Shield, Activity, Hash, Zap, AlertCircle,
-    CheckCircle2, LayoutGrid, Eye, TrendingDown, TrendingUp
+    CheckCircle2, LayoutGrid, TrendingDown, TrendingUp
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
@@ -51,7 +51,7 @@ const InvisibleTowerGame: React.FC = () => {
                 let val = Math.floor(Math.random() * 9) + 1;
 
                 if (isNegative) val = -val;
-                let effectiveVal = val * (multiplier || 1);
+                const effectiveVal = val * (multiplier || 1);
                 totalSum += effectiveVal;
 
                 newTower.push({
@@ -237,7 +237,7 @@ const InvisibleTowerGame: React.FC = () => {
                             <div className="flex flex-col-reverse items-center gap-1 relative pt-20">
                                 {Array.from({ length: Math.max(...tower.map(t => t.row)) + 1 }).map((_, rIdx) => (
                                     <div key={rIdx} className="flex gap-1">
-                                        {tower.filter(t => t.row === rIdx).map((segment, sIdx) => {
+                                        {tower.filter(t => t.row === rIdx).map((segment) => {
                                             const globalIndex = tower.findIndex(t => t.id === segment.id);
                                             const isActive = globalIndex === currentIndex;
                                             const isPast = globalIndex < currentIndex;

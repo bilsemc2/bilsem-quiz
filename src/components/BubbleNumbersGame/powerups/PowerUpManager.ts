@@ -3,7 +3,7 @@ import { PowerUpType, POWER_UPS } from './types';
 export class PowerUpManager {
   private activePowerUps: Map<PowerUpType, number> = new Map(); // type -> bitiş zamanı
   private cooldowns: Map<PowerUpType, number> = new Map();      // type -> kullanılabilir zaman
-  
+
   constructor() {
     // Cooldown'ları sıfırla
     Object.keys(POWER_UPS).forEach(type => {
@@ -25,10 +25,10 @@ export class PowerUpManager {
   // Güçlendirici kullan
   activatePowerUp(type: PowerUpType, currentTime: number): void {
     const powerUp = POWER_UPS[type];
-    
+
     // Cooldown'u ayarla
     this.cooldowns.set(type, currentTime + powerUp.cooldown);
-    
+
     // Süreli etki varsa aktifleştir
     if (powerUp.duration > 0) {
       this.activePowerUps.set(type, currentTime + powerUp.duration);
@@ -52,7 +52,7 @@ export class PowerUpManager {
   // Tüm aktif güçlendiricileri getir
   getActivePowerUps(currentTime: number): PowerUpType[] {
     return Array.from(this.activePowerUps.entries())
-      .filter(([_, endTime]) => endTime > currentTime)
-      .map(([type]) => type as PowerUpType);
+      .filter((entry) => entry[1] > currentTime)
+      .map((entry) => entry[0] as PowerUpType);
   }
 }

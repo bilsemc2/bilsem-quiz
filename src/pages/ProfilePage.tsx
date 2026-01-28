@@ -153,7 +153,7 @@ export const ProfilePage: React.FC = () => {
             await supabase.from('profiles').update({ referral_code: newCode }).eq('id', user.id);
             setUserData(prev => ({ ...prev, referral_code: newCode }));
             toast.success('Yeni referans kodunuz oluşturuldu!');
-        } catch (error) {
+        } catch {
             toast.error('Referans kodu oluşturulamadı.');
         }
     };
@@ -436,11 +436,11 @@ export const ProfilePage: React.FC = () => {
                                                     <p className="text-pink-400/70 text-sm">Yaratıcılığını sergile</p>
                                                 </div>
                                                 {/* Analiz Hakkı Göstergesi */}
-                                                {(userData as any).resim_analiz_hakki !== undefined && (
+                                                {'resim_analiz_hakki' in userData && typeof userData.resim_analiz_hakki === 'number' && (
                                                     <div className="bg-pink-500/20 px-3 py-1.5 rounded-xl border border-pink-500/30">
                                                         <span className="text-xs text-pink-300">Analiz: </span>
-                                                        <span className={`font-bold ${(userData as any).resim_analiz_hakki > 0 ? 'text-pink-400' : 'text-rose-400'}`}>
-                                                            {(userData as any).resim_analiz_hakki}
+                                                        <span className={`font-bold ${(userData as UserProfile & { resim_analiz_hakki?: number }).resim_analiz_hakki! > 0 ? 'text-pink-400' : 'text-rose-400'}`}>
+                                                            {(userData as UserProfile & { resim_analiz_hakki?: number }).resim_analiz_hakki}
                                                         </span>
                                                     </div>
                                                 )}

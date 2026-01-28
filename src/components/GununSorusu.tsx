@@ -9,7 +9,7 @@ interface Question {
   question_number: number;
   correct_option_id: string;
   image_url?: string;
-  solution_video?: any;
+  solution_video?: string | null;
   is_active: boolean;
 }
 
@@ -32,23 +32,23 @@ const GununSorusu: React.FC = () => {
       try {
         // Bugünün tarihine göre sabit bir sıra belirle
         const todaySeed = getTodaysSeed();
-        
+
         // Aktif sorulardan birini seç
         const { data, error } = await supabase
           .from('questions')
           .select('*')
           .eq('is_active', true)
           .order('question_number', { ascending: true });
-        
+
         if (error) {
           throw error;
         }
-        
+
         if (data && data.length > 0) {
           // Günün tarihine göre belirli bir soruyu seç
           const index = todaySeed % data.length;
           setQuestion(data[index]);
-          
+
           // Eğer resim varsa, Base64 formatında yükle
           if (data[index].image_url) {
             loadQuestionImage(data[index].image_url);
@@ -67,29 +67,29 @@ const GununSorusu: React.FC = () => {
     };
 
     fetchDailyQuestion();
-    
+
     // Koruma CSS'ini ekle
     const style = document.createElement('style');
     style.textContent = getImageProtectionStyles();
     document.head.appendChild(style);
-    
+
     // Temizleme fonksiyonu
     return () => {
       document.head.removeChild(style);
     };
   }, []);
-  
+
   // Resmi Base64 formatında yükle
   const loadQuestionImage = async (imageUrl: string) => {
     if (!imageUrl) return;
-    
+
     setImageLoading(true);
     try {
       // Resmi güvenli URL ile yükle
       const secureUrl = encryptImageUrl(imageUrl);
       const base64Data = await loadImageAsBase64(secureUrl);
       setImageBase64(base64Data);
-      
+
       // Filigran ekle
       setTimeout(addWatermark, 500);
     } catch (error) {
@@ -98,43 +98,43 @@ const GununSorusu: React.FC = () => {
       setImageLoading(false);
     }
   };
-  
+
   // Filigran ekle
   const addWatermark = () => {
     if (!watermarkRef.current) return;
-    
+
     const container = watermarkRef.current;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
+
     if (!ctx) return;
-    
+
     // Canvas boyutunu ayarla
     canvas.width = container.offsetWidth;
     canvas.height = container.offsetHeight;
-    
+
     // Yarı saydam filigran metni
     ctx.globalAlpha = 0.2;
     ctx.font = '14px Arial';
     ctx.fillStyle = '#000';
-    
+
     // Filigran metnini eğimli olarak yerleştir
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate(-Math.PI / 6); // -30 derece eğim
-    
+
     // Filigran metnini tekrarla
     const text = '';
     const textWidth = ctx.measureText(text).width;
-    
+
     for (let y = -canvas.height; y < canvas.height; y += 40) {
       for (let x = -canvas.width; x < canvas.width; x += textWidth + 40) {
         ctx.fillText(text, x, y);
       }
     }
-    
+
     ctx.restore();
-    
+
     // Canvas'ı arka plan olarak ayarla
     container.style.position = 'relative';
     const watermarkElement = document.createElement('div');
@@ -146,13 +146,13 @@ const GununSorusu: React.FC = () => {
     watermarkElement.style.backgroundImage = `url(${canvas.toDataURL('image/png')})`;
     watermarkElement.style.pointerEvents = 'none';
     watermarkElement.style.zIndex = '2';
-    
+
     // Önceki filigranı temizle ve yenisini ekle
     const oldWatermark = container.querySelector('.watermark');
     if (oldWatermark) {
       container.removeChild(oldWatermark);
     }
-    
+
     watermarkElement.className = 'watermark';
     container.appendChild(watermarkElement);
   };
@@ -180,29 +180,29 @@ const GununSorusu: React.FC = () => {
         {question.text && (
           <p className="text-gray-800 mb-4">{question.text}</p>
         )}
-        
+
         {question.image_url && (
           <div className="mb-4 flex justify-center relative" ref={watermarkRef}>
             {imageLoading ? (
               <div className="animate-pulse bg-gray-200 rounded-lg" style={{ width: '300px', height: '200px' }} />
             ) : imageBase64 ? (
-              <img 
-                src={imageBase64} 
+              <img
+                src={imageBase64}
                 alt={`Soru ${question.question_number}`}
                 className="max-w-full h-auto rounded-lg shadow-md protected-image"
                 style={{ maxHeight: '300px' }}
-                onContextMenu={(e) => e.preventDefault()} 
+                onContextMenu={(e) => e.preventDefault()}
                 onDragStart={(e) => e.preventDefault()}
                 draggable="false"
               />
             ) : (
-              <img 
-                src={encryptImageUrl(question.image_url)} 
+              <img
+                src={encryptImageUrl(question.image_url)}
                 alt={`Soru ${question.question_number}`}
                 className="max-w-full h-auto rounded-lg shadow-md protected-image"
                 style={{ maxHeight: '300px' }}
                 loading="lazy"
-                onContextMenu={(e) => e.preventDefault()} 
+                onContextMenu={(e) => e.preventDefault()}
                 onDragStart={(e) => e.preventDefault()}
                 draggable="false"
               />

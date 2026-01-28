@@ -136,7 +136,7 @@ const UserGameStats: React.FC = () => {
                 game_id: p.game_id,
                 score: p.score_achieved || 0,
                 created_at: p.created_at,
-                game_name: (p.metadata as any)?.game_name || p.game_id,
+                game_name: (p.metadata && typeof p.metadata === 'object' && 'game_name' in p.metadata) ? (p.metadata as { game_name?: string }).game_name || p.game_id : p.game_id,
             }));
 
             // Haftalık karşılaştırma
@@ -168,7 +168,7 @@ const UserGameStats: React.FC = () => {
             const gameGroups: Record<string, { scores: { score: number; date: Date }[]; name: string }> = {};
             plays.forEach(p => {
                 const gameId = p.game_id;
-                const gameName = (p.metadata as any)?.game_name || gameId;
+                const gameName = (p.metadata && typeof p.metadata === 'object' && 'game_name' in p.metadata) ? (p.metadata as { game_name?: string }).game_name || gameId : gameId;
                 if (!gameGroups[gameId]) {
                     gameGroups[gameId] = { scores: [], name: gameName };
                 }
@@ -179,7 +179,7 @@ const UserGameStats: React.FC = () => {
             });
 
             const gameProgress = Object.entries(gameGroups)
-                .filter(([_, data]) => data.scores.length >= 2) // En az 2 oynama gerekli
+                .filter((entry) => entry[1].scores.length >= 2) // En az 2 oynama gerekli
                 .map(([gameId, data]) => {
                     // Tarihe göre sırala (eskiden yeniye)
                     const sorted = [...data.scores].sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -531,8 +531,8 @@ const UserGameStats: React.FC = () => {
                                         <p className="text-white/40 text-xs">{game.playCount} oynama</p>
                                     </div>
                                     <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm font-bold ${game.improvement > 0 ? 'bg-emerald-500/20 text-emerald-400' :
-                                            game.improvement < 0 ? 'bg-red-500/20 text-red-400' :
-                                                'bg-white/10 text-white/50'
+                                        game.improvement < 0 ? 'bg-red-500/20 text-red-400' :
+                                            'bg-white/10 text-white/50'
                                         }`}>
                                         {game.improvement > 0 ? (
                                             <><TrendingUp className="w-4 h-4" /> +{game.improvement}%</>

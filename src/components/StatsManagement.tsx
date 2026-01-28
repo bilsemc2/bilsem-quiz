@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
-  Paper,
   Typography,
   CircularProgress,
   Alert,
@@ -91,7 +90,7 @@ export const StatsManagement: React.FC = () => {
     fetchStats();
   }, []);
 
-  const calculateQuizStats = (quizData: any[]): QuizStats => {
+  const calculateQuizStats = (quizData: Array<{ score: number; questions_answered: number; correct_answers: number; completed_at: string; profiles?: { full_name?: string; email?: string } | null }>): QuizStats => {
     const totalQuizzes = quizData.length;
     const totalQuestionsAnswered = quizData.reduce((sum, quiz) => sum + quiz.questions_answered, 0);
     const totalCorrectAnswers = quizData.reduce((sum, quiz) => sum + quiz.correct_answers, 0);
@@ -126,7 +125,7 @@ export const StatsManagement: React.FC = () => {
     };
   };
 
-  const calculateUserStats = (userData: any[]): UserStats => {
+  const calculateUserStats = (userData: Array<{ points?: number; experience?: number }>): UserStats => {
     const totalPoints = userData.reduce((sum, user) => sum + (user.points || 0), 0);
     const totalExperience = userData.reduce((sum, user) => sum + (user.experience || 0), 0);
     const averagePoints = userData.length ? totalPoints / userData.length : 0;
@@ -181,9 +180,9 @@ export const StatsManagement: React.FC = () => {
                   Doğruluk Oranı: %{quizStats?.accuracyRate.toFixed(2)}
                 </Typography>
               </Box>
-              
+
               <Divider sx={{ my: 2 }} />
-              
+
               <Typography variant="subtitle1" gutterBottom>
                 En Yüksek Skorlar
               </Typography>

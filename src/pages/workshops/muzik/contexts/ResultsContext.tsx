@@ -1,15 +1,15 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface TestResult {
     score: number;
     overallScore?: number;
     timestamp: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface ResultsContextType {
     testResults: Record<string, TestResult>;
-    saveResult: (testId: string, resultData: any) => void;
+    saveResult: (testId: string, resultData: object) => void;
     resetResults: () => void;
     getResult: (testId: string) => TestResult | undefined;
     getOverallPerformance: () => number;
@@ -27,10 +27,11 @@ export function ResultsProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('musicTestResults', JSON.stringify(testResults));
     }, [testResults]);
 
-    const saveResult = (testId: string, resultData: any) => {
+    const saveResult = (testId: string, resultData: object) => {
         setTestResults(prev => ({
             ...prev,
             [testId]: {
+                score: 0, // default score
                 ...resultData,
                 timestamp: new Date().toISOString()
             }

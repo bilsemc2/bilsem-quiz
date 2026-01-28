@@ -207,7 +207,7 @@ const BlogPage: React.FC = () => {
         toast.success('Bültene başarıyla katıldınız!');
         setSubscribed(true);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Newsletter error:', error);
       toast.error('Bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
@@ -222,7 +222,7 @@ const BlogPage: React.FC = () => {
           title: selectedPost.title,
           url: window.location.href,
         });
-      } catch (err) {
+      } catch {
         // User cancelled or error
       }
     } else {
