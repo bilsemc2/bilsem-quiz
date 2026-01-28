@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
-import { Edit, Trash2, X, Loader2, Users, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Edit, Trash2, X, Loader2, Users, ChevronLeft, ChevronRight, Search, Key } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
@@ -65,6 +65,11 @@ const UserManagement = () => {
   const [filters, setFilters] = useState({
     name: '', email: '', grade: '', showOnlyVip: false,
   });
+  // Password reset state
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -189,6 +194,55 @@ const UserManagement = () => {
     }
   };
 
+  const handleOpenPasswordReset = (user: User) => {
+    setPasswordResetUser(user);
+    setNewPassword('');
+    setPasswordDialogOpen(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!passwordResetUser || !newPassword) return;
+    if (newPassword.length < 6) {
+      toast.error('Şifre en az 6 karakter olmalı');
+      return;
+    }
+    try {
+      setResettingPassword(true);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/admin-reset-password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          targetUserId: passwordResetUser.id,
+          newPassword: newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Şifre güncellenemedi');
+      }
+
+      toast.success(`${passwordResetUser.name || passwordResetUser.email} kullanıcısının şifresi güncellendi`);
+      setPasswordDialogOpen(false);
+      setNewPassword('');
+      setPasswordResetUser(null);
+    } catch (err: any) {
+      console.error('Şifre sıfırlama hatası:', err);
+      toast.error(err.message || 'Şifre sıfırlama hatası');
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
   const paginatedUsers = filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
 
@@ -264,8 +318,9 @@ const UserManagement = () => {
                   <td className="py-3 px-4 text-center"><ToggleSwitch checked={user.is_vip} onChange={() => handleToggleVip(user.id, user.is_vip)} /></td>
                   <td className="py-3 px-4">
                     <div className="flex justify-center gap-1">
-                      <button onClick={() => handleEdit(user)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"><Edit className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(user.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleEdit(user)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Düzenle"><Edit className="w-4 h-4" /></button>
+                      <button onClick={() => handleOpenPasswordReset(user)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Şifre Sıfırla"><Key className="w-4 h-4" /></button>
+                      <button onClick={() => handleDelete(user.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="Sil"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </motion.tr>
@@ -373,6 +428,55 @@ const UserManagement = () => {
             <div className="flex justify-end gap-3 mt-8">
               <Dialog.Close asChild><button className="px-5 py-2 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors">İptal</button></Dialog.Close>
               <button onClick={handleSave} className="px-8 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-95">Kaydet</button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Password Reset Dialog */}
+      <Dialog.Root open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+          <Dialog.Content aria-describedby={undefined} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md z-50">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Key className="w-5 h-5 text-amber-500" />
+                Şifre Sıfırla
+              </Dialog.Title>
+              <Dialog.Close asChild><button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-600" /></button></Dialog.Close>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800">
+                  <strong>{passwordResetUser?.name || passwordResetUser?.email}</strong> kullanıcısının şifresini değiştiriyorsunuz.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-900 mb-1">Yeni Şifre</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="En az 6 karakter"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-amber-500 text-slate-900 font-medium outline-none placeholder:text-slate-400"
+                  minLength={6}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Dialog.Close asChild>
+                <button className="px-5 py-2 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors">
+                  İptal
+                </button>
+              </Dialog.Close>
+              <button
+                onClick={handleResetPassword}
+                disabled={resettingPassword || newPassword.length < 6}
+                className="px-6 py-2 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600 shadow-md shadow-amber-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {resettingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
+                Şifreyi Güncelle
+              </button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>
