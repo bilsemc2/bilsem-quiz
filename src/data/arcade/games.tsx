@@ -1,5 +1,5 @@
 import React from 'react';
-import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle } from 'lucide-react';
+import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle, Zap } from 'lucide-react';
 
 export interface ArcadeGame {
     id: string;
@@ -92,5 +92,14 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         color: "from-sky-300 to-blue-500",
         icon: <Circle size={48} className="text-white animate-bounce" />,
         link: "/arcade/neseli-balonlar"
+    },
+    {
+        id: 'chromabreak',
+        title: "ChromaBreak",
+        description: "Blokları kır, renk sırasını hatırla ve hafıza testini geç!",
+        cost: 40,
+        color: "from-cyan-500 to-purple-600",
+        icon: <Zap size={48} className="text-white" />,
+        link: "/arcade/chromabreak"
     }
 ];
