@@ -164,7 +164,7 @@ const KraftOrigami: React.FC = () => {
                         to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
-                        <ArrowLeft size={16} /> Arcade'e Dön
+                        <ArrowLeft size={16} /> BİLSEM Zeka'ya Dön
                     </Link>
                 </div>
             </div>
@@ -191,7 +191,7 @@ const KraftOrigami: React.FC = () => {
                         to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
-                        <ArrowLeft size={16} /> Arcade'e Dön
+                        <ArrowLeft size={16} /> BİLSEM Zeka'ya Dön
                     </Link>
                 </div>
             </div>

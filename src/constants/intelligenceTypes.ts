@@ -131,7 +131,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
 export const WORKSHOP_LABELS: Record<WorkshopType, string> = {
     tablet: 'Tablet Değerlendirme (1. Aşama)',
     bireysel: 'Bireysel Değerlendirme (2. Aşama)',
-    arcade: 'Zeka Arcade',
+    arcade: 'BİLSEM Zeka',
 };
 
 // Zeka türü renkleri (UI için)

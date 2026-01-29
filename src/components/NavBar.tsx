@@ -98,7 +98,7 @@ const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropd
                 className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-indigo-500/10 transition-colors group"
               >
                 <Gamepad2 className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform" />
-                <span className="font-medium text-white">Zeka Arcade</span>
+                <span className="font-medium text-white">BİLSEM Zeka</span>
                 <Sparkles className="w-3 h-3 text-yellow-400 animate-pulse" />
               </Link>
 
@@ -182,7 +182,7 @@ const NavBar = () => {
 
   const menuItems = [
     { name: "Bilsem", path: "/bilsem" },
-    { name: "Arcade", path: "/bilsem-zeka", showWhenAuth: true },
+    { name: "BİLSEM Zeka", path: "/bilsem-zeka", showWhenAuth: true },
     { name: "Hakkımızda", path: "/about" },
     { name: "İletişim", path: "/contact" },
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },

@@ -169,7 +169,7 @@ const KartDedektifi: React.FC = () => {
         <div className="flex gap-4 pointer-events-auto">
           <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border border-white/20 hover:bg-white/20 transition-all">
             <ChevronLeft className="w-5 h-5 text-sky-400" />
-            <span className="font-bold text-white/80">Arcade</span>
+            <span className="font-bold text-white/80">BİLSEM Zeka</span>
           </Link>
           <div className="bg-white/10 backdrop-blur-md px-5 py-2 rounded-full shadow-lg flex items-center gap-2 border border-white/20">
             <Trophy className="text-yellow-500 w-6 h-6" />

@@ -102,7 +102,7 @@ const TersNavigator: React.FC = () => {
             <div className="absolute top-20 left-4 z-50">
                 <Link to="/bilsem-zeka" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors bg-slate-900/50 backdrop-blur px-4 py-2 rounded-full border border-slate-800">
                     <ChevronLeft className="w-5 h-5" />
-                    <span className="font-bold">Arcade</span>
+                    <span className="font-bold">BİLSEM Zeka</span>
                 </Link>
             </div>
 

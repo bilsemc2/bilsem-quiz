@@ -231,7 +231,7 @@ const RenkliBalon: React.FC = () => {
                 <div className="flex gap-4 pointer-events-auto">
                     <Link to="/bilsem-zeka" className="bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border-2 border-blue-200 hover:bg-blue-50 transition-colors">
                         <ChevronLeft className="w-5 h-5 text-blue-500" />
-                        <span className="font-bold text-gray-700">Arcade</span>
+                        <span className="font-bold text-gray-700">BİLSEM Zeka</span>
                     </Link>
                     <div className="bg-white/90 backdrop-blur px-5 py-2 rounded-full shadow-lg flex items-center gap-2 border-2 border-blue-200">
                         <Trophy className="text-yellow-500 w-6 h-6" />

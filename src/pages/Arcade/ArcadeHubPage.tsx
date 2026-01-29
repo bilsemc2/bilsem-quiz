@@ -75,7 +75,7 @@ const ArcadeHubPage: React.FC = () => {
                             </div>
                             <div>
                                 <h1 className="text-5xl lg:text-7xl font-black text-white tracking-tighter">
-                                    Zeka <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-yellow-500">Arcade</span>
+                                    Zeka <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-yellow-500">BİLSEM Zeka</span>
                                 </h1>
                                 <p className="text-slate-400 font-bold mt-2 uppercase tracking-[0.3em] flex items-center gap-2">
                                     <Sparkles size={16} className="text-amber-400" /> Jetonunu At, Oyununu Seç!

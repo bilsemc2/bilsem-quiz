@@ -199,7 +199,7 @@ const AynaUstasi: React.FC = () => {
                         to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
-                        <ArrowLeft size={16} /> Arcade'e Dön
+                        <ArrowLeft size={16} /> BİLSEM Zeka'ya Dön
                     </Link>
                 </div>
             </div>
@@ -225,7 +225,7 @@ const AynaUstasi: React.FC = () => {
                         to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
-                        <ArrowLeft size={16} /> Arcade'e Dön
+                        <ArrowLeft size={16} /> BİLSEM Zeka'ya Dön
                     </Link>
                 </div>
             </div>
@@ -239,7 +239,7 @@ const AynaUstasi: React.FC = () => {
                     to="/bilsem-zeka"
                     className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm mb-4"
                 >
-                    <ArrowLeft size={16} /> Arcade'e Dön
+                    <ArrowLeft size={16} /> BİLSEM Zeka'ya Dön
                 </Link>
                 <h1 className="text-3xl md:text-5xl font-black text-blue-400 tracking-tight flex items-center justify-center gap-3 drop-shadow-[0_0_10px_rgba(96,165,250,0.3)]">
                     Ayna <span className="text-rose-400">Ustası</span>
