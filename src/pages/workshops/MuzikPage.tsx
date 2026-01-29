@@ -242,7 +242,7 @@ const MuzikPage: React.FC = () => {
                             </h3>
                             <div className="relative w-full aspect-video rounded-2xl overflow-hidden">
                                 <iframe
-                                    src="https://www.youtube.com/embed/wMRDvYumiNU"
+                                    src="https://www.youtube.com/embed/eCBx2n-FOCg"
                                     title="Müzik AI Atölyesi Tanıtım"
                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                     allowFullScreen
