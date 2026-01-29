@@ -28,9 +28,9 @@ export async function analyzeImage(imageUrl: string, words: string[]): Promise<I
                 {
                     role: "user",
                     content: [
-                        { 
-                            type: "text", 
-                            text: `Bu resim bir öğrenci tarafından şu kelimeler kullanılarak oluşturuldu: ${words.join(', ')}. 
+                        {
+                            type: "text",
+                            text: `Bu resim bir öğrenci tarafından şu kelimeler kullanılarak kara kalem kullanılarak oluşturuldu: ${words.join(', ')}. 
                             
 Lütfen resmi analiz et ve şu kriterlere göre değerlendir:
 
@@ -42,7 +42,7 @@ Lütfen resmi analiz et ve şu kriterlere göre değerlendir:
 2. Kompozisyon ve Yaratıcılık:
 - Kompozisyon düzeni ve denge
 - Yaratıcı yaklaşımlar ve özgünlük
-- Renk ve form kullanımı
+- Renk tonu ve form kullanımı
 - Hikaye anlatımı
 
 3. Görsel Anlatım:
@@ -92,14 +92,14 @@ Yaratıcılık: (puan)
         });
 
         const content = response.choices[0]?.message?.content || '';
-        
+
         // Parse feedback and scores from the response
         const feedbackMatch = content.match(/\[FEEDBACK\]([\s\S]*?)\[\/FEEDBACK\]/);
         const scoresMatch = content.match(/\[SCORES\]([\s\S]*?)\[\/SCORES\]/);
-        
+
         const feedback = feedbackMatch ? feedbackMatch[1].trim() : 'Geri bildirim alınamadı.';
         const scoresText = scoresMatch ? scoresMatch[1].trim() : '';
-        
+
         // Parse individual scores
         const scores = {
             composition: 0,
@@ -115,8 +115,8 @@ Yaratıcılık: (puan)
             scoreLines.forEach(line => {
                 const [criterion, scoreStr] = line.split(':').map(s => s.trim());
                 const score = parseInt(scoreStr) || 0;
-                
-                switch(criterion.toLowerCase()) {
+
+                switch (criterion.toLowerCase()) {
                     case 'kompozisyon':
                         scores.composition = score;
                         break;
@@ -137,8 +137,8 @@ Yaratıcılık: (puan)
         }
 
         // Calculate total score
-        scores.totalScore = (scores.composition + scores.lines + scores.perspective + 
-                           scores.proportions + scores.creativity);
+        scores.totalScore = (scores.composition + scores.lines + scores.perspective +
+            scores.proportions + scores.creativity);
 
         return {
             feedback,
