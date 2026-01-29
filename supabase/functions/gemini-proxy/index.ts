@@ -3,7 +3,7 @@
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, prefer',
 };
 
 Deno.serve(async (req) => {
@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
             throw new Error('GEMINI_API_KEY is not configured');
         }
 
-        const { action, mode, promptData, drawingBase64, theme, story } = await req.json();
+        const { action, mode, promptData, drawingBase64, theme, story, testType, target, detected } = await req.json();
 
         let result: string | object;
 
@@ -34,6 +34,9 @@ Deno.serve(async (req) => {
                 break;
             case 'generateQuestions':
                 result = await generateQuestions(GEMINI_API_KEY, story);
+                break;
+            case 'analyzeMusicPerformance':
+                result = await analyzeMusicPerformance(GEMINI_API_KEY, testType, target, detected);
                 break;
             default:
                 throw new Error(`Unknown action: ${action}`);
@@ -295,4 +298,93 @@ Yanıtı aşağıdaki JSON yapısında formatla (sadece JSON döndür):
     }
 
     return questionsData.questions;
+}
+
+// Music Performance Analysis
+interface MusicAnalysisResult {
+    score: number;
+    accuracy: number;
+    feedback: {
+        strengths: string[];
+        improvements: string[];
+        tips: string[];
+    };
+    encouragement: string;
+    detailedAnalysis: string;
+}
+
+async function analyzeMusicPerformance(
+    apiKey: string,
+    testType: string,
+    target: unknown,
+    detected: unknown
+): Promise<MusicAnalysisResult> {
+    const prompt = `
+Sen uzman bir müzik öğretmenisin. Bir öğrencinin BİLSEM müzik yetenek testindeki performansını analiz et.
+Öğrenci yaşı: 7-12. Dil: Türkçe. Üslup: Teşvik edici, yapıcı ve profesyonel.
+
+Test Türü: ${testType}
+Beklenen (Hedef): ${JSON.stringify(target)}
+Algılanan (Öğrenci): ${JSON.stringify(detected)}
+
+Analiz kriterleri:
+- Pitch (frekans) doğruluğu
+- Ritim ve zamanlama tutarlılığı
+- Müzikal duyum kalitesi
+
+Lütfen SADECE belirlenen JSON formatında yanıt ver.
+`;
+
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                systemInstruction: {
+                    parts: [{ text: 'Sen müzik eğitimi uzmanı bir AI asistanısın. Türkçe yanıt ver. Yapıcı ve teşvik edici ol.' }]
+                },
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 1000,
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                        type: 'object',
+                        properties: {
+                            score: { type: 'number' },
+                            accuracy: { type: 'number' },
+                            feedback: {
+                                type: 'object',
+                                properties: {
+                                    strengths: { type: 'array', items: { type: 'string' } },
+                                    improvements: { type: 'array', items: { type: 'string' } },
+                                    tips: { type: 'array', items: { type: 'string' } }
+                                },
+                                required: ['strengths', 'improvements', 'tips']
+                            },
+                            encouragement: { type: 'string' },
+                            detailedAnalysis: { type: 'string' }
+                        },
+                        required: ['score', 'accuracy', 'feedback', 'encouragement', 'detailedAnalysis']
+                    }
+                }
+            }),
+        }
+    );
+
+    const data = await response.json();
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textContent) {
+        return {
+            score: 0,
+            accuracy: 0,
+            feedback: { strengths: [], improvements: ['Analiz yapılamadı'], tips: [] },
+            encouragement: 'Bağlantını kontrol edip tekrar dene.',
+            detailedAnalysis: 'Sistem analizi şu an gerçekleştiremiyor.'
+        };
+    }
+
+    return JSON.parse(textContent);
 }

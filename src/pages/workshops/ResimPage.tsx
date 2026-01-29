@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft, Lock } from 'lucide-react';
+import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft, Lock, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ResimGame from '../../components/Workshops/Resim/ResimGame';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,6 +14,7 @@ const ResimPage: React.FC = () => {
     const [userTalents, setUserTalents] = useState<string[]>([]);
     const [analysisQuota, setAnalysisQuota] = useState<number | null>(null);
     const [isTeacher, setIsTeacher] = useState(false);
+    const [showTalentWarning, setShowTalentWarning] = useState(false);
 
     useEffect(() => {
         const checkTalentAccess = async () => {
@@ -204,10 +205,10 @@ const ResimPage: React.FC = () => {
                                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500"></div>
                                     <span className="text-slate-300">Kontrol ediliyor...</span>
                                 </div>
-                            ) : hasTalentAccess ? (
+                            ) : (
                                 <div className="flex flex-col items-center gap-4">
                                     {/* Kalan Analiz Hakkı Göstergesi */}
-                                    {!isTeacher && analysisQuota !== null && (
+                                    {hasTalentAccess && !isTeacher && analysisQuota !== null && (
                                         <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20">
                                             <p className="text-slate-300 text-sm">
                                                 Kalan Analiz Hakkı:
@@ -218,7 +219,13 @@ const ResimPage: React.FC = () => {
                                         </div>
                                     )}
                                     <button
-                                        onClick={() => setIsActive(true)}
+                                        onClick={() => {
+                                            if (hasTalentAccess) {
+                                                setIsActive(true);
+                                            } else {
+                                                setShowTalentWarning(true);
+                                            }
+                                        }}
                                         className="group relative inline-flex items-center justify-center gap-4 px-16 py-6 bg-gradient-to-r from-pink-600 to-purple-700 text-white font-black text-2xl rounded-full hover:shadow-2xl hover:shadow-pink-500/40 transition-all duration-300 transform hover:-translate-y-1 active:scale-95 overflow-hidden"
                                     >
                                         <span className="relative flex items-center gap-3">
@@ -226,30 +233,61 @@ const ResimPage: React.FC = () => {
                                         </span>
                                     </button>
                                 </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <button
-                                        disabled
-                                        className="group relative inline-flex items-center justify-center gap-4 px-16 py-6 bg-slate-600/50 text-slate-400 font-black text-2xl rounded-full cursor-not-allowed overflow-hidden"
-                                    >
-                                        <span className="relative flex items-center gap-3">
-                                            <Lock className="w-6 h-6" /> Atölyeye Gir
-                                        </span>
-                                    </button>
-                                    <p className="text-rose-400 text-sm font-medium">
-                                        Bu atölye sadece yetenek alanı <strong>Resim</strong> olan öğrenciler içindir.
-                                        {userTalents.length > 0 && (
-                                            <span className="block mt-1 text-slate-400">
-                                                Sizin yetenek alanınız: <strong>{userTalents.join(', ')}</strong>
-                                            </span>
-                                        )}
-                                    </p>
-                                </div>
                             )}
                         </div>
                     </div>
                 </motion.div>
             </div>
+
+            {/* Yetenek Alanı Uyarı Modal */}
+            {showTalentWarning && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl border border-white/10 shadow-2xl p-8 max-w-md w-full text-center relative"
+                    >
+                        <button
+                            onClick={() => setShowTalentWarning(false)}
+                            className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Lock className="w-10 h-10 text-rose-400" />
+                        </div>
+
+                        <h2 className="text-2xl font-bold text-white mb-4">
+                            Bu Atölye Profilinize Uygun Değil
+                        </h2>
+
+                        <p className="text-white/70 mb-6 leading-relaxed">
+                            Resim Atölyesi sadece yetenek alanı <strong className="text-pink-400">Resim</strong> olan öğrencilerimiz içindir.
+                            {userTalents.length > 0 && (
+                                <span className="block mt-2">
+                                    Sizin yetenek alanınız: <strong className="text-amber-400">{userTalents.join(', ')}</strong>
+                                </span>
+                            )}
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => setShowTalentWarning(false)}
+                                className="w-full py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all border border-white/10"
+                            >
+                                Anladım, Sayfada Kalayım
+                            </button>
+                            <Link
+                                to="/profile"
+                                className="w-full py-3 bg-pink-600 text-white font-semibold rounded-xl hover:bg-pink-700 transition-all text-center"
+                            >
+                                Profilimi Görüntüle
+                            </Link>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 };
