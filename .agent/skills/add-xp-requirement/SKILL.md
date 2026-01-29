@@ -10,7 +10,7 @@ description: Yeni sayfa/oyun için XP gereksinimi ekler
 | Kategori | Format | Örnek XP |
 |----------|--------|----------|
 | Oyunlar | `/oyunlar/[slug]` | 10 |
-| Arcade | `/arcade/[slug]` | 30-50 |
+| Arcade | `/bilsem-zeka/[slug]` | 30-50 |
 | Bireysel | `/atolyeler/bireysel-degerlendirme/[slug]` | 15 |
 | Tablet | `/atolyeler/tablet-degerlendirme/[slug]` | 10 |
 

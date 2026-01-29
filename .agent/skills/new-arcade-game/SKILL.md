@@ -73,7 +73,7 @@ export const GAME_CONFIG = {
   cost: 40,
   color: 'from-cyan-500 to-blue-600',
   icon: <Icon size={48} className="text-white" />,
-  link: '/arcade/[oyun-slug]',
+  link: '/bilsem-zeka/[oyun-slug]',
 }
 ```
 
@@ -86,7 +86,7 @@ const [OyunAdi] = React.lazy(() =>
   import('./components/Arcade/Games/[OyunAdi]/[OyunAdi]')
 );
 
-<Route path="/arcade/[oyun-slug]" element={<RequireAuth><[OyunAdi] /></RequireAuth>} />
+<Route path="/bilsem-zeka/[oyun-slug]" element={<RequireAuth><[OyunAdi] /></RequireAuth>} />
 ```
 
 ---
@@ -95,7 +95,7 @@ const [OyunAdi] = React.lazy(() =>
 
 ```sql
 INSERT INTO xp_requirements (path, xp_cost, description) 
-VALUES ('/arcade/[oyun-slug]', 40, '[Oyun Adı]');
+VALUES ('/bilsem-zeka/[oyun-slug]', 40, '[Oyun Adı]');
 ```
 
 ---
