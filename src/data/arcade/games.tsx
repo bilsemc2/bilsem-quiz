@@ -19,7 +19,7 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 50,
         color: "from-slate-800 to-indigo-900",
         icon: <Focus size={48} className="text-white animate-pulse" />,
-        link: "/arcade/karanlik-labirent"
+        link: "/bilsem-zeka/karanlik-labirent"
     },
     {
         id: 'renkli-balon',
@@ -28,7 +28,7 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 30,
         color: "from-sky-400 to-blue-600",
         icon: <Sparkles size={48} className="text-white animate-bounce" />,
-        link: "/arcade/renkli-balon"
+        link: "/bilsem-zeka/renkli-balon"
     },
     {
         id: 'ters-navigator',
@@ -37,7 +37,7 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 40,
         color: "from-indigo-600 to-purple-700",
         icon: <Navigation2 size={48} className="text-white rotate-45" />,
-        link: "/arcade/ters-navigator"
+        link: "/bilsem-zeka/ters-navigator"
     },
     {
         id: 'ayna-ustasi',
@@ -46,7 +46,7 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 35,
         color: "from-rose-500 to-pink-600",
         icon: <FlipHorizontal2 size={48} className="text-white" />,
-        link: "/arcade/ayna-ustasi"
+        link: "/bilsem-zeka/ayna-ustasi"
     },
     {
         id: 'kraft-origami',
@@ -55,7 +55,7 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 40,
         color: "from-amber-500 to-orange-600",
         icon: <Scissors size={48} className="text-white" />,
-        link: "/arcade/kraft-origami"
+        link: "/bilsem-zeka/kraft-origami"
     },
     {
         id: 'labirent-ustasi',
@@ -64,7 +64,7 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 35,
         color: "from-indigo-500 to-purple-600",
         icon: <Compass size={48} className="text-white" />,
-        link: "/arcade/labirent-ustasi"
+        link: "/bilsem-zeka/labirent-ustasi"
     },
     {
         id: 'oruntulu-top',
@@ -73,7 +73,7 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 35,
         color: "from-emerald-500 to-teal-600",
         icon: <Focus size={48} className="text-white" />,
-        link: "/arcade/oruntulu-top"
+        link: "/bilsem-zeka/oruntulu-top"
     },
     {
         id: 'kart-dedektifi',
@@ -82,7 +82,7 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 40,
         color: "from-sky-400 to-blue-600",
         icon: <Search size={48} className="text-white" />,
-        link: "/arcade/kart-dedektifi"
+        link: "/bilsem-zeka/kart-dedektifi"
     },
     {
         id: 'neseli-balonlar',
@@ -91,7 +91,7 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 35,
         color: "from-sky-300 to-blue-500",
         icon: <Circle size={48} className="text-white animate-bounce" />,
-        link: "/arcade/neseli-balonlar"
+        link: "/bilsem-zeka/neseli-balonlar"
     },
     {
         id: 'chromabreak',
@@ -100,6 +100,6 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 40,
         color: "from-cyan-500 to-purple-600",
         icon: <Zap size={48} className="text-white" />,
-        link: "/arcade/chromabreak"
+        link: "/bilsem-zeka/chromabreak"
     }
 ];

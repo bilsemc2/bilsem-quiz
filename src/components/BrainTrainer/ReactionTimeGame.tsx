@@ -235,7 +235,7 @@ const ReactionTimeGame: React.FC = () => {
                     className="text-center mb-6"
                 >
                     <Link
-                        to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"}
+                        to={location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme"}
                         className="inline-flex items-center gap-2 text-amber-400 font-bold hover:text-amber-300 transition-colors mb-4 uppercase text-xs tracking-widest"
                     >
                         <ChevronLeft size={16} />
@@ -478,7 +478,7 @@ const ReactionTimeGame: React.FC = () => {
                                         Tekrar Oyna
                                     </button>
                                     <Link
-                                        to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"}
+                                        to={location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme"}
                                         className="px-6 py-3 bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-600 transition-all"
                                     >
                                         Geri Dön

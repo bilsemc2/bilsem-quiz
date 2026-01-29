@@ -275,7 +275,7 @@ const CosmicMemoryGame: React.FC = () => {
             <div className="container mx-auto max-w-6xl relative z-10 flex flex-col gap-10">
                 {/* HUD */}
                 <div className="flex items-center justify-between bg-white/5 backdrop-blur-md p-8 rounded-[3rem] shadow-2xl border-2 border-white/10 text-white">
-                    <Link to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/tablet-degerlendirme"} className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-black transition-all">
+                    <Link to={location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/tablet-degerlendirme"} className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-black transition-all">
                         <ChevronLeft size={28} /> {location.state?.arcadeMode ? "ARCADE" : "MERKEZ"}
                     </Link>
                     <div className="flex items-center gap-6">
@@ -414,7 +414,7 @@ const CosmicMemoryGame: React.FC = () => {
                                 </p>
                                 <div className="flex flex-col gap-6">
                                     <button onClick={restartGame} className="w-full py-8 bg-indigo-600 text-white font-black rounded-4xl flex items-center justify-center gap-6 shadow-[0_12px_0_#4338ca] border-b-4 border-indigo-800 hover:scale-105 transition-all text-3xl active:translate-y-3 active:shadow-none uppercase">YENİDEN DENE</button>
-                                    <Link to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/tablet-degerlendirme"} className="text-indigo-400 font-black text-2xl hover:text-indigo-300 transition-colors block mt-8 underline decoration-4 underline-offset-8">{location.state?.arcadeMode ? "ARCADE'E DÖN" : "MERKEZE DÖN"}</Link>
+                                    <Link to={location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/tablet-degerlendirme"} className="text-indigo-400 font-black text-2xl hover:text-indigo-300 transition-colors block mt-8 underline decoration-4 underline-offset-8">{location.state?.arcadeMode ? "ARCADE'E DÖN" : "MERKEZE DÖN"}</Link>
                                 </div>
                             </motion.div>
                         </motion.div>

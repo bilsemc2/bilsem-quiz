@@ -229,7 +229,7 @@ const RenkliBalon: React.FC = () => {
             {/* HUD */}
             <div className="absolute top-20 left-4 right-4 z-30 flex justify-between items-center pointer-events-none">
                 <div className="flex gap-4 pointer-events-auto">
-                    <Link to="/arcade" className="bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border-2 border-blue-200 hover:bg-blue-50 transition-colors">
+                    <Link to="/bilsem-zeka" className="bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border-2 border-blue-200 hover:bg-blue-50 transition-colors">
                         <ChevronLeft className="w-5 h-5 text-blue-500" />
                         <span className="font-bold text-gray-700">Arcade</span>
                     </Link>
@@ -400,7 +400,7 @@ const RenkliBalon: React.FC = () => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <Link to="/arcade" className="bg-slate-600 hover:bg-slate-700 text-white text-xl py-4 rounded-2xl shadow-lg font-bold flex items-center justify-center gap-2">
+                                <Link to="/bilsem-zeka" className="bg-slate-600 hover:bg-slate-700 text-white text-xl py-4 rounded-2xl shadow-lg font-bold flex items-center justify-center gap-2">
                                     <ChevronLeft className="w-6 h-6" /> Arcade
                                 </Link>
                                 <button

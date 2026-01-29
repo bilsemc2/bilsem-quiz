@@ -14,7 +14,7 @@ interface GameHUDProps {
 const GameHUD: React.FC<GameHUDProps> = ({ energy, timeLeft, level, score, lastCollectionTime }) => {
     return (
         <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl p-6 rounded-[2.5rem] border border-white/10 mb-8 shadow-2xl">
-            <Link to="/arcade" className="flex items-center gap-2 text-indigo-400 font-bold hover:text-white transition-colors">
+            <Link to="/bilsem-zeka" className="flex items-center gap-2 text-indigo-400 font-bold hover:text-white transition-colors">
                 <ChevronLeft size={20} /> ARCADE
             </Link>
 

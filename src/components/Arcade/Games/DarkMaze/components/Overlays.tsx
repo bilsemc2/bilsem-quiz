@@ -70,7 +70,7 @@ export const GameOverOverlay: React.FC<GameOverOverlayProps> = ({ score, level, 
                 >
                     YENİDEN DENE
                 </button>
-                <Link to="/arcade" className="text-slate-400 font-bold hover:text-white">DÖNÜŞ</Link>
+                <Link to="/bilsem-zeka" className="text-slate-400 font-bold hover:text-white">DÖNÜŞ</Link>
             </div>
         </div>
     </div>

@@ -34,7 +34,7 @@ const QUICK_ACCESS_BUTTONS = [
         description: 'Jeton at, oyununa başla!',
         icon: Gamepad2,
         color: 'from-purple-500 to-indigo-500',
-        link: '/arcade'
+        link: '/bilsem-zeka'
     },
     {
         id: 'quizizz',

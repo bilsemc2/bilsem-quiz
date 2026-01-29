@@ -12,7 +12,7 @@ import { ArcadeMachine } from '../../components/Arcade/ArcadeMachine';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import XPWarning from '../../components/XPWarning';
-import { ARCADE_GAMES } from '../../data/arcade/games';
+import { ARCADE_GAMES } from '../../data/bilsem-zeka/games';
 
 
 const ArcadeHubPage: React.FC = () => {
