@@ -1,5 +1,5 @@
 import React from 'react';
-import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle, Zap } from 'lucide-react';
+import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle, Zap, Box } from 'lucide-react';
 
 export interface ArcadeGame {
     id: string;
@@ -101,5 +101,14 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         color: "from-cyan-500 to-purple-600",
         icon: <Zap size={48} className="text-white" />,
         link: "/bilsem-zeka/chromabreak"
+    },
+    {
+        id: 'kup-puzzle',
+        title: "Küp Puzzle",
+        description: "3D küpten hedef parçaları çıkar! Uzamsal zeka ve dikkat testi.",
+        cost: 40,
+        color: "from-blue-500 to-indigo-600",
+        icon: <Box size={48} className="text-white" />,
+        link: "/bilsem-zeka/kup-puzzle"
     }
 ];
