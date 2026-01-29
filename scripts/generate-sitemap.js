@@ -34,7 +34,7 @@ const staticPages = [
     '/atolyeler/bireysel-degerlendirme',
     '/atolyeler/hizli-okuma',
     '/oyunlar',
-    '/zeka-arcade',
+    '/bilsem-zeka',
     '/deyimler',
 ];
 
