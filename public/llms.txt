@@ -1,0 +1,99 @@
+# BİLSEMC2 - Üstün Yetenekli Çocuklar İçin Dijital Eğitim Platformu
+
+> BİLSEMC2, Türkiye'deki Bilim ve Sanat Merkezleri (BİLSEM) sınavlarına hazırlık ve üstün yetenekli çocukların gelişimi için kapsamlı bir dijital eğitim platformudur.
+
+## Platform Hakkında
+
+BİLSEMC2, 2026 yılında kurulan ve üstün yetenekli çocukların potansiyellerini keşfetmelerine yardımcı olan Türkiye'nin lider eğitim teknolojisi platformudur.
+
+### Temel Özellikler
+
+- **BİLSEM Sınav Hazırlığı**: TÜZÖ (TÜBİTAK Üstün Zekalılar ve Yetenekliler Ölçeği) formatına uygun alıştırmalar
+- **Bireysel Değerlendirme Simülatörleri**: 2. aşama sınavına hazırlık için 30+ kognitif simülatör
+- **Müzik Yetenek Atölyesi**: AI destekli ritim, melodi ve armoni analizi
+- **Resim Yetenek Atölyesi**: AI destekli çizim analizi ve değerlendirme
+- **BİLSEM Zeka Oyunları**: 14+ premium beyin eğitimi oyunu
+- **Hızlı Okuma Programı**: Okuma hızı ve anlama geliştirme
+
+### Hedef Kitle
+
+- 6-14 yaş arası üstün yetenekli çocuklar
+- BİLSEM sınavlarına hazırlanan öğrenciler
+- Çocuklarının potansiyelini keşfetmek isteyen veliler
+- Öğretmenler ve eğitimciler
+
+## İçerik Kategorileri
+
+### Blog Yazıları
+Platform, üstün yeteneklilik, zeka gelişimi, eğitim stratejileri ve BİLSEM sınavları hakkında kapsamlı blog içerikleri sunmaktadır.
+
+Öne çıkan konular:
+- BİLSEM sınav hazırlık stratejileri
+- Üstün yetenekli çocukların özellikleri
+- Zeka geliştirme aktiviteleri
+- Veli rehberleri
+- Bilim ve teknoloji haberleri
+
+### Eğitim Atölyeleri
+
+1. **Müzik Atölyesi** (`/atolyeler/muzik`)
+   - Ritim algılama testleri
+   - Melodi hafızası egzersizleri
+   - Armoni analizi
+
+2. **Resim Atölyesi** (`/atolyeler/resim`)
+   - AI destekli çizim değerlendirme
+   - Renk ve kompozisyon analizi
+   - Yaratıcılık ölçümü
+
+3. **Bireysel Değerlendirme** (`/atolyeler/bireysel-degerlendirme`)
+   - Sözel yetenek simülatörleri
+   - Sayısal yetenek simülatörleri
+   - Uzamsal zeka testleri
+   - Hafıza ve dikkat oyunları
+
+### Zeka Oyunları (`/bilsem-zeka`)
+
+Premium beyin eğitimi oyunları:
+- Cam Köprü (spatial reasoning)
+- ChromaBreak (renk-mantık)
+- Karanlık Labirent (hafıza)
+- Kart Dedektifi (örüntü tanıma)
+- Küp Puzzle (3D düşünme)
+- Ve 9+ oyun daha
+
+## Teknik Bilgiler
+
+- **Web Sitesi**: https://bilsemc2.com
+- **Sitemap**: https://bilsemc2.com/sitemap.xml
+- **İletişim**: https://bilsemc2.com/contact
+
+## Sık Sorulan Sorular
+
+Detaylı SSS sayfası: https://bilsemc2.com/faq
+
+---
+
+## Önemli Sayfalar
+
+- Ana Sayfa: https://bilsemc2.com
+- Blog: https://bilsemc2.com/blog
+- BİLSEM Rehberi: https://bilsemc2.com/bilsem-rehberi
+- Hizmetler: https://bilsemc2.com/services
+- Planlar: https://bilsemc2.com/plans
+- Hakkımızda: https://bilsemc2.com/about
+- SSS: https://bilsemc2.com/faq
+- İletişim: https://bilsemc2.com/contact
+
+## Atölyeler
+
+- Müzik Atölyesi: https://bilsemc2.com/atolyeler/muzik
+- Resim Atölyesi: https://bilsemc2.com/atolyeler/resim
+- Bireysel Değerlendirme: https://bilsemc2.com/atolyeler/bireysel-degerlendirme
+- Hızlı Okuma: https://bilsemc2.com/atolyeler/hizli-okuma
+
+## Oyunlar
+
+- BİLSEM Zeka: https://bilsemc2.com/bilsem-zeka
+- Oyun Merkezi: https://bilsemc2.com/oyunlar
+- Deyimler Oyunu: https://bilsemc2.com/deyimler
