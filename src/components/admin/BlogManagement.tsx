@@ -16,15 +16,21 @@ import AIBlogWriterModal from './AIBlogWriterModal';
 const createSlug = (title: string) => {
   if (!title) return '';
 
-  const map: { [key: string]: string } = {
+  // Türkçe karakterleri ÖNCE dönüştür (toLowerCase'dan önce!)
+  const turkishMap: { [key: string]: string } = {
     'ç': 'c', 'Ç': 'c', 'ğ': 'g', 'Ğ': 'g', 'ı': 'i', 'İ': 'i',
     'ö': 'o', 'Ö': 'o', 'ş': 's', 'Ş': 's', 'ü': 'u', 'Ü': 'u'
   };
 
-  let result = title.toLowerCase();
-  Object.keys(map).forEach(key => {
-    result = result.split(key).join(map[key]);
+  let result = title;
+
+  // Önce Türkçe karakterleri ASCII'ye çevir
+  Object.keys(turkishMap).forEach(key => {
+    result = result.split(key).join(turkishMap[key]);
   });
+
+  // Sonra küçük harfe çevir
+  result = result.toLowerCase();
 
   // Harf ve rakam dışındaki karakterleri temizle, boşlukları tire yap
   result = result
@@ -33,7 +39,7 @@ const createSlug = (title: string) => {
     .replace(/\s+/g, '-')        // Boşlukları tire yap
     .replace(/-+/g, '-');        // Birden fazla tireyi teke indir
 
-  console.log('New Manual Slugified:', result);
+  console.log('Slugified:', result);
   return result;
 };
 
