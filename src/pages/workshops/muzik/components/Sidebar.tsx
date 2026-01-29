@@ -1,103 +1,70 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useProgress, TEST_ORDER } from '../contexts/ProgressContext';
-import { useModal } from '../contexts/ModalContext';
-import '../muzik.css';
+import { NavLink, useLocation } from 'react-router-dom';
 
-const ResetButton: React.FC = () => {
-    const { resetProgress } = useProgress();
-    const { confirm } = useModal();
-    const navigate = useNavigate();
+const menuItems = [
+  { path: 'single-note', label: 'Tek Nota', icon: '🎵' },
+  { path: 'double-note', label: 'İki Nota', icon: '🎶' },
+  { path: 'triple-note', label: 'Üç Nota', icon: '🎼' },
+  { path: 'rhythm', label: 'Ritim Tekrarı', icon: '🥁' },
+  { path: 'melody', label: 'Melodi Tekrarı', icon: '🎹' },
+  { path: 'melody-difference', label: 'Melodi Farkı', icon: '🎸' },
+  { path: 'rhythm-difference', label: 'Ritim Farkı', icon: '🎺' },
+  { path: 'song-performance', label: 'Şarkı İcrası', icon: '🎤' },
+];
 
-    return (
-        <button
-            className="muzik-reset-button"
-            onClick={async () => {
-                const ok = await confirm({
-                    title: 'İlerlemeyi Sıfırla',
-                    message: 'Tüm ilerlemeniz ve sonuçlarınız silinecektir. Emin misiniz?',
-                    confirmText: 'Evet, Sıfırla',
-                    cancelText: 'Vazgeç'
-                });
+export const Sidebar: React.FC = () => {
+  const location = useLocation();
 
-                if (ok) {
-                    resetProgress();
-                    navigate('/atolyeler/muzik');
-                }
-            }}
-        >
-            🔄 İlerlemeyi Sıfırla
-        </button>
-    );
-};
+  // Aktif item'ı bul (progress bar için)
+  const activeIndex = menuItems.findIndex(item =>
+    location.pathname.includes(item.path)
+  );
+  const progress = activeIndex >= 0 ? ((activeIndex + 1) / menuItems.length) * 100 : 0;
 
-const Sidebar: React.FC = () => {
-    const { isTestCompleted, isTestLocked, getCompletedCount, getTotalTestCount } = useProgress();
+  return (
+    <aside className="w-64 bg-white border-r h-[calc(100vh-65px)] sticky top-[65px] p-4 hidden md:block overflow-y-auto">
+      <nav className="space-y-1">
+        {menuItems.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) =>
+              `w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${isActive
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-indigo-600'
+              }`
+            }
+          >
+            <span className="text-xl">{item.icon}</span>
+            <span>{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
 
-    const completedCount = getCompletedCount();
-    const totalCount = getTotalTestCount();
-    const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-
-    return (
-        <div className="muzik-sidebar">
-            <div className="muzik-sidebar-header">
-                <div className="muzik-sidebar-title-row">
-                    <h2 className="muzik-sidebar-title">Müzik Atölyesi</h2>
-                    <span className="muzik-progress-count">{completedCount}/{totalCount}</span>
-                </div>
-                <div className="muzik-sidebar-progress-container">
-                    <div
-                        className="muzik-sidebar-progress-fill"
-                        style={{ width: `${progressPercentage}%` }}
-                    />
-                </div>
-            </div>
-
-            <nav className="muzik-sidebar-nav">
-                {(() => {
-                    let testCounter = 0;
-                    return TEST_ORDER.map((test) => {
-                        const isCompleted = isTestCompleted(test.id);
-                        const isLocked = isTestLocked(test.id);
-                        const isTest = !test.alwaysUnlocked;
-
-                        if (isTest) testCounter++;
-                        const displayIndex = isTest ? testCounter : null;
-
-                        return (
-                            <NavLink
-                                key={test.id}
-                                to={test.path}
-                                className={({ isActive }) => `muzik-sidebar-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}`}
-                                onClick={(e) => {
-                                    if (isLocked) {
-                                        e.preventDefault();
-                                    }
-                                }}
-                            >
-                                <div className="muzik-sidebar-item-icon">
-                                    {isLocked ? '🔒' : test.icon}
-                                </div>
-                                <div className="muzik-sidebar-item-content">
-                                    <div className="muzik-sidebar-item-name">{test.name}</div>
-                                    {isCompleted && !test.alwaysUnlocked && (
-                                        <div className="muzik-sidebar-item-badge">✓ Tamamlandı</div>
-                                    )}
-                                </div>
-                                {displayIndex && (
-                                    <div className="text-sm font-black opacity-20 font-mono">{displayIndex}</div>
-                                )}
-                            </NavLink>
-                        );
-                    });
-                })()}
-            </nav>
-
-            <div className="muzik-sidebar-footer">
-                <ResetButton />
-            </div>
+      <div className="mt-8 p-4 bg-indigo-50 rounded-2xl">
+        <h4 className="text-xs font-black text-indigo-700 uppercase tracking-widest mb-2">
+          İlerleme
+        </h4>
+        <div className="w-full bg-indigo-100 h-2 rounded-full overflow-hidden">
+          <div
+            className="bg-indigo-600 h-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
         </div>
-    );
-};
+        <p className="text-xs text-indigo-600 mt-2 font-medium">
+          {activeIndex >= 0 ? `${activeIndex + 1}/${menuItems.length} Test` : '0 Test'}
+        </p>
+      </div>
 
-export default Sidebar;
+      {/* Ana Sayfaya Dön */}
+      <NavLink
+        to="/atolyeler/muzik"
+        end
+        className="mt-4 flex items-center space-x-2 px-4 py-2 text-sm text-slate-400 hover:text-indigo-600 transition-colors"
+      >
+        <span>←</span>
+        <span>Ana Sayfaya Dön</span>
+      </NavLink>
+    </aside>
+  );
+};

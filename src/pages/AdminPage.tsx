@@ -26,7 +26,9 @@ import {
   People as PeopleIcon,
   Book as BookIcon,
   ConfirmationNumber as TicketIcon,
-  Psychology as BrainIcon
+  Psychology as BrainIcon,
+  Inventory as PackageIcon,
+  CardMembership as SubscriptionIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -41,6 +43,8 @@ import SendMessage from '../components/admin/SendMessage';
 import TalentAnalytics from '../components/admin/TalentAnalytics';
 import StudentStatistics from '../components/admin/StudentStatistics';
 import StoryGeneratorPage from './Story/StoryGeneratorPage';
+import PackageManagement from '../components/admin/PackageManagement';
+import SubscriptionManagement from '../components/admin/SubscriptionManagement';
 import { toast } from 'react-hot-toast';
 
 interface Notification {
@@ -132,6 +136,20 @@ const AdminPage: React.FC = () => {
       icon: <PeopleIcon />,
       component: <StudentStatistics />,
       path: '/admin/student-statistics',
+    },
+    {
+      id: 'packages',
+      title: 'Paketler',
+      icon: <PackageIcon />,
+      component: <PackageManagement />,
+      path: '/admin/packages',
+    },
+    {
+      id: 'subscriptions',
+      title: 'Abonelikler',
+      icon: <SubscriptionIcon />,
+      component: <SubscriptionManagement />,
+      path: '/admin/subscriptions',
     },
   ]);
 

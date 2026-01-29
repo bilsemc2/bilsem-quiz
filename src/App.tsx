@@ -176,7 +176,7 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/atolyeler/genel-yetenek" element={<RequireAuth><GenelYetenekPage /></RequireAuth>} />
             <Route path="/atolyeler/resim" element={<RequireAuth><ResimPage /></RequireAuth>} />
 
-            <Route path="/atolyeler/muzik/*" element={<RequireAuth requiredTalent="Müzik"><MuzikWorkshopRoutes /></RequireAuth>} />
+            <Route path="/atolyeler/muzik/*" element={<RequireAuth><MuzikWorkshopRoutes /></RequireAuth>} />
             <Route path="/atolyeler/tablet-degerlendirme" element={<RequireAuth><TabletAssessmentPage /></RequireAuth>} />
             <Route path="/atolyeler/bireysel-degerlendirme" element={<RequireAuth><IndividualAssessmentPage /></RequireAuth>} />
 

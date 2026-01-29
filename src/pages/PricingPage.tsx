@@ -1,22 +1,131 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Crown, Sparkles, Check, MessageCircle, Zap, Shield, Clock, Gift, CreditCard, QrCode } from 'lucide-react';
+import { ChevronLeft, Shield, Clock, Check, FileText, ExternalLink } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import type { Package } from '../types/package';
+import PackageCard from '../components/PackageCard';
 
 export default function PricingPage() {
-  const whatsappUrl = 'https://api.whatsapp.com/send/?phone=905416150721&text=Merhaba, Profesyonel Plan Paket hakkında bilgi almak istiyorum.';
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [xpInput, setXpInput] = useState(10000);
 
-  const features = [
-    { text: 'Sınırsız Quizizz Kodları', icon: Zap },
-    { text: 'VIP Özel İçerikler', icon: Crown },
-    { text: 'Öncelikli Destek', icon: Shield },
-    { text: 'Tüm Oyunlara Erişim', icon: Sparkles },
-    { text: 'Dönemlik Güncelleme', icon: Clock },
-    { text: 'Bonus XP ve Ödüller', icon: Gift },
-  ];
+  useEffect(() => {
+    fetchPackages();
+  }, []);
+
+  const fetchPackages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+
+      // Parse features from JSONB
+      const parsed = (data || []).map(pkg => ({
+        ...pkg,
+        features: typeof pkg.features === 'string' ? JSON.parse(pkg.features) : pkg.features || [],
+        includes: pkg.includes || [],
+      }));
+
+      setPackages(parsed);
+    } catch (error) {
+      console.error('Paketler yüklenirken hata:', error);
+      // Fallback to hardcoded packages if database not ready
+      setPackages([
+        {
+          id: '1',
+          slug: 'pro',
+          name: 'Bireysel Değerlendirme - PRO',
+          description: 'Genel Yetenek, Resim ve Müzik modüllerini kapsar. Tam kapsamlı hazırlık paketi.',
+          price: 9999,
+          price_renewal: null,
+          type: 'bundle',
+          initial_credits: null,
+          xp_required: null,
+          features: ['Genel Yetenek Simülatörleri', 'Resim Analizi (Sınırsız)', 'Müzik Eğitimi (Sınav Tarihine Kadar)', 'VIP Destek', 'Tüm Beyin Eğitimi Oyunları'],
+          includes: ['genel_yetenek', 'resim', 'muzik'],
+          payment_url: 'https://www.paytr.com/link/fHufWAE',
+          whatsapp_url: 'https://api.whatsapp.com/send/?phone=905416150721&text=Merhaba, Bireysel Değerlendirme PRO paketi hakkında bilgi almak istiyorum.',
+          qr_code_url: '/images/qr_paytr.png',
+          is_recommended: true,
+          is_active: true,
+          sort_order: 1,
+        },
+        {
+          id: '2',
+          slug: 'standard',
+          name: 'Bireysel Değerlendirme - Standart',
+          description: 'XP miktarınıza göre fiyatlandırma. En az 10.000 XP ile başlayın.',
+          price: 1000,
+          price_renewal: null,
+          type: 'xp_based',
+          initial_credits: null,
+          xp_required: 10000,
+          features: ['Genel Yetenek Simülatörleri', 'Beyin Eğitimi Oyunları', 'XP Bitene Kadar Erişim'],
+          includes: ['genel_yetenek'],
+          payment_url: null,
+          whatsapp_url: 'https://api.whatsapp.com/send/?phone=905416150721&text=Merhaba, Bireysel Değerlendirme Standart paketi hakkında bilgi almak istiyorum.',
+          qr_code_url: null,
+          is_recommended: false,
+          is_active: true,
+          sort_order: 2,
+        },
+        {
+          id: '3',
+          slug: 'resim',
+          name: 'Bireysel Değerlendirme - Resim',
+          description: 'Resim analizi hakkı. 30 analiz ile başlayın, daha sonra ek hak satın alın.',
+          price: 3000,
+          price_renewal: 1500,
+          type: 'credit_based',
+          initial_credits: 30,
+          xp_required: null,
+          features: ['30 Resim Analizi Hakkı', 'Detaylı Geri Bildirim', 'İlerleme Takibi'],
+          includes: ['resim'],
+          payment_url: null,
+          whatsapp_url: 'https://api.whatsapp.com/send/?phone=905416150721&text=Merhaba, Bireysel Değerlendirme Resim paketi hakkında bilgi almak istiyorum.',
+          qr_code_url: null,
+          is_recommended: false,
+          is_active: true,
+          sort_order: 3,
+        },
+        {
+          id: '4',
+          slug: 'muzik',
+          name: 'Bireysel Değerlendirme - Müzik',
+          description: 'Müzik modülüne sınav tarihine kadar tam erişim.',
+          price: 3000,
+          price_renewal: null,
+          type: 'time_based',
+          initial_credits: null,
+          xp_required: null,
+          features: ['Ritim Eğitimi', 'Nota Tanıma', 'Melodi Eşleştirme', 'Sınav Tarihine Kadar Erişim'],
+          includes: ['muzik'],
+          payment_url: null,
+          whatsapp_url: 'https://api.whatsapp.com/send/?phone=905416150721&text=Merhaba, Bireysel Değerlendirme Müzik paketi hakkında bilgi almak istiyorum.',
+          qr_code_url: null,
+          is_recommended: false,
+          is_active: true,
+          sort_order: 4,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContact = (pkg: Package) => {
+    console.log('Contact for package:', pkg.name);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 pt-24 pb-12 px-6">
-      <div className="container mx-auto max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 pt-24 pb-12 px-4 sm:px-6">
+      <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -30,135 +139,120 @@ export default function PricingPage() {
             <ChevronLeft size={16} />
             Ana Sayfa
           </Link>
-          <h1 className="text-4xl lg:text-5xl font-black text-white mb-4">
-            👑 <span className="text-purple-400">VIP</span> Üyelik
+          <h1 className="text-3xl lg:text-5xl font-black text-white mb-4">
+            🎯 <span className="text-purple-400">Bireysel Değerlendirme</span> Paketleri
           </h1>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Sınav hazırlığında en iyi paketimizle planlı ve verimli ilerleyin.
+          <p className="text-slate-400 text-lg max-w-3xl mx-auto">
+            2. Aşama (Bireysel Değerlendirme) sınavına hazırlık için size uygun paketi seçin.
           </p>
         </motion.div>
 
-        {/* Main Pricing Card */}
+        {/* Info Section */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="relative max-w-lg mx-auto"
+          className="bg-slate-800/50 border border-white/10 rounded-2xl p-6 mb-12 max-w-4xl mx-auto"
         >
-          {/* Popular Badge */}
-          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: 'spring' }}
-              className="bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 text-sm font-black px-6 py-2 rounded-full shadow-lg shadow-amber-500/30 flex items-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              En Popüler
-            </motion.div>
-          </div>
-
-          {/* Card */}
-          <div className="bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700 rounded-3xl p-8 lg:p-10 border border-purple-500/30 shadow-2xl shadow-purple-500/20 overflow-hidden relative">
-            {/* Glow Effect */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent pointer-events-none" />
-
-            {/* Crown Icon */}
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: 0.2, type: 'spring' }}
-              className="w-20 h-20 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl shadow-amber-500/40"
-            >
-              <Crown className="w-10 h-10 text-slate-900" />
-            </motion.div>
-
-            <h2 className="text-2xl lg:text-3xl font-black text-white text-center mb-2">
-              Profesyonel Plan Paket
-            </h2>
-            <p className="text-purple-200 text-center mb-6">
-              Tüm özelliklere sınırsız erişim
-            </p>
-
-            {/* Price */}
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="text-5xl lg:text-6xl font-black text-white">₺9999</span>
-                <span className="text-purple-200 text-lg">/Dönemlik</span>
-              </div>
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-purple-400" />
+            Program Hakkında
+          </h2>
+          <p className="text-slate-300 text-sm leading-relaxed mb-4">
+            Çocuklarımızın potansiyellerini keşfetmek ve onları geleceğe en donanımlı şekilde hazırlamak
+            amacıyla hazırladığımız program, MEB BİLSEM tanılama süreçlerine paralel olarak öğrencilerin
+            bilişsel yeteneklerini en üst seviyeye çıkarmayı hedeflemektedir.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <div className="text-center p-3 bg-white/5 rounded-xl">
+              <div className="text-2xl mb-1">🧠</div>
+              <div className="text-white text-sm font-medium">Sözel & Sayısal</div>
+              <div className="text-slate-400 text-xs">Akıl Yürütme</div>
             </div>
-
-            {/* Features */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-              {features.map((feature, index) => (
-                <motion.div
-                  key={feature.text}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + index * 0.05 }}
-                  className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-3"
-                >
-                  <feature.icon className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                  <span className="text-white text-sm">{feature.text}</span>
-                </motion.div>
-              ))}
+            <div className="text-center p-3 bg-white/5 rounded-xl">
+              <div className="text-2xl mb-1">👁️</div>
+              <div className="text-white text-sm font-medium">Görsel-Uzamsal</div>
+              <div className="text-slate-400 text-xs">İşlemleme</div>
             </div>
-
-            {/* CTA Button - WhatsApp */}
-            <motion.a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="block w-full py-4 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 font-black text-lg rounded-xl shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all text-center"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <MessageCircle className="w-5 h-5" />
-                Plan Hakkında Bilgi Al
-              </div>
-            </motion.a>
-
-            {/* Divider */}
-            <div className="flex items-center gap-4 my-6">
-              <div className="flex-1 h-px bg-white/20" />
-              <span className="text-purple-200 text-sm font-medium">veya</span>
-              <div className="flex-1 h-px bg-white/20" />
+            <div className="text-center p-3 bg-white/5 rounded-xl">
+              <div className="text-2xl mb-1">🎯</div>
+              <div className="text-white text-sm font-medium">Dikkat & Bellek</div>
+              <div className="text-slate-400 text-xs">Yönetimi</div>
             </div>
-
-            {/* PayTR Payment Button */}
-            <motion.a
-              href="https://www.paytr.com/link/fHufWAE"
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="block w-full py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black text-lg rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all text-center mb-6"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <CreditCard className="w-5 h-5" />
-                💳 Hemen Öde
-              </div>
-            </motion.a>
-
-            {/* QR Code Section */}
-            <div className="bg-white/10 rounded-2xl p-6 text-center">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <QrCode className="w-5 h-5 text-purple-200" />
-                <span className="text-purple-200 text-sm font-medium">QR Kod ile Öde</span>
-              </div>
-              <div className="bg-white p-4 rounded-xl inline-block mx-auto">
-                <img
-                  src="/images/qr_paytr.png"
-                  alt="PayTR Ödeme QR Kodu"
-                  className="w-32 h-32"
-                />
-              </div>
-              <p className="text-purple-200/70 text-xs mt-3">
-                Telefonunuzla tarayarak ödeme yapabilirsiniz
-              </p>
+            <div className="text-center p-3 bg-white/5 rounded-xl">
+              <div className="text-2xl mb-1">💡</div>
+              <div className="text-white text-sm font-medium">Problem Çözme</div>
+              <div className="text-slate-400 text-xs">Akışkan Zeka</div>
             </div>
           </div>
+
+          {/* Document Links */}
+          <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t border-white/10">
+            <a
+              href="https://drive.google.com/file/d/1trI97xFXCEYBxAkuohvey7nAAYk3PgFP/view?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 rounded-lg text-sm transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              2. Aşama Hakkında
+            </a>
+            <a
+              href="https://drive.google.com/file/d/1wTWu1OkZokSDbWesKdmoLjbjBOIwLK_m/view?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 rounded-lg text-sm transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Ders İçeriği & Planlama
+            </a>
+          </div>
+        </motion.div>
+
+        {/* Packages Grid */}
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            {packages.map((pkg, index) => (
+              <PackageCard
+                key={pkg.id}
+                pkg={pkg}
+                index={index}
+                onContact={handleContact}
+                xpInput={pkg.type === 'xp_based' ? xpInput : undefined}
+                onXpChange={pkg.type === 'xp_based' ? setXpInput : undefined}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Important Notes */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-amber-900/20 border border-amber-500/30 rounded-2xl p-6 max-w-4xl mx-auto mb-12"
+        >
+          <h3 className="text-lg font-bold text-amber-400 mb-4">
+            ⚠️ Önemli Hizmet Koşulları
+          </h3>
+          <ul className="space-y-3 text-slate-300 text-sm">
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400">•</span>
+              <span><strong>Hizmet Süresi:</strong> Eğitim desteğimiz, öğrenciniz 2. aşama sınavına girene kadar devam eder.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400">•</span>
+              <span><strong>İade Politikası:</strong> Programın temel amacı öğrenciyi sürece hazırlamaktır. 1. aşama sınavını kazanamaması durumunda ücret iadesi yapılmamaktadır.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400">•</span>
+              <span><strong>2. Aşama Tarihi:</strong> 06 Nisan 2026'da başlayacak olan bireysel değerlendirme sürecine hazırlık.</span>
+            </li>
+          </ul>
         </motion.div>
 
         {/* FAQ Section */}
@@ -166,7 +260,7 @@ export default function PricingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-16 text-center"
+          className="text-center"
         >
           <div className="bg-slate-800/50 border border-white/5 rounded-2xl p-8 max-w-lg mx-auto">
             <h3 className="text-xl font-bold text-white mb-4">
