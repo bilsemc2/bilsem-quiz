@@ -63,13 +63,17 @@ const UserManagement = () => {
     name: '', email: '', points: 0, experience: 0, grade: 0, referred_by: '', yetenek_alani: [] as string[], resim_analiz_hakki: 3,
   });
   const [filters, setFilters] = useState({
-    name: '', email: '', grade: '', showOnlyVip: false,
+    name: '', email: '', grade: '', showOnlyVip: false, yetenek_alani: '',
   });
   // Password reset state
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -99,6 +103,12 @@ const UserManagement = () => {
     if (filters.email) result = result.filter(u => u.email.toLowerCase().includes(filters.email.toLowerCase()));
     if (filters.grade) result = result.filter(u => u.grade === parseInt(filters.grade));
     if (filters.showOnlyVip) result = result.filter(u => u.is_vip);
+    if (filters.yetenek_alani) {
+      result = result.filter(u => {
+        const yetenekler = parseYetenekAlani(u.yetenek_alani);
+        return yetenekler.includes(filters.yetenek_alani);
+      });
+    }
     setFilteredUsers(result);
   }, [users, filters]);
 
@@ -169,14 +179,24 @@ const UserManagement = () => {
     }
   };
 
-  const handleDelete = async (userId: string) => {
-    if (!window.confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
+  const handleOpenDeleteDialog = (user: User) => {
+    setDeletingUser(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingUser) return;
     try {
-      await supabase.from('profiles').delete().eq('id', userId);
-      setUsers(users.filter(u => u.id !== userId));
+      setDeleting(true);
+      await supabase.from('profiles').delete().eq('id', deletingUser.id);
+      setUsers(users.filter(u => u.id !== deletingUser.id));
       toast.success('Kullanıcı silindi');
+      setDeleteDialogOpen(false);
+      setDeletingUser(null);
     } catch {
       toast.error('Silme hatası');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -282,6 +302,13 @@ const UserManagement = () => {
           <option value="false">Tüm VIP</option>
           <option value="true">Sadece VIP</option>
         </select>
+        <select value={filters.yetenek_alani} onChange={(e) => setFilters(p => ({ ...p, yetenek_alani: e.target.value }))}
+          className="px-3 py-2 border border-indigo-200 rounded-lg text-sm focus:border-indigo-500 outline-none bg-indigo-50">
+          <option value="">Tüm Yetenek Alanları</option>
+          {YETENEK_ALANLARI.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
         <div className="flex-1" />
         <button
           onClick={handleResetAllXP}
@@ -320,7 +347,7 @@ const UserManagement = () => {
                     <div className="flex justify-center gap-1">
                       <button onClick={() => handleEdit(user)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Düzenle"><Edit className="w-4 h-4" /></button>
                       <button onClick={() => handleOpenPasswordReset(user)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Şifre Sıfırla"><Key className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(user.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="Sil"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleOpenDeleteDialog(user)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="Sil"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </motion.tr>
@@ -394,7 +421,7 @@ const UserManagement = () => {
                 <label className="block text-sm font-bold text-slate-900 mb-2">Yetenek Alanları</label>
                 <div className="flex flex-wrap gap-3">
                   {YETENEK_ALANLARI.map(opt => (
-                    <label key={opt.value} className={`flex items - center gap - 2 px - 3 py - 2 rounded - lg cursor - pointer transition border ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-50 border-indigo-300' : 'border-slate-200 hover:bg-slate-50'} `}>
+                    <label key={opt.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition border ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-50 border-indigo-300' : 'border-slate-200 hover:bg-slate-50'}`}>
                       <input
                         type="checkbox"
                         checked={editFormData.yetenek_alani.includes(opt.value)}
@@ -407,7 +434,7 @@ const UserManagement = () => {
                         }}
                         className="sr-only"
                       />
-                      <div className={`w - 4 h - 4 rounded border flex items - center justify - center ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300'} `}>
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${editFormData.yetenek_alani.includes(opt.value) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300'}`}>
                         {editFormData.yetenek_alani.includes(opt.value) && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -476,6 +503,47 @@ const UserManagement = () => {
               >
                 {resettingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
                 Şifreyi Güncelle
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
+          <Dialog.Content aria-describedby={undefined} className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md z-50">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-xl font-bold text-red-600 flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Kullanıcıyı Sil
+              </Dialog.Title>
+              <Dialog.Close asChild><button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-600" /></button></Dialog.Close>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-slate-800 mb-2">
+                  <strong>{deletingUser?.name || deletingUser?.email}</strong> kullanıcısını silmek istediğinizden emin misiniz?
+                </p>
+                <p className="text-sm text-red-600 font-medium">
+                  ⚠️ Bu işlem geri alınamaz!
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Dialog.Close asChild>
+                <button className="px-5 py-2 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors">
+                  Vazgeç
+                </button>
+              </Dialog.Close>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-6 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 shadow-md shadow-red-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                Evet, Sil
               </button>
             </div>
           </Dialog.Content>

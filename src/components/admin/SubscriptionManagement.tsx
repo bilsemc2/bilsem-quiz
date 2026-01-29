@@ -66,13 +66,12 @@ export default function SubscriptionManagement() {
 
     const fetchData = async () => {
         try {
-            // Fetch subscriptions with user and package info
+            // Fetch subscriptions with package info only (user fetched separately)
             const { data: subs, error: subsError } = await supabase
                 .from('user_subscriptions')
                 .select(`
           *,
-          package:packages(*),
-          user:profiles!user_subscriptions_user_id_fkey(id, name, email)
+          package:packages(*)
         `)
                 .order('created_at', { ascending: false });
 
@@ -95,7 +94,14 @@ export default function SubscriptionManagement() {
 
             if (usrsError) throw usrsError;
 
-            setSubscriptions(subs || []);
+            // Merge user info into subscriptions
+            const userMap = new Map(usrs?.map(u => [u.id, u]) || []);
+            const subsWithUsers = (subs || []).map(sub => ({
+                ...sub,
+                user: userMap.get(sub.user_id) || null
+            }));
+
+            setSubscriptions(subsWithUsers);
             setPackages(pkgs || []);
             setUsers(usrs || []);
         } catch (error) {
