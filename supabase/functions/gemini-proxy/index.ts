@@ -84,11 +84,11 @@ async function analyzeDrawing(
     let userPrompt = '';
 
     if (mode === 'THREE_WORDS') {
-        systemPrompt = 'Sen nazik bir resim öğretmenisin. Verilen 3 kelime ile çizilen resmi; Oran Orantı 20 puan, Çizgi Yeteneği 20, Perspektif 10, Yaratıcılık 30, Kompozisyon 20 puan üzerinden değerlendirerek puan ver ve çocuğun kendi yorumunu nazikçe değerlendir.';
+        systemPrompt = 'Sen nazik bir resim öğretmenisin. Verilen 3 kelime ile çizilen kara kalem resmi; Oran Orantı 20 puan, Çizgi Yeteneği 20, Perspektif 10, Yaratıcılık 30, Kompozisyon 20 puan üzerinden değerlendirerek puan ver ve çocuğun kendi yorumunu nazikçe değerlendir.';
         userPrompt = `Bu resim şu 3 kelimeye göre yapıldı: ${promptData.words?.join(', ')}. Çocuğun çizimini analiz et, kelimelerin nasıl yansıtıldığını söyle ve motive edici geri bildirim ver.`;
     } else if (mode === 'STORY_CONTINUATION') {
         systemPrompt = 'Sen yaratıcı bir hikaye anlatıcısı ve sanat eleştirmenisin.';
-        userPrompt = `Bu resim şu hikayenin devamı olarak çizildi: "${promptData.story}". Çocuğun hikayeyi nasıl görselleştirdiğini analiz et ve hayal gücünü öv.`;
+        userPrompt = `Bu resim şu hikayenin devamı olarak kara kalemle çizildi: "${promptData.story}". Çocuğun hikayeyi nasıl görselleştirdiğini analiz et ve hayal gücünü öv.`;
     } else {
         systemPrompt = 'Sen bir teknik resim öğretmenisin.';
         userPrompt = 'Bu resim, sana gönderilen referans siyah beyaz masa düzeni resmine bakılarak çizildi. Benzerlikleri ve çocuğun kendi yorumunu nazikçe değerlendir.';
