@@ -170,7 +170,7 @@ const NeseliBalonlar: React.FC = () => {
                 <div className="flex gap-4 pointer-events-auto">
                     <Link to="/bilsem-zeka" className="bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border-2 border-sky-200 hover:bg-sky-50 transition-colors">
                         <ChevronLeft className="w-5 h-5 text-sky-500" />
-                        <span className="font-bold text-gray-700">Arcade</span>
+                        <span className="font-bold text-gray-700">BİLSEM Zeka</span>
                     </Link>
                 </div>
                 <div className="flex gap-3 pointer-events-auto">

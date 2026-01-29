@@ -112,7 +112,7 @@ const ChromaBreak: React.FC = () => {
                         className="flex items-center gap-2 text-slate-300 hover:text-cyan-400 transition-colors"
                     >
                         <ChevronLeft size={20} />
-                        <span className="text-sm font-medium">Arcade</span>
+                        <span className="text-sm font-medium">BİLSEM Zeka</span>
                     </Link>
 
                     <h1 className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
@@ -293,7 +293,7 @@ const ChromaBreak: React.FC = () => {
                                     to="/bilsem-zeka"
                                     className="flex items-center gap-2 px-6 py-3 bg-slate-700 text-white rounded-full font-bold hover:bg-slate-600"
                                 >
-                                    Arcade'e Dön
+                                    BİLSEM Zeka'ya Dön
                                 </Link>
                             </div>
                         </motion.div>
