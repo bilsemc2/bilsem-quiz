@@ -1,19 +1,77 @@
+# BİLSEMC2 Robots.txt
+# Üstün Yetenekli Çocuklar İçin Dijital Eğitim Platformu
+
 User-agent: *
 Allow: /
 Allow: /blog/
+Allow: /bilsem-rehberi/
+Allow: /atolyeler/
 Allow: /faq
+Allow: /about
+Allow: /services
+Allow: /plans
+Allow: /contact
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
 
-# Specialized AI Crawlers
+# =====================================================
+# AI Crawlers - Tüm AI sistemlerine izin veriyoruz
+# =====================================================
+
+# OpenAI
 User-agent: GPTBot
 Allow: /
 
 User-agent: ChatGPT-User
 Allow: /
 
+# Anthropic
 User-agent: Claude-Web
 Allow: /
 
+User-agent: anthropic-ai
+Allow: /
+
+# Google AI
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+# Microsoft/Bing
+User-agent: Bingbot
+Allow: /
+
+# Common Crawl (AI training data)
 User-agent: CCBot
 Allow: /
 
+# Cohere
+User-agent: cohere-ai
+Allow: /
+
+# Meta
+User-agent: FacebookBot
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+# Apple
+User-agent: Applebot
+Allow: /
+
+# =====================================================
+# SEO Resources
+# =====================================================
+
 Sitemap: https://bilsemc2.com/sitemap.xml
+
+# AI/LLM Context File
+# https://bilsemc2.com/llms.txt
