@@ -161,7 +161,7 @@ const KraftOrigami: React.FC = () => {
                         <Play size={24} /> BAŞLA
                     </button>
                     <Link
-                        to="/arcade"
+                        to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
                         <ArrowLeft size={16} /> Arcade'e Dön
@@ -188,7 +188,7 @@ const KraftOrigami: React.FC = () => {
                         TEKRAR OYNA
                     </button>
                     <Link
-                        to="/arcade"
+                        to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
                         <ArrowLeft size={16} /> Arcade'e Dön
@@ -205,7 +205,7 @@ const KraftOrigami: React.FC = () => {
             <header className="h-14 border-b border-white/10 flex items-center justify-between px-6 bg-[#0a0f1e] z-50">
                 <div className="flex items-center gap-4">
                     <Link
-                        to="/arcade"
+                        to="/bilsem-zeka"
                         className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors"
                     >
                         <ArrowLeft size={18} />

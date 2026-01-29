@@ -196,7 +196,7 @@ const AynaUstasi: React.FC = () => {
                         BAŞLA
                     </button>
                     <Link
-                        to="/arcade"
+                        to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
                         <ArrowLeft size={16} /> Arcade'e Dön
@@ -222,7 +222,7 @@ const AynaUstasi: React.FC = () => {
                         TEKRAR OYNA
                     </button>
                     <Link
-                        to="/arcade"
+                        to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
                         <ArrowLeft size={16} /> Arcade'e Dön
@@ -236,7 +236,7 @@ const AynaUstasi: React.FC = () => {
         <div className="min-h-screen flex flex-col items-center py-4 px-2 md:py-8 md:px-4 bg-[#020617] pt-24">
             <header className="text-center mb-4 md:mb-8">
                 <Link
-                    to="/arcade"
+                    to="/bilsem-zeka"
                     className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm mb-4"
                 >
                     <ArrowLeft size={16} /> Arcade'e Dön

@@ -161,7 +161,7 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/profile" element={<RequireAuth skipXPCheck><ProfilePage /></RequireAuth>} />
             <Route path="/homework" element={<RequireAuth><HomeworkPage /></RequireAuth>} />
             <Route path="/quizizz-kodlari" element={<RequireAuth><QuizizzCodesPage /></RequireAuth>} />
-            <Route path="/arcade" element={<RequireAuth><ArcadeHubPage /></RequireAuth>} />
+            <Route path="/bilsem-zeka" element={<RequireAuth><ArcadeHubPage /></RequireAuth>} />
 
 
             {/* Admin Routes */}
@@ -215,16 +215,16 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/games/puzzle-master" element={<RequireAuth><PuzzleMasterGame /></RequireAuth>} />
 
             {/* Arcade Routes */}
-            <Route path="/arcade/karanlik-labirent" element={<RequireAuth><DarkMaze /></RequireAuth>} />
-            <Route path="/arcade/renkli-balon" element={<RequireAuth><RenkliBalon /></RequireAuth>} />
-            <Route path="/arcade/ters-navigator" element={<RequireAuth><TersNavigator /></RequireAuth>} />
-            <Route path="/arcade/ayna-ustasi" element={<RequireAuth><AynaUstasi /></RequireAuth>} />
-            <Route path="/arcade/kraft-origami" element={<RequireAuth><KraftOrigami /></RequireAuth>} />
-            <Route path="/arcade/labirent-ustasi" element={<RequireAuth><LabirentUstasi /></RequireAuth>} />
-            <Route path="/arcade/oruntulu-top" element={<RequireAuth><OruntuluTop /></RequireAuth>} />
-            <Route path="/arcade/kart-dedektifi" element={<RequireAuth><KartDedektifi /></RequireAuth>} />
-            <Route path="/arcade/neseli-balonlar" element={<RequireAuth><NeseliBalonlar /></RequireAuth>} />
-            <Route path="/arcade/chromabreak" element={<RequireAuth><ChromaBreak /></RequireAuth>} />
+            <Route path="/bilsem-zeka/karanlik-labirent" element={<RequireAuth><DarkMaze /></RequireAuth>} />
+            <Route path="/bilsem-zeka/renkli-balon" element={<RequireAuth><RenkliBalon /></RequireAuth>} />
+            <Route path="/bilsem-zeka/ters-navigator" element={<RequireAuth><TersNavigator /></RequireAuth>} />
+            <Route path="/bilsem-zeka/ayna-ustasi" element={<RequireAuth><AynaUstasi /></RequireAuth>} />
+            <Route path="/bilsem-zeka/kraft-origami" element={<RequireAuth><KraftOrigami /></RequireAuth>} />
+            <Route path="/bilsem-zeka/labirent-ustasi" element={<RequireAuth><LabirentUstasi /></RequireAuth>} />
+            <Route path="/bilsem-zeka/oruntulu-top" element={<RequireAuth><OruntuluTop /></RequireAuth>} />
+            <Route path="/bilsem-zeka/kart-dedektifi" element={<RequireAuth><KartDedektifi /></RequireAuth>} />
+            <Route path="/bilsem-zeka/neseli-balonlar" element={<RequireAuth><NeseliBalonlar /></RequireAuth>} />
+            <Route path="/bilsem-zeka/chromabreak" element={<RequireAuth><ChromaBreak /></RequireAuth>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" />} />

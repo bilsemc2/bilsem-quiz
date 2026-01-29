@@ -405,7 +405,7 @@ const OruntuluTop: React.FC = () => {
       {/* Arcade HUD */}
       <div className="absolute top-20 left-4 right-4 z-30 flex justify-between items-center pointer-events-none">
         <div className="flex gap-4 pointer-events-auto">
-          <Link to="/arcade" className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border border-white/20 hover:bg-white/20 transition-all">
+          <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border border-white/20 hover:bg-white/20 transition-all">
             <ChevronLeft className="w-5 h-5 text-indigo-400" />
             <span className="font-bold text-white/80">Arcade</span>
           </Link>
@@ -499,7 +499,7 @@ const OruntuluTop: React.FC = () => {
               >
                 <Play fill="white" className="w-8 h-8" /> BAŞLA!
               </button>
-              <Link to="/arcade" className="mt-8 text-slate-500 hover:text-white transition-colors block text-sm font-bold uppercase tracking-widest">Geri Dön</Link>
+              <Link to="/bilsem-zeka" className="mt-8 text-slate-500 hover:text-white transition-colors block text-sm font-bold uppercase tracking-widest">Geri Dön</Link>
             </div>
           </motion.div>
         )}
@@ -525,7 +525,7 @@ const OruntuluTop: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <Link to="/arcade" className="bg-slate-800 hover:bg-slate-700 text-white text-xl py-4 rounded-2xl shadow-lg font-bold flex items-center justify-center gap-2 transition-all">
+                <Link to="/bilsem-zeka" className="bg-slate-800 hover:bg-slate-700 text-white text-xl py-4 rounded-2xl shadow-lg font-bold flex items-center justify-center gap-2 transition-all">
                   Arcade
                 </Link>
                 <button

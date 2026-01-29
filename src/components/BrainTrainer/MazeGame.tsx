@@ -478,7 +478,7 @@ const MazeGame: React.FC = () => {
                     className="text-center mb-8"
                 >
                     <Link
-                        to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"}
+                        to={location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme"}
                         className="inline-flex items-center gap-2 text-indigo-400 font-bold hover:text-indigo-300 transition-all mb-4 uppercase text-xs tracking-widest"
                     >
                         <ChevronLeft size={16} />

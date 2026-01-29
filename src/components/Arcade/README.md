@@ -21,7 +21,7 @@ src/components/Arcade/
 src/pages/Arcade/
 └── ArcadeHubPage.tsx        # Ana arcade sayfası
 
-src/data/arcade/
+src/data/bilsem-zeka/
 └── games.tsx                # Oyun listesi ve metadata
 ```
 
@@ -46,7 +46,7 @@ mkdir -p src/components/Arcade/Games/YeniOyun/components
     cost: 30,  // XP maliyeti
     color: "from-blue-500 to-purple-600",
     icon: <IconComponent size={48} className="text-white" />,
-    link: "/arcade/yeni-oyun"
+    link: "/bilsem-zeka/yeni-oyun"
 }
 ```
 
@@ -54,11 +54,11 @@ mkdir -p src/components/Arcade/Games/YeniOyun/components
 ```tsx
 const YeniOyun = React.lazy(() => import('./components/Arcade/Games/YeniOyun/YeniOyun'));
 // ...
-<Route path="/arcade/yeni-oyun" element={<RequireAuth><YeniOyun /></RequireAuth>} />
+<Route path="/bilsem-zeka/yeni-oyun" element={<RequireAuth><YeniOyun /></RequireAuth>} />
 ```
 
 ### 5. Veritabanına XP Gereksinimi Ekle
-Admin panelinden `/arcade/yeni-oyun` için XP gereksinimi ekle.
+Admin panelinden `/bilsem-zeka/yeni-oyun` için XP gereksinimi ekle.
 
 ## 🔧 Önemli Hook'lar
 
@@ -82,7 +82,7 @@ saveGamePlay({
 - **Kartlar**: `rounded-3xl` veya `rounded-[2rem]` border ile
 - **Butonlar**: `shadow-[0_6px_0_#color]` 3D efekt
 - **Animasyonlar**: Framer Motion kullan
-- **Geri Butonu**: `/arcade` hub'a dönen link
+- **Geri Butonu**: `/bilsem-zeka` hub'a dönen link
 
 ## ⚡ XP Akışı
 

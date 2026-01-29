@@ -284,7 +284,7 @@ const ShadowDetectiveGame: React.FC = () => {
             <div className="container mx-auto max-w-5xl relative z-10">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-amber-500/20 pb-8">
                     <div className="flex items-center gap-5">
-                        <Link to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"} className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-all text-amber-500 border border-amber-500/20">
+                        <Link to={location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme"} className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-all text-amber-500 border border-amber-500/20">
                             <ChevronLeft />
                         </Link>
                         <div>
@@ -423,7 +423,7 @@ const ShadowDetectiveGame: React.FC = () => {
                                 <button onClick={startApp} className="w-full py-6 bg-amber-500 text-slate-950 font-black text-2xl rounded-3xl hover:bg-amber-400 transition-all flex items-center justify-center gap-4 shadow-[0_8px_0_#92400E] active:translate-y-2 active:shadow-none mb-4 uppercase">
                                     SORUŞTURMAYI YENİLE <RefreshCw />
                                 </button>
-                                <Link to={location.state?.arcadeMode ? "/arcade" : "/atolyeler/bireysel-degerlendirme"} className="text-slate-500 hover:text-amber-500 font-bold block transition-colors tracking-widest uppercase text-sm">{location.state?.arcadeMode ? "ARCADE HUB'A DÖN" : "Merkez Ofise Dön"}</Link>
+                                <Link to={location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme"} className="text-slate-500 hover:text-amber-500 font-bold block transition-colors tracking-widest uppercase text-sm">{location.state?.arcadeMode ? "ARCADE HUB'A DÖN" : "Merkez Ofise Dön"}</Link>
                             </div>
                         </motion.div>
                     )}

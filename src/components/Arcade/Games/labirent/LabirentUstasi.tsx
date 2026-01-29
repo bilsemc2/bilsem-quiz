@@ -198,7 +198,7 @@ const LabirentUstasi: React.FC = () => {
                         <Play size={24} /> BAŞLA
                     </button>
                     <Link
-                        to="/arcade"
+                        to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
                         <ArrowLeft size={16} /> Arcade'e Dön
@@ -226,7 +226,7 @@ const LabirentUstasi: React.FC = () => {
                         TEKRAR OYNA
                     </button>
                     <Link
-                        to="/arcade"
+                        to="/bilsem-zeka"
                         className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
                     >
                         <ArrowLeft size={16} /> Arcade'e Dön
@@ -244,7 +244,7 @@ const LabirentUstasi: React.FC = () => {
             <header className="px-6 py-3 flex items-center justify-between bg-slate-900/80 border-b border-slate-800">
                 <div className="flex items-center gap-4">
                     <Link
-                        to="/arcade"
+                        to="/bilsem-zeka"
                         className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors"
                     >
                         <ArrowLeft size={18} />

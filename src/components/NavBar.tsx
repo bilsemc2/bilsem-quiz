@@ -93,7 +93,7 @@ const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropd
               </Link>
 
               <Link
-                to="/arcade"
+                to="/bilsem-zeka"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-indigo-500/10 transition-colors group"
               >
@@ -182,7 +182,7 @@ const NavBar = () => {
 
   const menuItems = [
     { name: "Bilsem", path: "/bilsem" },
-    { name: "Arcade", path: "/arcade", showWhenAuth: true },
+    { name: "Arcade", path: "/bilsem-zeka", showWhenAuth: true },
     { name: "Hakkımızda", path: "/about" },
     { name: "İletişim", path: "/contact" },
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
