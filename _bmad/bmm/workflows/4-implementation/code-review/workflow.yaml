@@ -48,3 +48,4 @@ input_file_patterns:
     load_strategy: "SELECTIVE_LOAD"
 
 standalone: true
+web_bundle: false
