@@ -1,0 +1,5 @@
+{
+  "name": "3D Cube Puzzle & Inventory",
+  "description": "An interactive 3D cube where blocks can be extracted into a colored inventory and dragged back into their original positions.",
+  "requestFramePermissions": []
+}
