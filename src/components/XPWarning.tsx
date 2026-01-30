@@ -205,7 +205,7 @@ const XPWarning = ({ requiredXP, currentXP, title, onBack }: XPWarningProps) => 
               <div className="space-y-2 mb-6">
                 {[
                   'Bireysel Değerlendirme Simülatörleri',
-                  'Beyin Eğitimi Oyunları',
+                  'bilsem Zeka Oyunları',
                   'XP Bitene Kadar Erişim',
                 ].map((feature, i) => (
                   <div key={i} className="flex items-center gap-2">
