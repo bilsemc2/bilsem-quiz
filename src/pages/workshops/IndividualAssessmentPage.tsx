@@ -402,19 +402,16 @@ const IndividualAssessmentPage: React.FC = () => {
                             whileHover={{ y: -10 }}
                             className="group relative"
                         >
-                            {/* Special glow for new games */}
+                            {/* Special border for new games */}
                             {(mod as { isNew?: boolean }).isNew && (
-                                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-[3.5rem] blur-sm opacity-75 group-hover:opacity-100 transition-opacity animate-pulse" />
+                                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-[3.5rem] opacity-50" />
                             )}
-                            <div className={`h-full bg-white/5 backdrop-blur-xl rounded-[3.5rem] p-10 border transition-all duration-500 flex flex-col justify-between overflow-hidden relative shadow-2xl ${(mod as { isNew?: boolean }).isNew
-                                    ? 'border-emerald-500/50 hover:border-emerald-400/70'
+                            <div className={`h-full bg-slate-900/90 backdrop-blur-xl rounded-[3.5rem] p-10 border transition-all duration-500 flex flex-col justify-between overflow-hidden relative shadow-2xl ${(mod as { isNew?: boolean }).isNew
+                                    ? 'border-emerald-500/30'
                                     : 'border-white/10 hover:border-indigo-500/30'
                                 }`}>
                                 {/* Decorative Gradient */}
-                                <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl transition-colors ${(mod as { isNew?: boolean }).isNew
-                                        ? 'bg-emerald-500/10 group-hover:bg-emerald-500/20'
-                                        : 'bg-indigo-500/5 group-hover:bg-indigo-500/10'
-                                    }`} />
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors" />
 
                                 <div className="relative z-10 space-y-8">
                                     <div className="flex items-center justify-between">
