@@ -93,24 +93,96 @@ const MatrixEchoGame: React.FC = () => {
         }, 1000);
     }, [cells, playSound]);
 
-    // Dinamik Soru Üretici
+    // Pozisyon numarası döndür (1-9)
+    const getPositionName = (index: number): string => {
+        return `${index + 1}. kutu`;
+    };
+
+    // Dinamik Soru Üretici - Daha net sorular
     const generateQuestion = (finalCells: CellData[]) => {
-        // En büyük sayı
-        const maxCell = [...finalCells].sort((a, b) => (b.value || 0) - (a.value || 0))[0];
-        // Başlangıçta 1. kutu (en düşük indeksli başlangıç hücresi veya index 0'daki varsa)
-        // Kullanıcı isteğine göre: "başlangıçta 1. kutuda duran sayı" (genelde index 0 kastedilir)
-        const initialFirstCell = finalCells.find(c => c.initialIndex === 0) || finalCells[0];
+        const questionTypes = [
+            // Tip 1: Belirli bir pozisyondaki sayıyı sor
+            () => {
+                const randomCell = finalCells[Math.floor(Math.random() * finalCells.length)];
+                return {
+                    text: `Şu anda ${getPositionName(randomCell.currentIndex)}'da hangi sayı var?`,
+                    answer: randomCell.value || 0
+                };
+            },
+            // Tip 2: İki pozisyondaki sayıların toplamı
+            () => {
+                if (finalCells.length < 2) return null;
+                const shuffled = [...finalCells].sort(() => Math.random() - 0.5);
+                const cell1 = shuffled[0];
+                const cell2 = shuffled[1];
+                return {
+                    text: `${getPositionName(cell1.currentIndex)}'daki sayı ile ${getPositionName(cell2.currentIndex)}'daki sayının toplamı kaçtır?`,
+                    answer: (cell1.value || 0) + (cell2.value || 0)
+                };
+            },
+            // Tip 3: En büyük sayının bulunduğu pozisyon
+            () => {
+                const maxCell = [...finalCells].sort((a, b) => (b.value || 0) - (a.value || 0))[0];
+                return {
+                    text: `En büyük sayı (${maxCell.value}) şu anda kaçıncı kutuda?`,
+                    answer: maxCell.currentIndex + 1
+                };
+            },
+            // Tip 4: En küçük sayının bulunduğu pozisyon
+            () => {
+                const minCell = [...finalCells].sort((a, b) => (a.value || 0) - (b.value || 0))[0];
+                return {
+                    text: `En küçük sayı (${minCell.value}) şu anda kaçıncı kutuda?`,
+                    answer: minCell.currentIndex + 1
+                };
+            },
+            // Tip 5: Belirli bir sayının hangi kutuda olduğu
+            () => {
+                const randomCell = finalCells[Math.floor(Math.random() * finalCells.length)];
+                return {
+                    text: `${randomCell.value} sayısı şu anda kaçıncı kutuda?`,
+                    answer: randomCell.currentIndex + 1
+                };
+            },
+            // Tip 6: İki pozisyondaki sayıların farkı
+            () => {
+                if (finalCells.length < 2) return null;
+                const shuffled = [...finalCells].sort(() => Math.random() - 0.5);
+                const cell1 = shuffled[0];
+                const cell2 = shuffled[1];
+                const val1 = cell1.value || 0;
+                const val2 = cell2.value || 0;
+                return {
+                    text: `${getPositionName(cell1.currentIndex)}'daki sayı ile ${getPositionName(cell2.currentIndex)}'daki sayının farkı kaçtır? (büyükten küçüğü çıkar)`,
+                    answer: Math.abs(val1 - val2)
+                };
+            },
+        ];
 
-        const answer = (maxCell.value || 0) + (initialFirstCell.value || 0);
+        // Rastgele bir soru tipi seç (geçerli sonuç alana kadar dene)
+        let q = null;
+        let attempts = 0;
+        while (!q && attempts < 10) {
+            const randomType = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+            q = randomType();
+            attempts++;
+        }
 
-        setQuestion({
-            text: `En büyük sayının durduğu yerdeki değer ile başlangıçta en üst-sol (veya ilk) kutuda duran sayının toplamı kaçtır?`,
-            answer
-        });
+        if (!q) {
+            // Fallback: basit soru
+            const cell = finalCells[0];
+            q = {
+                text: `${getPositionName(cell.currentIndex)}'da hangi sayı var?`,
+                answer: cell.value || 0
+            };
+        }
 
-        const opts = [answer];
+        setQuestion(q);
+
+        // Şıkları oluştur
+        const opts = [q.answer];
         while (opts.length < 4) {
-            const fake = answer + (Math.floor(Math.random() * 10) - 5);
+            const fake = q.answer + (Math.floor(Math.random() * 10) - 5);
             if (!opts.includes(fake) && fake > 0) opts.push(fake);
         }
         setOptions(opts.sort(() => Math.random() - 0.5));
@@ -272,6 +344,10 @@ const MatrixEchoGame: React.FC = () => {
                                                 )}
                                             </AnimatePresence>
 
+                                            {/* Pozisyon Numarası - Her zaman göster */}
+                                            <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-500/30 flex items-center justify-center">
+                                                <span className="text-xs font-bold text-blue-300">{idx + 1}</span>
+                                            </div>
                                             {/* Grid Süsleri */}
                                             <div className="absolute top-2 left-2 w-1 h-1 bg-blue-500/20 rounded-full" />
                                             <div className="absolute bottom-2 right-2 w-1 h-1 bg-blue-500/20 rounded-full" />
