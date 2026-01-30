@@ -405,22 +405,32 @@ const [SimulatorName]Game = React.lazy(() => import('./components/BrainTrainer/[
 
 ---
 
-## Adım 3: IndividualAssessmentPage'e Ekle
+## Adım 3: IndividualAssessmentPage'e Ekle ⚠️ EN ÜSTE EKLE
 
-`src/pages/workshops/IndividualAssessmentPage.tsx` dosyasında ilgili kategoriye ekle:
+`src/pages/workshops/IndividualAssessmentPage.tsx` dosyasında **modules dizisinin EN BAŞINA** ekle:
 
 ```tsx
-{
-  title: '[Simülatör Adı]',
-  description: 'Kısa açıklama',
-  icon: Brain, // veya uygun ikon
-  path: '/atolyeler/bireysel-degerlendirme/[simulator-slug]',
-  intelligenceType: 'Görsel-Uzamsal Zeka', // veya uygun tip
-  color: 'from-indigo-500 to-purple-600',
-}
+const modules = [
+    {
+        id: '[simulator-slug]',
+        title: '[Simülatör Adı]',
+        desc: 'Kısa açıklama',
+        icon: <Brain />, // veya uygun ikon
+        color: 'violet', // renk adı
+        difficulty: 'Zor', // Kolay/Orta/Zor/Uzman
+        link: '/games/[simulator-slug]',
+        isNew: true  // 🆕 YENİ badge gösterir
+    },
+    // ... mevcut oyunlar
+];
 ```
 
-> **⚠️ Tip Güvenliği Notu:** `useAuth()` hook'undan dönen `profile.yetenek_alani` alanının tipi `AuthContext.tsx` içinde tanımlıdır. Yeni alanlar kullanıyorsanız, `src/contexts/AuthContext.tsx` dosyasındaki `Profile` interface'ine ekleyin. Aksi halde index signature (`[key: string]: unknown`) nedeniyle TypeScript hataları alırsınız.
+> **⚠️ Önemli Kurallar:**
+> 1. **En üste ekle**: Yeni oyun her zaman listenin en başında olmalı
+> 2. **isNew: true ekle**: Bu, oyunun yanında "YENİ" badge'i gösterir
+> 3. **Önceki oyunun isNew'ini kaldır**: Bir önceki yeni oyunun `isNew: true` satırını sil
+
+> **⚠️ Tip Güvenliği Notu:** `useAuth()` hook'undan dönen `profile.yetenek_alani` alanının tipi `AuthContext.tsx` içinde tanımlıdır. Yeni alanlar kullanıyorsanız, `src/contexts/AuthContext.tsx` dosyasındaki `Profile` interface'ine ekleyin.
 
 ---
 
@@ -505,7 +515,10 @@ className="animate-bounce"
 - [ ] Glassmorphism tasarım
 - [ ] Responsive layout
 - [ ] Welcome/Playing/GameOver/Victory ekranları
-- [ ] IndividualAssessmentPage'e eklendi
+- [ ] IndividualAssessmentPage'e **EN ÜSTE** eklendi
+- [ ] `isNew: true` eklendi (YENİ badge)
+- [ ] Önceki oyunun `isNew` kaldırıldı
+- [ ] `intelligenceTypes.ts`'e eklendi (zeka + workshop)
 - [ ] XP requirement veritabanına eklendi
 - [ ] Route eklendi ve test edildi
 
@@ -517,3 +530,5 @@ className="animate-bounce"
 - **Cosmic Memory**: `src/components/BrainTrainer/CosmicMemoryGame.tsx`
 - **Part-Whole**: `src/components/BrainTrainer/PartWholeGame.tsx`
 - **Visual Scanning**: `src/components/BrainTrainer/VisualScanningGame.tsx`
+- **Number Memory**: `src/components/BrainTrainer/NumberMemoryGame.tsx`
+
