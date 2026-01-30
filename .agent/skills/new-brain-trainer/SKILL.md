@@ -420,6 +420,8 @@ const [SimulatorName]Game = React.lazy(() => import('./components/BrainTrainer/[
 }
 ```
 
+> **⚠️ Tip Güvenliği Notu:** `useAuth()` hook'undan dönen `profile.yetenek_alani` alanının tipi `AuthContext.tsx` içinde tanımlıdır. Yeni alanlar kullanıyorsanız, `src/contexts/AuthContext.tsx` dosyasındaki `Profile` interface'ine ekleyin. Aksi halde index signature (`[key: string]: unknown`) nedeniyle TypeScript hataları alırsınız.
+
 ---
 
 ## Adım 4: XP Requirement Ekle

@@ -291,6 +291,15 @@ const IndividualAssessmentPage: React.FC = () => {
             link: "/games/isitsel-hafiza"
         },
         {
+            id: 'number-memory',
+            title: "Sayısal Hafıza",
+            desc: "Sesli okunan rakamları dinle! Sıralama, toplam ve pozisyon sorularıyla işitsel-sayısal hafızanı test et.",
+            icon: <Headphones />,
+            color: "violet",
+            difficulty: "Zor",
+            link: "/games/sayisal-hafiza"
+        },
+        {
             id: 'reaction-time',
             title: "Tepki Süresi",
             desc: "Ne kadar hızlı tepki verebilirsin? Reflekslerini test et!",

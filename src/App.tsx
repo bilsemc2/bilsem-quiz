@@ -87,6 +87,7 @@ const SentenceSynonymGame = React.lazy(() => import('./components/BrainTrainer/S
 const DigitSymbolGame = React.lazy(() => import('./components/BrainTrainer/DigitSymbolGame'));
 const VisualScanningGame = React.lazy(() => import('./components/BrainTrainer/VisualScanningGame'));
 const AuditoryMemoryGame = React.lazy(() => import('./components/BrainTrainer/AuditoryMemoryGame'));
+const NumberMemoryGame = React.lazy(() => import('./components/BrainTrainer/NumberMemoryGame'));
 const ReactionTimeGame = React.lazy(() => import('./components/BrainTrainer/ReactionTimeGame'));
 const FaceExpressionGame = React.lazy(() => import('./components/BrainTrainer/FaceExpressionGame'));
 const KnowledgeCardGame = React.lazy(() => import('./components/BrainTrainer/KnowledgeCardGame'));
@@ -209,6 +210,7 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/games/simge-kodlama" element={<RequireAuth><DigitSymbolGame /></RequireAuth>} />
             <Route path="/games/gorsel-tarama" element={<RequireAuth><VisualScanningGame /></RequireAuth>} />
             <Route path="/games/isitsel-hafiza" element={<RequireAuth><AuditoryMemoryGame /></RequireAuth>} />
+            <Route path="/games/sayisal-hafiza" element={<RequireAuth><NumberMemoryGame /></RequireAuth>} />
             <Route path="/games/tepki-suresi" element={<RequireAuth><ReactionTimeGame /></RequireAuth>} />
             <Route path="/games/yuz-ifadesi" element={<RequireAuth><FaceExpressionGame /></RequireAuth>} />
             <Route path="/games/bilgi-kartlari" element={<RequireAuth><KnowledgeCardGame /></RequireAuth>} />
