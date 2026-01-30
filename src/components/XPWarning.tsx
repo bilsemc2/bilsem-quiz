@@ -228,13 +228,15 @@ const XPWarning = ({ requiredXP, currentXP, title, onBack }: XPWarningProps) => 
 
               {/* Butonlar */}
               <div className="space-y-2">
-                <Link
-                  to="/pricing"
+                <a
+                  href="https://www.paytr.com/link/E7upXbk"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold rounded-xl hover:from-emerald-400 hover:to-teal-400 transition-all shadow-lg shadow-emerald-500/25"
                 >
                   <CreditCard className="w-5 h-5" />
                   💳 Hemen Öde
-                </Link>
+                </a>
                 <a
                   href="https://api.whatsapp.com/send/?phone=905416150721&text=Merhaba, XP Paket satın almak istiyorum."
                   target="_blank"
