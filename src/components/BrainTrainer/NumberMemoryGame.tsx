@@ -168,9 +168,16 @@ const NumberMemoryGame: React.FC = () => {
                 if (shuffled1 !== forwardOrder && !options.includes(shuffled1)) options.push(shuffled1);
                 if (reversed !== forwardOrder && !options.includes(reversed)) options.push(reversed);
                 if (shuffled2 !== forwardOrder && !options.includes(shuffled2)) options.push(shuffled2);
-                while (options.length < 4) {
+                let attempts = 0;
+                while (options.length < 4 && attempts < 20) {
                     const fake = [...seq].sort(() => Math.random() - 0.5).join(' - ');
                     if (!options.includes(fake)) options.push(fake);
+                    attempts++;
+                }
+                // Yeterli seçenek bulunamazsa farklı rakamlarla doldur
+                while (options.length < 4) {
+                    const fakeSeq = seq.map(() => Math.floor(Math.random() * 10));
+                    options.push(fakeSeq.join(' - '));
                 }
                 return {
                     text: 'Rakamlar hangi sırayla söylendi? (İleri)',
@@ -189,9 +196,16 @@ const NumberMemoryGame: React.FC = () => {
                 if (forwardOrder !== backwardOrder && !options.includes(forwardOrder)) options.push(forwardOrder);
                 if (shuffled1 !== backwardOrder && !options.includes(shuffled1)) options.push(shuffled1);
                 if (shuffled2 !== backwardOrder && !options.includes(shuffled2)) options.push(shuffled2);
-                while (options.length < 4) {
+                let attempts = 0;
+                while (options.length < 4 && attempts < 20) {
                     const fake = [...seq].sort(() => Math.random() - 0.5).join(' - ');
                     if (!options.includes(fake)) options.push(fake);
+                    attempts++;
+                }
+                // Yeterli seçenek bulunamazsa farklı rakamlarla doldur
+                while (options.length < 4) {
+                    const fakeSeq = seq.map(() => Math.floor(Math.random() * 10));
+                    options.push(fakeSeq.join(' - '));
                 }
                 return {
                     text: 'Rakamlar ters sırayla hangisi? (Geri)',
