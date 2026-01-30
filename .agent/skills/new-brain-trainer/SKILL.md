@@ -424,7 +424,29 @@ const [SimulatorName]Game = React.lazy(() => import('./components/BrainTrainer/[
 
 ---
 
-## Adım 4: XP Requirement Ekle
+## Adım 4: Zeka Türü Eşleştirmesi Ekle ⚠️ KRİTİK
+
+`src/constants/intelligenceTypes.ts` dosyasında oyunu **her iki tabloya** ekle:
+
+```typescript
+// 1. OYUN_ZEKA_ESLESTIRMESI - Zeka türü analizi için
+export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
+    // ...
+    '[simulator-slug]': ZEKA_TURLERI.[UYGUN_TIP], // Örn: CALISMA_BELLEGI, GORSEL_UZAMSAL
+};
+
+// 2. OYUN_WORKSHOP_ESLESTIRMESI - Workshop kategorisi için
+export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
+    // ...
+    '[simulator-slug]': 'bireysel', // veya 'tablet' veya 'arcade'
+};
+```
+
+> **⚠️ Bu adım zorunludur!** Bu eşleştirmeler eklenmezse `useGamePersistence` hook'u `workshop_type` ve `intelligence_type` değerlerini `null` olarak kaydeder ve admin panelindeki TalentAnalytics/StudentStatistics raporlarında oyun görünmez.
+
+---
+
+## Adım 5: XP Requirement Ekle
 
 ```sql
 INSERT INTO xp_requirements (path, xp_cost, description) 
