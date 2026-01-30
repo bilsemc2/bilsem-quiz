@@ -106,20 +106,26 @@ const NumberMemoryGame: React.FC = () => {
 
     // Dizi seslerini çal
     const playSequence = useCallback(async (seq: number[]) => {
+        console.log('[DEBUG] playSequence started', seq);
         setPhase('listening');
         for (let i = 0; i < seq.length; i++) {
+            console.log('[DEBUG] Playing number', i, seq[i]);
             setCurrentPlayIndex(i);
             await playNumber(seq[i]);
             await new Promise(resolve => setTimeout(resolve, 400)); // Sesler arası bekleme
         }
+        console.log('[DEBUG] All numbers played, generating question');
         setCurrentPlayIndex(-1);
         // Soru oluştur
         generateQuestion(seq);
+        console.log('[DEBUG] Question generated, setting phase to question');
         setPhase('question');
+        console.log('[DEBUG] Phase set to question');
     }, [playNumber]);
 
     // Soru oluştur
     const generateQuestion = useCallback((seq: number[]) => {
+        console.log('[DEBUG] generateQuestion called with', seq);
         const questionTypes = [
             // Tip 1: N. rakam hangisi?
             () => {
@@ -127,9 +133,15 @@ const NumberMemoryGame: React.FC = () => {
                 const ordinal = pos + 1;
                 const answer = seq[pos];
                 const options = [answer];
-                while (options.length < 4) {
+                let attempts = 0;
+                while (options.length < 4 && attempts < 20) {
                     const fake = Math.floor(Math.random() * 10);
                     if (!options.includes(fake)) options.push(fake);
+                    attempts++;
+                }
+                // Fallback
+                for (let i = 0; options.length < 4 && i < 10; i++) {
+                    if (!options.includes(i)) options.push(i);
                 }
                 return {
                     text: `${ordinal}. söylenen rakam hangisiydi?`,
@@ -143,12 +155,25 @@ const NumberMemoryGame: React.FC = () => {
                 if (seq.length < 2) return null;
                 const pos1 = Math.floor(Math.random() * seq.length);
                 let pos2 = Math.floor(Math.random() * seq.length);
-                while (pos2 === pos1) pos2 = Math.floor(Math.random() * seq.length);
+                let attempts = 0;
+                while (pos2 === pos1 && attempts < 10) {
+                    pos2 = Math.floor(Math.random() * seq.length);
+                    attempts++;
+                }
+                if (pos2 === pos1) pos2 = (pos1 + 1) % seq.length;
                 const answer = seq[pos1] + seq[pos2];
                 const options = [answer];
-                while (options.length < 4) {
+                attempts = 0;
+                while (options.length < 4 && attempts < 30) {
                     const fake = answer + Math.floor(Math.random() * 7) - 3;
                     if (!options.includes(fake) && fake >= 0 && fake <= 18) options.push(fake);
+                    attempts++;
+                }
+                // Fallback: zorla farklı sayılar ekle
+                let fallback = 0;
+                while (options.length < 4) {
+                    if (!options.includes(fallback)) options.push(fallback);
+                    fallback++;
                 }
                 return {
                     text: `${pos1 + 1}. ve ${pos2 + 1}. rakamların toplamı kaçtır?`,
@@ -218,9 +243,15 @@ const NumberMemoryGame: React.FC = () => {
             () => {
                 const maxNum = Math.max(...seq);
                 const options = [maxNum];
-                while (options.length < 4) {
+                let attempts = 0;
+                while (options.length < 4 && attempts < 20) {
                     const fake = Math.floor(Math.random() * 10);
                     if (!options.includes(fake)) options.push(fake);
+                    attempts++;
+                }
+                // Fallback
+                for (let i = 0; options.length < 4 && i < 10; i++) {
+                    if (!options.includes(i)) options.push(i);
                 }
                 return {
                     text: 'Söylenen rakamlardan en büyüğü hangisiydi?',
@@ -233,9 +264,15 @@ const NumberMemoryGame: React.FC = () => {
             () => {
                 const uniqueCount = new Set(seq).size;
                 const options = [uniqueCount];
-                while (options.length < 4) {
+                let attempts = 0;
+                while (options.length < 4 && attempts < 20) {
                     const fake = Math.floor(Math.random() * seq.length) + 1;
                     if (!options.includes(fake) && fake <= 10) options.push(fake);
+                    attempts++;
+                }
+                // Fallback
+                for (let i = 1; options.length < 4 && i <= 10; i++) {
+                    if (!options.includes(i)) options.push(i);
                 }
                 return {
                     text: 'Kaç farklı rakam söylendi?',
