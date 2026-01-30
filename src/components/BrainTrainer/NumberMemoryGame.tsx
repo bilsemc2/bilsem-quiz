@@ -90,17 +90,37 @@ const NumberMemoryGame: React.FC = () => {
         return seq;
     }, []);
 
-    // Ses çal
+    // Ses çal - timeout ile korumalı
     const playNumber = useCallback((num: number): Promise<void> => {
         return new Promise((resolve) => {
+            // Maximum 3 saniye timeout - ses yüklenemezse devam et
+            const timeout = setTimeout(() => {
+                console.warn(`Audio timeout for number ${num}`);
+                resolve();
+            }, 3000);
+
             if (audioRef.current) {
                 audioRef.current.pause();
             }
             const audio = new Audio(NUMBER_SOUNDS[num]);
             audioRef.current = audio;
-            audio.onended = () => resolve();
-            audio.onerror = () => resolve();
-            audio.play().catch(() => resolve());
+
+            audio.onended = () => {
+                clearTimeout(timeout);
+                resolve();
+            };
+            audio.onerror = () => {
+                clearTimeout(timeout);
+                console.error(`Audio error for number ${num}`);
+                resolve();
+            };
+            audio.oncanplaythrough = () => {
+                audio.play().catch(() => {
+                    clearTimeout(timeout);
+                    resolve();
+                });
+            };
+            audio.load();
         });
     }, []);
 
