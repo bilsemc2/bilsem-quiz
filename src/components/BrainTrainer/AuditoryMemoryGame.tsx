@@ -332,7 +332,7 @@ const AuditoryMemoryGame: React.FC = () => {
                                 {gameState === 'feedback' && isCorrect === false && (
                                     <div className="flex items-center justify-center gap-3 text-red-400">
                                         <XCircle className="w-6 h-6" />
-                                        <span className="text-lg font-bold">Yanlış sıra! {lives > 1 ? `${lives - 1} can kaldı` : 'Oyun bitti!'}</span>
+                                        <span className="text-lg font-bold">Yanlış sıra! {lives > 0 ? `${lives} can kaldı` : 'Oyun bitti!'}</span>
                                     </div>
                                 )}
                             </div>
