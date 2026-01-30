@@ -106,26 +106,20 @@ const NumberMemoryGame: React.FC = () => {
 
     // Dizi seslerini çal
     const playSequence = useCallback(async (seq: number[]) => {
-        console.log('[DEBUG] playSequence started', seq);
         setPhase('listening');
         for (let i = 0; i < seq.length; i++) {
-            console.log('[DEBUG] Playing number', i, seq[i]);
             setCurrentPlayIndex(i);
             await playNumber(seq[i]);
             await new Promise(resolve => setTimeout(resolve, 400)); // Sesler arası bekleme
         }
-        console.log('[DEBUG] All numbers played, generating question');
         setCurrentPlayIndex(-1);
         // Soru oluştur
         generateQuestion(seq);
-        console.log('[DEBUG] Question generated, setting phase to question');
         setPhase('question');
-        console.log('[DEBUG] Phase set to question');
     }, [playNumber]);
 
     // Soru oluştur
     const generateQuestion = useCallback((seq: number[]) => {
-        console.log('[DEBUG] generateQuestion called with', seq);
         const questionTypes = [
             // Tip 1: N. rakam hangisi?
             () => {
