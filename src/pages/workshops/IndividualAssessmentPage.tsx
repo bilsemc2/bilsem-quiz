@@ -57,6 +57,16 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'number-memory',
+            title: "Sayısal Hafıza",
+            desc: "Sesli okunan rakamları dinle! Sıralama, toplam ve pozisyon sorularıyla işitsel-sayısal hafızanı test et.",
+            icon: <Headphones />,
+            color: "violet",
+            difficulty: "Zor",
+            link: "/games/sayisal-hafiza",
+            isNew: true
+        },
+        {
             id: 'puzzle-master',
             title: "Puzzle Master",
             desc: "Karmaşık görsel örüntüler içindeki eksik parçayı bulma ve analiz etme simülatörü.",
@@ -291,15 +301,6 @@ const IndividualAssessmentPage: React.FC = () => {
             link: "/games/isitsel-hafiza"
         },
         {
-            id: 'number-memory',
-            title: "Sayısal Hafıza",
-            desc: "Sesli okunan rakamları dinle! Sıralama, toplam ve pozisyon sorularıyla işitsel-sayısal hafızanı test et.",
-            icon: <Headphones />,
-            color: "violet",
-            difficulty: "Zor",
-            link: "/games/sayisal-hafiza"
-        },
-        {
             id: 'reaction-time',
             title: "Tepki Süresi",
             desc: "Ne kadar hızlı tepki verebilirsin? Reflekslerini test et!",
@@ -416,7 +417,12 @@ const IndividualAssessmentPage: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <h3 className="text-2xl font-black text-white mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-violet-400 transition-all duration-300 tracking-tight">{mod.title}</h3>
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-2xl font-black text-white mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-violet-400 transition-all duration-300 tracking-tight">{mod.title}</h3>
+                                            {(mod as { isNew?: boolean }).isNew && (
+                                                <span className="px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-black uppercase rounded-full animate-pulse mb-3">YENİ</span>
+                                            )}
+                                        </div>
                                         <p className="text-slate-400 text-sm font-medium leading-relaxed italic line-clamp-2">{mod.desc}</p>
                                     </div>
                                 </div>
