@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Lock, Zap, ArrowLeft, Sparkles, Target, CreditCard, Check, MessageCircle } from 'lucide-react';
+import { Lock, Zap, ArrowLeft, Target, CreditCard, Check, MessageCircle } from 'lucide-react';
 
 interface XPWarningProps {
   requiredXP: number;
@@ -23,13 +23,6 @@ const XPWarning = ({ requiredXP, currentXP, title, onBack }: XPWarningProps) => 
     return null;
   }
 
-  // Motivasyon mesajları
-  const getMotivationMessage = () => {
-    if (progress >= 75) return "Neredeyse başardın! 🔥";
-    if (progress >= 50) return "Yarısını geçtin, devam et! 💪";
-    if (progress >= 25) return "İyi gidiyorsun! ⚡";
-    return "Macera seni bekliyor! 🚀";
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
@@ -143,17 +136,6 @@ const XPWarning = ({ requiredXP, currentXP, title, onBack }: XPWarningProps) => 
                   <Target className="w-3 h-3 text-purple-400" />
                   <span className="text-purple-300">{remainingXP} XP daha gerekiyor</span>
                 </div>
-              </motion.div>
-
-              {/* Motivasyon mesajı */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
-                className="flex items-center justify-center gap-2 mb-4"
-              >
-                <Sparkles className="w-4 h-4 text-yellow-400" />
-                <span className="text-white/80 text-sm font-medium">{getMotivationMessage()}</span>
               </motion.div>
 
               {/* XP Kazanma Butonu */}
