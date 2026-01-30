@@ -303,7 +303,7 @@ const ColorPerception: React.FC = () => {
                           {gameState.level === 5 ? <Trophy size={48} fill="currentColor" /> : <Target size={48} />}
                         </div>
                         <h2 className="text-4xl font-black text-gray-900 mb-4">
-                          {gameState.level === 5 ? 'Efsanesin!' : 'Oyun Bitti!'}
+                          {gameState.level === 5 ? 'Efsanesin!' : 'Tekrar Deneyelim! 💪'}
                         </h2>
                         <p className="text-lg text-gray-500 font-bold mb-10 leading-relaxed">
                           {gameState.level === 5

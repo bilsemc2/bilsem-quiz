@@ -645,7 +645,7 @@ const NumberMemoryGame: React.FC = () => {
                                         ) : (
                                             <>
                                                 <XCircle size={24} />
-                                                <span className="font-bold">Yanlış! Doğru cevap: {question.answer}</span>
+                                                <span className="font-bold">Doğrusu: {question.answer} idi</span>
                                             </>
                                         )}
                                     </motion.div>
@@ -667,7 +667,7 @@ const NumberMemoryGame: React.FC = () => {
                                 <XCircle size={48} className="text-white" />
                             </div>
 
-                            <h2 className="text-3xl font-bold text-red-400 mb-4">Oyun Bitti!</h2>
+                            <h2 className="text-3xl font-bold text-amber-400 mb-4">Tekrar Deneyelim! 💪</h2>
 
                             <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-6">
                                 <div className="grid grid-cols-2 gap-4">

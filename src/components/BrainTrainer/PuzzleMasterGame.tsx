@@ -359,7 +359,7 @@ const PuzzleMasterGame: React.FC = () => {
                                 {isCorrect === false && (
                                     <motion.div initial={{ x: -10 }} animate={{ x: 0 }} className="bg-red-500/10 border border-red-500/50 p-4 rounded-2xl flex items-start gap-3 w-full">
                                         <AlertCircle className="text-red-400 shrink-0" size={20} />
-                                        <p className="text-xs text-red-200 font-bold">Desen Yanlış! <br /><span className="opacity-60 text-[10px]">Parçayı tekrar incele.</span></p>
+                                        <p className="text-xs text-red-200 font-bold">Bu sefer olmadı! <br /><span className="opacity-60 text-[10px]">Parçayı tekrar incele.</span></p>
                                     </motion.div>
                                 )}
                             </div>

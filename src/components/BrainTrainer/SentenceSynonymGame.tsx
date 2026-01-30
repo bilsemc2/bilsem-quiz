@@ -386,7 +386,7 @@ const SentenceSynonymGame: React.FC = () => {
                                         ) : (
                                             <>
                                                 <XCircle className="w-6 h-6" />
-                                                Yanlış! Doğru cevap: {currentQuestion.dogru_kelime}
+                                                Doğrusu: {currentQuestion.dogru_kelime} idi
                                             </>
                                         )}
                                     </motion.div>

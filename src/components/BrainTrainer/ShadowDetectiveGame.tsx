@@ -28,7 +28,7 @@ const FAILURE_MESSAGES = [
     "Dikkatli Bak!",
     "Hedef Şaştı!",
     "Gözden Kaçtı!",
-    "Yanlış İz!",
+    "Bu İz Değil",
     "Soruşturma Sürüyor..."
 ];
 

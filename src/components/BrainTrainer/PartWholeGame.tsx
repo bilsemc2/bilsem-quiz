@@ -537,7 +537,7 @@ const PartWholeGame: React.FC = () => {
                                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-28 h-28 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-amber-500/30">
                                     <Trophy size={56} />
                                 </div>
-                                <h2 className="text-5xl font-black text-white mb-6 mt-8">Oyun Bitti!</h2>
+                                <h2 className="text-5xl font-black text-white mb-6 mt-8">Tekrar Deneyelim! 💪</h2>
                                 <p className="text-slate-400 font-medium text-xl mb-4">
                                     {score > 0 ? "Milyarlarca desen içinden doğru yolu buldun!" : "Üzülme, bir sonraki sefer kesin yapacaksın!"}
                                 </p>

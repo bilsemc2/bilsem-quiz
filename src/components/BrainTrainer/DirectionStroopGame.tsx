@@ -388,7 +388,7 @@ const DirectionStroopGame: React.FC = () => {
                                         ) : (
                                             <>
                                                 <XCircle className="w-6 h-6" />
-                                                Yanlış! Doğru cevap: {currentRound.correctAnswer}
+                                                Doğrusu: {currentRound.correctAnswer} idi
                                             </>
                                         )}
                                     </motion.div>
