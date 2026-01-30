@@ -12,6 +12,7 @@ export interface Profile {
     school?: string;
     avatar_url?: string;
     last_seen?: string;
+    yetenek_alani?: string | string[];
     [key: string]: unknown;
 }
 
