@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, ShieldX } from 'lucide-react';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, ShieldX, Calculator } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import './bireysel.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -57,14 +57,32 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'gurultu-filtresi',
+            title: "Gürültü Filtresi",
+            desc: "Dikkat dağıtıcı arka plan sesleri arasında hedef sesi tanı! Seçici dikkat ve odaklanma.",
+            icon: <Headphones />,
+            color: "purple",
+            difficulty: "Uzman",
+            link: "/games/gurultu-filtresi",
+            isNew: true
+        },
+        {
+            id: 'sayisal-sifre',
+            title: "Sayısal Şifre",
+            desc: "Sayılar arasındaki gizli kuralları keşfet! Soyut matematiksel mantık ve örüntü tanıma.",
+            icon: <Calculator />,
+            color: "amber",
+            difficulty: "Uzman",
+            link: "/games/sayisal-sifre"
+        },
+        {
             id: 'number-memory',
             title: "Sayısal Hafıza",
             desc: "Sesli okunan rakamları dinle! Sıralama, toplam ve pozisyon sorularıyla işitsel-sayısal hafızanı test et.",
             icon: <Headphones />,
             color: "violet",
             difficulty: "Zor",
-            link: "/games/sayisal-hafiza",
-            isNew: true
+            link: "/games/sayisal-hafiza"
         },
         {
             id: 'puzzle-master',
@@ -407,8 +425,8 @@ const IndividualAssessmentPage: React.FC = () => {
                                 <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-[3.5rem] opacity-50" />
                             )}
                             <div className={`h-full bg-slate-900/90 backdrop-blur-xl rounded-[3.5rem] p-10 border transition-all duration-500 flex flex-col justify-between overflow-hidden relative shadow-2xl ${(mod as { isNew?: boolean }).isNew
-                                    ? 'border-emerald-500/30'
-                                    : 'border-white/10 hover:border-indigo-500/30'
+                                ? 'border-emerald-500/30'
+                                : 'border-white/10 hover:border-indigo-500/30'
                                 }`}>
                                 {/* Decorative Gradient */}
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors" />

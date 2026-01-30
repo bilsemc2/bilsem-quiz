@@ -381,7 +381,7 @@ const FaceExpressionGame: React.FC = () => {
                                                 ) : (
                                                     <>
                                                         <XCircle className="w-6 h-6" />
-                                                        Yanlış! Doğrusu: {currentQuestion.correctEmotion.name}
+                                                        Doğru ifade: {currentQuestion.correctEmotion.name} idi
                                                     </>
                                                 )}
                                             </motion.div>

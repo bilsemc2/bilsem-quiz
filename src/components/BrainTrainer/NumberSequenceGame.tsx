@@ -471,7 +471,7 @@ const NumberSequenceGame: React.FC = () => {
                                         ) : (
                                             <>
                                                 <XCircle className="w-6 h-6" />
-                                                Yanlış! Doğru cevap: {currentQuestion.answer}
+                                                Doğrusu: {currentQuestion.answer} idi
                                             </>
                                         )}
                                     </motion.div>

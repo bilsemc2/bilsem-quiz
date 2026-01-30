@@ -297,7 +297,7 @@ const ColorGrid: React.FC = () => {
                           {gameState.gameOver
                             ? (gameState.level === 5
                               ? `Final Skoru: ${score}. Tüm sekansları kusursuz hatırladın!`
-                              : `Yanlış hücreye tıkladın. Final Skorun: ${score}`)
+                              : `Bu sefer olmadı. Final Skorun: ${score}`)
                             : 'Zihnini odakla ve renkleri takip et.'}
                         </p>
                         <button

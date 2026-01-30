@@ -467,7 +467,7 @@ const DualBindGame = () => {
                                         ) : (
                                             <>
                                                 <XCircle className="w-6 h-6" />
-                                                Yanlış! Doğru: {currentQuestion.correctAnswer}
+                                                Doğrusu: {currentQuestion.correctAnswer} idi
                                             </>
                                         )}
                                     </motion.div>

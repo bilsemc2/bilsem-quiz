@@ -332,7 +332,7 @@ const AuditoryMemoryGame: React.FC = () => {
                                 {gameState === 'feedback' && isCorrect === false && (
                                     <div className="flex items-center justify-center gap-3 text-red-400">
                                         <XCircle className="w-6 h-6" />
-                                        <span className="text-lg font-bold">Yanlış sıra! {lives > 0 ? `${lives} can kaldı` : 'Oyun bitti!'}</span>
+                                        <span className="text-lg font-bold">Bu sefer olmadı! {lives > 0 ? `${lives} can kaldı` : 'Tekrar deneyelim!'}</span>
                                     </div>
                                 )}
                             </div>
@@ -392,7 +392,7 @@ const AuditoryMemoryGame: React.FC = () => {
                         >
                             <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-3xl p-8">
                                 <Trophy className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-                                <h2 className="text-3xl font-black text-white mb-2">Oyun Bitti! 🎵</h2>
+                                <h2 className="text-3xl font-black text-white mb-2">Tekrar Deneyelim! 💪🎵</h2>
 
                                 <div className="grid grid-cols-2 gap-4 my-6">
                                     <div className="bg-slate-800/50 rounded-xl p-4">

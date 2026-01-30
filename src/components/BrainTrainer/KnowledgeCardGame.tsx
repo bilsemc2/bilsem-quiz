@@ -511,7 +511,7 @@ const KnowledgeCardGame: React.FC = () => {
                                         ) : (
                                             <>
                                                 <XCircle className="w-6 h-6" />
-                                                Yanlış! Doğru cevap: {currentQuestion.correctAnswer}
+                                                Doğrusu: {currentQuestion.correctAnswer} idi
                                             </>
                                         )}
                                     </motion.div>
@@ -530,7 +530,7 @@ const KnowledgeCardGame: React.FC = () => {
                             <div className="bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-3xl p-8">
                                 <Trophy className="w-16 h-16 text-amber-400 mx-auto mb-4" />
                                 <h2 className="text-3xl font-black text-white mb-2">
-                                    {lives <= 0 ? 'Oyun Bitti! 💔' : totalTime <= 0 ? 'Süre Doldu! ⏰' : 'Tebrikler! 🎉'}
+                                    {lives <= 0 ? 'Tekrar Deneyelim! 💪' : totalTime <= 0 ? 'Süre Doldu! ⏰' : 'Tebrikler! 🎉'}
                                 </h2>
 
                                 <div className="grid grid-cols-2 gap-4 my-6">

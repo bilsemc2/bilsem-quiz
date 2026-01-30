@@ -377,7 +377,7 @@ const PencilStroopGame: React.FC = () => {
                                         ) : (
                                             <>
                                                 <XCircle className="w-8 h-8" />
-                                                Yanlış! Doğru renk: {currentRound.textColorName}
+                                                Doğru renk: {currentRound.textColorName} idi
                                             </>
                                         )}
                                     </motion.div>

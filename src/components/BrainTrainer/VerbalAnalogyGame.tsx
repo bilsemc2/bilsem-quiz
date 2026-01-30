@@ -398,7 +398,7 @@ const VerbalAnalogyGame: React.FC = () => {
                                         ) : (
                                             <>
                                                 <XCircle className="w-6 h-6" />
-                                                Yanlış! Doğru cevap: {currentQuestion.options.find(o => o.id === currentQuestion.correct_option_id)?.text}
+                                                Doğrusu: {currentQuestion.options.find(o => o.id === currentQuestion.correct_option_id)?.text} idi
                                             </>
                                         )}
                                     </motion.div>
