@@ -164,12 +164,19 @@ const XPWarning = ({ requiredXP, currentXP, title, onBack }: XPWarningProps) => 
                 className="space-y-2"
               >
                 <Link
-                  to="/profile"
+                  to="/profile#referral"
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 text-white/80 font-medium rounded-xl hover:bg-white/20 transition-all text-sm"
                 >
-                  <Zap className="w-4 h-4" />
-                  Quiz Çözerek XP Kazan
+                  🎁 Arkadaşını Davet Et
                 </Link>
+                <a
+                  href="https://www.instagram.com/bilsemc2/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 text-white/80 font-medium rounded-xl hover:bg-white/20 transition-all text-sm"
+                >
+                  📱 Sosyal Medyada Takip Et
+                </a>
                 <button
                   onClick={onBack || (() => window.history.back())}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 text-white/60 font-medium rounded-xl hover:text-white/80 transition-all text-sm"
@@ -263,7 +270,7 @@ const XPWarning = ({ requiredXP, currentXP, title, onBack }: XPWarningProps) => 
           transition={{ delay: 1 }}
           className="text-center text-white/40 text-xs mt-4"
         >
-          Quiz çöz, oyun oyna → XP kazan veya XP satın alarak hızlıca devam et!
+          Arkadaşlarını davet et, sosyal medyada takip et → XP kazan veya XP satın al!
         </motion.p>
       </motion.div>
     </div>
