@@ -424,7 +424,7 @@ Gerçekçi gölgeler ve ışık-gölge kontrastı önemli. Kesinlikle renkli olm
     try {
         // Gemini 2.5 Flash Image ile görsel üretimi (Google AI Studio formatı)
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
