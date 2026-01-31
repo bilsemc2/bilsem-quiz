@@ -30,8 +30,8 @@ export async function generateActivityPrompt(mode: ActivityMode) {
 }
 
 export async function generateStillLifeImage() {
-    // Natürmort modu için statik fallback - görsel üretimi karmaşık
-    return "https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop";
+    // AI ile siyah-beyaz natürmort görseli üret
+    return await callGeminiProxy('generateStillLifeImage');
 }
 
 export async function analyzeDrawing(mode: ActivityMode, promptData: unknown, drawingBase64: string) {

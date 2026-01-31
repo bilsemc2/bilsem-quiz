@@ -38,6 +38,9 @@ Deno.serve(async (req) => {
             case 'analyzeMusicPerformance':
                 result = await analyzeMusicPerformance(GEMINI_API_KEY, testType, target, detected);
                 break;
+            case 'generateStillLifeImage':
+                result = await generateStillLifeImage(GEMINI_API_KEY);
+                break;
             default:
                 throw new Error(`Unknown action: ${action}`);
         }
@@ -387,4 +390,71 @@ Lütfen SADECE belirlenen JSON formatında yanıt ver.
     }
 
     return JSON.parse(textContent);
+}
+
+// Still Life Image Generation using Gemini Imagen
+async function generateStillLifeImage(apiKey: string): Promise<string> {
+    // Rastgele natürmort nesne kombinasyonları
+    const objectSets = [
+        'bir elma, bir armut ve bir üzüm salkımı',
+        'bir çaydanlık, iki fincan ve bir şekerlik',
+        'bir kitap, bir gözlük ve bir kalem',
+        'bir vazo içinde çiçekler ve yanında bir elma',
+        'bir mum, bir eski saat ve bir kitap',
+        'bir keman ve nota kağıtları',
+        'bir sepet içinde ekmek ve peynir',
+        'bir şapka, bir eşarp ve eldiven',
+        'bir fener, bir pusula ve harita',
+        'üç farklı boyutta seramik vazo',
+        'bir kahve fincanı, kahve çekirdekleri ve bir kaşık',
+        'bir satranç tahtası ve birkaç taş',
+        'antik bir telefon ve bir defter',
+        'bir gitar ve yanında bir şapka',
+        'meyveli bir tabak ve bir bıçak'
+    ];
+
+    const randomObjects = objectSets[Math.floor(Math.random() * objectSets.length)];
+
+    const prompt = `Siyah beyaz, kara kalem tarzında, profesyonel bir natürmort çizimi. 
+Basit bir masa üzerinde ${randomObjects} düzenlenmiş. 
+Yumuşak gölgelendirme, temiz çizgiler, sanatsal perspektif. 
+Arka plan sade ve boş olmalı. Resim çizim eğitimi için referans olarak kullanılacak.
+Gerçekçi gölgeler ve ışık-gölge kontrastı önemli. Kesinlikle renkli olmamalı, sadece siyah-beyaz tonlar.`;
+
+    try {
+        // Gemini 2.0 Flash ile görsel üretimi
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ['TEXT', 'IMAGE']
+                    }
+                }),
+            }
+        );
+
+        const data = await response.json();
+
+        // Görsel verisini çıkar
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        for (const part of parts) {
+            if (part.inlineData?.mimeType?.startsWith('image/')) {
+                // Base64 data URL olarak döndür
+                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+            }
+        }
+
+        // Fallback: Görsel üretilemezse statik URL
+        console.error('Görsel üretilemedi, fallback kullanılıyor');
+        return 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop';
+    } catch (error) {
+        console.error('Görsel üretim hatası:', error);
+        return 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop';
+    }
 }
