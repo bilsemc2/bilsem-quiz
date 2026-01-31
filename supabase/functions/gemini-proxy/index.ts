@@ -422,9 +422,9 @@ Arka plan sade ve boş olmalı. Resim çizim eğitimi için referans olarak kull
 Gerçekçi gölgeler ve ışık-gölge kontrastı önemli. Kesinlikle renkli olmamalı, sadece siyah-beyaz tonlar.`;
 
     try {
-        // Gemini 2.0 Flash ile görsel üretimi
+        // Gemini 2.5 Flash Image ile görsel üretimi (Google AI Studio formatı)
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -433,7 +433,7 @@ Gerçekçi gölgeler ve ışık-gölge kontrastı önemli. Kesinlikle renkli olm
                         parts: [{ text: prompt }]
                     }],
                     generationConfig: {
-                        responseModalities: ['TEXT', 'IMAGE']
+                        responseModalities: ['IMAGE', 'TEXT']
                     }
                 }),
             }
@@ -441,17 +441,26 @@ Gerçekçi gölgeler ve ışık-gölge kontrastı önemli. Kesinlikle renkli olm
 
         const data = await response.json();
 
+        // Debug: API yanıtını logla
+        console.log('Gemini 2.5 Flash Image Response status:', response.status);
+        console.log('Gemini 2.5 Flash Image Response:', JSON.stringify(data).substring(0, 800));
+
+        if (data.error) {
+            console.error('Gemini API Error:', JSON.stringify(data.error));
+            return 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop';
+        }
+
         // Görsel verisini çıkar
         const parts = data.candidates?.[0]?.content?.parts || [];
         for (const part of parts) {
-            if (part.inlineData?.mimeType?.startsWith('image/')) {
-                // Base64 data URL olarak döndür
-                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+            if (part.inlineData) {
+                console.log('Görsel başarıyla üretildi!');
+                return `data:image/png;base64,${part.inlineData.data}`;
             }
         }
 
         // Fallback: Görsel üretilemezse statik URL
-        console.error('Görsel üretilemedi, fallback kullanılıyor');
+        console.error('Görsel üretilemedi');
         return 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=1000&auto=format&fit=crop';
     } catch (error) {
         console.error('Görsel üretim hatası:', error);
