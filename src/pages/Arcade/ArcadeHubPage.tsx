@@ -143,6 +143,7 @@ const ArcadeHubPage: React.FC = () => {
                                 cost={getGameCost(game)}
                                 color={game.color}
                                 icon={game.icon}
+                                tuzo={game.tuzo}
                                 onPlay={() => navigate(game.link, { state: { arcadeMode: true, autoStart: true } })}
                                 onInsufficientXP={(required) => setWarningData({
                                     required,

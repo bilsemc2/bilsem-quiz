@@ -74,8 +74,23 @@ export const GAME_CONFIG = {
   color: 'from-cyan-500 to-blue-600',
   icon: <Icon size={48} className="text-white" />,
   link: '/bilsem-zeka/[oyun-slug]',
+  tuzo: '5.X.X TUZÖ Beceri Adı', // Zorunlu!
 }
 ```
+
+**Mevcut TUZÖ Kodları:**
+| Kod | Beceri |
+|-----|--------|
+| 5.1.x | Sözel Beceriler |
+| 5.2.x | Sayısal Beceriler |
+| 5.3.x | Uzamsal Beceriler |
+| 5.4.x | Kısa Süreli Bellek |
+| 5.5.x | Akıl Yürütme |
+| 5.6.x | İşlem Hızı |
+| 5.7.x | Dikkat |
+| 5.8.x | Kontrol/Esneklik |
+| 5.9.x | Çalışma Belleği |
+| 5.10.x | Sosyal Zeka |
 
 ---
 

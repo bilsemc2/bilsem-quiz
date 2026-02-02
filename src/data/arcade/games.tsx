@@ -9,6 +9,7 @@ export interface ArcadeGame {
     color: string;
     icon: React.ReactNode;
     link: string;
+    tuzo?: string;
 }
 
 export const ARCADE_GAMES: ArcadeGame[] = [
@@ -19,7 +20,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 50,
         color: "from-slate-800 to-indigo-900",
         icon: <Focus size={48} className="text-white animate-pulse" />,
-        link: "/bilsem-zeka/karanlik-labirent"
+        link: "/bilsem-zeka/karanlik-labirent",
+        tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
     },
     {
         id: 'renkli-balon',
@@ -28,7 +30,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 30,
         color: "from-sky-400 to-blue-600",
         icon: <Sparkles size={48} className="text-white animate-bounce" />,
-        link: "/bilsem-zeka/renkli-balon"
+        link: "/bilsem-zeka/renkli-balon",
+        tuzo: "5.2.1 Sayısal Dizi Tamamlama"
     },
     {
         id: 'ters-navigator',
@@ -37,7 +40,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 40,
         color: "from-indigo-600 to-purple-700",
         icon: <Navigation2 size={48} className="text-white rotate-45" />,
-        link: "/bilsem-zeka/ters-navigator"
+        link: "/bilsem-zeka/ters-navigator",
+        tuzo: "5.8.1 Bilişsel Esneklik"
     },
     {
         id: 'ayna-ustasi',
@@ -46,7 +50,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 35,
         color: "from-rose-500 to-pink-600",
         icon: <FlipHorizontal2 size={48} className="text-white" />,
-        link: "/bilsem-zeka/ayna-ustasi"
+        link: "/bilsem-zeka/ayna-ustasi",
+        tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
     },
     {
         id: 'kraft-origami',
@@ -55,7 +60,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 40,
         color: "from-amber-500 to-orange-600",
         icon: <Scissors size={48} className="text-white" />,
-        link: "/bilsem-zeka/kraft-origami"
+        link: "/bilsem-zeka/kraft-origami",
+        tuzo: "5.3.2 Desen Analizi"
     },
     {
         id: 'labirent-ustasi',
@@ -64,7 +70,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 35,
         color: "from-indigo-500 to-purple-600",
         icon: <Compass size={48} className="text-white" />,
-        link: "/bilsem-zeka/labirent-ustasi"
+        link: "/bilsem-zeka/labirent-ustasi",
+        tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
     },
     {
         id: 'oruntulu-top',
@@ -73,7 +80,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 35,
         color: "from-emerald-500 to-teal-600",
         icon: <Focus size={48} className="text-white" />,
-        link: "/bilsem-zeka/oruntulu-top"
+        link: "/bilsem-zeka/oruntulu-top",
+        tuzo: "5.5.1 Analogik Akıl Yürütme"
     },
     {
         id: 'kart-dedektifi',
@@ -82,7 +90,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 40,
         color: "from-sky-400 to-blue-600",
         icon: <Search size={48} className="text-white" />,
-        link: "/bilsem-zeka/kart-dedektifi"
+        link: "/bilsem-zeka/kart-dedektifi",
+        tuzo: "5.5.2 Kural Çıkarsama"
     },
     {
         id: 'neseli-balonlar',
@@ -91,7 +100,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 35,
         color: "from-sky-300 to-blue-500",
         icon: <Circle size={48} className="text-white animate-bounce" />,
-        link: "/bilsem-zeka/neseli-balonlar"
+        link: "/bilsem-zeka/neseli-balonlar",
+        tuzo: "5.4.2 Görsel Kısa Süreli Bellek"
     },
     {
         id: 'chromabreak',
@@ -100,7 +110,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 40,
         color: "from-cyan-500 to-purple-600",
         icon: <Zap size={48} className="text-white" />,
-        link: "/bilsem-zeka/chromabreak"
+        link: "/bilsem-zeka/chromabreak",
+        tuzo: "5.4.2 Görsel Kısa Süreli Bellek"
     },
     {
         id: 'yol-bulmaca',
@@ -109,7 +120,8 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         cost: 40,
         color: "from-yellow-500 to-orange-600",
         icon: <Route size={48} className="text-white" />,
-        link: "/bilsem-zeka/yol-bulmaca"
+        link: "/bilsem-zeka/yol-bulmaca",
+        tuzo: "5.9.2 Çalışma Belleği"
     }
 ];
 

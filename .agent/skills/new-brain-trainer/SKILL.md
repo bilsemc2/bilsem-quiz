@@ -419,11 +419,26 @@ const modules = [
         color: 'violet', // renk adı
         difficulty: 'Zor', // Kolay/Orta/Zor/Uzman
         link: '/games/[simulator-slug]',
-        isNew: true  // 🆕 YENİ badge gösterir
+        isNew: true,  // 🆕 YENİ badge gösterir
+        tuzo: '5.X.X TUZÖ Beceri Adı',  // ❗ Zorunlu!
     },
     // ... mevcut oyunlar
 ];
 ```
+
+**Mevcut TUZÖ Kodları:**
+| Kod | Beceri |
+|-----|--------|
+| 5.1.x | Sözel Beceriler (Kelime, Analoji, Anlama) |
+| 5.2.x | Sayısal Beceriler (Dizi, Problem, Mantık) |
+| 5.3.x | Uzamsal Beceriler (Desen, Şekil, Labirent) |
+| 5.4.x | Kısa Süreli Bellek (Sayısal, Görsel) |
+| 5.5.x | Akıl Yürütme (Analogik, Kural Çıkarsama) |
+| 5.6.x | İşlem Hızı |
+| 5.7.x | Dikkat (Seçici, Bölünmüş) |
+| 5.8.x | Kontrol/Esneklik (Stroop, İnhibishyon) |
+| 5.9.x | Çalışma Belleği (Güncelleme, İzleme, Bağlama) |
+| 5.10.x | Sosyal Zeka |
 
 > **⚠️ Önemli Kurallar:**
 > 1. **En üste ekle**: Yeni oyun her zaman listenin en başında olmalı

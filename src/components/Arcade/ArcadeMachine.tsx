@@ -11,6 +11,7 @@ interface ArcadeMachineProps {
     cost: number;
     color: string;
     icon?: React.ReactNode;
+    tuzo?: string;
     onPlay: () => void;
     onInsufficientXP?: (required: number) => void;
 }
@@ -21,6 +22,7 @@ export const ArcadeMachine: React.FC<ArcadeMachineProps> = ({
     cost,
     color,
     icon,
+    tuzo,
     onPlay,
     onInsufficientXP
 }) => {
@@ -67,7 +69,14 @@ export const ArcadeMachine: React.FC<ArcadeMachineProps> = ({
 
                 {/* Info */}
                 <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-                <p className="text-slate-400 text-sm mb-6 line-clamp-2">{description}</p>
+                <p className="text-slate-400 text-sm mb-3 line-clamp-2">{description}</p>
+                {/* TUZÖ Badge */}
+                {tuzo && (
+                    <div className="mb-4 inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
+                        <span className="text-[9px] font-black text-indigo-300 uppercase tracking-wider">TUZÖ</span>
+                        <span className="text-[9px] font-bold text-indigo-400">{tuzo}</span>
+                    </div>
+                )}
 
                 {/* Coin Slot / Button */}
                 {!isPaid ? (

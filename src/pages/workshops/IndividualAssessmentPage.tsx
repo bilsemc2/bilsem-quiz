@@ -64,7 +64,8 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "purple",
             difficulty: "Uzman",
             link: "/games/gurultu-filtresi",
-            isNew: true
+            isNew: true,
+            tuzo: "5.7.1 Seçici Dikkat"
         },
         {
             id: 'sayisal-sifre',
@@ -73,7 +74,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Calculator />,
             color: "amber",
             difficulty: "Uzman",
-            link: "/games/sayisal-sifre"
+            link: "/games/sayisal-sifre",
+            tuzo: "5.2.3 Soyut Sayısal Mantık"
         },
         {
             id: 'number-memory',
@@ -82,7 +84,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Headphones />,
             color: "violet",
             difficulty: "Zor",
-            link: "/games/sayisal-hafiza"
+            link: "/games/sayisal-hafiza",
+            tuzo: "5.4.1 Sayısal Kısa Süreli Bellek"
         },
         {
             id: 'puzzle-master',
@@ -91,7 +94,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <ScanEye />,
             color: "indigo",
             difficulty: "Zor",
-            link: "/games/puzzle-master"
+            link: "/games/puzzle-master",
+            tuzo: "5.3.2 Desen Analizi"
         },
         {
             id: 'cosmic-memory',
@@ -100,7 +104,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Star />,
             color: "indigo",
             difficulty: "Zor",
-            link: "/games/kozmik-hafiza"
+            link: "/games/kozmik-hafiza",
+            tuzo: "5.4.2 Görsel Kısa Süreli Bellek"
         },
         {
             id: 'n-back',
@@ -109,7 +114,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Radio />,
             color: "emerald",
             difficulty: "Uzman",
-            link: "/games/n-geri-sifresi"
+            link: "/games/n-geri-sifresi",
+            tuzo: "5.9.2 Çalışma Belleği (Güncelleme)"
         },
         {
             id: 'shadow-detective',
@@ -118,7 +124,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Search />,
             color: "amber",
             difficulty: "Uzman",
-            link: "/games/golge-dedektifi"
+            link: "/games/golge-dedektifi",
+            tuzo: "5.3.1 Şekil Eşleştirme"
         },
         {
             id: 'cross-match',
@@ -127,7 +134,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Cpu />,
             color: "rose",
             difficulty: "Uzman",
-            link: "/games/capraz-eslesme"
+            link: "/games/capraz-eslesme",
+            tuzo: "5.9.1 Çalışma Belleği (İzleme)"
         },
         {
             id: 'signal-sum',
@@ -136,7 +144,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Hash />,
             color: "cyan",
             difficulty: "Uzman",
-            link: "/games/sinyal-toplami"
+            link: "/games/sinyal-toplami",
+            tuzo: "5.7.2 Bölünmüş Dikkat"
         },
         {
             id: 'target-grid',
@@ -145,7 +154,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <LayoutGrid />,
             color: "purple",
             difficulty: "Uzman",
-            link: "/games/hedef-sayi"
+            link: "/games/hedef-sayi",
+            tuzo: "5.2.2 Matematiksel Problem Çözme"
         },
         {
             id: 'stream-sum',
@@ -154,7 +164,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <TrendingUp />,
             color: "sky",
             difficulty: "Uzman",
-            link: "/games/akiskan-toplam"
+            link: "/games/akiskan-toplam",
+            tuzo: "5.9.2 Çalışma Belleği (Güncelleme)"
         },
         {
             id: 'invisible-tower',
@@ -163,7 +174,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <TrendingUp />,
             color: "amber",
             difficulty: "Uzman",
-            link: "/games/gorunmez-kule"
+            link: "/games/gorunmez-kule",
+            tuzo: "5.9.2 Çalışma Belleği (Güncelleme)"
         },
         {
             id: 'matrix-echo',
@@ -172,7 +184,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <LayoutGrid />,
             color: "blue",
             difficulty: "Uzman",
-            link: "/games/matris-yankisi"
+            link: "/games/matris-yankisi",
+            tuzo: "5.3.2 Desen Analizi"
         },
         {
             id: 'reflection-sum',
@@ -181,7 +194,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <ArrowLeftRight />,
             color: "purple",
             difficulty: "Uzman",
-            link: "/games/yansima-toplami"
+            link: "/games/yansima-toplami",
+            tuzo: "5.9.2 Çalışma Belleği (Ters Sıralı)"
         },
         {
             id: 'idioms',
@@ -190,7 +204,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Languages />,
             color: "pink",
             difficulty: "Orta",
-            link: "/deyimler"
+            link: "/deyimler",
+            tuzo: "5.1.3 Sözlü Anlama"
         },
         {
             id: 'maze',
@@ -199,7 +214,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Grid3X3 />,
             color: "teal",
             difficulty: "Zor",
-            link: "/games/labirent"
+            link: "/games/labirent",
+            tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
         },
         {
             id: 'stroop',
@@ -208,7 +224,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Eye />,
             color: "violet",
             difficulty: "Orta",
-            link: "/games/stroop"
+            link: "/games/stroop",
+            tuzo: "5.8.1 Bilişsel Esneklik"
         },
         {
             id: 'direction-stroop',
@@ -217,7 +234,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Compass />,
             color: "cyan",
             difficulty: "Orta",
-            link: "/games/yon-stroop"
+            link: "/games/yon-stroop",
+            tuzo: "5.8.1 Bilişsel Esneklik"
         },
         {
             id: 'emoji-stroop',
@@ -226,7 +244,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Smile />,
             color: "pink",
             difficulty: "Kolay",
-            link: "/games/emoji-stroop"
+            link: "/games/emoji-stroop",
+            tuzo: "5.8.2 Tepki Kontrolü (İnhibisyon)"
         },
         {
             id: 'pencil-stroop',
@@ -235,7 +254,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <PenTool />,
             color: "amber",
             difficulty: "Orta",
-            link: "/games/renkli-kalemler"
+            link: "/games/renkli-kalemler",
+            tuzo: "5.8.1 Bilişsel Esneklik"
         },
         {
             id: 'symbol-match',
@@ -244,7 +264,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Lightbulb />,
             color: "violet",
             difficulty: "Orta",
-            link: "/games/sekil-hafizasi"
+            link: "/games/sekil-hafizasi",
+            tuzo: "5.4.2 Görsel Kısa Süreli Bellek"
         },
         {
             id: 'dual-bind',
@@ -253,7 +274,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Link2 />,
             color: "rose",
             difficulty: "Zor",
-            link: "/games/cift-mod-hafiza"
+            link: "/games/cift-mod-hafiza",
+            tuzo: "5.9.1 Çalışma Belleği (Bağlama)"
         },
         {
             id: 'number-sequence',
@@ -262,7 +284,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Hash />,
             color: "blue",
             difficulty: "Orta",
-            link: "/games/sayisal-dizi"
+            link: "/games/sayisal-dizi",
+            tuzo: "5.2.1 Sayısal Dizi Tamamlama"
         },
         {
             id: 'verbal-analogy',
@@ -271,7 +294,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <BookOpen />,
             color: "pink",
             difficulty: "Orta",
-            link: "/games/sozel-analoji"
+            link: "/games/sozel-analoji",
+            tuzo: "5.1.2 Sözel Analoji"
         },
         {
             id: 'synonym',
@@ -280,7 +304,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <BookText />,
             color: "teal",
             difficulty: "Orta",
-            link: "/games/es-anlam"
+            link: "/games/es-anlam",
+            tuzo: "5.1.1 Kelime Bilgisi"
         },
         {
             id: 'sentence-synonym',
@@ -289,7 +314,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <MessageSquareText />,
             color: "violet",
             difficulty: "Orta",
-            link: "/games/cumle-ici-es-anlam"
+            link: "/games/cumle-ici-es-anlam",
+            tuzo: "5.1.3 Sözlü Anlama"
         },
         {
             id: 'digit-symbol',
@@ -298,7 +324,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Binary />,
             color: "cyan",
             difficulty: "Orta",
-            link: "/games/simge-kodlama"
+            link: "/games/simge-kodlama",
+            tuzo: "5.6.1 İşlem Hızı"
         },
         {
             id: 'visual-scanning',
@@ -307,7 +334,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <ScanEye />,
             color: "rose",
             difficulty: "Orta",
-            link: "/games/gorsel-tarama"
+            link: "/games/gorsel-tarama",
+            tuzo: "5.7.1 Seçici Dikkat"
         },
         {
             id: 'auditory-memory',
@@ -316,7 +344,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Headphones />,
             color: "indigo",
             difficulty: "Zor",
-            link: "/games/isitsel-hafiza"
+            link: "/games/isitsel-hafiza",
+            tuzo: "5.4.1 Sayısal Kısa Süreli Bellek"
         },
         {
             id: 'reaction-time',
@@ -325,7 +354,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <Activity />,
             color: "amber",
             difficulty: "Kolay",
-            link: "/games/tepki-suresi"
+            link: "/games/tepki-suresi",
+            tuzo: "5.6.1 İşlem Hızı"
         },
         {
             id: 'face-expression',
@@ -334,7 +364,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <CircleUser />,
             color: "pink",
             difficulty: "Orta",
-            link: "/games/yuz-ifadesi"
+            link: "/games/yuz-ifadesi",
+            tuzo: "5.10.1 Sosyal Zeka"
         },
         {
             id: 'knowledge-card',
@@ -343,7 +374,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <BookOpen />,
             color: "emerald",
             difficulty: "Orta",
-            link: "/games/bilgi-kartlari"
+            link: "/games/bilgi-kartlari",
+            tuzo: "5.1.4 Bilgi (Genel Kültür)"
         },
         {
             id: 'story-quiz',
@@ -352,7 +384,8 @@ const IndividualAssessmentPage: React.FC = () => {
             icon: <BookText />,
             color: "purple",
             difficulty: "Orta",
-            link: "/stories/quiz-game"
+            link: "/stories/quiz-game",
+            tuzo: "5.1.3 Sözlü Anlama"
         }
     ];
 
@@ -449,6 +482,13 @@ const IndividualAssessmentPage: React.FC = () => {
                                             )}
                                         </div>
                                         <p className="text-slate-400 text-sm font-medium leading-relaxed italic line-clamp-2">{mod.desc}</p>
+                                        {/* TUZÖ Badge */}
+                                        {mod.tuzo && (
+                                            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
+                                                <span className="text-[10px] font-black text-indigo-300 uppercase tracking-wider">TUZÖ</span>
+                                                <span className="text-[10px] font-bold text-indigo-400">{mod.tuzo}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
