@@ -188,13 +188,30 @@ const UserManagement = () => {
     if (!deletingUser) return;
     try {
       setDeleting(true);
-      await supabase.from('profiles').delete().eq('id', deletingUser.id);
+
+      const { error, count } = await supabase
+        .from('profiles')
+        .delete({ count: 'exact' })
+        .eq('id', deletingUser.id);
+
+      if (error) {
+        console.error('Supabase silme hatası:', error);
+        toast.error(`Silme hatası: ${error.message}`);
+        return;
+      }
+
+      if (count === 0) {
+        toast.error('Kullanıcı silinemedi. RLS politikası silme işlemini engelliyor olabilir.');
+        return;
+      }
+
       setUsers(users.filter(u => u.id !== deletingUser.id));
       toast.success('Kullanıcı silindi');
       setDeleteDialogOpen(false);
       setDeletingUser(null);
-    } catch {
-      toast.error('Silme hatası');
+    } catch (err) {
+      console.error('Silme hatası:', err);
+      toast.error(err instanceof Error ? err.message : 'Silme hatası');
     } finally {
       setDeleting(false);
     }

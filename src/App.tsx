@@ -53,6 +53,7 @@ const StoryQuizGame = React.lazy(() => import('./pages/Story/StoryQuizGame'));
 // Workshop Pages
 const GenelYetenekPage = React.lazy(() => import('./pages/workshops/GenelYetenekPage'));
 const ResimPage = React.lazy(() => import('./pages/workshops/ResimPage'));
+const MuzikPage = React.lazy(() => import('./pages/workshops/MuzikPage'));
 const TabletAssessmentPage = React.lazy(() => import('./pages/workshops/TabletAssessmentPage'));
 const IndividualAssessmentPage = React.lazy(() => import('./pages/workshops/IndividualAssessmentPage'));
 
@@ -176,9 +177,10 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/stories/quiz-game" element={<RequireAuth><StoryQuizGame /></RequireAuth>} />
 
             {/* Workshop Routes */}
-            <Route path="/atolyeler/genel-yetenek" element={<RequireAuth><GenelYetenekPage /></RequireAuth>} />
-            <Route path="/atolyeler/resim" element={<RequireAuth><ResimPage /></RequireAuth>} />
+            <Route path="/atolyeler/genel-yetenek" element={<GenelYetenekPage />} />
+            <Route path="/atolyeler/resim" element={<ResimPage />} />
 
+            <Route path="/atolyeler/muzik" element={<MuzikPage />} />
             <Route path="/atolyeler/muzik/*" element={<RequireAuth><MuzikWorkshopRoutes /></RequireAuth>} />
             <Route path="/atolyeler/tablet-degerlendirme" element={<RequireAuth><TabletAssessmentPage /></RequireAuth>} />
             <Route path="/atolyeler/bireysel-degerlendirme" element={<RequireAuth><IndividualAssessmentPage /></RequireAuth>} />

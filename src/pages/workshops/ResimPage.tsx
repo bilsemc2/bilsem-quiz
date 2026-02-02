@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft, Lock, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft, Lock, X, LogIn } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import ResimGame from '../../components/Workshops/Resim/ResimGame';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import './resim/resim.css';
 
 const ResimPage: React.FC = () => {
+    const navigate = useNavigate();
     const [isActive, setIsActive] = useState(false);
     const { user } = useAuth();
     const [hasTalentAccess, setHasTalentAccess] = useState<boolean | null>(null);
@@ -15,6 +17,7 @@ const ResimPage: React.FC = () => {
     const [analysisQuota, setAnalysisQuota] = useState<number | null>(null);
     const [isTeacher, setIsTeacher] = useState(false);
     const [showTalentWarning, setShowTalentWarning] = useState(false);
+    const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
     useEffect(() => {
         const checkTalentAccess = async () => {
@@ -94,6 +97,43 @@ const ResimPage: React.FC = () => {
 
     return (
         <div className="resim-workshop-container pt-24 pb-12 px-6">
+            {/* SEO Meta Tags */}
+            <Helmet>
+                <title>Resim AI Atölyesi | BİLSEM Görsel Sanatlar Yetenek Testi</title>
+                <meta name="description" content="Yapay zeka destekli görsel sanatlar yetenek değerlendirmesi. AI tarafından üretilen natürmort analizi, kompozisyon ve yaratıcı çizim becerileri testi. BİLSEM hazırlık için ideal." />
+                <meta name="keywords" content="resim yetenek testi, BİLSEM görsel sanatlar, AI resim analizi, natürmort, sanat eğitimi, yaratıcı çizim" />
+                <link rel="canonical" href="https://bilsemc2.com/atolyeler/resim" />
+
+                {/* Open Graph */}
+                <meta property="og:type" content="website" />
+                <meta property="og:title" content="Resim AI Atölyesi | BİLSEM Görsel Sanatlar" />
+                <meta property="og:description" content="AI destekli görsel sanatlar yetenek değerlendirmesi. Natürmort analizi ve yaratıcı çizim becerileri." />
+                <meta property="og:url" content="https://bilsemc2.com/atolyeler/resim" />
+                <meta property="og:image" content="https://bilsemc2.com/og-resim-atolyesi.jpg" />
+
+                {/* Twitter Card */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Resim AI Atölyesi | BİLSEM" />
+                <meta name="twitter:description" content="AI destekli görsel sanatlar yeteneği değerlendirmesi" />
+
+                {/* Structured Data */}
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "EducationalOccupationalProgram",
+                        "name": "Resim AI Atölyesi",
+                        "description": "Yapay zeka destekli görsel sanatlar yetenek değerlendirme programı",
+                        "provider": {
+                            "@type": "Organization",
+                            "name": "BİLSEM C2",
+                            "url": "https://bilsemc2.com"
+                        },
+                        "educationalProgramMode": "online",
+                        "occupationalCategory": "Görsel Sanatlar Eğitimi"
+                    })}
+                </script>
+            </Helmet>
+
             {/* Background Blobs */}
             <div className="resim-bg-blobs">
                 <div className="resim-blob resim-blob-1" />
@@ -220,7 +260,9 @@ const ResimPage: React.FC = () => {
                                     )}
                                     <button
                                         onClick={() => {
-                                            if (hasTalentAccess) {
+                                            if (!user) {
+                                                setShowLoginPrompt(true);
+                                            } else if (hasTalentAccess) {
                                                 setIsActive(true);
                                             } else {
                                                 setShowTalentWarning(true);
@@ -284,6 +326,52 @@ const ResimPage: React.FC = () => {
                             >
                                 Profilimi Görüntüle
                             </Link>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Giriş Yapma Uyarı Modal */}
+            {showLoginPrompt && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl border border-white/10 shadow-2xl p-8 max-w-md w-full text-center relative"
+                    >
+                        <button
+                            onClick={() => setShowLoginPrompt(false)}
+                            className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div className="w-20 h-20 bg-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <LogIn className="w-10 h-10 text-pink-400" />
+                        </div>
+
+                        <h2 className="text-2xl font-bold text-white mb-4">
+                            Giriş Yapmanız Gerekiyor
+                        </h2>
+
+                        <p className="text-white/70 mb-6 leading-relaxed">
+                            Resim Atölyesi'ne erişmek için lütfen giriş yapın veya yeni bir hesap oluşturun.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => navigate('/login', { state: { from: '/atolyeler/resim' } })}
+                                className="w-full py-3 bg-pink-600 text-white font-semibold rounded-xl hover:bg-pink-700 transition-all flex items-center justify-center gap-2"
+                            >
+                                <LogIn size={18} />
+                                Giriş Yap
+                            </button>
+                            <button
+                                onClick={() => navigate('/signup')}
+                                className="w-full py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all border border-white/10"
+                            >
+                                Yeni Hesap Oluştur
+                            </button>
                         </div>
                     </motion.div>
                 </div>

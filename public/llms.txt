@@ -89,6 +89,7 @@ Detaylı SSS sayfası: https://bilsemc2.com/faq
 
 - Müzik Atölyesi: https://bilsemc2.com/atolyeler/muzik
 - Resim Atölyesi: https://bilsemc2.com/atolyeler/resim
+- Genel Yetenek: https://bilsemc2.com/atolyeler/genel-yetenek
 - Bireysel Değerlendirme: https://bilsemc2.com/atolyeler/bireysel-degerlendirme
 - Hızlı Okuma: https://bilsemc2.com/atolyeler/hizli-okuma
 

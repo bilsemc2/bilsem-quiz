@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Music, Rocket, Lock, X, Brain, Sparkles, Waves, Headphones, Target, Zap, ChevronLeft } from 'lucide-react';
+import { Music, Rocket, Lock, X, Brain, Sparkles, Waves, Headphones, Target, Zap, ChevronLeft, LogIn } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAudio } from './muzik/contexts/AudioContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
 const MuzikPage: React.FC = () => {
     const navigate = useNavigate();
-    const { startAudioContext } = useAudio();
     const { user } = useAuth();
 
     const [hasMusicTalent, setHasMusicTalent] = useState<boolean | null>(null);
     const [userTalents, setUserTalents] = useState<string[]>([]);
     const [showTalentWarning, setShowTalentWarning] = useState(false);
+    const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
     // AI Özellikleri
     const aiFeatures = [
@@ -82,31 +82,60 @@ const MuzikPage: React.FC = () => {
         checkTalent();
     }, [user]);
 
-    const handleStart = async () => {
+    const handleStart = () => {
+        // Önce giriş kontrolü
+        if (!user) {
+            setShowLoginPrompt(true);
+            return;
+        }
+
         if (hasMusicTalent === false) {
             setShowTalentWarning(true);
             return;
         }
 
-        try {
-            const success = await startAudioContext();
-            if (success) {
-                const audio = new Audio('/ses/bilsemc2.mp3');
-                audio.play().catch(err => console.warn("Intro audio failed:", err));
-                setTimeout(() => {
-                    navigate("/atolyeler/muzik/single-note");
-                }, 200);
-            } else {
-                navigate("/atolyeler/muzik/single-note");
-            }
-        } catch (err) {
-            console.error("Failed to start audio workshop:", err);
-            navigate("/atolyeler/muzik/single-note");
-        }
+        // Doğrudan workshop'a yönlendir (AudioContext orada başlatılacak)
+        navigate("/atolyeler/muzik/single-note");
     };
 
     return (
         <div className="min-h-screen relative overflow-hidden bg-[#0a0a1a]">
+            {/* SEO Meta Tags */}
+            <Helmet>
+                <title>Müzik AI Atölyesi | BİLSEM Yetenek Testi - Yapay Zeka Destekli Değerlendirme</title>
+                <meta name="description" content="Yapay zeka destekli müzik yetenek testi. Gerçek zamanlı pitch algılama, ritim analizi ve kişisel geri bildirim ile müzikal yeteneklerinizi keşfedin. BİLSEM hazırlık için ideal." />
+                <meta name="keywords" content="müzik yetenek testi, BİLSEM müzik, pitch algılama, ritim testi, müzik eğitimi, yapay zeka müzik" />
+                <link rel="canonical" href="https://bilsemc2.com/atolyeler/muzik" />
+
+                {/* Open Graph */}
+                <meta property="og:type" content="website" />
+                <meta property="og:title" content="Müzik AI Atölyesi | BİLSEM Yetenek Testi" />
+                <meta property="og:description" content="Yapay zeka destekli müzik yetenek değerlendirmesi. Pitch algılama, ritim analizi ve kişisel geri bildirim." />
+                <meta property="og:url" content="https://bilsemc2.com/atolyeler/muzik" />
+                <meta property="og:image" content="https://bilsemc2.com/og-muzik-atolyesi.jpg" />
+
+                {/* Twitter Card */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Müzik AI Atölyesi | BİLSEM" />
+                <meta name="twitter:description" content="AI destekli müzik yeteneği değerlendirmesi" />
+
+                {/* Structured Data */}
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "EducationalOccupationalProgram",
+                        "name": "Müzik AI Atölyesi",
+                        "description": "Yapay zeka destekli müzik yetenek değerlendirme programı",
+                        "provider": {
+                            "@type": "Organization",
+                            "name": "BİLSEM C2",
+                            "url": "https://bilsemc2.com"
+                        },
+                        "educationalProgramMode": "online",
+                        "occupationalCategory": "Müzik Eğitimi"
+                    })}
+                </script>
+            </Helmet>
             {/* Animated Background */}
             <div className="absolute inset-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/50 via-slate-950 to-purple-950/50" />
@@ -350,6 +379,52 @@ const MuzikPage: React.FC = () => {
                             >
                                 Profilimi Görüntüle
                             </Link>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Giriş Yapma Uyarı Modal */}
+            {showLoginPrompt && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl border border-white/10 shadow-2xl p-8 max-w-md w-full text-center relative"
+                    >
+                        <button
+                            onClick={() => setShowLoginPrompt(false)}
+                            className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div className="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <LogIn className="w-10 h-10 text-indigo-400" />
+                        </div>
+
+                        <h2 className="text-2xl font-bold text-white mb-4">
+                            Giriş Yapmanız Gerekiyor
+                        </h2>
+
+                        <p className="text-white/70 mb-6 leading-relaxed">
+                            Müzik AI Atölyesi'ne erişmek için lütfen giriş yapın veya yeni bir hesap oluşturun.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => navigate('/login', { state: { from: '/atolyeler/muzik' } })}
+                                className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                            >
+                                <LogIn size={18} />
+                                Giriş Yap
+                            </button>
+                            <button
+                                onClick={() => navigate('/signup')}
+                                className="w-full py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all border border-white/10"
+                            >
+                                Yeni Hesap Oluştur
+                            </button>
                         </div>
                     </motion.div>
                 </div>

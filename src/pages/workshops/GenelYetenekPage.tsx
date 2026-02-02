@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Lightbulb, Brain, Target, Zap, Rocket, Tablet, ChevronRight, Trophy, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -43,6 +44,42 @@ const GenelYetenekPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-950 pt-24 pb-16 px-6 overflow-hidden relative">
+            {/* SEO Meta Tags */}
+            <Helmet>
+                <title>BİLSEM Genel Yetenek Testi | Tablet ve Bireysel Değerlendirme Hazırlık</title>
+                <meta name="description" content="BİLSEM genel yetenek sınavına hazırlık. Tablet değerlendirme simülatörü ve bireysel değerlendirme hazırlık merkezi. Mantık, uzamsal düşünme ve problem çözme becerileri." />
+                <meta name="keywords" content="BİLSEM genel yetenek, tablet değerlendirme, bireysel değerlendirme, zeka testi, mantık testi, uzamsal düşünme" />
+                <link rel="canonical" href="https://bilsemc2.com/atolyeler/genel-yetenek" />
+
+                {/* Open Graph */}
+                <meta property="og:type" content="website" />
+                <meta property="og:title" content="BİLSEM Genel Yetenek Testi | Hazırlık Merkezi" />
+                <meta property="og:description" content="Tablet ve bireysel değerlendirme simülatörleri ile BİLSEM sınavına hazırlan." />
+                <meta property="og:url" content="https://bilsemc2.com/atolyeler/genel-yetenek" />
+                <meta property="og:image" content="https://bilsemc2.com/og-genel-yetenek.jpg" />
+
+                {/* Twitter Card */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="BİLSEM Genel Yetenek | Hazırlık" />
+                <meta name="twitter:description" content="Tablet ve bireysel değerlendirme hazırlık merkezi" />
+
+                {/* Structured Data */}
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "EducationalOccupationalProgram",
+                        "name": "BİLSEM Genel Yetenek Hazırlık",
+                        "description": "BİLSEM genel yetenek sınavına hazırlık programı - Tablet ve bireysel değerlendirme simülatörleri",
+                        "provider": {
+                            "@type": "Organization",
+                            "name": "BİLSEM C2",
+                            "url": "https://bilsemc2.com"
+                        },
+                        "educationalProgramMode": "online",
+                        "occupationalCategory": "Eğitim / Zeka Geliştirme"
+                    })}
+                </script>
+            </Helmet>
             {/* Arka Plan Efektleri */}
             <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[150px]" />
