@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import {
     ChevronLeft, RotateCcw, Trophy,
-    Star, Zap, Brain, Rocket, Eye, Heart, Clock
+    Star, Zap, Brain, Eye, Heart, Clock, Play, Home,
+    CheckCircle2, XCircle, Sparkles
 } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
@@ -16,11 +17,26 @@ interface GameState {
     score: number;
     sequence: number[];
     userSequence: number[];
-    isDisplaying: number | null; // Şu an parlayan hücrenin indexi
+    isDisplaying: number | null;
     status: 'WAITING' | 'DISPLAYING' | 'INPUT' | 'SUCCESS' | 'FAILURE' | 'GAMEOVER';
     gridSize: number;
     mode: GameMode;
 }
+
+// Child-friendly feedback messages
+const SUCCESS_MESSAGES = [
+    "Süper hafıza! ⭐",
+    "Uzay dahisi! 🚀",
+    "Harikasın! 🌟",
+    "Mükemmel! 💫",
+    "Kozmik zeka! 🧠",
+];
+
+const FAIL_MESSAGES = [
+    "Tekrar dene! 💪",
+    "Diziye odaklan! 👀",
+    "Biraz daha dikkat! 🎯",
+];
 
 const CosmicMemoryGame: React.FC = () => {
     const { playSound } = useSound();
@@ -28,6 +44,9 @@ const CosmicMemoryGame: React.FC = () => {
     const location = useLocation();
     const [gameStarted, setGameStarted] = useState(false);
     const gameStartTimeRef = useRef<number>(0);
+    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [isCorrectFeedback, setIsCorrectFeedback] = useState(true);
 
     const [state, setState] = useState<GameState>({
         level: 1,
@@ -40,12 +59,12 @@ const CosmicMemoryGame: React.FC = () => {
         mode: 'NORMAL'
     });
     const [lives, setLives] = useState(5);
-    const [totalTime, setTotalTime] = useState(180); // 3 dakika
+    const [totalTime, setTotalTime] = useState(180);
 
     // ------------------ Oyun Mantığı ------------------
 
     const generateSequence = useCallback((level: number, size: number) => {
-        const length = level + 2; // Başlangıçta 3, her seviye +1
+        const length = level + 2;
         const newSequence = [];
         for (let i = 0; i < length; i++) {
             newSequence.push(Math.floor(Math.random() * (size * size)));
@@ -69,7 +88,6 @@ const CosmicMemoryGame: React.FC = () => {
         }));
     }, [state.level, generateSequence]);
 
-    // Sekansı Göster
     useEffect(() => {
         if (state.status === 'DISPLAYING') {
             let i = 0;
@@ -82,7 +100,7 @@ const CosmicMemoryGame: React.FC = () => {
 
                 const currentIdx = state.sequence[i];
                 setState(prev => ({ ...prev, isDisplaying: currentIdx }));
-                playSound('cosmic_pop'); // Parlama sesi
+                playSound('cosmic_pop');
 
                 setTimeout(() => {
                     setState(prev => ({ ...prev, isDisplaying: null }));
@@ -100,12 +118,10 @@ const CosmicMemoryGame: React.FC = () => {
         const nextUserSequence = [...state.userSequence, idx];
         const currentStep = state.userSequence.length;
 
-        // Doğrulama Mantığı
         let isCorrect = false;
         if (state.mode === 'NORMAL') {
             isCorrect = state.sequence[currentStep] === idx;
         } else {
-            // REVERSE MOD: Sekansın sonundan başına doğru kontrol
             isCorrect = state.sequence[state.sequence.length - 1 - currentStep] === idx;
         }
 
@@ -114,8 +130,12 @@ const CosmicMemoryGame: React.FC = () => {
             setState(prev => ({ ...prev, userSequence: nextUserSequence }));
 
             if (nextUserSequence.length === state.sequence.length) {
-                // Seviye Tamamlandı
+                setIsCorrectFeedback(true);
+                setFeedbackMessage(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+                setShowFeedback(true);
+
                 setTimeout(() => {
+                    setShowFeedback(false);
                     if (state.level === 10) {
                         setState(prev => ({ ...prev, status: 'GAMEOVER', score: prev.score + 500 }));
                     } else {
@@ -126,29 +146,36 @@ const CosmicMemoryGame: React.FC = () => {
                         }));
                         setTimeout(() => {
                             setState(prev => ({ ...prev, level: prev.level + 1 }));
-                        }, 1500);
+                        }, 500);
                     }
-                }, 500);
+                }, 1200);
             }
         } else {
             playSound('cosmic_fail');
+            setIsCorrectFeedback(false);
+            setFeedbackMessage(FAIL_MESSAGES[Math.floor(Math.random() * FAIL_MESSAGES.length)]);
+            setShowFeedback(true);
+
             setLives(l => {
                 const newLives = l - 1;
-                if (newLives <= 0) {
-                    setState(prev => ({ ...prev, status: 'FAILURE' }));
-                    setTimeout(() => {
-                        setState(prev => ({ ...prev, status: 'GAMEOVER' }));
-                    }, 1500);
-                } else {
-                    setState(prev => ({ ...prev, status: 'FAILURE' }));
-                    setTimeout(() => {
-                        if (state.level === 10) {
+                setTimeout(() => {
+                    setShowFeedback(false);
+                    if (newLives <= 0) {
+                        setState(prev => ({ ...prev, status: 'FAILURE' }));
+                        setTimeout(() => {
                             setState(prev => ({ ...prev, status: 'GAMEOVER' }));
-                        } else {
-                            setState(prev => ({ ...prev, level: prev.level + 1, status: 'WAITING' }));
-                        }
-                    }, 1500);
-                }
+                        }, 500);
+                    } else {
+                        setState(prev => ({ ...prev, status: 'FAILURE' }));
+                        setTimeout(() => {
+                            if (state.level === 10) {
+                                setState(prev => ({ ...prev, status: 'GAMEOVER' }));
+                            } else {
+                                setState(prev => ({ ...prev, level: prev.level + 1, status: 'WAITING' }));
+                            }
+                        }, 500);
+                    }
+                }, 1200);
                 return newLives;
             });
         }
@@ -176,21 +203,18 @@ const CosmicMemoryGame: React.FC = () => {
         setGameStarted(true);
     }, []);
 
-    // Handle Auto Start from HUB
     useEffect(() => {
         if (location.state?.autoStart && !gameStarted) {
             restartGame();
         }
     }, [location.state, gameStarted, restartGame]);
 
-    // Oyun başladığında süre başlat
     useEffect(() => {
         if (gameStarted && state.status !== 'GAMEOVER') {
             gameStartTimeRef.current = Date.now();
         }
     }, [gameStarted, state.status]);
 
-    // Toplam süre zamanlayıcısı
     useEffect(() => {
         if (!gameStarted || state.status === 'GAMEOVER') return;
         const totalTimer = setInterval(() => {
@@ -206,7 +230,6 @@ const CosmicMemoryGame: React.FC = () => {
         return () => clearInterval(totalTimer);
     }, [gameStarted, state.status]);
 
-    // Oyun bittiğinde verileri kaydet
     useEffect(() => {
         if (state.status === 'GAMEOVER' && gameStartTimeRef.current > 0) {
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
@@ -224,203 +247,373 @@ const CosmicMemoryGame: React.FC = () => {
         }
     }, [state.status, state.score, state.level, state.mode, state.gridSize, saveGamePlay]);
 
-    // ------------------ Render ------------------
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Back link - FIXED
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
+    // ------------------ Welcome Screen ------------------
 
     if (!gameStarted) {
         return (
-            <div className="min-h-screen bg-[#050510] flex items-center justify-center p-6 text-white relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(79,70,229,0.15),transparent)] animate-pulse" />
+            <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                {/* Decorative Background */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl animate-pulse" />
+                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl" />
+                    <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl" />
+                </div>
+
                 <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="bg-white/5 backdrop-blur-3xl p-12 rounded-[4rem] border-4 border-white/10 text-center max-w-2xl shadow-2xl relative z-10"
+                    className="bg-white/10 backdrop-blur-xl p-10 rounded-3xl border border-white/20 text-center max-w-xl relative z-10"
+                    style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}
                 >
-                    <div className="w-24 h-24 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl rotate-12">
-                        <Star size={60} className="text-white fill-white animate-pulse" />
-                    </div>
-                    <h1 className="text-5xl font-black mb-6 tracking-tight bg-gradient-to-r from-indigo-200 to-purple-400 bg-clip-text text-transparent uppercase italic">KOZMİK HAFIZA</h1>
-
-                    <div className="text-left space-y-6 mb-12 bg-black/20 p-8 rounded-3xl border border-white/5 shadow-inner">
-                        <div className="flex gap-4 items-start">
-                            <div className="w-8 h-8 rounded-full bg-indigo-500 flex-shrink-0 flex items-center justify-center font-black">1</div>
-                            <p className="text-indigo-100 font-bold text-lg">Ekranda parlayan yıldızları ve sırasını takip et.</p>
-                        </div>
-                        <div className="flex gap-4 items-start">
-                            <div className="w-8 h-8 rounded-full bg-purple-500 flex-shrink-0 flex items-center justify-center font-black">2</div>
-                            <p className="text-indigo-100 font-bold text-lg">"NORMAL" modda aynı sırayla, "REVERSE" modda sondan başa dokun.</p>
-                        </div>
-                        <div className="flex gap-4 items-start">
-                            <div className="w-8 h-8 rounded-full bg-pink-500 flex-shrink-0 flex items-center justify-center font-black">3</div>
-                            <p className="text-indigo-100 font-bold text-lg">Seviye ilerledikçe uzay derinleşir ve ızgara büyür!</p>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={() => setGameStarted(true)}
-                        className="px-12 py-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-black text-2xl rounded-3xl hover:scale-110 transition-all shadow-[0_10px_0_#4338ca] border-b-4 border-indigo-800 active:translate-y-2 active:shadow-none flex items-center gap-4 mx-auto group"
+                    {/* 3D Gummy Icon */}
+                    <motion.div
+                        className="w-28 h-28 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                        style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
-                        KEŞFE BAŞLA! <Rocket className="group-hover:translate-x-2 group-hover:-translate-y-2 transition-transform" />
-                    </button>
+                        <Star size={52} className="text-white fill-white drop-shadow-lg" />
+                    </motion.div>
+
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+                        Kozmik Hafıza
+                    </h1>
+
+                    <p className="text-slate-300 mb-6 text-lg">
+                        Yıldızların sırasını hatırla! ⭐
+                    </p>
+
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="font-bold text-indigo-300 mb-3 flex items-center gap-2">
+                            <Sparkles size={18} />
+                            Nasıl Oynanır?
+                        </h3>
+                        <ul className="text-sm text-slate-200 space-y-2">
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-indigo-500/30 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                                Parlayan yıldızları takip et
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-purple-500/30 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                                NORMAL: Aynı sırada tıkla
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-pink-500/30 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                                REVERSE: Ters sırada tıkla
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-emerald-500/30 rounded-full flex items-center justify-center text-xs font-bold">🎯</span>
+                                10 seviye tamamla!
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="flex flex-wrap justify-center gap-4 mb-6">
+                        <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/20">
+                            <Heart className="text-red-400" size={16} />
+                            <span className="text-sm text-slate-200">5 Can</span>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/20">
+                            <Clock className="text-blue-400" size={16} />
+                            <span className="text-sm text-slate-200">3 Dakika</span>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/20">
+                            <Zap className="text-emerald-400" size={16} />
+                            <span className="text-sm text-slate-200">10 Seviye</span>
+                        </div>
+                    </div>
+
+                    {/* TUZÖ Badge */}
+                    <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
+                        <span className="text-[9px] font-black text-indigo-300 uppercase tracking-wider">TUZÖ</span>
+                        <span className="text-[9px] font-bold text-indigo-400">5.4.2 Görsel Kısa Süreli Bellek</span>
+                    </div>
+
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setGameStarted(true)}
+                        className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl"
+                        style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Play size={28} className="fill-white" />
+                            <span>Başla</span>
+                        </div>
+                    </motion.button>
                 </motion.div>
             </div>
         );
     }
 
-    return (
-        <div className="min-h-screen bg-[#02020a] p-6 pt-24 relative overflow-hidden flex flex-col items-center">
-            {/* Kozmik Arka Plan */}
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30" />
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.15),transparent)] pointer-events-none" />
+    // ------------------ Game Screen ------------------
 
-            <div className="container mx-auto max-w-6xl relative z-10 flex flex-col gap-10">
-                {/* HUD */}
-                <div className="flex items-center justify-between bg-white/5 backdrop-blur-md p-8 rounded-[3rem] shadow-2xl border-2 border-white/10 text-white">
-                    <Link to={location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/tablet-degerlendirme"} className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-black transition-all">
-                        <ChevronLeft size={28} /> {location.state?.arcadeMode ? "ARCADE" : "MERKEZ"}
-                    </Link>
-                    <div className="flex items-center gap-6">
-                        {/* Canlar */}
-                        <div className="flex flex-col items-center px-4">
-                            <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1">Can</span>
-                            <div className="flex gap-1">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <Heart
-                                        key={i}
-                                        size={18}
-                                        className={`transition-all ${i < lives ? 'text-red-500 fill-red-500' : 'text-slate-700'}`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex flex-col items-center px-4 border-r border-white/10">
-                            <span className="text-indigo-300/60 text-xs font-black uppercase tracking-widest mb-1">Sektör</span>
-                            <div className="text-2xl font-black text-indigo-400">{state.level}<span className="text-indigo-900 text-lg">/10</span></div>
-                        </div>
-                        <div className="flex flex-col items-center px-4 border-r border-white/10">
-                            <span className="text-purple-300/60 text-xs font-black uppercase tracking-widest mb-1">Veri</span>
-                            <div className="text-2xl font-black text-purple-400">{state.score}</div>
-                        </div>
-                        <div className="flex flex-col items-center px-4 border-r border-white/10">
-                            <span className="text-pink-300/60 text-xs font-black uppercase tracking-widest mb-1">Mod</span>
-                            <div className={`text-lg font-black px-3 py-1 rounded-full border-2 transition-all ${state.mode === 'REVERSE'
-                                ? 'bg-pink-500/20 border-pink-500 text-pink-400'
-                                : 'bg-indigo-500/20 border-indigo-500 text-indigo-400'
-                                }`}>
-                                {state.mode}
-                            </div>
-                        </div>
-                        {/* Toplam Süre */}
-                        <div className="flex flex-col items-center min-w-[70px]">
-                            <span className="text-cyan-300/60 text-xs font-black uppercase tracking-widest mb-1">Toplam</span>
-                            <div className={`flex items-center gap-1 text-xl font-black font-mono ${totalTime < 30 ? 'text-red-400 animate-pulse' : 'text-cyan-400'} transition-all`}>
-                                <Clock size={16} />
-                                {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}
-                            </div>
-                        </div>
-                    </div>
-                    <button
-                        onClick={restartGame}
-                        className="p-4 bg-white/5 text-indigo-300 hover:bg-white/10 rounded-2xl transition-all border border-white/10 active:scale-95"
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white relative overflow-hidden">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl" />
+            </div>
+
+            {/* Feedback Overlay */}
+            <AnimatePresence>
+                {showFeedback && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
                     >
-                        <RotateCcw size={28} />
-                    </button>
+                        <motion.div
+                            initial={{ y: 50 }}
+                            animate={{ y: 0 }}
+                            className={`
+                                px-12 py-8 rounded-3xl text-center
+                                ${isCorrectFeedback
+                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                }
+                            `}
+                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                        >
+                            <motion.div
+                                animate={{ scale: [1, 1.2, 1], rotate: isCorrectFeedback ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                {isCorrectFeedback
+                                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                }
+                            </motion.div>
+                            <p className="text-3xl font-black text-white">{feedbackMessage}</p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <div className="relative z-10 p-4">
+                {/* Header */}
+                <div className="max-w-4xl mx-auto flex items-center justify-between mb-6">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
+
+                    <div className="flex items-center gap-3 flex-wrap justify-end">
+                        {/* Score */}
+                        <div className="flex items-center gap-2 bg-purple-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-purple-500/30">
+                            <Star className="text-purple-400" size={18} />
+                            <span className="font-bold text-purple-400">{state.score}</span>
+                        </div>
+
+                        {/* Lives */}
+                        <div className="flex items-center gap-1 bg-red-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-red-500/30">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <Heart
+                                    key={i}
+                                    size={14}
+                                    className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Timer */}
+                        <div className="flex items-center gap-2 bg-blue-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-blue-500/30">
+                            <Clock className="text-blue-400" size={18} />
+                            <span className={`font-bold ${totalTime <= 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'}`}>
+                                {formatTime(totalTime)}
+                            </span>
+                        </div>
+
+                        {/* Level */}
+                        <div className="flex items-center gap-2 bg-emerald-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-emerald-500/30">
+                            <Zap className="text-emerald-400" size={18} />
+                            <span className="font-bold text-emerald-400">Lv.{state.level}</span>
+                        </div>
+
+                        {/* Mode Badge */}
+                        <div className={`px-3 py-2 rounded-xl font-bold text-sm ${state.mode === 'REVERSE'
+                                ? 'bg-pink-500/20 border border-pink-500/30 text-pink-300'
+                                : 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-300'
+                            }`}>
+                            {state.mode}
+                        </div>
+
+                        {/* Restart */}
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={restartGame}
+                            className="p-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20"
+                        >
+                            <RotateCcw size={20} className="text-slate-300" />
+                        </motion.button>
+                    </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center gap-12 py-10">
-                    {/* Oyun Izgarası */}
-                    <div
-                        className="grid gap-4 p-8 bg-white/5 backdrop-blur-xl rounded-[3rem] border-4 border-white/10 shadow-[0_0_80px_rgba(99,102,241,0.1)] relative"
-                        style={{
-                            gridTemplateColumns: `repeat(${state.gridSize}, 1fr)`,
-                            width: state.gridSize === 3 ? '400px' : state.gridSize === 4 ? '500px' : '600px',
-                            height: state.gridSize === 3 ? '400px' : state.gridSize === 4 ? '500px' : '600px'
-                        }}
-                    >
-                        {Array.from({ length: state.gridSize * state.gridSize }).map((_, idx) => (
-                            <motion.button
-                                key={idx}
-                                initial={false}
-                                animate={state.isDisplaying === idx ? {
-                                    scale: 1.15,
-                                    backgroundColor: 'rgba(255,255,255,0.9)',
-                                    boxShadow: '0 0 50px rgba(255,255,255,0.8)'
-                                } : {
-                                    scale: 1,
-                                    backgroundColor: 'rgba(255,255,255,0.05)',
-                                    boxShadow: '0 0 0px rgba(255,255,255,0)'
-                                }}
-                                whileHover={state.status === 'INPUT' ? { scale: 1.05, backgroundColor: 'rgba(255,255,255,0.15)' } : {}}
-                                whileTap={state.status === 'INPUT' ? { scale: 0.95 } : {}}
-                                onClick={() => handleCellClick(idx)}
-                                className={`rounded-2xl border-2 border-white/10 transition-colors ${state.status === 'INPUT' ? 'cursor-pointer' : 'cursor-default'
+                {/* Game Grid */}
+                <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
+                    {/* Status Banner */}
+                    <AnimatePresence>
+                        {(state.status === 'DISPLAYING' || state.status === 'INPUT') && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                className={`mb-6 flex items-center gap-3 px-6 py-3 rounded-2xl font-bold ${state.status === 'DISPLAYING'
+                                        ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-300'
+                                        : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
                                     }`}
                             >
-                                <AnimatePresence>
-                                    {(state.isDisplaying === idx || state.userSequence.includes(idx)) && (
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0 }}
-                                            className="flex items-center justify-center h-full w-full"
-                                        >
-                                            <Star className={state.isDisplaying === idx ? "text-indigo-600 fill-indigo-600" : "text-indigo-400 opacity-30"} size={30} />
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </motion.button>
-                        ))}
+                                {state.status === 'DISPLAYING' ? (
+                                    <><Eye className="animate-pulse" size={20} /> Takip Et!</>
+                                ) : (
+                                    <><Brain className="animate-bounce" size={20} /> {state.mode === 'REVERSE' ? 'Ters Sırayla Tıkla!' : 'Aynı Sırayla Tıkla!'}</>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                        {/* Durum Bildirimleri */}
-                        <AnimatePresence>
-                            {(state.status === 'DISPLAYING' || state.status === 'INPUT') && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0 }}
-                                    className="absolute -top-20 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-indigo-500/20 border border-indigo-500/50 px-8 py-3 rounded-full text-indigo-200 font-black uppercase tracking-widest"
+                    {/* Grid - 3D Gummy Cards */}
+                    <div
+                        className="grid gap-3 p-6 bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20"
+                        style={{
+                            gridTemplateColumns: `repeat(${state.gridSize}, 1fr)`,
+                            width: state.gridSize === 3 ? '320px' : state.gridSize === 4 ? '400px' : '480px',
+                            boxShadow: 'inset 0 2px 12px rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.3)'
+                        }}
+                    >
+                        {Array.from({ length: state.gridSize * state.gridSize }).map((_, idx) => {
+                            const isActive = state.isDisplaying === idx;
+                            const isClicked = state.userSequence.includes(idx);
+
+                            return (
+                                <motion.button
+                                    key={idx}
+                                    initial={false}
+                                    animate={isActive ? {
+                                        scale: 1.1,
+                                    } : {
+                                        scale: 1,
+                                    }}
+                                    whileHover={state.status === 'INPUT' ? { scale: 1.05 } : {}}
+                                    whileTap={state.status === 'INPUT' ? { scale: 0.95 } : {}}
+                                    onClick={() => handleCellClick(idx)}
+                                    className={`aspect-square rounded-2xl transition-all ${state.status === 'INPUT' ? 'cursor-pointer' : 'cursor-default'}`}
+                                    style={{
+                                        background: isActive
+                                            ? 'linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)'
+                                            : isClicked
+                                                ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.4) 100%)'
+                                                : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                        boxShadow: isActive
+                                            ? 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.3), 0 0 30px rgba(129, 140, 248, 0.6)'
+                                            : 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)',
+                                        border: isActive ? '2px solid rgba(255,255,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                                    }}
                                 >
-                                    {state.status === 'DISPLAYING' ? (
-                                        <><Eye className="animate-pulse" /> TAKİP ET!</>
-                                    ) : (
-                                        <><Brain className="animate-bounce" /> {state.mode === 'REVERSE' ? 'TERS SIRALAYIN!' : 'SIRALAYIN!'}</>
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                    <AnimatePresence>
+                                        {(isActive || isClicked) && (
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0 }}
+                                                className="flex items-center justify-center h-full w-full"
+                                            >
+                                                <Star
+                                                    className={isActive ? "text-white fill-white drop-shadow-lg" : "text-indigo-300/50"}
+                                                    size={state.gridSize === 3 ? 32 : state.gridSize === 4 ? 28 : 24}
+                                                />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.button>
+                            );
+                        })}
                     </div>
                 </div>
+            </div>
 
-                {/* Mesaj Overlays */}
-                <AnimatePresence>
-                    {state.status === 'SUCCESS' && (
-                        <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.5 }} className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-                            <div className="bg-emerald-500 text-white px-12 py-6 rounded-full font-black text-4xl shadow-2xl flex items-center gap-6 border-4 border-white animate-bounce italic">
-                                <Zap className="fill-white" /> MUHTEŞEM!
+            {/* Game Over Overlay */}
+            <AnimatePresence>
+                {state.status === 'GAMEOVER' && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 border border-white/20 text-center max-w-md w-full"
+                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                        >
+                            <motion.div
+                                className="w-24 h-24 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.4), 0 8px 32px rgba(251, 191, 36, 0.5)' }}
+                                animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                            >
+                                <Trophy size={48} className="text-white" />
+                            </motion.div>
+
+                            <h2 className="text-3xl font-black text-amber-300 mb-2">
+                                {state.score >= 5000 ? '🎉 Uzay Dahisi!' : 'Görev Tamamlandı!'}
+                            </h2>
+                            <p className="text-slate-300 mb-6">Kozmik hafızan harika!</p>
+
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/20">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-black text-purple-400">{state.score}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Seviye</p>
+                                        <p className="text-3xl font-black text-emerald-400">{state.level}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={restartGame}
+                                    className="w-full px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-lg"
+                                    style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+                                >
+                                    <div className="flex items-center justify-center gap-3">
+                                        <RotateCcw size={24} />
+                                        <span>Tekrar Oyna</span>
+                                    </div>
+                                </motion.button>
+                                <Link
+                                    to={backLink}
+                                    className="w-full px-6 py-4 bg-white/10 backdrop-blur-sm rounded-2xl font-bold flex items-center justify-center gap-2 border border-white/20"
+                                >
+                                    <Home size={20} />
+                                    <span>{location.state?.arcadeMode ? "Arcade'e Dön" : "Çıkış"}</span>
+                                </Link>
                             </div>
                         </motion.div>
-                    )}
-
-                    {state.status === 'GAMEOVER' && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050510]/95 backdrop-blur-3xl">
-                            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white/5 rounded-[5rem] p-20 border-2 border-white/20 text-center max-w-2xl w-full shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-                                <div className="w-40 h-40 bg-gradient-to-br from-indigo-400 to-purple-600 text-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-[0_0_50px_rgba(99,102,241,0.3)] rotate-12">
-                                    <Trophy size={100} />
-                                </div>
-                                <h2 className="text-6xl font-black text-white mb-6 tracking-tighter italic uppercase">GÖREV BİTTİ</h2>
-                                <p className="text-indigo-100 font-bold text-3xl mb-14 leading-relaxed italic">
-                                    Uzay Hafızan Kanıtlandı! <br />
-                                    <span className="text-7xl text-indigo-500 block font-black mt-8 not-italic">{state.score} <span className="text-2xl text-indigo-800">PUAN</span></span>
-                                </p>
-                                <div className="flex flex-col gap-6">
-                                    <button onClick={restartGame} className="w-full py-8 bg-indigo-600 text-white font-black rounded-4xl flex items-center justify-center gap-6 shadow-[0_12px_0_#4338ca] border-b-4 border-indigo-800 hover:scale-105 transition-all text-3xl active:translate-y-3 active:shadow-none uppercase">YENİDEN DENE</button>
-                                    <Link to={location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/tablet-degerlendirme"} className="text-indigo-400 font-black text-2xl hover:text-indigo-300 transition-colors block mt-8 underline decoration-4 underline-offset-8">{location.state?.arcadeMode ? "ARCADE'E DÖN" : "MERKEZE DÖN"}</Link>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

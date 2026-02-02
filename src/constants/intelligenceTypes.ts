@@ -78,6 +78,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'chromabreak': ZEKA_TURLERI.GORSEL_HAFIZA,
     'yol-bulmaca': ZEKA_TURLERI.CALISMA_BELLEGI,
     'renkli-lambalar': ZEKA_TURLERI.GORSEL_HAFIZA,
+    'desen-boyama': ZEKA_TURLERI.GORSEL_UZAMSAL,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -121,6 +122,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'hikaye-quiz': 'bireysel',
     'sayisal-sifre': 'bireysel',
     'gurultu-filtresi': 'bireysel',
+    'desen-boyama': 'bireysel',
 
     // Arcade Oyunları
     'arcade-dark-maze': 'arcade',

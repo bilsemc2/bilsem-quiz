@@ -57,6 +57,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'desen-boyama',
+            title: "Desen Boyama",
+            desc: "Örüntüdeki boşluğu doğru renklerle doldur! Desen analizi ve görsel tamamlama.",
+            icon: <PenTool />,
+            color: "rose",
+            difficulty: "Orta",
+            link: "/games/desen-boyama",
+            isNew: true,
+            tuzo: "5.3.2 Desen Analizi"
+        },
+        {
             id: 'gurultu-filtresi',
             title: "Gürültü Filtresi",
             desc: "Dikkat dağıtıcı arka plan sesleri arasında hedef sesi tanı! Seçici dikkat ve odaklanma.",
@@ -64,7 +75,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "purple",
             difficulty: "Uzman",
             link: "/games/gurultu-filtresi",
-            isNew: true,
             tuzo: "5.7.1 Seçici Dikkat"
         },
         {

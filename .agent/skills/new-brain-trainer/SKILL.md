@@ -480,43 +480,171 @@ VALUES ('/atolyeler/bireysel-degerlendirme/[simulator-slug]', 15, '[Simülatör 
 
 ---
 
-## Tasarım Standartları
+## Tasarım Standartları - 3D Gummy Candy Stili
 
-### Renk Paleti
-```css
-/* Arka Plan */
-bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900
+### 🍬 3D Gummy Candy Estetiği
 
-/* Glassmorphism Paneller */
-bg-slate-800/50 backdrop-blur-xl rounded-3xl
+Tüm BrainTrainer oyunları "yumuşak şeker" görsel stilini takip etmelidir:
 
-/* Durum Renkleri */
-text-amber-400   /* Skor */
-text-red-400     /* Can */
-text-blue-400    /* Süre */
-text-emerald-400 /* Seviye/Başarı */
-text-purple-400  /* Aksiyon */
+#### Ana İkon (Welcome Screen)
+```tsx
+<motion.div 
+    className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center"
+    style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+    animate={{ y: [0, -8, 0] }}
+    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+>
+    <IconComponent size={52} className="text-white drop-shadow-lg" />
+</motion.div>
 ```
 
-### Touch-First Hedefler
+#### 3D Gummy Butonlar
+```tsx
+<motion.button
+    whileHover={{ scale: 1.05, y: -2 }}
+    whileTap={{ scale: 0.95 }}
+    className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl"
+    style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+>
+    <div className="flex items-center gap-3">
+        <Play size={28} className="fill-white" />
+        <span>Başla</span>
+    </div>
+</motion.button>
+```
+
+#### 3D Gummy Kartlar/Hücreler
+```tsx
+style={{
+    background: isActive 
+        ? 'linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)' 
+        : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+    boxShadow: isActive 
+        ? 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.3), 0 0 30px rgba(129, 140, 248, 0.6)'
+        : 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)',
+    borderRadius: '24px',
+}}
+```
+
+---
+
+### 🎯 Çocuk Dostu Geri Bildirim Overlay
+
+```tsx
+// Mesaj dizileri
+const CORRECT_MESSAGES = [
+    "Harikasın! 🎨",
+    "Süpersin! ⭐",
+    "Muhteşem! 🌟",
+    "Bravo! 🎉",
+    "Tam isabet! 🎯",
+];
+
+const WRONG_MESSAGES = [
+    "Tekrar dene! 💪",
+    "Düşün ve bul! 🧐",
+    "Biraz daha dikkat! 🎯",
+];
+
+// Feedback Overlay Component
+<AnimatePresence>
+    {phase === 'feedback' && (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        >
+            <motion.div
+                initial={{ y: 50 }}
+                animate={{ y: 0 }}
+                className={`px-12 py-8 rounded-3xl text-center ${
+                    isCorrect 
+                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600' 
+                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                }`}
+                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+            >
+                <motion.div
+                    animate={{ scale: [1, 1.2, 1], rotate: isCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                    transition={{ duration: 0.5 }}
+                >
+                    {isCorrect 
+                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                    }
+                </motion.div>
+                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
+            </motion.div>
+        </motion.div>
+    )}
+</AnimatePresence>
+```
+
+---
+
+### 🎨 Renk Paleti
+
+```css
+/* Arka Plan - Koyu Gradient */
+bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900
+
+/* Glassmorphism Paneller */
+bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20
+
+/* HUD Elementleri */
+bg-amber-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-amber-500/30  /* Skor */
+bg-red-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-red-500/30      /* Can */
+bg-blue-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-blue-500/30    /* Süre */
+bg-emerald-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-emerald-500/30 /* Seviye */
+
+/* Kalp İkonlu Can Gösterimi */
+<div className="flex items-center gap-1">
+    {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
+        <Heart 
+            key={i} 
+            size={14} 
+            className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'} 
+        />
+    ))}
+</div>
+```
+
+---
+
+### 📍 TUZÖ Badge
+
+```tsx
+<div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full">
+    <span className="text-[9px] font-black text-violet-300 uppercase tracking-wider">TUZÖ</span>
+    <span className="text-[9px] font-bold text-violet-400">5.X.X Beceri Adı</span>
+</div>
+```
+
+---
+
+### ✋ Touch-First Hedefler
 ```css
 /* Minimum tıklama alanları */
 min-h-[80px] min-w-[80px]  /* Kartlar */
 px-8 py-4                   /* Butonlar */
 gap-4                       /* Grid spacing */
+rounded-2xl                 /* Yumuşak köşeler */
 ```
 
-### Animasyonlar
+### 🎭 Animasyonlar
 ```tsx
-// Hover efekti
-whileHover={{ scale: 1.05 }}
+// Hover efekti (3D float)
+whileHover={{ scale: 1.05, y: -4 }}
 whileTap={{ scale: 0.95 }}
 
-// Pulsing efekt (düşük süre)
-className="animate-pulse"
+// Bounce animasyonu (ikon)
+animate={{ y: [0, -8, 0] }}
+transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
 
-// Bounce efekt (zafer)
-className="animate-bounce"
+// Zafer animasyonu
+animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
+transition={{ duration: 1.5, repeat: Infinity }}
 ```
 
 ---
