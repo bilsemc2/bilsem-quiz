@@ -1,5 +1,5 @@
 import React from 'react';
-import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle, Zap, Route } from 'lucide-react';
+import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle, Zap, Route, Lightbulb } from 'lucide-react';
 
 export interface ArcadeGame {
     id: string;
@@ -122,6 +122,16 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         icon: <Route size={48} className="text-white" />,
         link: "/bilsem-zeka/yol-bulmaca",
         tuzo: "5.9.2 Çalışma Belleği"
+    },
+    {
+        id: 'renkli-lambalar',
+        title: "Renkli Lambalar",
+        description: "Renkli solucanların yollarını ezberle ve hedef renkteki lambaları bul!",
+        cost: 35,
+        color: "from-pink-500 to-purple-600",
+        icon: <Lightbulb size={48} className="text-white" />,
+        link: "/bilsem-zeka/renkli-lambalar",
+        tuzo: "5.4.2 Görsel Kısa Süreli Bellek"
     }
 ];
 

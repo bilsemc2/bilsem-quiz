@@ -77,6 +77,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'ters-navigator': ZEKA_TURLERI.BILISSEL_ESNEKLIK,
     'chromabreak': ZEKA_TURLERI.GORSEL_HAFIZA,
     'yol-bulmaca': ZEKA_TURLERI.CALISMA_BELLEGI,
+    'renkli-lambalar': ZEKA_TURLERI.GORSEL_HAFIZA,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -133,6 +134,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'ters-navigator': 'arcade',
     'chromabreak': 'arcade',
     'yol-bulmaca': 'arcade',
+    'renkli-lambalar': 'arcade',
 };
 
 // Workshop türü etiketleri
