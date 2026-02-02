@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
     ChevronLeft, RotateCcw, Play, Trophy, Sparkles,
     Square, Circle, Triangle, Star, Heart, Diamond,
-    Box, Layers, Zap, Clock
+    Box, Layers, Zap, Timer, Eye, CheckCircle2, XCircle
 } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
-// ------------------ Tip Tanımları ------------------
+// ------------------ Types ------------------
 type FaceName = 'FRONT' | 'BACK' | 'LEFT' | 'RIGHT' | 'TOP' | 'BOTTOM';
 
 interface FaceContent {
@@ -47,7 +47,20 @@ const ICONS = [
     { icon: Diamond, name: 'Baklava' }
 ];
 
-// 11 Standart Küp Açınımı (Nets)
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Harika! 🧊",
+    "Süper 3D Görüş! 👁️",
+    "Müthiş! ⭐",
+    "Bravo! 🌟",
+];
+
+const FAILURE_MESSAGES = [
+    "Tekrar dene! 💪",
+    "Dikkatli hayal et! 🧠",
+];
+
+// 11 Standard Cube Nets
 const NET_LAYOUTS: CubeNet[] = [
     { name: '1-4-1 (T)', grid: [[null, 'TOP', null, null], ['LEFT', 'FRONT', 'RIGHT', 'BACK'], [null, 'BOTTOM', null, null]] },
     { name: '1-4-1 (L)', grid: [['TOP', null, null, null], ['BACK', 'RIGHT', 'FRONT', 'LEFT'], [null, null, null, 'BOTTOM']] },
@@ -65,31 +78,35 @@ const NET_LAYOUTS: CubeNet[] = [
 const MagicCubeGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
-    const [gameStarted, setGameStarted] = useState(false);
-    const [gameOver, setGameOver] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
+    const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
+    const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [isFolding, setIsFolding] = useState(false);
-    const [isCorrecting, setIsCorrecting] = useState(false);
     const [timeLeft, setTimeLeft] = useState(45);
-    const [lives, setLives] = useState(5);
-    const [totalTime, setTotalTime] = useState(180); // 3 dakika
+    const [lives, setLives] = useState(3);
     const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
 
-    // Mevcut Seviye Verileri
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
+    // Current Level Data
     const [currentNet, setCurrentNet] = useState<CubeNet>(NET_LAYOUTS[0]);
     const [facesData, setFacesData] = useState<Record<FaceName, FaceContent>>({} as Record<FaceName, FaceContent>);
     const [options, setOptions] = useState<GameOption[]>([]);
 
-    // ------------------ Küp Verisi Üretici ------------------
+    const totalQuestions = 10;
+
+    // ------------------ Level Generator ------------------
     const generateLevel = useCallback(() => {
         setIsFolding(false);
-        // Rastgele bir net seç
         const net = NET_LAYOUTS[Math.floor(Math.random() * NET_LAYOUTS.length)];
         setCurrentNet(net);
 
-        // Her yüz için benzersiz bir renk/ikon kombinasyonu
         const newFacesData: Partial<Record<FaceName, FaceContent>> = {};
         const shuffledColors = [...COLORS].sort(() => Math.random() - 0.5);
         const shuffledIcons = [...ICONS].sort(() => Math.random() - 0.5);
@@ -104,9 +121,8 @@ const MagicCubeGame: React.FC = () => {
         });
         setFacesData(newFacesData as Record<FaceName, FaceContent>);
 
-        // Seçenekleri oluştur
         const correctOption: GameOption = {
-            rotation: { x: -20, y: 35 }, // Sabit bir "güzel" açı
+            rotation: { x: -20, y: 35 },
             isCorrect: true,
             id: 'correct'
         };
@@ -117,102 +133,104 @@ const MagicCubeGame: React.FC = () => {
         ];
 
         setOptions([...distractorOptions, correctOption].sort(() => Math.random() - 0.5));
-
         setTimeLeft(45);
-        setIsCorrecting(false);
-        setIsFolding(false);
-        setShowSuccess(false);
+        setShowFeedback(null);
     }, []);
 
+    // Start Game
+    const startGame = useCallback(() => {
+        setGameState('playing');
+        setLevel(1);
+        setScore(0);
+        setLives(3);
+        gameStartTimeRef.current = Date.now();
+        hasSavedRef.current = false;
+        generateLevel();
+    }, [generateLevel]);
+
+    // Auto start from HUB
     useEffect(() => {
-        if (gameStarted && !gameOver && !showSuccess && !isCorrecting && !isFolding) {
-            generateLevel();
+        if (location.state?.autoStart && gameState === 'idle') {
+            startGame();
         }
-    }, [gameStarted, gameOver, level, generateLevel, showSuccess, isCorrecting, isFolding]);
+    }, [location.state, gameState, startGame]);
 
+    // Timer
     useEffect(() => {
-        if (!gameStarted || gameOver || showSuccess || isCorrecting) return;
-        const timer = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    playSound('complete');
-                    setIsCorrecting(true);
-                    setLives(l => {
-                        const newLives = l - 1;
-                        if (newLives <= 0) {
-                            setTimeout(() => setGameOver(true), 2000);
-                        } else {
-                            setTimeout(() => {
-                                setIsCorrecting(false);
-                                if (level === 10) setGameOver(true);
-                                else setLevel(lv => lv + 1);
-                            }, 2000);
-                        }
-                        return newLives;
-                    });
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [gameStarted, gameOver, showSuccess, isCorrecting, playSound, level]);
+        let interval: NodeJS.Timeout;
+        if (gameState === 'playing' && timeLeft > 0 && !showFeedback) {
+            interval = setInterval(() => {
+                setTimeLeft(prev => {
+                    if (prev <= 1) {
+                        // Time's up - count as wrong
+                        playSound('incorrect');
+                        setShowFeedback('wrong');
+                        setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+                        setLives(l => l - 1);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [gameState, timeLeft, showFeedback, playSound]);
 
-    // Toplam süre zamanlayıcısı
+    // Handle feedback timeout
     useEffect(() => {
-        if (!gameStarted || gameOver) return;
-        const totalTimer = setInterval(() => {
-            setTotalTime(prev => {
-                if (prev <= 1) {
-                    clearInterval(totalTimer);
-                    setGameOver(true);
-                    return 0;
+        if (showFeedback) {
+            const timeout = setTimeout(() => {
+                setShowFeedback(null);
+                if (lives <= 0 && showFeedback === 'wrong') {
+                    setGameState('finished');
+                } else if (level >= totalQuestions) {
+                    setGameState('finished');
+                } else {
+                    setLevel(l => l + 1);
+                    generateLevel();
                 }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(totalTimer);
-    }, [gameStarted, gameOver]);
+            }, 2000);
+            return () => clearTimeout(timeout);
+        }
+    }, [showFeedback, lives, level, generateLevel]);
 
     const handleSelect = (option: GameOption) => {
-        if (isCorrecting || showSuccess) return;
+        if (showFeedback) return;
 
         if (option.isCorrect) {
             playSound('correct');
+            setShowFeedback('correct');
+            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
             setScore(s => s + timeLeft * 15);
-            if (level === 10) {
-                setGameOver(true);
-            } else {
-                setShowSuccess(true);
-                setTimeout(() => {
-                    setLevel(l => l + 1);
-                    setShowSuccess(false);
-                }, 1500);
-            }
         } else {
             playSound('incorrect');
-            setScore(s => Math.max(0, s - 20));
+            setShowFeedback('wrong');
+            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
             setIsFolding(true);
-            setIsCorrecting(true);
-            setLives(l => {
-                const newLives = l - 1;
-                if (newLives <= 0) {
-                    setTimeout(() => setGameOver(true), 2500);
-                } else {
-                    setTimeout(() => {
-                        setIsCorrecting(false);
-                        if (level === 10) setGameOver(true);
-                        else setLevel(lv => lv + 1);
-                    }, 2500);
-                }
-                return newLives;
-            });
+            setLives(l => l - 1);
         }
     };
 
-    // ------------------ 3D Küp Bileşeni ------------------
-    const Cube3D = ({ rotation, size = 120, data }: { rotation: { x: number; y: number }; size?: number; data: Record<FaceName, FaceContent> }) => {
+    // Save game data on finish
+    useEffect(() => {
+        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
+            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'sihirli-kupler',
+                score_achieved: score,
+                duration_seconds: durationSeconds,
+                lives_remaining: lives,
+                metadata: {
+                    level_reached: level,
+                    game_name: '3B Görselleştirme (Sihirli Küpler)',
+                }
+            });
+        }
+    }, [gameState, score, lives, level, saveGamePlay]);
+
+    // ------------------ 3D Cube Component ------------------
+    const Cube3D = ({ rotation, size = 100, data }: { rotation: { x: number; y: number }; size?: number; data: Record<FaceName, FaceContent> }) => {
         const half = size / 2;
         const faceStyle = (transform: string, color: string) => ({
             position: 'absolute' as const,
@@ -225,7 +243,8 @@ const MagicCubeGame: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             backfaceVisibility: 'hidden' as const,
-            borderRadius: '8px'
+            borderRadius: '12px',
+            boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2)'
         });
 
         if (!data.FRONT) return null;
@@ -242,27 +261,21 @@ const MagicCubeGame: React.FC = () => {
                         transformStyle: 'preserve-3d',
                     }}
                 >
-                    {/* ÖN */}
                     <div style={faceStyle(`translateZ(${half}px)`, data.FRONT.color)}>
                         <data.FRONT.icon size={size * 0.5} color="white" />
                     </div>
-                    {/* ARKA */}
                     <div style={faceStyle(`translateZ(-${half}px) rotateY(180deg)`, data.BACK.color)}>
                         <data.BACK.icon size={size * 0.5} color="white" />
                     </div>
-                    {/* SOL */}
                     <div style={faceStyle(`translateX(-${half}px) rotateY(-90deg)`, data.LEFT.color)}>
                         <data.LEFT.icon size={size * 0.5} color="white" />
                     </div>
-                    {/* SAĞ */}
                     <div style={faceStyle(`translateX(${half}px) rotateY(90deg)`, data.RIGHT.color)}>
                         <data.RIGHT.icon size={size * 0.5} color="white" />
                     </div>
-                    {/* ÜST */}
                     <div style={faceStyle(`translateY(-${half}px) rotateX(90deg)`, data.TOP.color)}>
                         <data.TOP.icon size={size * 0.5} color="white" />
                     </div>
-                    {/* ALT */}
                     <div style={faceStyle(`translateY(${half}px) rotateX(-90deg)`, data.BOTTOM.color)}>
                         <data.BOTTOM.icon size={size * 0.5} color="white" />
                     </div>
@@ -271,289 +284,459 @@ const MagicCubeGame: React.FC = () => {
         );
     };
 
-    // Oyun başladığında süre başlat
-    useEffect(() => {
-        if (gameStarted && !gameOver) {
-            gameStartTimeRef.current = Date.now();
-        }
-    }, [gameStarted, gameOver]);
-
-    // Oyun bittiğinde verileri kaydet
-    useEffect(() => {
-        if (gameOver && gameStartTimeRef.current > 0) {
-            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-            saveGamePlay({
-                game_id: 'sihirli-kupler',
-                score_achieved: score,
-                duration_seconds: durationSeconds,
-                metadata: {
-                    level_reached: level,
-                    game_name: '3B Görselleştirme (Sihirli Küpler)',
-                }
-            });
-        }
-    }, [gameOver, score, level, saveGamePlay]);
-
-    if (!gameStarted) {
-        return (
-            <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-6 text-white relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent)]" />
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="bg-white/5 backdrop-blur-2xl p-12 rounded-[4rem] border-4 border-white/10 text-center max-w-2xl shadow-2xl relative z-10"
-                >
-                    <div className="w-24 h-24 bg-gradient-to-tr from-amber-400 to-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl rotate-12">
-                        <Box size={60} className="text-white" />
-                    </div>
-                    <h1 className="text-5xl font-black mb-6 tracking-tight bg-gradient-to-r from-amber-200 to-yellow-500 bg-clip-text text-transparent uppercase italic">SİHİRLİ KÜPLER</h1>
-
-                    <div className="text-left space-y-6 mb-12 bg-black/20 p-8 rounded-3xl border border-white/5 shadow-inner">
-                        <div className="flex gap-4 items-start">
-                            <div className="w-8 h-8 rounded-full bg-amber-500 flex-shrink-0 flex items-center justify-center font-black">1</div>
-                            <p className="text-amber-100 font-bold text-lg">Sol taraftaki açık küp şemasına (net) dikkatlice bak.</p>
-                        </div>
-                        <div className="flex gap-4 items-start">
-                            <div className="w-8 h-8 rounded-full bg-orange-500 flex-shrink-0 flex items-center justify-center font-black">2</div>
-                            <p className="text-amber-100 font-bold text-lg">Bu şema katlandığında hangi küpün oluşacağını hayal et.</p>
-                        </div>
-                        <div className="flex gap-4 items-start">
-                            <div className="w-8 h-8 rounded-full bg-red-500 flex-shrink-0 flex items-center justify-center font-black">3</div>
-                            <p className="text-amber-100 font-bold text-lg">Yüzeylerdeki renk ve ikon eşleşmelerini kontrol et!</p>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={() => setGameStarted(true)}
-                        className="px-12 py-6 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black text-2xl rounded-3xl hover:scale-110 transition-all shadow-[0_10px_0_#9a3412] border-b-4 border-orange-800 active:translate-y-2 active:shadow-none flex items-center gap-4 mx-auto group"
-                    >
-                        KÜPÜ KATLA! <Play fill="currentColor" />
-                    </button>
-                </motion.div>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-[#050510] p-6 pt-24 relative overflow-hidden flex flex-col items-center">
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.1),transparent)] pointer-events-none" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-amber-950 to-orange-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+            </div>
 
-            <div className="container mx-auto max-w-6xl relative z-10 flex flex-col gap-10">
-                {/* HUD */}
-                <div className="flex items-center justify-between bg-white/5 backdrop-blur-md p-8 rounded-[3rem] shadow-2xl border-2 border-white/10 text-white">
-                    <Link to="/atolyeler/tablet-degerlendirme" className="flex items-center gap-2 text-amber-400 hover:text-amber-300 font-black transition-all">
-                        <ChevronLeft size={28} /> MERKEZ
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-6xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
                     </Link>
-                    <div className="flex items-center gap-6">
-                        {/* Canlar */}
-                        <div className="flex flex-col items-center px-4">
-                            <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1">Can</span>
-                            <div className="flex gap-1">
-                                {Array.from({ length: 5 }).map((_, i) => (
+
+                    {gameState === 'playing' && (
+                        <div className="flex items-center gap-4 flex-wrap">
+                            {/* Score */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(251, 191, 36, 0.3)'
+                                }}
+                            >
+                                <Star className="text-amber-400 fill-amber-400" size={18} />
+                                <span className="font-bold text-amber-400">{score}</span>
+                            </div>
+
+                            {/* Lives */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                                }}
+                            >
+                                {[...Array(3)].map((_, i) => (
                                     <Heart
                                         key={i}
                                         size={18}
-                                        className={`transition-all ${i < lives ? 'text-red-500 fill-red-500' : 'text-slate-700'}`}
+                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
                                     />
                                 ))}
                             </div>
-                        </div>
-                        <div className="flex flex-col items-center px-4 border-r border-white/10">
-                            <span className="text-amber-300/60 text-xs font-black uppercase tracking-widest mb-1">Blok</span>
-                            <div className="text-2xl font-black text-amber-400">{level}<span className="text-amber-900 text-lg">/10</span></div>
-                        </div>
-                        <div className="flex flex-col items-center px-4 border-r border-white/10">
-                            <span className="text-orange-300/60 text-xs font-black uppercase tracking-widest mb-1">Puan</span>
-                            <div className="text-2xl font-black text-orange-400">{score}</div>
-                        </div>
-                        <div className="flex flex-col items-center px-4 border-r border-white/10">
-                            <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1">Süre</span>
-                            <div className={`text-2xl font-black ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-amber-400'} transition-all font-mono`}>
-                                {timeLeft}s
-                            </div>
-                        </div>
-                        {/* Toplam Süre */}
-                        <div className="flex flex-col items-center min-w-[70px]">
-                            <span className="text-cyan-300/60 text-xs font-black uppercase tracking-widest mb-1">Toplam</span>
-                            <div className={`flex items-center gap-1 text-xl font-black font-mono ${totalTime < 30 ? 'text-red-400 animate-pulse' : 'text-cyan-400'} transition-all`}>
-                                <Clock size={16} />
-                                {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}
-                            </div>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => { setLevel(1); setScore(0); setLives(5); setTotalTime(180); generateLevel(); }}
-                        className="p-4 bg-white/5 text-amber-300 hover:bg-white/10 rounded-2xl transition-all border border-white/10 active:scale-95"
-                    >
-                        <RotateCcw size={28} />
-                    </button>
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-                    {/* Sol: Açınım (Net) Paneli */}
-                    <div className="bg-white/5 backdrop-blur-lg p-10 rounded-[4rem] border-2 border-white/10 shadow-inner flex flex-col items-center gap-8 min-h-[500px] justify-center relative overflow-hidden">
-                        <div className="flex items-center gap-4 z-20">
-                            <div className="bg-amber-900/40 px-8 py-2 rounded-full text-amber-200 font-black text-xs flex items-center gap-3 border border-amber-500/30 uppercase tracking-widest">
-                                <Layers size={20} className="animate-pulse" /> {isFolding ? 'Küp Katlanıyor...' : 'Küp Açınımı'}
-                            </div>
-                            <button
-                                onClick={() => setIsFolding(!isFolding)}
-                                className={`p-2 rounded-xl transition-all border-2 flex items-center gap-2 font-black text-xs uppercase tracking-tighter ${isFolding
-                                    ? 'bg-amber-500/20 border-amber-500 text-amber-400'
-                                    : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30'
-                                    }`}
-                            >
-                                {isFolding ? <RotateCcw size={16} /> : <Play size={16} />}
-                                {isFolding ? 'Aç' : 'Katla'}
-                            </button>
-                        </div>
-
-                        <div
-                            className="relative transition-all duration-1000"
-                            style={{
-                                perspective: '1200px',
-                                width: '320px',
-                                height: '320px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
-                        >
-                            <motion.div
-                                animate={isFolding ? { rotateX: -20, rotateY: 35 } : { rotateX: 0, rotateY: 0 }}
-                                transition={{ duration: 2 }}
+                            {/* Level */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
                                 style={{
-                                    position: 'relative',
-                                    width: '80px',
-                                    height: '80px',
-                                    transformStyle: 'preserve-3d'
+                                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(245, 158, 11, 0.3)'
                                 }}
                             >
-                                {currentNet.grid.map((row, rIdx) => (
-                                    row.map((faceName, cIdx) => {
-                                        if (!faceName || !facesData[faceName]) return null;
+                                <Box className="text-orange-400" size={18} />
+                                <span className="font-bold text-orange-400">{level}/{totalQuestions}</span>
+                            </div>
 
-                                        // FRONT yüzünü merkez (0,0,0) kabul et
-                                        // Grid içindeki FRONT koordinatlarını bul
-                                        let frontR = 0, frontC = 0;
-                                        currentNet.grid.forEach((r, ri) => r.forEach((f, ci) => { if (f === 'FRONT') { frontR = ri; frontC = ci; } }));
+                            {/* Timer */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: timeLeft <= 10
+                                        ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)'
+                                        : 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: timeLeft <= 10
+                                        ? '1px solid rgba(239, 68, 68, 0.5)'
+                                        : '1px solid rgba(6, 182, 212, 0.3)'
+                                }}
+                            >
+                                <Timer className={timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'} size={18} />
+                                <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'}`}>{timeLeft}s</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
 
-                                        const relR = rIdx - frontR;
-                                        const relC = cIdx - frontC;
-                                        const size = 80;
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+                <AnimatePresence mode="wait">
+                    {/* Welcome Screen */}
+                    {gameState === 'idle' && (
+                        <motion.div
+                            key="welcome"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
+                        >
+                            {/* 3D Gummy Icon */}
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ y: [0, -8, 0], rotateY: [0, 10, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <Box size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                        // Katlanma Hedefleri (FRONT merkezli)
-                                        const foldTargets: Record<FaceName, { rx: number, ry: number, rz: number, tx: number, ty: number, tz: number }> = {
-                                            FRONT: { rx: 0, ry: 0, rz: 0, tx: 0, ty: 0, tz: size / 2 },
-                                            BACK: { rx: 0, ry: 180, rz: 0, tx: 0, ty: 0, tz: -size / 2 },
-                                            LEFT: { rx: 0, ry: -90, rz: 0, tx: -size / 2, ty: 0, tz: 0 },
-                                            RIGHT: { rx: 0, ry: 90, rz: 0, tx: size / 2, ty: 0, tz: 0 },
-                                            TOP: { rx: 90, ry: 0, rz: 0, tx: 0, ty: -size / 2, tz: 0 },
-                                            BOTTOM: { rx: -90, ry: 0, rz: 0, tx: 0, ty: size / 2, tz: 0 }
-                                        };
+                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+                                🧊 Sihirli Küpler
+                            </h1>
 
-                                        const target = foldTargets[faceName];
+                            {/* Example */}
+                            <div
+                                className="rounded-2xl p-5 mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <p className="text-slate-400 text-sm mb-3">Örnek:</p>
+                                <div className="flex justify-center items-center gap-4 mb-3">
+                                    <Layers size={40} className="text-amber-400" />
+                                    <span className="text-2xl">➡️</span>
+                                    <Box size={40} className="text-orange-400" />
+                                </div>
+                                <p className="text-slate-400 text-sm">Açınımı katla, doğru küpü bul!</p>
+                            </div>
 
-                                        return (
-                                            <motion.div
-                                                key={faceName}
-                                                initial={false}
-                                                animate={isFolding ? {
-                                                    x: target.tx,
-                                                    y: target.ty,
-                                                    z: target.tz,
-                                                    rotateX: target.rx,
-                                                    rotateY: target.ry,
-                                                    rotateZ: target.rz,
-                                                } : {
-                                                    x: relC * size,
-                                                    y: relR * size,
-                                                    z: 0,
-                                                    rotateX: 0,
-                                                    rotateY: 0,
-                                                    rotateZ: 0,
-                                                }}
-                                                transition={{ duration: 1.5, ease: "easeInOut" }}
-                                                className="absolute inset-0 rounded-xl border-2 border-white/20 flex items-center justify-center text-white"
+                            {/* Instructions */}
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                                <h3 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2">
+                                    <Eye size={20} /> Nasıl Oynanır?
+                                </h3>
+                                <ul className="space-y-2 text-slate-300 text-sm">
+                                    <li className="flex items-center gap-2">
+                                        <Sparkles size={14} className="text-orange-400" />
+                                        <span>Küp açınımını <strong>incele</strong></span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <Sparkles size={14} className="text-orange-400" />
+                                        <span>Zihninde <strong>katla</strong></span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <Sparkles size={14} className="text-orange-400" />
+                                        <span>Doğru küpü seç, 3 can!</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            {/* TUZÖ Badge */}
+                            <div className="bg-amber-500/10 text-amber-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-amber-500/30">
+                                TUZÖ 4.2.1 Üç Boyutlu Uzayda Görselleştirme
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="px-8 py-4 rounded-2xl font-bold text-lg"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(245, 158, 11, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Play size={24} fill="currentColor" />
+                                    <span>Teste Başla</span>
+                                </div>
+                            </motion.button>
+                        </motion.div>
+                    )}
+
+                    {/* Playing State */}
+                    {gameState === 'playing' && facesData.FRONT && (
+                        <motion.div
+                            key="game"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="w-full max-w-6xl"
+                        >
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Left: Net Panel */}
+                                <div
+                                    className="rounded-3xl p-8 flex flex-col items-center gap-6"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
+                                    }}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div
+                                            className="px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2"
+                                            style={{
+                                                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%)',
+                                                border: '1px solid rgba(245, 158, 11, 0.3)'
+                                            }}
+                                        >
+                                            <Layers size={16} className="text-amber-400" />
+                                            <span className="text-amber-400">{isFolding ? 'Katlanıyor...' : 'Küp Açınımı'}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsFolding(!isFolding)}
+                                            className="px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"
+                                            style={{
+                                                background: isFolding ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                border: isFolding ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(255,255,255,0.1)'
+                                            }}
+                                        >
+                                            {isFolding ? <RotateCcw size={14} /> : <Play size={14} />}
+                                            {isFolding ? 'Aç' : 'Katla'}
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        className="relative"
+                                        style={{
+                                            perspective: '1200px',
+                                            width: '280px',
+                                            height: '280px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                    >
+                                        <motion.div
+                                            animate={isFolding ? { rotateX: -20, rotateY: 35 } : { rotateX: 0, rotateY: 0 }}
+                                            transition={{ duration: 2 }}
+                                            style={{
+                                                position: 'relative',
+                                                width: '60px',
+                                                height: '60px',
+                                                transformStyle: 'preserve-3d'
+                                            }}
+                                        >
+                                            {currentNet.grid.map((row, rIdx) => (
+                                                row.map((faceName, cIdx) => {
+                                                    if (!faceName || !facesData[faceName]) return null;
+
+                                                    let frontR = 0, frontC = 0;
+                                                    currentNet.grid.forEach((r, ri) => r.forEach((f, ci) => { if (f === 'FRONT') { frontR = ri; frontC = ci; } }));
+
+                                                    const relR = rIdx - frontR;
+                                                    const relC = cIdx - frontC;
+                                                    const size = 60;
+
+                                                    const foldTargets: Record<FaceName, { rx: number, ry: number, rz: number, tx: number, ty: number, tz: number }> = {
+                                                        FRONT: { rx: 0, ry: 0, rz: 0, tx: 0, ty: 0, tz: size / 2 },
+                                                        BACK: { rx: 0, ry: 180, rz: 0, tx: 0, ty: 0, tz: -size / 2 },
+                                                        LEFT: { rx: 0, ry: -90, rz: 0, tx: -size / 2, ty: 0, tz: 0 },
+                                                        RIGHT: { rx: 0, ry: 90, rz: 0, tx: size / 2, ty: 0, tz: 0 },
+                                                        TOP: { rx: 90, ry: 0, rz: 0, tx: 0, ty: -size / 2, tz: 0 },
+                                                        BOTTOM: { rx: -90, ry: 0, rz: 0, tx: 0, ty: size / 2, tz: 0 }
+                                                    };
+
+                                                    const target = foldTargets[faceName];
+
+                                                    return (
+                                                        <motion.div
+                                                            key={faceName}
+                                                            initial={false}
+                                                            animate={isFolding ? {
+                                                                x: target.tx,
+                                                                y: target.ty,
+                                                                z: target.tz,
+                                                                rotateX: target.rx,
+                                                                rotateY: target.ry,
+                                                                rotateZ: target.rz,
+                                                            } : {
+                                                                x: relC * size,
+                                                                y: relR * size,
+                                                                z: 0,
+                                                                rotateX: 0,
+                                                                rotateY: 0,
+                                                                rotateZ: 0,
+                                                            }}
+                                                            transition={{ duration: 1.5, ease: "easeInOut" }}
+                                                            className="absolute inset-0 rounded-lg border-2 border-white/30 flex items-center justify-center text-white"
+                                                            style={{
+                                                                backgroundColor: facesData[faceName].color,
+                                                                backfaceVisibility: 'hidden',
+                                                                transformStyle: 'preserve-3d',
+                                                                boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.2)'
+                                                            }}
+                                                        >
+                                                            {React.createElement(facesData[faceName].icon, { size: 30 })}
+                                                        </motion.div>
+                                                    );
+                                                })
+                                            ))}
+                                        </motion.div>
+                                    </div>
+
+                                    <p className="text-slate-500 text-xs italic">
+                                        {isFolding ? 'Doğru katlanışı izle' : 'Zihninde katla'}
+                                    </p>
+                                </div>
+
+                                {/* Right: Options Panel */}
+                                <div
+                                    className="rounded-3xl p-8 flex flex-col items-center gap-6"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
+                                    }}
+                                >
+                                    <h2 className="text-xl font-bold flex items-center gap-2">
+                                        Hangisi Oluşur? <Sparkles className="text-amber-400" size={20} />
+                                    </h2>
+
+                                    <div className="grid grid-cols-3 gap-4">
+                                        {options.map((option) => (
+                                            <motion.button
+                                                key={option.id}
+                                                whileHover={!showFeedback ? { scale: 1.05, y: -4 } : {}}
+                                                whileTap={!showFeedback ? { scale: 0.95 } : {}}
+                                                onClick={() => handleSelect(option)}
+                                                disabled={showFeedback !== null}
+                                                className="p-6 rounded-[30%] transition-all"
                                                 style={{
-                                                    backgroundColor: facesData[faceName].color,
-                                                    backfaceVisibility: 'hidden',
-                                                    transformStyle: 'preserve-3d'
+                                                    background: showFeedback && option.isCorrect
+                                                        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.2) 100%)'
+                                                        : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
+                                                    border: showFeedback && option.isCorrect
+                                                        ? '2px solid #10B981'
+                                                        : '1px solid rgba(255,255,255,0.1)',
+                                                    cursor: showFeedback ? 'default' : 'pointer'
                                                 }}
                                             >
-                                                {React.createElement(facesData[faceName].icon, { size: 40 })}
-                                            </motion.div>
-                                        );
-                                    })
-                                ))}
-                            </motion.div>
-                        </div>
-
-                        <p className="text-amber-300/40 text-[10px] font-black uppercase tracking-[0.3em] italic z-20">
-                            {isFolding ? 'Hatanı gör ve doğru katlanışı izle' : 'Yukarıdaki şemayı zihninde katla'}
-                        </p>
-                    </div>
-
-                    {/* Sağ: Seçenekler Paneli */}
-                    <div className="bg-white/5 backdrop-blur-lg p-10 rounded-[4rem] border-2 border-white/10 shadow-2xl flex flex-col items-center gap-8">
-                        <h2 className="text-3xl font-black text-white flex items-center gap-3 italic text-center uppercase tracking-tighter">
-                            Hangisi Oluşur? <Sparkles className="text-yellow-400" />
-                        </h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3 gap-6 w-full">
-                            {options.map((option) => (
-                                <motion.button
-                                    key={option.id}
-                                    whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,191,0,0.1)' }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleSelect(option)}
-                                    className={`bg-white/5 rounded-[3rem] p-10 transition-all border-4 flex flex-col items-center gap-6 group overflow-hidden ${isCorrecting && option.isCorrect ? 'border-emerald-500 bg-emerald-500/20 shadow-[0_0_40px_rgba(16,185,129,0.3)]' : 'border-white/10'
-                                        }`}
-                                >
-                                    <div className="py-8">
-                                        <Cube3D rotation={option.rotation} size={100} data={facesData} />
+                                                <Cube3D rotation={option.rotation} size={80} data={facesData} />
+                                            </motion.button>
+                                        ))}
                                     </div>
-                                    <div className="h-2 w-20 bg-amber-500/20 rounded-full group-hover:bg-amber-500/50 transition-colors" />
-                                </motion.button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Mesaj Overlays */}
-                <AnimatePresence>
-                    {showSuccess && (
-                        <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.5 }} className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-                            <div className="bg-emerald-500 text-white px-12 py-6 rounded-full font-black text-4xl shadow-2xl flex items-center gap-6 border-4 border-white animate-bounce italic">
-                                <Zap className="fill-white" /> MUHTEŞEM!
+                                </div>
                             </div>
                         </motion.div>
                     )}
 
-                    {gameOver && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050510]/95 backdrop-blur-3xl">
-                            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white/5 rounded-[5rem] p-20 border-2 border-white/20 text-center max-w-2xl w-full shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500" />
-                                <div className="w-40 h-40 bg-gradient-to-br from-yellow-400 to-orange-600 text-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-[0_0_50px_rgba(234,179,8,0.3)] rotate-12">
-                                    <Trophy size={100} />
+                    {/* Game Over */}
+                    {gameState === 'finished' && (
+                        <motion.div
+                            key="gameover"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
+                        >
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
+
+                            <h2 className="text-3xl font-black text-amber-300 mb-2">
+                                {level >= 8 ? '🎉 Harika!' : 'Görev Tamam!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                {level >= 8 ? '3D uzayı fethettin!' : 'Tekrar deneyelim!'}
+                            </p>
+
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Seviye</p>
+                                        <p className="text-3xl font-bold text-orange-400">{level}/{totalQuestions}</p>
+                                    </div>
                                 </div>
-                                <h2 className="text-6xl font-black text-white mb-6 tracking-tighter italic uppercase text-shadow-lg">GÖREV TAMAM</h2>
-                                <p className="text-amber-100 font-bold text-3xl mb-14 leading-relaxed italic">
-                                    3 Boyutlu Uzayı Fethettin! <br />
-                                    <span className="text-7xl text-amber-500 block font-black mt-8 not-italic">{score} <span className="text-2xl text-amber-800">PUAN</span></span>
-                                </p>
-                                <div className="flex flex-col gap-6">
-                                    <button onClick={() => { setLevel(1); setScore(0); setGameOver(false); setGameStarted(true); }} className="w-full py-8 bg-amber-600 text-white font-black rounded-4xl flex items-center justify-center gap-6 shadow-[0_12px_0_#9a3412] border-b-4 border-amber-800 hover:scale-105 transition-all text-3xl active:translate-y-3 active:shadow-none uppercase">YENİDEN BAŞLA</button>
-                                    <Link to="/atolyeler/tablet-degerlendirme" className="text-amber-400 font-black text-2xl hover:text-amber-300 transition-colors block mt-8 underline decoration-4 underline-offset-8">ANA ÜSSE DÖN</Link>
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(245, 158, 11, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
                                 </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Feedback Overlay */}
+                <AnimatePresence>
+                    {showFeedback && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ y: 50 }}
+                                animate={{ y: 0 }}
+                                className={`px-12 py-8 rounded-3xl text-center ${showFeedback === 'correct'
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }`}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: showFeedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {showFeedback === 'correct'
+                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    }
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
                             </motion.div>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .text-shadow-lg { text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-            `}} />
         </div>
     );
 };

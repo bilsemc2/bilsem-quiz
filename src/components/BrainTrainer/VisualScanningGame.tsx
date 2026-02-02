@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Timer, CheckCircle2, XCircle, ChevronLeft, Zap, Target, Eye } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, RotateCcw, Play, Star, Timer, CheckCircle2, XCircle, ChevronLeft, Zap, Target, Eye, Sparkles, Heart } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useSound } from '../../hooks/useSound';
 
 // Sembol seti - hedef ve dikkat dağıtıcılar
 const ALL_SYMBOLS = ['★', '●', '■', '▲', '◆', '♦', '♣', '♠', '♥', '○', '□', '△', '◇', '✕', '✓', '⬟'];
@@ -15,8 +16,23 @@ interface CellData {
     isWrongClick: boolean;
 }
 
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Harika! 👁️",
+    "Keskin Göz! 🎯",
+    "Müthiş! ⭐",
+    "Bravo! 🌟",
+];
+
+const FAILURE_MESSAGES = [
+    "Dikkatli bak! 👀",
+    "Tekrar dene! 💪",
+];
+
 const VisualScanningGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const { playSound } = useSound();
+    const location = useLocation();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [targetSymbol, setTargetSymbol] = useState<string>('★');
     const [grid, setGrid] = useState<CellData[]>([]);
@@ -28,6 +44,9 @@ const VisualScanningGame: React.FC = () => {
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
     const [level, setLevel] = useState(1);
+    const [lives, setLives] = useState(3);
+    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -35,14 +54,18 @@ const VisualScanningGame: React.FC = () => {
     const gameDuration = 60;
     const gridSize = 64; // 8x8 grid
 
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
     // Seviyeye göre hedef sayısı ve dikkat dağıtıcı çeşitliliği
     const getLevelConfig = (lvl: number) => {
         const configs = [
-            { targetCount: 8, distractorTypes: 3 },  // Level 1: 8 hedef, 3 farklı dikkat dağıtıcı
-            { targetCount: 10, distractorTypes: 4 }, // Level 2: 10 hedef, 4 farklı
-            { targetCount: 12, distractorTypes: 5 }, // Level 3: 12 hedef, 5 farklı
-            { targetCount: 14, distractorTypes: 6 }, // Level 4: 14 hedef, 6 farklı
-            { targetCount: 16, distractorTypes: 7 }, // Level 5: 16 hedef, 7 farklı
+            { targetCount: 8, distractorTypes: 3 },
+            { targetCount: 10, distractorTypes: 4 },
+            { targetCount: 12, distractorTypes: 5 },
+            { targetCount: 14, distractorTypes: 6 },
+            { targetCount: 16, distractorTypes: 7 },
         ];
         return configs[Math.min(lvl - 1, configs.length - 1)];
     };
@@ -52,19 +75,16 @@ const VisualScanningGame: React.FC = () => {
         const config = getLevelConfig(lvl);
         const cells: CellData[] = [];
 
-        // Hedef olmayan sembolleri seç
         const distractors = ALL_SYMBOLS
             .filter(s => s !== target)
             .sort(() => Math.random() - 0.5)
             .slice(0, config.distractorTypes);
 
-        // Hedef pozisyonlarını rastgele seç
         const targetPositions = new Set<number>();
         while (targetPositions.size < config.targetCount) {
             targetPositions.add(Math.floor(Math.random() * gridSize));
         }
 
-        // Grid'i doldur
         for (let i = 0; i < gridSize; i++) {
             if (targetPositions.has(i)) {
                 cells.push({
@@ -90,7 +110,6 @@ const VisualScanningGame: React.FC = () => {
 
     // Yeni tur başlat
     const startNewRound = useCallback((currentLevel: number) => {
-        // Yeni hedef sembol seç
         const newTarget = ALL_SYMBOLS[Math.floor(Math.random() * ALL_SYMBOLS.length)];
         setTargetSymbol(newTarget);
         setGrid(generateGrid(newTarget, currentLevel));
@@ -105,11 +124,20 @@ const VisualScanningGame: React.FC = () => {
         setStreak(0);
         setBestStreak(0);
         setLevel(1);
+        setLives(3);
+        setFeedback(null);
         gameStartTimeRef.current = Date.now();
         hasSavedRef.current = false;
         setGameState('playing');
         startNewRound(1);
     }, [startNewRound]);
+
+    // Handle Auto Start from HUB
+    useEffect(() => {
+        if (location.state?.autoStart && gameState === 'idle') {
+            startGame();
+        }
+    }, [location.state, gameState, startGame]);
 
     // Zamanlayıcı
     useEffect(() => {
@@ -118,7 +146,6 @@ const VisualScanningGame: React.FC = () => {
                 setTimeLeft(prev => prev - 1);
             }, 1000);
         } else if (gameState === 'playing' && timeLeft === 0) {
-            // Süre dolunca kaçırılanları hesapla
             const missed = grid.filter(cell => cell.isTarget && !cell.isClicked).length;
             setMissedCount(prev => prev + missed);
             setGameState('finished');
@@ -141,6 +168,7 @@ const VisualScanningGame: React.FC = () => {
                 game_id: 'gorsel-tarama',
                 score_achieved: score,
                 duration_seconds: durationSeconds,
+                lives_remaining: lives,
                 metadata: {
                     correct_count: correctCount,
                     wrong_count: wrongCount,
@@ -152,7 +180,7 @@ const VisualScanningGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState]);
+    }, [gameState, score, lives, correctCount, wrongCount, missedCount, bestStreak, level, saveGamePlay]);
 
     // Tur tamamlandı mı kontrol et
     useEffect(() => {
@@ -161,32 +189,33 @@ const VisualScanningGame: React.FC = () => {
         const remainingTargets = grid.filter(cell => cell.isTarget && !cell.isClicked).length;
 
         if (remainingTargets === 0 && grid.length > 0) {
-            // Tüm hedefler bulundu!
-            const bonusTime = 5; // 5 saniye bonus
+            const bonusTime = 5;
             setTimeLeft(prev => Math.min(prev + bonusTime, gameDuration));
 
-            // Seviye artır
             const newLevel = Math.min(level + 1, 5);
             setLevel(newLevel);
 
-            // Yeni tur başlat
+            setFeedback('correct');
+            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            playSound('correct');
+
             setTimeout(() => {
+                setFeedback(null);
                 startNewRound(newLevel);
-            }, 500);
+            }, 1000);
         }
-    }, [grid, gameState, level, startNewRound]);
+    }, [grid, gameState, level, startNewRound, playSound]);
 
     // Hücreye tıklama
     const handleCellClick = (index: number) => {
         if (gameState !== 'playing') return;
 
         const cell = grid[index];
-        if (cell.isClicked || cell.isWrongClick) return; // Zaten tıklanmış
+        if (cell.isClicked || cell.isWrongClick) return;
 
         const newGrid = [...grid];
 
         if (cell.isTarget) {
-            // Doğru tıklama
             newGrid[index] = { ...cell, isClicked: true };
             setCorrectCount(prev => prev + 1);
             setStreak(prev => {
@@ -196,12 +225,23 @@ const VisualScanningGame: React.FC = () => {
             });
             const streakBonus = Math.min(streak * 2, 20);
             setScore(prev => prev + 25 + streakBonus);
+            playSound('correct');
         } else {
-            // Yanlış tıklama
             newGrid[index] = { ...cell, isWrongClick: true };
             setWrongCount(prev => prev + 1);
             setStreak(0);
-            setScore(prev => Math.max(0, prev - 10)); // Ceza
+            setScore(prev => Math.max(0, prev - 10));
+            setLives(prev => {
+                const newLives = prev - 1;
+                if (newLives <= 0) {
+                    setGameState('finished');
+                }
+                return newLives;
+            });
+            setFeedback('wrong');
+            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            playSound('incorrect');
+            setTimeout(() => setFeedback(null), 1000);
         }
 
         setGrid(newGrid);
@@ -221,123 +261,263 @@ const VisualScanningGame: React.FC = () => {
     const totalTargetsInRound = grid.filter(cell => cell.isTarget).length;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-rose-950 to-slate-900 pt-24 pb-12 px-6">
-            <div className="container mx-auto max-w-4xl">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-6"
-                >
-                    <Link
-                        to="/atolyeler/bireysel-degerlendirme"
-                        className="inline-flex items-center gap-2 text-rose-400 font-bold hover:text-rose-300 transition-colors mb-4 uppercase text-xs tracking-widest"
-                    >
-                        <ChevronLeft size={16} />
-                        Bireysel Değerlendirme
-                    </Link>
-                    <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
-                        👁️ <span className="text-rose-400">Görsel</span> Tarama
-                    </h1>
-                    <p className="text-slate-400">Hedef sembolü bul ve tıkla!</p>
-                </motion.div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-rose-950 to-pink-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+            </div>
 
-                {/* Stats */}
-                <div className="flex justify-center gap-4 mb-6 flex-wrap">
-                    <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                        <Star className="w-5 h-5 text-amber-400" />
-                        <span className="text-white font-bold">{score}</span>
-                    </div>
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
+
                     {gameState === 'playing' && (
-                        <>
-                            <div className={`bg-slate-800/50 border rounded-xl px-5 py-2 flex items-center gap-2 ${timeLeft <= 10 ? 'border-red-500 animate-pulse' : 'border-white/10'}`}>
-                                <Timer className={`w-5 h-5 ${timeLeft <= 10 ? 'text-red-400' : 'text-rose-400'}`} />
-                                <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-white'}`}>{formatTime(timeLeft)}</span>
+                        <div className="flex items-center gap-4 flex-wrap">
+                            {/* Score */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(251, 191, 36, 0.3)'
+                                }}
+                            >
+                                <Star className="text-amber-400 fill-amber-400" size={18} />
+                                <span className="font-bold text-amber-400">{score}</span>
                             </div>
-                            <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                                <Target className="w-5 h-5 text-emerald-400" />
-                                <span className="text-white font-bold">{totalTargetsInRound - remainingTargets}/{totalTargetsInRound}</span>
+
+                            {/* Lives */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                                }}
+                            >
+                                {[...Array(3)].map((_, i) => (
+                                    <Heart
+                                        key={i}
+                                        size={18}
+                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                                    />
+                                ))}
                             </div>
-                            <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                                <Zap className="w-5 h-5 text-amber-400" />
-                                <span className="text-white font-bold">x{streak}</span>
+
+                            {/* Level */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.2) 0%, rgba(225, 29, 72, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(244, 63, 94, 0.3)'
+                                }}
+                            >
+                                <Target className="text-rose-400" size={18} />
+                                <span className="font-bold text-rose-400">Seviye {level}</span>
                             </div>
-                        </>
+
+                            {/* Timer */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: timeLeft <= 10
+                                        ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)'
+                                        : 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: timeLeft <= 10
+                                        ? '1px solid rgba(239, 68, 68, 0.5)'
+                                        : '1px solid rgba(6, 182, 212, 0.3)'
+                                }}
+                            >
+                                <Timer className={timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'} size={18} />
+                                <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'}`}>{formatTime(timeLeft)}</span>
+                            </div>
+
+                            {/* Streak */}
+                            {streak > 0 && (
+                                <div
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                                        boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(168, 85, 247, 0.3)'
+                                    }}
+                                >
+                                    <Zap className="text-purple-400" size={18} />
+                                    <span className="font-bold text-purple-400">x{streak}</span>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
+            </div>
 
-                {/* Game Area */}
-                <div className="flex flex-col items-center">
-                    {/* Idle State */}
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+                <AnimatePresence mode="wait">
+                    {/* Welcome Screen */}
                     {gameState === 'idle' && (
                         <motion.div
+                            key="welcome"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6"
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
-                            <div className="bg-slate-800/50 border border-white/10 rounded-3xl p-8 max-w-lg">
-                                <div className="text-6xl mb-4">👁️</div>
-                                <h2 className="text-2xl font-bold text-white mb-4">Görsel Tarama Testi</h2>
+                            {/* 3D Gummy Icon */}
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <Eye size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                <div className="bg-slate-700/50 rounded-xl p-4 mb-6">
-                                    <p className="text-slate-300 text-sm mb-3">Nasıl Oynanır:</p>
-                                    <div className="flex justify-center items-center gap-2 mb-3">
-                                        <span className="text-slate-400">Hedef:</span>
-                                        <span className="w-12 h-12 bg-rose-500/20 border-2 border-rose-500 rounded-xl flex items-center justify-center text-rose-400 font-bold text-2xl">
-                                            ★
-                                        </span>
+                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent">
+                                👁️ Görsel Tarama
+                            </h1>
+
+                            {/* Example */}
+                            <div
+                                className="rounded-2xl p-5 mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <p className="text-slate-400 text-sm mb-3">Örnek:</p>
+                                <div className="flex items-center justify-center gap-4 mb-3">
+                                    <div className="text-center">
+                                        <span className="text-slate-400 text-xs">Hedef:</span>
+                                        <div
+                                            className="w-14 h-14 rounded-[25%] flex items-center justify-center mt-1"
+                                            style={{
+                                                background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.3) 0%, rgba(225, 29, 72, 0.2) 100%)',
+                                                border: '2px solid rgba(244, 63, 94, 0.5)'
+                                            }}
+                                        >
+                                            <span className="text-rose-400 text-2xl font-bold">★</span>
+                                        </div>
                                     </div>
-                                    <p className="text-slate-400 text-sm">
-                                        Grid'deki tüm hedef sembolleri bul ve tıkla!
-                                    </p>
+                                    <span className="text-2xl">→</span>
+                                    <div className="grid grid-cols-4 gap-1">
+                                        {['●', '★', '■', '▲', '◆', '★', '♦', '●'].map((s, i) => (
+                                            <div
+                                                key={i}
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                                                style={{
+                                                    background: s === '★' ? 'rgba(244, 63, 94, 0.3)' : 'rgba(255,255,255,0.05)',
+                                                    border: s === '★' ? '1px solid rgba(244, 63, 94, 0.5)' : '1px solid rgba(255,255,255,0.1)'
+                                                }}
+                                            >
+                                                <span className={s === '★' ? 'text-rose-400' : 'text-slate-500'}>{s}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
+                                <p className="text-slate-400 text-sm">Grid'deki tüm hedef sembolleri bul!</p>
+                            </div>
 
-                                <ul className="text-slate-400 text-sm space-y-2 text-left mb-6">
+                            {/* Instructions */}
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                                <h3 className="text-lg font-bold text-rose-300 mb-3 flex items-center gap-2">
+                                    <Eye size={20} /> Nasıl Oynanır?
+                                </h3>
+                                <ul className="space-y-2 text-slate-300 text-sm">
                                     <li className="flex items-center gap-2">
-                                        <Eye className="w-4 h-4 text-rose-400" />
-                                        Hedef sembolü araştırarak bul
+                                        <Sparkles size={14} className="text-rose-400" />
+                                        <span>Grid'deki <strong>hedef sembolü</strong> bul</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <Target className="w-4 h-4 text-emerald-400" />
-                                        Tüm hedefleri bulunca <strong className="text-white">seviye atla</strong>
+                                        <Sparkles size={14} className="text-rose-400" />
+                                        <span>Hepsini bulunca <strong>seviye atla</strong></span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <Timer className="w-4 h-4 text-amber-400" />
-                                        {gameDuration} saniye içinde en çok puanı topla!
+                                        <Sparkles size={14} className="text-rose-400" />
+                                        <span>Yanlış tıklamasan dikkat! 3 can!</span>
                                     </li>
                                 </ul>
-
-                                <button
-                                    onClick={startGame}
-                                    className="px-8 py-4 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold rounded-xl hover:from-rose-400 hover:to-pink-400 transition-all flex items-center gap-3 mx-auto"
-                                >
-                                    <Play className="w-5 h-5" />
-                                    Teste Başla
-                                </button>
                             </div>
+
+                            {/* TUZÖ Badge */}
+                            <div className="bg-rose-500/10 text-rose-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-rose-500/30">
+                                TUZÖ 5.2.1 Görsel Tarama & Seçici Dikkat
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="px-8 py-4 rounded-2xl font-bold text-lg"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(244, 63, 94, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Play size={24} fill="currentColor" />
+                                    <span>Teste Başla</span>
+                                </div>
+                            </motion.button>
                         </motion.div>
                     )}
 
                     {/* Playing State */}
                     {gameState === 'playing' && (
                         <motion.div
+                            key="game"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             className="w-full max-w-xl"
                         >
                             {/* Target Display */}
-                            <div className="bg-slate-800/70 border border-white/20 rounded-2xl p-4 mb-4 flex items-center justify-center gap-4">
-                                <span className="text-slate-400 text-sm uppercase tracking-wider">Hedef Sembol:</span>
-                                <div className="w-14 h-14 bg-rose-500/20 border-2 border-rose-500 rounded-xl flex items-center justify-center">
+                            <div
+                                className="rounded-2xl p-4 mb-4 flex items-center justify-center gap-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
+                                    border: '2px solid rgba(244, 63, 94, 0.3)'
+                                }}
+                            >
+                                <span className="text-slate-400 text-sm uppercase tracking-wider">Hedef:</span>
+                                <div
+                                    className="w-14 h-14 rounded-[25%] flex items-center justify-center"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.3) 0%, rgba(225, 29, 72, 0.2) 100%)',
+                                        border: '2px solid rgba(244, 63, 94, 0.5)'
+                                    }}
+                                >
                                     <span className="text-rose-400 text-3xl">{targetSymbol}</span>
                                 </div>
                                 <div className="text-slate-400 text-sm">
-                                    Seviye <span className="text-rose-400 font-bold">{level}</span>
+                                    <span className="text-rose-400 font-bold">{totalTargetsInRound - remainingTargets}</span>/{totalTargetsInRound}
                                 </div>
                             </div>
 
                             {/* Grid */}
-                            <div className="grid grid-cols-8 gap-1 bg-slate-800/50 border border-white/10 rounded-2xl p-3">
+                            <div
+                                className="grid grid-cols-8 gap-1 p-3 rounded-2xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
                                 {grid.map((cell, index) => (
                                     <motion.button
                                         key={index}
@@ -346,17 +526,27 @@ const VisualScanningGame: React.FC = () => {
                                         transition={{ delay: index * 0.005 }}
                                         onClick={() => handleCellClick(index)}
                                         disabled={cell.isClicked || cell.isWrongClick}
-                                        className={`aspect-square rounded-lg flex items-center justify-center text-xl lg:text-2xl font-bold transition-all
-                                            ${cell.isClicked
-                                                ? 'bg-emerald-500/30 border-2 border-emerald-500 text-emerald-400'
+                                        className="aspect-square rounded-lg flex items-center justify-center text-xl lg:text-2xl font-bold transition-all"
+                                        style={{
+                                            background: cell.isClicked
+                                                ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
                                                 : cell.isWrongClick
-                                                    ? 'bg-red-500/30 border-2 border-red-500 text-red-400'
-                                                    : cell.isMissed
-                                                        ? 'bg-amber-500/30 border-2 border-amber-500 text-amber-400'
-                                                        : 'bg-slate-700/50 border border-white/10 text-slate-300 hover:bg-slate-600/50 hover:border-rose-500/50 active:scale-95'
-                                            }`}
+                                                    ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
+                                                    : 'rgba(255,255,255,0.05)',
+                                            border: cell.isClicked
+                                                ? '2px solid #10B981'
+                                                : cell.isWrongClick
+                                                    ? '2px solid #EF4444'
+                                                    : '1px solid rgba(255,255,255,0.1)',
+                                            boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
+                                            cursor: cell.isClicked || cell.isWrongClick ? 'default' : 'pointer'
+                                        }}
                                     >
-                                        {cell.symbol}
+                                        <span className={
+                                            cell.isClicked || cell.isWrongClick
+                                                ? 'text-white'
+                                                : 'text-slate-400'
+                                        }>{cell.symbol}</span>
                                     </motion.button>
                                 ))}
                             </div>
@@ -379,62 +569,123 @@ const VisualScanningGame: React.FC = () => {
                     {/* Finished State */}
                     {gameState === 'finished' && (
                         <motion.div
+                            key="finished"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6 w-full max-w-md"
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
-                            <div className="bg-gradient-to-br from-rose-500/20 to-pink-500/20 border border-rose-500/30 rounded-3xl p-8">
-                                <Trophy className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-                                <h2 className="text-3xl font-black text-white mb-2">Süre Doldu! ⏱️</h2>
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F43F5E 0%, #EF4444 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                <div className="grid grid-cols-2 gap-4 my-6">
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">Toplam Puan</p>
-                                        <p className="text-2xl font-black text-amber-400">{score}</p>
+                            <h2 className="text-3xl font-black text-rose-300 mb-2">
+                                {level >= 4 ? '🎉 Harika!' : 'Test Tamamlandı!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                {level >= 4 ? 'Keskin gözlü bir dedektifsin!' : 'Tekrar deneyelim!'}
+                            </p>
+
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
                                     </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
+                                    <div className="text-center">
                                         <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-2xl font-black text-emerald-400">%{accuracy}</p>
-                                    </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">Bulunan Hedef</p>
-                                        <p className="text-2xl font-black text-rose-400">{correctCount}</p>
-                                    </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">En İyi Seri</p>
-                                        <p className="text-2xl font-black text-purple-400">x{bestStreak}</p>
+                                        <p className="text-3xl font-bold text-emerald-400">%{accuracy}</p>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center justify-center gap-2 text-sm text-slate-400 mb-6">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                    <span>{correctCount} Doğru</span>
-                                    <span className="text-slate-600">|</span>
-                                    <XCircle className="w-4 h-4 text-red-400" />
-                                    <span>{wrongCount} Yanlış</span>
-                                    <span className="text-slate-600">|</span>
-                                    <span>Seviye {level}</span>
-                                </div>
-
-                                <div className="flex justify-center gap-4">
-                                    <button
-                                        onClick={startGame}
-                                        className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold rounded-xl hover:from-rose-400 hover:to-pink-400 transition-all flex items-center gap-2"
-                                    >
-                                        <RotateCcw className="w-5 h-5" />
-                                        Tekrar Oyna
-                                    </button>
-                                    <Link
-                                        to="/atolyeler/bireysel-degerlendirme"
-                                        className="px-6 py-3 bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-600 transition-all"
-                                    >
-                                        Geri Dön
-                                    </Link>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-xs">Bulunan</p>
+                                        <p className="text-xl font-bold text-rose-400">{correctCount}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-xs">Seviye</p>
+                                        <p className="text-xl font-bold text-purple-400">{level}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-xs">En İyi Seri</p>
+                                        <p className="text-xl font-bold text-cyan-400">x{bestStreak}</p>
+                                    </div>
                                 </div>
                             </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(244, 63, 94, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
+                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
                         </motion.div>
                     )}
-                </div>
+                </AnimatePresence>
+
+                {/* Feedback Overlay */}
+                <AnimatePresence>
+                    {feedback && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ y: 50 }}
+                                animate={{ y: 0 }}
+                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }`}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {feedback === 'correct'
+                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    }
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

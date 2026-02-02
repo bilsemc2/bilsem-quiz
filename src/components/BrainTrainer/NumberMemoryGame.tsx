@@ -67,12 +67,16 @@ const NumberMemoryGame: React.FC = () => {
 
     // Timer Effect
     useEffect(() => {
-        if ((phase === 'listening' || phase === 'question') && timeLeft > 0) {
+        if ((phase === 'listening' || phase === 'question' || phase === 'feedback') && timeLeft > 0) {
             timerRef.current = setTimeout(() => {
                 setTimeLeft(prev => prev - 1);
             }, 1000);
-        } else if (timeLeft === 0 && (phase === 'listening' || phase === 'question')) {
-            handleGameOver();
+        } else if (timeLeft === 0 && (phase === 'listening' || phase === 'question' || phase === 'feedback')) {
+            // Time's up - trigger game over
+            if (!hasSavedRef.current) {
+                hasSavedRef.current = true;
+                setPhase('game_over');
+            }
         }
 
         return () => {
@@ -104,22 +108,8 @@ const NumberMemoryGame: React.FC = () => {
         });
     }, []);
 
-    // Dizi seslerini çal
-    const playSequence = useCallback(async (seq: number[]) => {
-        setPhase('listening');
-        for (let i = 0; i < seq.length; i++) {
-            setCurrentPlayIndex(i);
-            await playNumber(seq[i]);
-            await new Promise(resolve => setTimeout(resolve, 400)); // Sesler arası bekleme
-        }
-        setCurrentPlayIndex(-1);
-        // Soru oluştur
-        generateQuestion(seq);
-        setPhase('question');
-    }, [playNumber]);
-
-    // Soru oluştur
-    const generateQuestion = useCallback((seq: number[]) => {
+    // Soru oluşturma fonksiyonu (playSequence'dan önce)
+    const createQuestion = useCallback((seq: number[]): Question => {
         const questionTypes = [
             // Tip 1: N. rakam hangisi?
             () => {
@@ -133,7 +123,6 @@ const NumberMemoryGame: React.FC = () => {
                     if (!options.includes(fake)) options.push(fake);
                     attempts++;
                 }
-                // Fallback
                 for (let i = 0; options.length < 4 && i < 10; i++) {
                     if (!options.includes(i)) options.push(i);
                 }
@@ -163,7 +152,6 @@ const NumberMemoryGame: React.FC = () => {
                     if (!options.includes(fake) && fake >= 0 && fake <= 18) options.push(fake);
                     attempts++;
                 }
-                // Fallback: zorla farklı sayılar ekle
                 let fallback = 0;
                 while (options.length < 4) {
                     if (!options.includes(fallback)) options.push(fallback);
@@ -179,7 +167,6 @@ const NumberMemoryGame: React.FC = () => {
             // Tip 3: İleri sıralama
             () => {
                 const forwardOrder = seq.join(' - ');
-                // Yanlış seçenekler oluştur
                 const shuffled1 = [...seq].sort(() => Math.random() - 0.5).join(' - ');
                 const shuffled2 = [...seq].reverse().sort(() => Math.random() - 0.5).join(' - ');
                 const reversed = [...seq].reverse().join(' - ');
@@ -193,7 +180,6 @@ const NumberMemoryGame: React.FC = () => {
                     if (!options.includes(fake)) options.push(fake);
                     attempts++;
                 }
-                // Yeterli seçenek bulunamazsa farklı rakamlarla doldur
                 while (options.length < 4) {
                     const fakeSeq = seq.map(() => Math.floor(Math.random() * 10));
                     options.push(fakeSeq.join(' - '));
@@ -205,35 +191,7 @@ const NumberMemoryGame: React.FC = () => {
                     type: 'order' as const
                 };
             },
-            // Tip 4: Geri sıralama
-            () => {
-                const backwardOrder = [...seq].reverse().join(' - ');
-                const forwardOrder = seq.join(' - ');
-                const shuffled1 = [...seq].sort(() => Math.random() - 0.5).join(' - ');
-                const shuffled2 = [...seq].reverse().sort(() => Math.random() - 0.5).join(' - ');
-                const options = [backwardOrder];
-                if (forwardOrder !== backwardOrder && !options.includes(forwardOrder)) options.push(forwardOrder);
-                if (shuffled1 !== backwardOrder && !options.includes(shuffled1)) options.push(shuffled1);
-                if (shuffled2 !== backwardOrder && !options.includes(shuffled2)) options.push(shuffled2);
-                let attempts = 0;
-                while (options.length < 4 && attempts < 20) {
-                    const fake = [...seq].sort(() => Math.random() - 0.5).join(' - ');
-                    if (!options.includes(fake)) options.push(fake);
-                    attempts++;
-                }
-                // Yeterli seçenek bulunamazsa farklı rakamlarla doldur
-                while (options.length < 4) {
-                    const fakeSeq = seq.map(() => Math.floor(Math.random() * 10));
-                    options.push(fakeSeq.join(' - '));
-                }
-                return {
-                    text: 'Rakamlar ters sırayla hangisi? (Geri)',
-                    answer: backwardOrder,
-                    options: options.slice(0, 4).sort(() => Math.random() - 0.5),
-                    type: 'order' as const
-                };
-            },
-            // Tip 5: En büyük rakam hangisiydi?
+            // Tip 4: En büyük rakam
             () => {
                 const maxNum = Math.max(...seq);
                 const options = [maxNum];
@@ -243,34 +201,12 @@ const NumberMemoryGame: React.FC = () => {
                     if (!options.includes(fake)) options.push(fake);
                     attempts++;
                 }
-                // Fallback
                 for (let i = 0; options.length < 4 && i < 10; i++) {
                     if (!options.includes(i)) options.push(i);
                 }
                 return {
                     text: 'Söylenen rakamlardan en büyüğü hangisiydi?',
                     answer: maxNum,
-                    options: options.sort(() => Math.random() - 0.5),
-                    type: 'number' as const
-                };
-            },
-            // Tip 6: Kaç farklı rakam söylendi?
-            () => {
-                const uniqueCount = new Set(seq).size;
-                const options = [uniqueCount];
-                let attempts = 0;
-                while (options.length < 4 && attempts < 20) {
-                    const fake = Math.floor(Math.random() * seq.length) + 1;
-                    if (!options.includes(fake) && fake <= 10) options.push(fake);
-                    attempts++;
-                }
-                // Fallback
-                for (let i = 1; options.length < 4 && i <= 10; i++) {
-                    if (!options.includes(i)) options.push(i);
-                }
-                return {
-                    text: 'Kaç farklı rakam söylendi?',
-                    answer: uniqueCount,
                     options: options.sort(() => Math.random() - 0.5),
                     type: 'number' as const
                 };
@@ -284,13 +220,32 @@ const NumberMemoryGame: React.FC = () => {
             q = randomType();
             attempts++;
         }
-
-        if (!q) {
-            q = questionTypes[0]()!;
-        }
-
-        setQuestion(q);
+        return q || questionTypes[0]()!;
     }, []);
+
+    // Dizi seslerini çal
+    const playSequence = useCallback(async (seq: number[]) => {
+        setPhase('listening');
+        for (let i = 0; i < seq.length; i++) {
+            // Check if game ended during playback
+            if (hasSavedRef.current) return;
+
+            setCurrentPlayIndex(i);
+            await playNumber(seq[i]);
+            await new Promise(resolve => setTimeout(resolve, 400));
+        }
+        setCurrentPlayIndex(-1);
+
+        // Check again before showing question
+        if (hasSavedRef.current) return;
+
+        const q = createQuestion(seq);
+        setQuestion(q);
+        setPhase('question');
+    }, [playNumber, createQuestion]);
+
+
+
 
     // Level başlat
     const startLevel = useCallback((lvl: number) => {
@@ -357,7 +312,7 @@ const NumberMemoryGame: React.FC = () => {
 
     // Cevap seç
     const handleAnswer = useCallback((answer: number | string) => {
-        if (phase !== 'question' || selectedAnswer !== null) return;
+        if (phase !== 'question' || selectedAnswer !== null || hasSavedRef.current) return;
 
         setSelectedAnswer(answer);
         const correct = answer === question?.answer;
@@ -365,6 +320,9 @@ const NumberMemoryGame: React.FC = () => {
         setPhase('feedback');
 
         setTimeout(() => {
+            // Check if game ended during feedback
+            if (hasSavedRef.current) return;
+
             if (correct) {
                 const newScore = score + 10 * level;
                 setScore(newScore);

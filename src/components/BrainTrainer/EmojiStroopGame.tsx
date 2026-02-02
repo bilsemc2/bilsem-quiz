@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Timer, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Smile } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Smile, Heart, Sparkles, Eye } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 interface Round {
@@ -22,33 +22,50 @@ const EMOTIONS = [
     { emoji: '😍', name: 'Aşık', word: 'AŞIK' },
 ];
 
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Harika! 😊",
+    "Süper! ⭐",
+    "Müthiş! 🎯",
+    "Bravo! 🌟",
+];
+
+const FAILURE_MESSAGES = [
+    "Tekrar dene! 💪",
+    "Neredeyse! ✨",
+    "Dikkatli bak! 👀",
+];
+
 const EmojiStroopGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [currentRound, setCurrentRound] = useState<Round | null>(null);
     const [roundNumber, setRoundNumber] = useState(0);
     const [score, setScore] = useState(0);
+    const [lives, setLives] = useState(3);
     const [correctCount, setCorrectCount] = useState(0);
     const [wrongCount, setWrongCount] = useState(0);
-    const [totalTime, setTotalTime] = useState(0);
-    const [roundStartTime, setRoundStartTime] = useState(0);
     const [reactionTimes, setReactionTimes] = useState<number[]>([]);
-    const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
+    const [roundStartTime, setRoundStartTime] = useState(0);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
     const totalRounds = 15;
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
     // Generate a new round
     const generateRound = useCallback((): Round => {
-        // Pick a random emoji
         const emojiIndex = Math.floor(Math.random() * EMOTIONS.length);
         const emoji = EMOTIONS[emojiIndex].emoji;
         const correctAnswer = EMOTIONS[emojiIndex].name;
 
-        // Pick a DIFFERENT word (different emotion name)
         let wordIndex;
         do {
             wordIndex = Math.floor(Math.random() * EMOTIONS.length);
@@ -56,7 +73,6 @@ const EmojiStroopGame: React.FC = () => {
 
         const word = EMOTIONS[wordIndex].word;
 
-        // Generate options (including correct answer)
         const options = new Set<string>([correctAnswer]);
         while (options.size < 4) {
             const randomEmotion = EMOTIONS[Math.floor(Math.random() * EMOTIONS.length)];
@@ -76,12 +92,13 @@ const EmojiStroopGame: React.FC = () => {
         setGameState('playing');
         setRoundNumber(1);
         setScore(0);
+        setLives(3);
         setCorrectCount(0);
         setWrongCount(0);
-        setTotalTime(0);
         setReactionTimes([]);
         setStreak(0);
         setBestStreak(0);
+        setFeedback(null);
         gameStartTimeRef.current = Date.now();
         hasSavedRef.current = false;
         const round = generateRound();
@@ -89,7 +106,14 @@ const EmojiStroopGame: React.FC = () => {
         setRoundStartTime(Date.now());
     }, [generateRound]);
 
-    // Oyun bittiğinde verileri kaydet
+    // Auto start from HUB
+    useEffect(() => {
+        if (location.state?.autoStart && gameState === 'idle') {
+            startGame();
+        }
+    }, [location.state, gameState, startGame]);
+
+    // Save game data on finish
     useEffect(() => {
         if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
             hasSavedRef.current = true;
@@ -107,16 +131,16 @@ const EmojiStroopGame: React.FC = () => {
                     best_streak: bestStreak,
                     average_reaction_ms: avgReaction,
                     total_rounds: totalRounds,
-                    accuracy: Math.round((correctCount / (correctCount + wrongCount)) * 100),
+                    accuracy: correctCount + wrongCount > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0,
                     game_name: 'Emoji Stroop',
                 }
             });
         }
-    }, [gameState]);
+    }, [gameState, score, correctCount, wrongCount, bestStreak, reactionTimes, saveGamePlay]);
 
     // Handle answer
     const handleAnswer = useCallback((answer: string) => {
-        if (!currentRound || showFeedback) return;
+        if (!currentRound || feedback) return;
 
         const reactionTime = Date.now() - roundStartTime;
         setReactionTimes(prev => [...prev, reactionTime]);
@@ -124,7 +148,8 @@ const EmojiStroopGame: React.FC = () => {
         const isCorrect = answer === currentRound.correctAnswer;
 
         if (isCorrect) {
-            setShowFeedback('correct');
+            setFeedback('correct');
+            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
             setCorrectCount(prev => prev + 1);
             setStreak(prev => {
                 const newStreak = prev + 1;
@@ -136,37 +161,28 @@ const EmojiStroopGame: React.FC = () => {
             const streakBonus = streak * 10;
             setScore(prev => prev + 100 + timeBonus + streakBonus);
         } else {
-            setShowFeedback('wrong');
+            setFeedback('wrong');
+            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
             setWrongCount(prev => prev + 1);
             setStreak(0);
+            setLives(prev => prev - 1);
         }
 
         setTimeout(() => {
-            setShowFeedback(null);
+            setFeedback(null);
 
-            if (roundNumber >= totalRounds) {
+            if (lives <= 1 && !isCorrect) {
                 setGameState('finished');
-                setTotalTime(Date.now() - roundStartTime + reactionTimes.reduce((a, b) => a + b, 0));
+            } else if (roundNumber >= totalRounds) {
+                setGameState('finished');
             } else {
                 setRoundNumber(prev => prev + 1);
                 const round = generateRound();
                 setCurrentRound(round);
                 setRoundStartTime(Date.now());
             }
-        }, 600);
-    }, [currentRound, roundStartTime, roundNumber, totalRounds, streak, bestStreak, generateRound, reactionTimes, showFeedback]);
-
-    // Timer
-    useEffect(() => {
-        if (gameState === 'playing') {
-            timerRef.current = setInterval(() => {
-                setTotalTime(prev => prev + 100);
-            }, 100);
-        }
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
-    }, [gameState]);
+        }, 1200);
+    }, [currentRound, roundStartTime, roundNumber, totalRounds, streak, bestStreak, generateRound, feedback, lives]);
 
     const averageReactionTime = reactionTimes.length > 0
         ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
@@ -177,102 +193,187 @@ const EmojiStroopGame: React.FC = () => {
         : 0;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-100 dark:from-slate-900 dark:via-purple-950 dark:to-slate-900 pt-24 pb-12 px-6">
-            <div className="container mx-auto max-w-4xl">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-8"
-                >
-                    <Link
-                        to="/atolyeler/bireysel-degerlendirme"
-                        className="inline-flex items-center gap-2 text-pink-500 font-bold hover:text-pink-400 transition-colors mb-4 uppercase text-xs tracking-widest"
-                    >
-                        <ChevronLeft size={16} />
-                        Bireysel Değerlendirme
-                    </Link>
-                    <h1 className="text-4xl lg:text-5xl font-black text-gray-800 dark:text-white mb-2">
-                        😊 <span className="text-pink-500">Emoji</span> Stroop
-                    </h1>
-                    <p className="text-gray-600 dark:text-slate-400">Emojiyi tanı, yazıya aldanma!</p>
-                </motion.div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-pink-950 to-rose-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl" />
+            </div>
 
-                {/* Stats */}
-                <div className="flex justify-center gap-4 mb-8 flex-wrap">
-                    <div className="bg-white/80 dark:bg-slate-800/50 border border-pink-200 dark:border-white/10 rounded-xl px-5 py-2 flex items-center gap-2 shadow-sm">
-                        <Star className="w-5 h-5 text-amber-400" />
-                        <span className="text-gray-800 dark:text-white font-bold">{score}</span>
-                    </div>
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
+
                     {gameState === 'playing' && (
-                        <>
-                            <div className="bg-white/80 dark:bg-slate-800/50 border border-pink-200 dark:border-white/10 rounded-xl px-5 py-2 flex items-center gap-2 shadow-sm">
-                                <Target className="w-5 h-5 text-pink-500" />
-                                <span className="text-gray-800 dark:text-white font-bold">{roundNumber}/{totalRounds}</span>
+                        <div className="flex items-center gap-4 flex-wrap">
+                            {/* Score */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(251, 191, 36, 0.3)'
+                                }}
+                            >
+                                <Star className="text-amber-400 fill-amber-400" size={18} />
+                                <span className="font-bold text-amber-400">{score}</span>
                             </div>
-                            <div className="bg-white/80 dark:bg-slate-800/50 border border-pink-200 dark:border-white/10 rounded-xl px-5 py-2 flex items-center gap-2 shadow-sm">
-                                <Zap className="w-5 h-5 text-amber-400" />
-                                <span className="text-gray-800 dark:text-white font-bold">x{streak}</span>
+
+                            {/* Lives */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                                }}
+                            >
+                                {[...Array(3)].map((_, i) => (
+                                    <Heart
+                                        key={i}
+                                        size={18}
+                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                                    />
+                                ))}
                             </div>
-                            <div className="bg-white/80 dark:bg-slate-800/50 border border-pink-200 dark:border-white/10 rounded-xl px-5 py-2 flex items-center gap-2 shadow-sm">
-                                <Timer className="w-5 h-5 text-emerald-500" />
-                                <span className="text-gray-800 dark:text-white font-bold">{Math.floor(totalTime / 1000)}s</span>
+
+                            {/* Progress */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(219, 39, 119, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(236, 72, 153, 0.3)'
+                                }}
+                            >
+                                <Target className="text-pink-400" size={18} />
+                                <span className="font-bold text-pink-400">{roundNumber}/{totalRounds}</span>
                             </div>
-                        </>
+
+                            {/* Streak */}
+                            {streak > 1 && (
+                                <div
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.2) 0%, rgba(225, 29, 72, 0.1) 100%)',
+                                        boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(244, 63, 94, 0.3)'
+                                    }}
+                                >
+                                    <Zap className="text-rose-400" size={18} />
+                                    <span className="font-bold text-rose-400">x{streak}</span>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
+            </div>
 
-                {/* Game Area */}
-                <div className="flex flex-col items-center">
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+                <AnimatePresence mode="wait">
+                    {/* Welcome Screen */}
                     {gameState === 'idle' && (
                         <motion.div
+                            key="welcome"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6"
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
-                            <div className="bg-white/90 dark:bg-slate-800/50 border border-pink-200 dark:border-white/10 rounded-3xl p-8 max-w-md shadow-xl">
-                                <div className="text-7xl mb-4 animate-bounce">😊</div>
-                                <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Emoji Stroop Oyunu</h2>
+                            {/* 3D Gummy Icon */}
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <Smile size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                <div className="bg-gradient-to-r from-pink-100 to-purple-100 dark:from-slate-700/50 dark:to-slate-700/50 rounded-xl p-4 mb-6">
-                                    <p className="text-gray-600 dark:text-slate-300 text-sm mb-3">Örnek:</p>
-                                    <div className="flex items-center justify-center gap-4 mb-2">
-                                        <span className="text-6xl">😊</span>
-                                        <span className="text-3xl font-black text-gray-800 dark:text-white">ÜZGÜN</span>
-                                    </div>
-                                    <p className="text-gray-500 dark:text-slate-400 text-sm">Doğru cevap: <span className="text-pink-500 font-bold">Mutlu</span> (emoji ne gösteriyor)</p>
+                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
+                                😊 Emoji Stroop
+                            </h1>
+
+                            {/* Example */}
+                            <div
+                                className="rounded-2xl p-5 mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <p className="text-slate-400 text-sm mb-3">Örnek:</p>
+                                <div className="flex items-center justify-center gap-4 mb-2">
+                                    <span className="text-6xl">😊</span>
+                                    <span className="text-3xl font-black">ÜZGÜN</span>
                                 </div>
+                                <p className="text-slate-400 text-sm">Doğru cevap: <span className="text-pink-400 font-bold">Mutlu</span> (emoji ne gösteriyor)</p>
+                            </div>
 
-                                <ul className="text-gray-600 dark:text-slate-400 text-sm space-y-2 text-left mb-6">
+                            {/* Instructions */}
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                                <h3 className="text-lg font-bold text-pink-300 mb-3 flex items-center gap-2">
+                                    <Eye size={20} /> Nasıl Oynanır?
+                                </h3>
+                                <ul className="space-y-2 text-slate-300 text-sm">
                                     <li className="flex items-center gap-2">
-                                        <Smile className="w-4 h-4 text-pink-500" />
-                                        Yazıya değil, <strong className="text-gray-800 dark:text-white">emojiye</strong> bak!
+                                        <Sparkles size={14} className="text-rose-400" />
+                                        <span>Yazıya değil, <strong>emojiye</strong> bak!</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <Zap className="w-4 h-4 text-amber-400" />
-                                        Hızlı ol, daha çok puan kazan!
+                                        <Sparkles size={14} className="text-rose-400" />
+                                        <span>Hızlı ol, daha çok puan kazan</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <Target className="w-4 h-4 text-emerald-500" />
-                                        {totalRounds} soru, eğlenerek öğren!
+                                        <Sparkles size={14} className="text-rose-400" />
+                                        <span>{totalRounds} soru, eğlenerek öğren!</span>
                                     </li>
                                 </ul>
-                                <button
-                                    onClick={startGame}
-                                    className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded-xl hover:from-pink-400 hover:to-purple-400 transition-all flex items-center gap-3 mx-auto shadow-lg hover:shadow-xl transform hover:scale-105"
-                                >
-                                    <Play className="w-5 h-5" />
-                                    Oynamaya Başla!
-                                </button>
                             </div>
+
+                            {/* TUZÖ Badge */}
+                            <div className="bg-pink-500/10 text-pink-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-pink-500/30">
+                                TUZÖ 5.2.3 Duygusal Dikkat
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="px-8 py-4 rounded-2xl font-bold text-lg"
+                                style={{
+                                    background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(236, 72, 153, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Play size={24} fill="currentColor" />
+                                    <span>Oynamaya Başla!</span>
+                                </div>
+                            </motion.button>
                         </motion.div>
                     )}
 
+                    {/* Playing */}
                     {gameState === 'playing' && currentRound && (
                         <motion.div
+                            key="game"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="flex flex-col items-center gap-8 w-full max-w-lg"
+                            exit={{ opacity: 0 }}
+                            className="w-full max-w-lg"
                         >
                             {/* Emoji Display */}
                             <AnimatePresence mode="wait">
@@ -281,30 +382,36 @@ const EmojiStroopGame: React.FC = () => {
                                     initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
                                     animate={{ opacity: 1, scale: 1, rotate: 0 }}
                                     exit={{ opacity: 0, scale: 0.5, rotate: 10 }}
-                                    className={`bg-white/90 dark:bg-slate-800/80 border-4 rounded-3xl p-8 w-full text-center shadow-xl ${showFeedback === 'correct' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' :
-                                        showFeedback === 'wrong' ? 'border-red-500 bg-red-50 dark:bg-red-500/10' :
-                                            'border-pink-300 dark:border-white/10'
-                                        } transition-all`}
+                                    className="text-center mb-8"
                                 >
-                                    <p className="text-gray-500 dark:text-slate-400 text-sm mb-4">Bu emoji ne hissediyor?</p>
-                                    <motion.div
-                                        className="text-8xl lg:text-9xl mb-4"
-                                        animate={{
-                                            scale: [1, 1.1, 1],
-                                            rotate: [0, 5, -5, 0]
+                                    <p className="text-slate-400 text-sm mb-4">Bu emoji ne hissediyor?</p>
+                                    <div
+                                        className="rounded-3xl p-8"
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                            boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                            border: '1px solid rgba(255,255,255,0.1)'
                                         }}
-                                        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
                                     >
-                                        {currentRound.emoji}
-                                    </motion.div>
-                                    <p className="text-3xl lg:text-4xl font-black text-gray-800 dark:text-white">
-                                        {currentRound.word}
-                                    </p>
+                                        <motion.div
+                                            className="text-8xl lg:text-9xl mb-4"
+                                            animate={{
+                                                scale: [1, 1.1, 1],
+                                                rotate: [0, 5, -5, 0]
+                                            }}
+                                            transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
+                                        >
+                                            {currentRound.emoji}
+                                        </motion.div>
+                                        <p className="text-3xl lg:text-4xl font-black">
+                                            {currentRound.word}
+                                        </p>
+                                    </div>
                                 </motion.div>
                             </AnimatePresence>
 
                             {/* Options */}
-                            <div className="grid grid-cols-2 gap-4 w-full">
+                            <div className="grid grid-cols-2 gap-3">
                                 {currentRound.options.map((option, index) => (
                                     <motion.button
                                         key={option}
@@ -312,107 +419,149 @@ const EmojiStroopGame: React.FC = () => {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.1 }}
                                         onClick={() => handleAnswer(option)}
-                                        disabled={showFeedback !== null}
-                                        className={`py-5 px-4 text-xl font-bold rounded-2xl transition-all shadow-md ${showFeedback && option === currentRound.correctAnswer
-                                            ? 'bg-emerald-500 text-white scale-105'
-                                            : showFeedback === 'wrong' && option !== currentRound.correctAnswer
-                                                ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-slate-500'
-                                                : 'bg-white dark:bg-slate-800 border-2 border-pink-200 dark:border-white/10 text-gray-800 dark:text-white hover:bg-pink-50 dark:hover:bg-slate-700 hover:border-pink-400 dark:hover:border-pink-500/50 active:scale-95'
-                                            }`}
+                                        disabled={feedback !== null}
+                                        whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
+                                        whileTap={!feedback ? { scale: 0.95 } : {}}
+                                        className="py-5 px-4 text-xl font-bold rounded-[25%] transition-all"
+                                        style={{
+                                            background: feedback && option === currentRound.correctAnswer
+                                                ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                                                : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                            boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
+                                            border: feedback && option === currentRound.correctAnswer
+                                                ? '2px solid #10B981'
+                                                : '1px solid rgba(255,255,255,0.1)',
+                                            cursor: feedback ? 'default' : 'pointer',
+                                            opacity: feedback && option !== currentRound.correctAnswer ? 0.5 : 1
+                                        }}
                                     >
                                         {option}
                                     </motion.button>
                                 ))}
                             </div>
-
-                            {/* Feedback */}
-                            <AnimatePresence>
-                                {showFeedback && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className={`flex items-center gap-2 font-bold text-lg ${showFeedback === 'correct' ? 'text-emerald-500' : 'text-red-500'
-                                            }`}
-                                    >
-                                        {showFeedback === 'correct' ? (
-                                            <>
-                                                <CheckCircle2 className="w-8 h-8" />
-                                                Harika! 🎉
-                                            </>
-                                        ) : (
-                                            <>
-                                                <XCircle className="w-8 h-8" />
-                                                Doğrusu: {currentRound.correctAnswer}
-                                            </>
-                                        )}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
                         </motion.div>
                     )}
 
+                    {/* Game Over */}
                     {gameState === 'finished' && (
                         <motion.div
+                            key="gameover"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6 w-full max-w-md"
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
-                            <div className="bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-500/20 dark:to-purple-500/20 border border-pink-300 dark:border-pink-500/30 rounded-3xl p-8 shadow-xl">
-                                <motion.div
-                                    animate={{ rotate: [0, 10, -10, 0] }}
-                                    transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
-                                >
-                                    <Trophy className="w-20 h-20 text-amber-400 mx-auto mb-4" />
-                                </motion.div>
-                                <h2 className="text-3xl font-black text-gray-800 dark:text-white mb-2">Tebrikler! 🎊</h2>
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                <div className="grid grid-cols-2 gap-4 my-6">
-                                    <div className="bg-white/80 dark:bg-slate-800/50 rounded-xl p-4 shadow">
-                                        <p className="text-gray-500 dark:text-slate-400 text-sm">Puan</p>
-                                        <p className="text-2xl font-black text-amber-500">{score}</p>
-                                    </div>
-                                    <div className="bg-white/80 dark:bg-slate-800/50 rounded-xl p-4 shadow">
-                                        <p className="text-gray-500 dark:text-slate-400 text-sm">Başarı</p>
-                                        <p className="text-2xl font-black text-emerald-500">%{accuracy}</p>
-                                    </div>
-                                    <div className="bg-white/80 dark:bg-slate-800/50 rounded-xl p-4 shadow">
-                                        <p className="text-gray-500 dark:text-slate-400 text-sm">Ortalama</p>
-                                        <p className="text-2xl font-black text-blue-500">{averageReactionTime}ms</p>
-                                    </div>
-                                    <div className="bg-white/80 dark:bg-slate-800/50 rounded-xl p-4 shadow">
-                                        <p className="text-gray-500 dark:text-slate-400 text-sm">En İyi Seri</p>
-                                        <p className="text-2xl font-black text-pink-500">x{bestStreak}</p>
-                                    </div>
-                                </div>
+                            <h2 className="text-3xl font-black text-amber-300 mb-2">
+                                {accuracy >= 80 ? '🎉 Tebrikler!' : 'Oyun Bitti!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                {accuracy >= 80 ? 'Muhteşem duygu okuma!' : 'Biraz daha pratik yap!'}
+                            </p>
 
-                                <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-slate-400 mb-6">
-                                    <span className="text-2xl">✅</span>
-                                    <span>{correctCount} Doğru</span>
-                                    <span className="text-gray-400">|</span>
-                                    <span className="text-2xl">❌</span>
-                                    <span>{wrongCount} Yanlış</span>
-                                </div>
-
-                                <div className="flex justify-center gap-4">
-                                    <button
-                                        onClick={startGame}
-                                        className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded-xl hover:from-pink-400 hover:to-purple-400 transition-all flex items-center gap-2 shadow-lg"
-                                    >
-                                        <RotateCcw className="w-5 h-5" />
-                                        Tekrar!
-                                    </button>
-                                    <Link
-                                        to="/atolyeler/bireysel-degerlendirme"
-                                        className="px-6 py-3 bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white font-bold rounded-xl hover:bg-gray-300 dark:hover:bg-slate-600 transition-all"
-                                    >
-                                        Geri Dön
-                                    </Link>
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Doğruluk</p>
+                                        <p className="text-3xl font-bold text-emerald-400">%{accuracy}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Ort. Tepki</p>
+                                        <p className="text-3xl font-bold text-blue-400">{averageReactionTime}ms</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">En İyi Seri</p>
+                                        <p className="text-3xl font-bold text-pink-400">x{bestStreak}</p>
+                                    </div>
                                 </div>
                             </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(236, 72, 153, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
+                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
                         </motion.div>
                     )}
-                </div>
+                </AnimatePresence>
+
+                {/* Feedback Overlay */}
+                <AnimatePresence>
+                    {feedback && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ y: 50 }}
+                                animate={{ y: 0 }}
+                                className={`
+                                    px-12 py-8 rounded-3xl text-center
+                                    ${feedback === 'correct'
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }
+                                `}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {feedback === 'correct'
+                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    }
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
+                                {feedback === 'wrong' && currentRound && (
+                                    <p className="text-white/80 mt-2">Doğrusu: {currentRound.correctAnswer}</p>
+                                )}
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

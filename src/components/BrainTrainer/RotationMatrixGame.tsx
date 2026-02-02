@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Play, Trophy, Rocket, Sparkles, Compass, Heart, Clock } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { ChevronLeft, RotateCcw, Play, Trophy, Sparkles, Compass, Heart, Star, Timer, CheckCircle2, XCircle, Eye, RotateCw } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
@@ -28,9 +28,23 @@ interface GameOption {
 
 const COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#A29BFE', '#55E6C1', '#FD79A8', '#FAB1A0', '#00D2D3', '#54A0FF'];
 
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Harika! 🚀",
+    "Süper Pilot! 🌟",
+    "Müthiş! ⭐",
+    "Bravo! 🎯",
+];
+
+const FAILURE_MESSAGES = [
+    "Tekrar dene! 💪",
+    "Dikkatli bak! 👀",
+];
+
 const RotationMatrixGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [sequence, setSequence] = useState<Shape[]>([]);
@@ -38,22 +52,26 @@ const RotationMatrixGame: React.FC = () => {
     const [options, setOptions] = useState<GameOption[]>([]);
     const [gameStarted, setGameStarted] = useState(false);
     const [gameOver, setGameOver] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
-    const [isCorrecting, setIsCorrecting] = useState(false);
+    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [isLevelLoading, setIsLevelLoading] = useState(false);
     const [timeLeft, setTimeLeft] = useState(30);
-    const [lives, setLives] = useState(5);
-    const [totalTime, setTotalTime] = useState(180); // 3 dakika
+    const [lives, setLives] = useState(3);
     const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
+    const totalQuestions = 10;
 
     const svgSize = 100;
 
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
     // ------------------ Sonsuz Şekil Motoru (Infinite Shape Engine) ------------------
     const generateShape = useCallback((): Shape => {
-        const numSticks = 3 + Math.floor(Math.random() * 4); // 3 ile 6 arası çubuk
+        const numSticks = 3 + Math.floor(Math.random() * 4);
         const sticks: Stick[] = [];
 
-        // Asimetriyi sağlamak için bir ana pivot (merkez kaçıklığı) belirle
         const globalOffsetX = (Math.random() - 0.5) * 10;
         const globalOffsetY = (Math.random() - 0.5) * 10;
 
@@ -61,17 +79,16 @@ const RotationMatrixGame: React.FC = () => {
             const isVertical = Math.random() > 0.5;
             const color = COLORS[Math.floor(Math.random() * COLORS.length)];
 
-            // Her çubuğu ızgara tabanlı ama rastgele offsetlerle yerleştir
             sticks.push({
                 color,
                 isVertical,
                 x: globalOffsetX + (isVertical ? (Math.random() - 0.5) * 44 : (Math.random() - 0.5) * 12),
                 y: globalOffsetY + (isVertical ? (Math.random() - 0.5) * 12 : (Math.random() - 0.5) * 44),
-                length: 45 + Math.random() * 45 // 45px ile 90px arası rastgele boy
+                length: 45 + Math.random() * 45
             });
         }
 
-        // Zorunlu bir asimetrik çubuk ekle (180 derece dönüşte aynı görünmemesi için)
+        // Asimetrik çubuk
         sticks.push({
             color: COLORS[Math.floor(Math.random() * COLORS.length)],
             isVertical: Math.random() > 0.5,
@@ -90,7 +107,6 @@ const RotationMatrixGame: React.FC = () => {
 
     const generateLevel = useCallback(() => {
         setIsLevelLoading(true);
-        // Dönüş adımı: 45, 90, 135
         const stepRotations = [45, 90, 135];
         const step = stepRotations[Math.floor(Math.random() * stepRotations.length)];
         const baseShape = generateShape();
@@ -114,7 +130,6 @@ const RotationMatrixGame: React.FC = () => {
         const distractors: GameOption[] = [];
         const usedRotations = [correctRot];
 
-        // Yanıltıcılar: 45 derecelik adımlarla unik rotasyonlar
         const allPossibleRotations = [0, 45, 90, 135, 180, 225, 270, 315];
 
         let safety = 0;
@@ -133,96 +148,65 @@ const RotationMatrixGame: React.FC = () => {
         const allOptions = [...distractors, { shape: correctShape, isCorrect: true }];
         setOptions(allOptions.sort(() => Math.random() - 0.5));
 
-        setShowSuccess(false);
-        setIsCorrecting(false);
+        setFeedback(null);
         setIsLevelLoading(false);
         setTimeLeft(30);
     }, [generateShape]);
 
     useEffect(() => {
-        if (gameStarted && !gameOver && !showSuccess && !isCorrecting && !isLevelLoading) {
+        if (gameStarted && !gameOver && !feedback && !isLevelLoading) {
             generateLevel();
         }
-    }, [gameStarted, gameOver, level, generateLevel, showSuccess, isCorrecting]);
+    }, [gameStarted, gameOver, level, generateLevel, feedback, isLevelLoading]);
 
+    // Timer
     useEffect(() => {
-        if (!gameStarted || gameOver || showSuccess || isCorrecting) return;
+        if (!gameStarted || gameOver || feedback || isLevelLoading) return;
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    playSound('complete');
-                    setIsCorrecting(true);
-                    setLives(l => {
-                        const newLives = l - 1;
-                        if (newLives <= 0) {
-                            setTimeout(() => setGameOver(true), 1500);
-                        } else {
-                            setTimeout(() => {
-                                setIsCorrecting(false);
-                                if (level === 15) setGameOver(true);
-                                else setLevel(lv => lv + 1);
-                            }, 1500);
-                        }
-                        return newLives;
-                    });
+                    setFeedback('wrong');
+                    setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+                    setLives(l => l - 1);
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [gameStarted, gameOver, showSuccess, isCorrecting, playSound, level]);
+    }, [gameStarted, gameOver, feedback, isLevelLoading]);
 
-    // Toplam süre zamanlayıcısı
+    // Handle feedback timeout
     useEffect(() => {
-        if (!gameStarted || gameOver) return;
-        const totalTimer = setInterval(() => {
-            setTotalTime(prev => {
-                if (prev <= 1) {
-                    clearInterval(totalTimer);
+        if (feedback) {
+            const timeout = setTimeout(() => {
+                setFeedback(null);
+                if (lives <= 0 && feedback === 'wrong') {
                     setGameOver(true);
-                    return 0;
+                } else if (level >= totalQuestions) {
+                    setGameOver(true);
+                } else {
+                    setLevel(l => l + 1);
                 }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(totalTimer);
-    }, [gameStarted, gameOver]);
+            }, 2000);
+            return () => clearTimeout(timeout);
+        }
+    }, [feedback, lives, level]);
 
     const handleOptionSelect = (option: GameOption) => {
-        if (isCorrecting || showSuccess || isLevelLoading) return;
+        if (feedback || isLevelLoading) return;
 
         if (option.isCorrect) {
             playSound('correct');
-            setScore(s => s + timeLeft * 10);
-            if (level === 15) {
-                setGameOver(true);
-            } else {
-                setShowSuccess(true);
-                // Başarı mesajından sonra seviye atla
-                setTimeout(() => {
-                    setLevel(l => l + 1);
-                    setShowSuccess(false);
-                }, 1500);
-            }
+            setFeedback('correct');
+            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            setScore(s => s + (level * 100) + (timeLeft * 5));
         } else {
             playSound('incorrect');
-            setScore(s => Math.max(0, s - 10));
-            setIsCorrecting(true);
-            setLives(l => {
-                const newLives = l - 1;
-                if (newLives <= 0) {
-                    setTimeout(() => setGameOver(true), 1500);
-                } else {
-                    setTimeout(() => {
-                        setIsCorrecting(false);
-                        if (level === 15) setGameOver(true);
-                        else setLevel(lv => lv + 1);
-                    }, 1500);
-                }
-                return newLives;
-            });
+            setFeedback('wrong');
+            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            setLives(l => l - 1);
         }
     };
 
@@ -256,212 +240,455 @@ const RotationMatrixGame: React.FC = () => {
         );
     };
 
-    // Oyun başladığında süre başlat
-    useEffect(() => {
-        if (gameStarted && !gameOver) {
-            gameStartTimeRef.current = Date.now();
-        }
-    }, [gameStarted, gameOver]);
+    const startGame = useCallback(() => {
+        setLevel(1);
+        setScore(0);
+        setLives(3);
+        setGameOver(false);
+        setGameStarted(true);
+        gameStartTimeRef.current = Date.now();
+        hasSavedRef.current = false;
+    }, []);
 
-    // Oyun bittiğinde verileri kaydet
+    // Handle Auto Start from HUB
     useEffect(() => {
-        if (gameOver && gameStartTimeRef.current > 0) {
+        if (location.state?.autoStart && !gameStarted) {
+            startGame();
+        }
+    }, [location.state, gameStarted, startGame]);
+
+    // Save game data on finish
+    useEffect(() => {
+        if (gameOver && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
             saveGamePlay({
                 game_id: 'rotasyon-matrisi',
                 score_achieved: score,
                 duration_seconds: durationSeconds,
+                lives_remaining: lives,
                 metadata: {
                     level_reached: level,
                     game_name: 'Rotasyon Matrisi',
                 }
             });
         }
-    }, [gameOver, score, level, saveGamePlay]);
+    }, [gameOver, score, lives, level, saveGamePlay]);
 
+    // Welcome Screen
     if (!gameStarted) {
         return (
-            <div className="min-h-screen bg-[#0a0a2e] flex items-center justify-center p-6 relative overflow-hidden text-white">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20" />
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="bg-white/5 backdrop-blur-xl p-12 rounded-[4rem] border-4 border-white/20 text-center max-w-2xl shadow-2xl relative z-10"
-                >
-                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
-                        <Rocket size={60} className="animate-bounce" />
-                    </div>
-                    <h1 className="text-5xl font-black mb-6 tracking-tight bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent italic uppercase">ASTRO-SEKANS</h1>
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 text-white">
+                {/* Decorative Background */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+                </div>
 
-                    <div className="text-left space-y-6 mb-12 bg-white/5 p-8 rounded-3xl border border-white/10 shadow-inner">
-                        <div className="flex gap-4 items-start">
-                            <div className="w-8 h-8 rounded-full bg-blue-500 flex-shrink-0 flex items-center justify-center font-black italic">1</div>
-                            <p className="text-blue-100 font-bold text-lg">3x3 ızgaradaki 9 kutunun dönüş kuralını saat yönünde (0°, 90°, 180°...) analiz et.</p>
-                        </div>
-                        <div className="flex gap-4 items-start">
-                            <div className="w-8 h-8 rounded-full bg-purple-500 flex-shrink-0 flex items-center justify-center font-black italic">2</div>
-                            <p className="text-blue-100 font-bold text-lg">Soru işaretli eksik kutuda şeklin hangi açıda durması gerektiğini bul.</p>
-                        </div>
-                        <div className="flex gap-4 items-start">
-                            <div className="w-8 h-8 rounded-full bg-amber-500 flex-shrink-0 flex items-center justify-center font-black italic">3</div>
-                            <p className="text-blue-100 font-bold text-lg">Dönüşler her zaman birbirini takip eder, kuralı bul ve doğruyu seç!</p>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={() => setGameStarted(true)}
-                        className="px-12 py-6 bg-purple-600 text-white font-black text-2xl rounded-3xl hover:scale-110 transition-all shadow-[0_10px_0_#4c1d95] border-b-4 border-purple-800 active:translate-y-2 active:shadow-none flex items-center gap-4 mx-auto group"
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-center max-w-xl"
                     >
-                        Anladım, Yolculuğa Başla! <Play fill="currentColor" />
-                    </button>
-                </motion.div>
+                        {/* 3D Gummy Icon */}
+                        <motion.div
+                            className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                                boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                            }}
+                            animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                            <RotateCw size={52} className="text-white drop-shadow-lg" />
+                        </motion.div>
+
+                        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                            🚀 Rotasyon Matrisi
+                        </h1>
+
+                        {/* Example */}
+                        <div
+                            className="rounded-2xl p-5 mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            <p className="text-slate-400 text-sm mb-3">Örnek:</p>
+                            <div className="flex items-center justify-center gap-2 mb-3">
+                                <div className="grid grid-cols-3 gap-1">
+                                    {[0, 45, 90, 135, 180, 225, 270, 315, '?'].map((rot, i) => (
+                                        <div
+                                            key={i}
+                                            className="w-10 h-10 rounded-lg flex items-center justify-center"
+                                            style={{
+                                                background: rot === '?'
+                                                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(124, 58, 237, 0.2) 100%)'
+                                                    : 'rgba(255,255,255,0.05)',
+                                                border: rot === '?' ? '2px dashed rgba(139, 92, 246, 0.5)' : '1px solid rgba(255,255,255,0.1)'
+                                            }}
+                                        >
+                                            {rot === '?' ? (
+                                                <span className="text-purple-400 font-bold">?</span>
+                                            ) : (
+                                                <RotateCw
+                                                    size={16}
+                                                    className="text-slate-400"
+                                                    style={{ transform: `rotate(${rot}deg)` }}
+                                                />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <p className="text-slate-400 text-sm">Dönüş kuralını bul, eksik şekli seç!</p>
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                            <h3 className="text-lg font-bold text-purple-300 mb-3 flex items-center gap-2">
+                                <Eye size={20} /> Nasıl Oynanır?
+                            </h3>
+                            <ul className="space-y-2 text-slate-300 text-sm">
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-indigo-400" />
+                                    <span>3x3 ızgaradaki <strong>dönüş kuralını</strong> bul</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-indigo-400" />
+                                    <span>Soru işaretli yerdeki doğru şekli seç</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-indigo-400" />
+                                    <span>45°, 90° veya 135° dönüşler! 3 can!</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* TUZÖ Badge */}
+                        <div className="bg-purple-500/10 text-purple-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-purple-500/30">
+                            TUZÖ 4.1.1 Uzamsal Akıl Yürütme
+                        </div>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05, y: -4 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={startGame}
+                            className="px-8 py-4 rounded-2xl font-bold text-lg"
+                            style={{
+                                background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(139, 92, 246, 0.4)'
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Play size={24} fill="currentColor" />
+                                <span>Yolculuğa Başla</span>
+                            </div>
+                        </motion.button>
+                    </motion.div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#05051a] p-6 pt-24 relative overflow-hidden flex flex-col items-center">
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(76,29,149,0.15),transparent)] pointer-events-none" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+            </div>
 
-            <div className="container mx-auto max-w-6xl relative z-10 flex flex-col gap-10">
-                <div className="flex items-center justify-between bg-white/5 backdrop-blur-md p-8 rounded-[3rem] shadow-2xl border-2 border-white/10 text-white">
-                    <Link to="/atolyeler/tablet-degerlendirme" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 font-black transition-all">
-                        <ChevronLeft size={28} /> MERKEZ
-                    </Link>
-                    <div className="flex items-center gap-6">
-                        {/* Canlar */}
-                        <div className="flex flex-col items-center px-4">
-                            <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1">Can</span>
-                            <div className="flex gap-1">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <Heart
-                                        key={i}
-                                        size={18}
-                                        className={`transition-all ${i < lives ? 'text-red-500 fill-red-500' : 'text-slate-700'}`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex flex-col items-center px-4 border-r border-white/10">
-                            <span className="text-blue-300/60 text-xs font-black uppercase tracking-widest mb-1 italic">Rota</span>
-                            <div className="text-2xl font-black text-blue-400">{level}<span className="text-blue-900 text-lg">/15</span></div>
-                        </div>
-                        <div className="flex flex-col items-center px-4 border-r border-white/10">
-                            <span className="text-purple-300/60 text-xs font-black uppercase tracking-widest mb-1 italic">Enerji</span>
-                            <div className="text-2xl font-black text-purple-400">{score}</div>
-                        </div>
-                        <div className="flex flex-col items-center px-4 border-r border-white/10">
-                            <span className="text-red-300/60 text-xs font-black uppercase tracking-widest mb-1 italic">Oksijen</span>
-                            <div className={`text-2xl font-black ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-amber-400'} transition-all font-mono`}>
-                                {timeLeft}s
-                            </div>
-                        </div>
-                        {/* Toplam Süre */}
-                        <div className="flex flex-col items-center min-w-[70px]">
-                            <span className="text-cyan-300/60 text-xs font-black uppercase tracking-widest mb-1">Toplam</span>
-                            <div className={`flex items-center gap-1 text-xl font-black font-mono ${totalTime < 30 ? 'text-red-400 animate-pulse' : 'text-cyan-400'} transition-all`}>
-                                <Clock size={16} />
-                                {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}
-                            </div>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => { setLevel(1); setScore(0); setLives(5); setTotalTime(180); generateLevel(); }}
-                        className="p-4 bg-white/5 text-blue-300 hover:bg-white/10 rounded-2xl transition-all border border-white/10 active:scale-95"
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
                     >
-                        <RotateCcw size={28} />
-                    </button>
-                </div>
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-                    {/* 3x3 Grid Ana Panel */}
-                    <div className="bg-white/5 backdrop-blur-lg p-8 rounded-[4rem] border-2 border-white/10 shadow-inner flex flex-col items-center gap-6">
-                        <div className="bg-blue-900/40 px-8 py-2 rounded-full text-blue-200 font-black text-xs flex items-center gap-3 border border-blue-500/30 italic">
-                            <Compass size={20} className="animate-spin-slow" /> SEKANSI ANALİZ ET
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-3 p-4 bg-black/40 rounded-[2.5rem] border-4 border-blue-500/20 shadow-[0_0_50px_rgba(59,130,246,0.1)] aspect-square w-full max-w-[400px]">
-                            {sequence.map((shape, idx) => (
-                                <div
-                                    key={shape.id}
-                                    className={`relative bg-white/5 rounded-2xl flex items-center justify-center border transition-all ${idx === targetIndex ? 'border-4 border-dashed border-blue-500/50 bg-blue-500/10' : 'border-white/10'
-                                        }`}
-                                >
-                                    <span className="absolute top-1 left-2 text-[10px] font-black text-white/20 italic">{idx + 1}</span>
-                                    {idx === targetIndex ? (
-                                        <div className="text-blue-400/50 font-black text-4xl animate-pulse">?</div>
-                                    ) : (
-                                        <ShapeSVG shape={shape} size={svgSize - 20} />
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                        <p className="text-blue-300/40 text-[10px] font-black uppercase tracking-[0.2em] italic">1'den 9'a Dönüş Takibini Yap</p>
-                    </div>
-
-                    {/* Seçenekler Paneli */}
-                    <div className="bg-white/5 backdrop-blur-lg p-10 rounded-[4rem] border-2 border-white/10 shadow-2xl flex flex-col items-center gap-10">
-                        <h2 className="text-3xl font-black text-white flex items-center gap-3 italic text-center uppercase tracking-tighter underline decoration-purple-500 decoration-4 underline-offset-8 mb-4">
-                            Eksik Parçayı Bul! <Sparkles className="text-yellow-400" />
-                        </h2>
-                        <div className="grid grid-cols-2 gap-6 w-full">
-                            {options.map((option) => (
-                                <motion.button
-                                    key={option.shape.id}
-                                    whileHover={!isCorrecting && !showSuccess ? { scale: 1.05, backgroundColor: 'rgba(255,255,255,0.1)' } : {}}
-                                    whileTap={!isCorrecting && !showSuccess ? { scale: 0.95 } : {}}
-                                    onClick={() => handleOptionSelect(option)}
-                                    className={`bg-white/5 rounded-[3rem] p-6 transition-all border-4 relative group overflow-hidden ${isCorrecting && option.isCorrect
-                                        ? 'border-emerald-500 bg-emerald-500/20 shadow-[0_0_40px_rgba(16,185,129,0.3)]'
-                                        : 'border-white/10'
-                                        } ${!isCorrecting && !showSuccess ? 'hover:border-purple-500/50' : ''}`}
-                                >
-                                    <div className="flex items-center justify-center">
-                                        <ShapeSVG shape={option.shape} size={svgSize} />
-                                    </div>
-                                </motion.button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <AnimatePresence>
-                    {showSuccess && (
-                        <motion.div
-                            key="success-overlay"
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1.1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+                    <div className="flex items-center gap-4 flex-wrap">
+                        {/* Score */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(251, 191, 36, 0.3)'
+                            }}
                         >
-                            <div className="bg-emerald-500 text-white px-20 py-10 rounded-full font-black text-6xl shadow-[0_0_50px_rgba(16,185,129,0.5)] flex items-center gap-8 border-4 border-white animate-bounce italic">
-                                <Rocket size={60} /> SÜPER!
+                            <Star className="text-amber-400 fill-amber-400" size={18} />
+                            <span className="font-bold text-amber-400">{score}</span>
+                        </div>
+
+                        {/* Lives */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)'
+                            }}
+                        >
+                            {[...Array(3)].map((_, i) => (
+                                <Heart
+                                    key={i}
+                                    size={18}
+                                    className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Level */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(139, 92, 246, 0.3)'
+                            }}
+                        >
+                            <Compass className="text-purple-400" size={18} />
+                            <span className="font-bold text-purple-400">{level}/{totalQuestions}</span>
+                        </div>
+
+                        {/* Timer */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: timeLeft <= 10
+                                    ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)'
+                                    : 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: timeLeft <= 10
+                                    ? '1px solid rgba(239, 68, 68, 0.5)'
+                                    : '1px solid rgba(6, 182, 212, 0.3)'
+                            }}
+                        >
+                            <Timer className={timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'} size={18} />
+                            <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'}`}>{timeLeft}s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center p-4">
+                <AnimatePresence mode="wait">
+                    {!gameOver && (
+                        <motion.div
+                            key="game"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="w-full max-w-5xl"
+                        >
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                                {/* 3x3 Grid */}
+                                <div
+                                    className="rounded-3xl p-6"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
+                                    }}
+                                >
+                                    <div className="text-center mb-4">
+                                        <span className="text-sm font-bold text-purple-400 flex items-center justify-center gap-2">
+                                            <Compass size={16} className="animate-spin" style={{ animationDuration: '8s' }} />
+                                            Sekansı Analiz Et
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
+                                        {sequence.map((shape, idx) => (
+                                            <div
+                                                key={shape.id}
+                                                className="aspect-square rounded-[25%] flex items-center justify-center relative"
+                                                style={{
+                                                    background: idx === targetIndex
+                                                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%)'
+                                                        : 'rgba(255,255,255,0.05)',
+                                                    border: idx === targetIndex
+                                                        ? '3px dashed rgba(139, 92, 246, 0.5)'
+                                                        : '1px solid rgba(255,255,255,0.1)',
+                                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)'
+                                                }}
+                                            >
+                                                <span className="absolute top-1 left-2 text-[10px] font-bold text-white/30">{idx + 1}</span>
+                                                {idx === targetIndex ? (
+                                                    <div className="text-purple-400/70 font-black text-3xl animate-pulse">?</div>
+                                                ) : (
+                                                    <ShapeSVG shape={shape} size={svgSize - 20} />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Options */}
+                                <div
+                                    className="rounded-3xl p-6"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
+                                    }}
+                                >
+                                    <h2 className="text-xl font-bold text-center mb-6 flex items-center justify-center gap-2">
+                                        Eksik Parçayı Bul! <Sparkles className="text-yellow-400" size={20} />
+                                    </h2>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {options.map((option) => {
+                                            const showResult = feedback !== null;
+                                            const isCorrect = option.isCorrect;
+
+                                            return (
+                                                <motion.button
+                                                    key={option.shape.id}
+                                                    whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
+                                                    whileTap={!feedback ? { scale: 0.95 } : {}}
+                                                    onClick={() => handleOptionSelect(option)}
+                                                    disabled={feedback !== null}
+                                                    className="aspect-square rounded-[25%] flex items-center justify-center transition-all"
+                                                    style={{
+                                                        background: showResult && isCorrect
+                                                            ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                                                            : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                                        boxShadow: showResult && isCorrect
+                                                            ? '0 0 30px rgba(16, 185, 129, 0.5)'
+                                                            : 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
+                                                        border: showResult && isCorrect
+                                                            ? '2px solid #10B981'
+                                                            : '1px solid rgba(255,255,255,0.1)',
+                                                        cursor: feedback ? 'default' : 'pointer',
+                                                        opacity: showResult && !isCorrect ? 0.5 : 1
+                                                    }}
+                                                >
+                                                    <ShapeSVG shape={option.shape} size={svgSize} />
+                                                </motion.button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     )}
 
+                    {/* Game Over */}
                     {gameOver && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#05051a]/90 backdrop-blur-3xl">
-                            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white/5 rounded-[5rem] p-20 border-2 border-white/20 text-center max-w-2xl w-full shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-                                <div className="w-40 h-40 bg-gradient-to-br from-yellow-400 to-orange-500 text-white rounded-full flex items-center justify-center mx-auto mb-10 shadow-[0_0_50px_rgba(234,179,8,0.3)]"><Trophy size={100} /></div>
-                                <h2 className="text-7xl font-black text-white mb-6 tracking-tighter italic uppercase underline decoration-purple-500">TAMAMLANDI</h2>
-                                <p className="text-blue-200 font-bold text-3xl mb-14 leading-relaxed italic">Galaksi rotasını başarıyla çizdin!<br /><span className="text-6xl text-purple-400 mt-10 block font-black not-italic">PUAN: {score}</span></p>
-                                <div className="space-y-6">
-                                    <button onClick={() => { setLevel(1); setScore(0); setGameOver(false); setGameStarted(true); }} className="w-full py-10 bg-purple-600 text-white font-black rounded-4xl flex items-center justify-center gap-6 shadow-[0_15px_0_#4c1d95] border-b-4 border-purple-800 hover:scale-105 transition-all text-3xl active:translate-y-3 active:shadow-none"><RotateCcw size={40} /> YENİ ROTA</button>
-                                    <Link to="/atolyeler/tablet-degerlendirme" className="text-blue-400 font-black text-2xl hover:text-blue-300 transition-colors block mt-12 underline decoration-4 underline-offset-8">ANA ÜSSE DÖN</Link>
+                        <motion.div
+                            key="gameover"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
+                        >
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #EF4444 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
+
+                            <h2 className="text-3xl font-black text-purple-300 mb-2">
+                                {level >= 8 ? '🎉 Harika!' : 'Yolculuk Tamamlandı!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                {level >= 8 ? 'Galaksi rotasını çizdin!' : 'Tekrar deneyelim!'}
+                            </p>
+
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Seviye</p>
+                                        <p className="text-3xl font-bold text-purple-400">{level}</p>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(139, 92, 246, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Yeni Rota</span>
+                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Feedback Overlay */}
+                <AnimatePresence>
+                    {feedback && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ y: 50 }}
+                                animate={{ y: 0 }}
+                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }`}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {feedback === 'correct'
+                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    }
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
                             </motion.div>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                .animate-spin-slow { animation: spin-slow 8s linear infinite; }
-            `}} />
         </div>
     );
 };

@@ -1,26 +1,39 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    ChevronLeft, RefreshCw, Trophy, Rocket, Timer,
-    Shield, Cpu, Zap, Activity, Grid, Target,
+    ChevronLeft, RotateCcw, Trophy, Timer, Play,
     Circle, Square, Triangle, Hexagon, Star, Pentagon,
-    Cross, Moon, Heart
+    Cross, Moon, Heart, Zap, Eye, Sparkles, CheckCircle2, XCircle, Grid3X3
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
-// --- Sabitler ---
+// --- Shapes ---
 const SHAPE_ICONS = [Circle, Square, Triangle, Hexagon, Star, Pentagon, Cross, Moon, Heart];
+
+// High Contrast Candy Colors
 const COLORS = [
-    { name: 'Emerald', value: '#10B981', bg: 'bg-emerald-500/20', border: 'border-emerald-500' },
-    { name: 'Amber', value: '#F59E0B', bg: 'bg-amber-500/20', border: 'border-amber-500' },
-    { name: 'Blue', value: '#3B82F6', bg: 'bg-blue-500/20', border: 'border-blue-500' },
-    { name: 'Rose', value: '#F43F5E', bg: 'bg-rose-500/20', border: 'border-rose-500' },
-    { name: 'Violet', value: '#8B5CF6', bg: 'bg-violet-500/20', border: 'border-violet-500' },
+    { name: 'Yeşil', hex: '#6BCB77' },
+    { name: 'Turuncu', hex: '#FFA500' },
+    { name: 'Mavi', hex: '#4ECDC4' },
+    { name: 'Pembe', hex: '#FF6B6B' },
+    { name: 'Mor', hex: '#9B59B6' },
 ];
 
-const SUCCESS_MESSAGES = ["MÜKEMMEL!", "TAM İSABET!", "VERİ EŞLEŞTİ!", "HARİKA!", "KUSURSUZ!"];
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Harika! ⭐",
+    "Süper Eşleşme! 🎯",
+    "Muhteşem! 🌟",
+    "Tam İsabet! 🎉",
+];
+
+const FAILURE_MESSAGES = [
+    "Tekrar dene! 💪",
+    "Neredeyse! ✨",
+    "Dikkatli bak! 👀",
+];
 
 interface Card {
     id: string;
@@ -40,22 +53,27 @@ const CrossMatchGame: React.FC = () => {
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
+    const [lives, setLives] = useState(3);
     const [cards, setCards] = useState<Card[]>([]);
     const [flippedIndices, setFlippedIndices] = useState<number[]>([]);
     const [timeLeft, setTimeLeft] = useState(60);
-    const [feedback, setFeedback] = useState<string | null>(null);
+    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
     const shuffleIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const gameStartTimeRef = useRef<number>(0);
 
-    // --- Kart Üretme ---
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
+    // --- Card Generation ---
     const generateCards = useCallback((lvl: number) => {
-        const pairCount = Math.min(8, 2 + Math.floor(lvl / 2)); // 2'den başla, her 2 seviyede bir artır (max 8 çift = 16 kart)
+        const pairCount = Math.min(8, 2 + Math.floor(lvl / 2));
         const selectedPairs: { s: number, c: number }[] = [];
 
         while (selectedPairs.length < pairCount) {
             const s = Math.floor(Math.random() * SHAPE_ICONS.length);
             const c = Math.floor(Math.random() * COLORS.length);
-            // Aynı sembol+renk kombinasyonunun daha önce seçilmediğinden emin ol
             if (!selectedPairs.some(p => p.s === s && p.c === c)) {
                 selectedPairs.push({ s, c });
             }
@@ -67,7 +85,7 @@ const CrossMatchGame: React.FC = () => {
                 id: Math.random().toString(36).substr(2, 9),
                 symbolIdx: pair.s,
                 colorIdx: pair.c,
-                isFlipped: true, // Başta önizleme için açık
+                isFlipped: true,
                 isMatched: false,
                 position: idx
             });
@@ -76,7 +94,7 @@ const CrossMatchGame: React.FC = () => {
         return newCards.sort(() => Math.random() - 0.5);
     }, []);
 
-    // --- Karıştırma (Shuffle) Mantığı ---
+    // --- Shuffle Logic ---
     const shufflePositions = useCallback(() => {
         if (status !== 'playing') return;
 
@@ -90,7 +108,7 @@ const CrossMatchGame: React.FC = () => {
         });
     }, [status, playSound]);
 
-    // --- Oyunu Başlat/Seviye Geç ---
+    // --- Start Level ---
     const startLevel = useCallback((lvl: number) => {
         const newCards = generateCards(lvl);
         setCards(newCards);
@@ -99,7 +117,6 @@ const CrossMatchGame: React.FC = () => {
         setStatus('preview');
         setTimeLeft(60);
 
-        // 3 saniye önizleme
         setTimeout(() => {
             setCards(prev => prev.map(c => ({ ...c, isFlipped: false })));
             setStatus('playing');
@@ -107,8 +124,10 @@ const CrossMatchGame: React.FC = () => {
     }, [generateCards]);
 
     const startApp = useCallback(() => {
+        gameStartTimeRef.current = Date.now();
         setLevel(1);
         setScore(0);
+        setLives(3);
         startLevel(1);
     }, [startLevel]);
 
@@ -119,10 +138,10 @@ const CrossMatchGame: React.FC = () => {
         }
     }, [location.state, status, startApp]);
 
-    // --- Shuffle Zamanlayıcısı ---
+    // --- Shuffle Timer ---
     useEffect(() => {
         if (status === 'playing' && level > 2) {
-            const intervalTime = Math.max(3000, 8000 - (level * 500)); // Seviye arttıkça sıklaşır
+            const intervalTime = Math.max(3000, 8000 - (level * 500));
             shuffleIntervalRef.current = setInterval(shufflePositions, intervalTime);
         }
         return () => {
@@ -130,7 +149,7 @@ const CrossMatchGame: React.FC = () => {
         };
     }, [status, level, shufflePositions]);
 
-    // --- Zamanlayıcı ---
+    // --- Timer ---
     useEffect(() => {
         let interval: NodeJS.Timeout;
         if (status === 'playing' && timeLeft > 0) {
@@ -141,14 +160,7 @@ const CrossMatchGame: React.FC = () => {
         return () => clearInterval(interval);
     }, [status, timeLeft]);
 
-    // Oyun başladığında süre başlat
-    useEffect(() => {
-        if (status === 'preview') {
-            gameStartTimeRef.current = Date.now();
-        }
-    }, [status]);
-
-    // Oyun bittiğinde verileri kaydet
+    // Save game data on game over
     useEffect(() => {
         if (status === 'gameover' && gameStartTimeRef.current > 0) {
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
@@ -164,7 +176,14 @@ const CrossMatchGame: React.FC = () => {
         }
     }, [status, score, level, saveGamePlay]);
 
-    // --- Kart Tıklama ---
+    // Format time
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // --- Card Click ---
     const handleCardClick = (idx: number) => {
         if (status !== 'playing' || cards[idx].isFlipped || cards[idx].isMatched || flippedIndices.length >= 2) return;
 
@@ -180,18 +199,22 @@ const CrossMatchGame: React.FC = () => {
             const second = cards[secondIdx];
 
             if (first.symbolIdx === second.symbolIdx && first.colorIdx === second.colorIdx) {
-                // EŞLEŞME BAŞARILI
+                // Match!
                 setTimeout(() => {
                     playSound('memory_match');
-                    setFeedback(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+                    setFeedback('correct');
+                    setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
                     setCards(prev => prev.map((c, i) =>
                         (i === firstIdx || i === secondIdx) ? { ...c, isMatched: true } : c
                     ));
                     setFlippedIndices([]);
                     setScore(prev => prev + (level * 50));
-                    setFeedback(null);
 
-                    // Bölüm bitti mi kontrol et
+                    setTimeout(() => {
+                        setFeedback(null);
+                    }, 1200);
+
+                    // Check level complete
                     setCards(currentCards => {
                         const allMatched = currentCards.every(c =>
                             (c.id === first.id || c.id === second.id) ? true : c.isMatched
@@ -206,169 +229,365 @@ const CrossMatchGame: React.FC = () => {
                     });
                 }, 500);
             } else {
-                // HATALI EŞLEŞME
+                // Wrong match
                 setTimeout(() => {
                     playSound('memory_fail');
+                    setFeedback('wrong');
+                    setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+
+                    const newLives = lives - 1;
+                    setLives(newLives);
+
                     setCards(prev => prev.map((c, i) =>
                         (i === firstIdx || i === secondIdx) ? { ...c, isFlipped: false } : c
                     ));
                     setFlippedIndices([]);
+
+                    setTimeout(() => {
+                        setFeedback(null);
+                        if (newLives <= 0) {
+                            setStatus('gameover');
+                        }
+                    }, 1200);
                 }, 1000);
             }
         }
     };
 
     return (
-        <div className="min-h-screen pt-24 pb-12 px-6 relative overflow-hidden font-mono" style={{ background: '#020617' }}>
-            {/* Siber Arka Plan */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none">
-                <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(16,185,129,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.05)_1px,transparent_1px)] bg-[size:40px_40px]" />
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-emerald-500/10 via-transparent to-transparent" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
             </div>
 
-            <div className="container mx-auto max-w-5xl relative z-10">
-                {/* HUD */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-emerald-500/20 pb-8">
-                    <div className="flex items-center gap-5">
-                        <Link to="/atolyeler/bireysel-degerlendirme" className="p-3 bg-emerald-500/5 rounded-2xl hover:bg-emerald-500/10 transition-all text-emerald-500 border border-emerald-500/20">
-                            <ChevronLeft />
-                        </Link>
-                        <div>
-                            <h1 className="text-4xl font-black tracking-tighter text-white flex items-center gap-3">
-                                ÇAPRAZ <span className="text-emerald-500">EŞLEŞME</span>
-                            </h1>
-                            <p className="text-[10px] text-emerald-500/60 font-bold uppercase tracking-[0.4em] mt-1 pl-1">Protocol: Symbolic Memory / V.2.0</p>
-                        </div>
-                    </div>
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
 
-                    <div className="flex gap-4">
-                        <div className="bg-emerald-950/30 border border-emerald-500/20 px-8 py-3 rounded-2xl text-center shadow-2xl backdrop-blur-xl">
-                            <div className="text-[10px] uppercase text-emerald-500/40 font-black mb-1">CORE LVL</div>
-                            <div className="text-2xl font-black text-emerald-500">{level}</div>
+                    {(status === 'preview' || status === 'playing') && (
+                        <div className="flex items-center gap-4 flex-wrap">
+                            {/* Score */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(251, 191, 36, 0.3)'
+                                }}
+                            >
+                                <Star className="text-amber-400 fill-amber-400" size={18} />
+                                <span className="font-bold text-amber-400">{score}</span>
+                            </div>
+
+                            {/* Lives */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                                }}
+                            >
+                                {[...Array(3)].map((_, i) => (
+                                    <Heart
+                                        key={i}
+                                        size={18}
+                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Timer */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: timeLeft <= 10
+                                        ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)'
+                                        : 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: `1px solid ${timeLeft <= 10 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                                }}
+                            >
+                                <Timer className={timeLeft <= 10 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} />
+                                <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-blue-400'}`}>
+                                    {formatTime(timeLeft)}
+                                </span>
+                            </div>
+
+                            {/* Level */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                                }}
+                            >
+                                <Zap className="text-emerald-400" size={18} />
+                                <span className="font-bold text-emerald-400">Seviye {level}</span>
+                            </div>
                         </div>
-                        <div className="bg-emerald-950/30 border border-emerald-500/20 px-8 py-3 rounded-2xl text-center shadow-2xl backdrop-blur-xl">
-                            <div className="text-[10px] uppercase text-emerald-500/40 font-black mb-1">XP EARNED</div>
-                            <div className="text-2xl font-black text-white">{score}</div>
-                        </div>
-                    </div>
+                    )}
                 </div>
+            </div>
 
-                <div className="flex flex-col items-center justify-center min-h-[500px]">
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+                <AnimatePresence mode="wait">
+                    {/* Welcome Screen */}
                     {status === 'waiting' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-10 bg-slate-900/40 p-16 rounded-[4rem] border border-emerald-500/10 backdrop-blur-3xl">
-                            <div className="relative mx-auto w-32 h-32 flex items-center justify-center">
-                                <Grid size={100} className="text-emerald-500/20 absolute animate-pulse" />
-                                <Cpu size={80} className="text-emerald-500" />
-                                <Shield className="absolute bottom-0 right-0 text-amber-500 flex" size={32} />
+                        <motion.div
+                            key="welcome"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
+                        >
+                            {/* 3D Gummy Icon */}
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <Grid3X3 size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
+
+                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                                🃏 Çapraz Eşleşme
+                            </h1>
+
+                            {/* Instructions */}
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                                <h3 className="text-lg font-bold text-emerald-300 mb-3 flex items-center gap-2">
+                                    <Eye size={20} /> Nasıl Oynanır?
+                                </h3>
+                                <ul className="space-y-2 text-slate-300 text-sm">
+                                    <li className="flex items-center gap-2">
+                                        <Sparkles size={14} className="text-teal-400" />
+                                        <span>Kartları 3 saniye incele</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <Sparkles size={14} className="text-teal-400" />
+                                        <span>Aynı şekil ve rengi eşleştir</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <Sparkles size={14} className="text-teal-400" />
+                                        <span>Dikkat! Kartlar yer değiştirebilir</span>
+                                    </li>
+                                </ul>
                             </div>
-                            <div className="max-w-md mx-auto space-y-6">
-                                <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Sistem Girişi</h2>
-                                <p className="text-emerald-500/60 font-medium leading-relaxed italic">
-                                    Sadece şekli değil, rengi de hatırla. Kartlar yer değiştirebilir, veri akışını takip etmeyi unutma dedektif.
-                                </p>
-                                <div className="grid grid-cols-3 gap-4 py-6 text-emerald-500/40 text-[10px] font-black uppercase tracking-widest">
-                                    <div className="flex flex-col items-center gap-2"><Target size={20} /> ANALİZ</div>
-                                    <div className="flex flex-col items-center gap-2"><Zap size={20} /> REFLEKS</div>
-                                    <div className="flex flex-col items-center gap-2"><Activity size={20} /> ODAK</div>
+
+                            {/* TUZÖ Badge */}
+                            <div className="bg-emerald-500/10 text-emerald-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-emerald-500/30">
+                                TUZÖ 5.4.2 Görsel Kısa Süreli Bellek
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startApp}
+                                className="px-8 py-4 rounded-2xl font-bold text-lg"
+                                style={{
+                                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(16, 185, 129, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Play size={24} fill="currentColor" />
+                                    <span>Başla</span>
                                 </div>
-                            </div>
-                            <button onClick={startApp} className="group relative px-12 py-5 bg-emerald-500 text-slate-950 font-black text-xl rounded-3xl hover:bg-emerald-400 transition-all transform hover:scale-105 active:scale-95 shadow-[0_10px_30px_rgba(16,185,129,0.3)] flex items-center gap-4 mx-auto uppercase">
-                                PROTOKOLÜ BAŞLAT <Rocket fill="currentColor" />
-                            </button>
+                            </motion.button>
                         </motion.div>
                     )}
 
+                    {/* Game Screen */}
                     {(status === 'preview' || status === 'playing' || status === 'shuffling') && (
-                        <div className="w-full space-y-12">
-                            <div className="flex items-center justify-center gap-12">
-                                <div className="flex items-center gap-4 bg-emerald-950/40 border border-emerald-500/20 px-8 py-3 rounded-2xl shadow-xl">
-                                    <Timer className={timeLeft < 10 ? 'text-rose-500 animate-pulse' : 'text-emerald-500'} />
-                                    <span className={`text-2xl font-black ${timeLeft < 10 ? 'text-rose-500' : 'text-white'}`}>{timeLeft}s</span>
-                                </div>
-                                <div className="text-emerald-500/40 font-black text-sm uppercase tracking-[0.3em] animate-pulse">
-                                    {status === 'preview' ? 'VERİLER YÜKLENİYOR...' : 'EŞLEŞTİRME AKTİF'}
-                                </div>
+                        <motion.div
+                            key="game"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="w-full max-w-4xl"
+                        >
+                            {/* Status */}
+                            <div className="text-center mb-6">
+                                <p className="text-lg font-bold text-emerald-300">
+                                    {status === 'preview' ? '👀 Kartları İncele...' : '🃏 Eşleştir!'}
+                                </p>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 perspective-1000">
+                            {/* Cards Grid */}
+                            <div
+                                className="grid grid-cols-4 gap-3 p-6 rounded-3xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
                                 {cards.map((card, idx) => {
                                     const Icon = SHAPE_ICONS[card.symbolIdx];
                                     const color = COLORS[card.colorIdx];
 
                                     return (
-                                        <motion.div
+                                        <motion.button
                                             key={card.id}
                                             layout
                                             initial={{ opacity: 0, scale: 0.8 }}
-                                            animate={{
-                                                opacity: 1,
-                                                scale: 1,
-                                                rotateY: card.isFlipped || card.isMatched ? 0 : 180
-                                            }}
-                                            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            whileHover={!card.isFlipped && !card.isMatched && status === 'playing' ? { scale: 0.95 } : {}}
+                                            whileTap={!card.isFlipped && !card.isMatched && status === 'playing' ? { scale: 0.9 } : {}}
                                             onClick={() => handleCardClick(idx)}
-                                            className={`relative h-44 cursor-pointer preserve-3d transition-shadow hover:shadow-[0_0_30px_rgba(16,185,129,0.2)] ${card.isMatched ? 'opacity-40 grayscale pointer-events-none' : ''}`}
+                                            className={`aspect-square rounded-[30%] transition-all ${card.isMatched ? 'opacity-30' : ''}`}
+                                            style={{
+                                                background: card.isFlipped || card.isMatched
+                                                    ? `linear-gradient(135deg, ${color.hex}40 0%, ${color.hex}20 100%)`
+                                                    : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                                boxShadow: card.isFlipped || card.isMatched
+                                                    ? `inset 0 -6px 12px rgba(0,0,0,0.3), inset 0 6px 12px rgba(255,255,255,0.2), 0 0 20px ${color.hex}40`
+                                                    : 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
+                                                border: card.isFlipped || card.isMatched
+                                                    ? `2px solid ${color.hex}80`
+                                                    : '1px solid rgba(255,255,255,0.1)',
+                                                cursor: !card.isFlipped && !card.isMatched && status === 'playing' ? 'pointer' : 'default'
+                                            }}
+                                            disabled={card.isFlipped || card.isMatched || status !== 'playing'}
                                         >
-                                            {/* Ön Yüz */}
-                                            <div className={`absolute inset-0 backface-hidden rounded-3xl border-2 flex flex-col items-center justify-center gap-3 ${color.bg} ${color.border} shadow-inner`}>
-                                                <Icon size={52} color={color.value} strokeWidth={3} />
-                                                <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: color.value }}>
-                                                    {color.name}
+                                            {(card.isFlipped || card.isMatched) && (
+                                                <div className="flex flex-col items-center justify-center h-full">
+                                                    <Icon size={36} color={color.hex} strokeWidth={2.5} />
                                                 </div>
-                                            </div>
-
-                                            {/* Arka Yüz */}
-                                            <div className="absolute inset-0 backface-hidden rounded-3xl bg-slate-900 border-2 border-emerald-500/10 flex items-center justify-center rotate-y-180">
-                                                <Cpu size={40} className="text-emerald-500/10" />
-                                                <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_center,rgba(16,185,129,1)_0%,transparent_70%)]" />
-                                            </div>
-                                        </motion.div>
+                                            )}
+                                        </motion.button>
                                     );
                                 })}
                             </div>
-
-                            {/* Geri Bildirim Overlay */}
-                            <AnimatePresence>
-                                {feedback && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 1.2 }}
-                                        className="fixed bottom-12 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-950 px-10 py-3 rounded-full font-black text-xl shadow-2xl z-[100] uppercase tracking-tighter"
-                                    >
-                                        {feedback}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    )}
-
-                    {status === 'gameover' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-8 w-full max-w-2xl bg-slate-900/80 p-16 rounded-[4rem] border-2 border-rose-500/20 shadow-2xl backdrop-blur-3xl">
-                            <div className="relative mx-auto w-40 h-40 bg-gradient-to-br from-rose-500 to-rose-700 text-white rounded-[2.5rem] flex items-center justify-center shadow-2xl rotate-12 mb-10 border-4 border-white/10">
-                                <Trophy size={100} />
-                            </div>
-                            <h2 className="text-6xl font-black text-white italic uppercase tracking-tighter">SİSTEM ÇÖKTÜ</h2>
-                            <p className="text-emerald-500 font-black text-4xl mb-12">VERİ KAZANIMI: {score}</p>
-
-                            <div className="space-y-4">
-                                <button onClick={startApp} className="w-full py-6 bg-emerald-500 text-slate-950 font-black text-2xl rounded-3xl hover:bg-emerald-400 transition-all flex items-center justify-center gap-4 shadow-[0_8px_0_#065f46] active:translate-y-2 active:shadow-none mb-4 uppercase">
-                                    BAĞLANTIYI YENİLE <RefreshCw />
-                                </button>
-                                <Link to="/atolyeler/bireysel-degerlendirme" className="text-emerald-500/40 hover:text-emerald-500 font-bold block transition-colors tracking-widest uppercase text-sm">Merkez Ofise Dön</Link>
-                            </div>
                         </motion.div>
                     )}
-                </div>
-            </div>
 
-            <style>{`
-                .perspective-1000 { perspective: 1000px; }
-                .preserve-3d { transform-style: preserve-3d; }
-                .backface-hidden { backface-visibility: hidden; }
-                .rotate-y-180 { transform: rotateY(180deg); }
-                .backface-hidden { backface-visibility: hidden; }
-            `}</style>
+                    {/* Game Over Screen */}
+                    {status === 'gameover' && (
+                        <motion.div
+                            key="gameover"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
+                        >
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
+
+                            <h2 className="text-3xl font-black text-amber-300 mb-2">
+                                {score >= 500 ? '🎉 Harika!' : 'Görev Tamamlandı!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                {score >= 500 ? 'Muhteşem bir hafızan var!' : 'Biraz daha pratik yap!'}
+                            </p>
+
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Seviye</p>
+                                        <p className="text-3xl font-bold text-emerald-400">{level}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startApp}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(16, 185, 129, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
+                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Feedback Overlay */}
+                <AnimatePresence>
+                    {feedback && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ y: 50 }}
+                                animate={{ y: 0 }}
+                                className={`
+                                    px-12 py-8 rounded-3xl text-center
+                                    ${feedback === 'correct'
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }
+                                `}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {feedback === 'correct'
+                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    }
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 };

@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Eye, Link2, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import {
+    ChevronLeft, RotateCcw, Trophy, Play, Star, Target, CheckCircle2, XCircle,
+    Heart, Zap, Eye, Link2, ArrowRight, Sparkles
+} from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useSound } from '../../hooks/useSound';
 
 interface SymbolColor {
     symbol: string;
@@ -13,10 +17,23 @@ interface SymbolColor {
 interface Question {
     type: 'color-to-symbol' | 'symbol-to-color';
     query: string;
-    hint: string; // Renk kutusu veya şekil gösterimi
+    hint: string;
     correctAnswer: string;
     options: string[];
 }
+
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Harika! 🔗",
+    "Süper! ⭐",
+    "Doğru! 🎉",
+    "Bravo! 🌟",
+];
+
+const FAILURE_MESSAGES = [
+    "Dikkatli bak! 👀",
+    "Tekrar dene! 💪",
+];
 
 const SYMBOLS = ['⭐', '▲', '●', '◆', '⬟', '⬢', '♠', '♥'];
 
@@ -32,25 +49,32 @@ const COLORS = [
 ];
 
 const DualBindGame = () => {
+    const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
     const [gameState, setGameState] = useState<'idle' | 'memorize' | 'question' | 'finished'>('idle');
     const [symbolColors, setSymbolColors] = useState<SymbolColor[]>([]);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [score, setScore] = useState(0);
-    const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0);
+    const [lives, setLives] = useState(3);
     const [level, setLevel] = useState(1);
     const [round, setRound] = useState(1);
     const [memorizeTime, setMemorizeTime] = useState(6);
     const [countdown, setCountdown] = useState(6);
     const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const [streak, setStreak] = useState(0);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
 
     const totalRounds = 5;
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
     // Zorluk seviyesine göre çift sayısı
     const getPairCount = () => {
@@ -81,13 +105,11 @@ const DualBindGame = () => {
         }));
     }, [level]);
 
-    // Çift yönlü soru oluştur (aynı eşleşme için iki soru)
+    // Çift yönlü soru oluştur
     const generateDualQuestions = useCallback((pairs: SymbolColor[]): Question[] => {
-        // Rastgele bir eşleşme seç
         const targetPair = pairs[Math.floor(Math.random() * pairs.length)];
         const otherPairs = pairs.filter(p => p !== targetPair);
 
-        // Soru 1: Renk göster → Şekli sor
         const wrongSymbols = otherPairs.map(p => p.symbol).slice(0, 3);
         const symbolOptions = [targetPair.symbol, ...wrongSymbols].sort(() => Math.random() - 0.5);
 
@@ -99,7 +121,6 @@ const DualBindGame = () => {
             options: symbolOptions,
         };
 
-        // Soru 2: Şekil göster → Rengi sor
         const wrongColors = otherPairs.map(p => p.colorName).slice(0, 3);
         const colorOptions = [targetPair.colorName, ...wrongColors].sort(() => Math.random() - 0.5);
 
@@ -132,14 +153,21 @@ const DualBindGame = () => {
     // Oyunu başlat
     const startGame = useCallback(() => {
         setScore(0);
-        setCorrectCount(0);
-        setWrongCount(0);
+        setLives(3);
+        setStreak(0);
         setRound(1);
         setLevel(1);
         gameStartTimeRef.current = Date.now();
         hasSavedRef.current = false;
         startRound();
     }, [startRound]);
+
+    // Handle Auto Start from HUB
+    useEffect(() => {
+        if (location.state?.autoStart && gameState === 'idle') {
+            startGame();
+        }
+    }, [location.state, gameState, startGame]);
 
     // Oyun bittiğinde verileri kaydet
     useEffect(() => {
@@ -150,17 +178,16 @@ const DualBindGame = () => {
                 game_id: 'cift-mod-hafiza',
                 score_achieved: score,
                 duration_seconds: durationSeconds,
+                lives_remaining: lives,
                 metadata: {
                     level_reached: level,
-                    correct_count: correctCount,
-                    wrong_count: wrongCount,
+                    streak: streak,
                     total_rounds: totalRounds,
-                    accuracy: Math.round((correctCount / (correctCount + wrongCount)) * 100),
                     game_name: 'Çift Mod Hafıza',
                 }
             });
         }
-    }, [gameState]);
+    }, [gameState, score, level, lives, streak, saveGamePlay, totalRounds]);
 
     // Ezberleme geri sayımı
     useEffect(() => {
@@ -185,28 +212,38 @@ const DualBindGame = () => {
         const isCorrect = answer === currentQ.correctAnswer;
 
         if (isCorrect) {
+            playSound('correct');
             setShowFeedback('correct');
-            setCorrectCount(prev => prev + 1);
+            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            setStreak(prev => prev + 1);
             const levelBonus = level * 15;
-            setScore(prev => prev + 100 + levelBonus);
+            setScore(prev => prev + 100 + levelBonus + (streak * 10));
         } else {
+            playSound('incorrect');
             setShowFeedback('wrong');
-            setWrongCount(prev => prev + 1);
+            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            setStreak(0);
+            setLives(l => {
+                if (l <= 1) {
+                    setTimeout(() => setGameState('finished'), 1500);
+                    return 0;
+                }
+                return l - 1;
+            });
         }
 
         setTimeout(() => {
             setShowFeedback(null);
             setSelectedAnswer(null);
 
+            if (lives <= 1 && !isCorrect) return;
+
             if (currentQuestionIndex < questions.length - 1) {
-                // Sonraki soruya geç (çift soru)
                 setCurrentQuestionIndex(prev => prev + 1);
             } else {
-                // Bu round bitti
                 if (round >= totalRounds) {
                     setGameState('finished');
                 } else {
-                    // Zorluk artır
                     if (round % 2 === 0 && level < 7) {
                         setLevel(prev => prev + 1);
                     }
@@ -217,131 +254,225 @@ const DualBindGame = () => {
         }, 1500);
     };
 
-    const accuracy = correctCount + wrongCount > 0
-        ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
-        : 0;
-
     const currentQuestion = questions[currentQuestionIndex];
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-rose-950 to-slate-900 pt-24 pb-12 px-6">
-            <div className="container mx-auto max-w-4xl">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-8"
-                >
-                    <Link
-                        to="/atolyeler/bireysel-degerlendirme"
-                        className="inline-flex items-center gap-2 text-rose-400 font-bold hover:text-rose-300 transition-colors mb-4 uppercase text-xs tracking-widest"
-                    >
-                        <ChevronLeft size={16} />
-                        Bireysel Değerlendirme
-                    </Link>
-                    <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
-                        🔗 <span className="text-rose-400">Çift Mod</span> Hafıza
-                    </h1>
-                    <p className="text-slate-400">Renk → Şekil ve Şekil → Renk çift yönlü hatırla!</p>
-                </motion.div>
-
-                {/* Stats */}
-                <div className="flex justify-center gap-4 mb-8 flex-wrap">
-                    <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                        <Star className="w-5 h-5 text-amber-400" />
-                        <span className="text-white font-bold">{score}</span>
-                    </div>
-                    {gameState !== 'idle' && gameState !== 'finished' && (
-                        <>
-                            <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                                <Target className="w-5 h-5 text-rose-400" />
-                                <span className="text-white font-bold">Tur {round}/{totalRounds}</span>
-                            </div>
-                            <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                                <Zap className="w-5 h-5 text-emerald-400" />
-                                <span className="text-white font-bold">Lv.{level}</span>
-                            </div>
-                        </>
-                    )}
+    // Welcome Screen
+    if (gameState === 'idle') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-rose-950 to-pink-950 text-white">
+                {/* Decorative Background */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
                 </div>
 
-                {/* Game Area */}
-                <div className="flex flex-col items-center">
-                    {/* Idle State */}
-                    {gameState === 'idle' && (
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-center max-w-xl"
+                    >
+                        {/* 3D Gummy Icon */}
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6"
+                            className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)',
+                                boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                            }}
+                            animate={{ y: [0, -8, 0] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                         >
-                            <div className="bg-slate-800/50 border border-white/10 rounded-3xl p-8 max-w-md">
-                                <div className="text-6xl mb-4">🔗</div>
-                                <h2 className="text-2xl font-bold text-white mb-4">Çift Mod Hafıza</h2>
-
-                                <div className="bg-slate-700/50 rounded-xl p-4 mb-6">
-                                    <p className="text-slate-300 text-sm mb-3">Nasıl Çalışır:</p>
-                                    <div className="flex items-center justify-center gap-2 mb-2">
-                                        <div className="w-8 h-8 rounded bg-red-500"></div>
-                                        <ArrowRight className="text-slate-400" />
-                                        <span className="text-2xl">⭐</span>
-                                    </div>
-                                    <div className="flex items-center justify-center gap-2">
-                                        <span className="text-2xl">⭐</span>
-                                        <ArrowRight className="text-slate-400" />
-                                        <div className="w-8 h-8 rounded bg-red-500"></div>
-                                    </div>
-                                    <p className="text-slate-400 text-xs mt-2">Her eşleşme için çift yönlü soru!</p>
-                                </div>
-
-                                <ul className="text-slate-400 text-sm space-y-2 text-left mb-6">
-                                    <li className="flex items-center gap-2">
-                                        <Eye className="w-4 h-4 text-rose-400" />
-                                        Şekil-renk eşleşmelerini <strong className="text-white">ezberle</strong>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Link2 className="w-4 h-4 text-pink-400" />
-                                        <strong className="text-white">İki soru:</strong> Renk→Şekil ve Şekil→Renk
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Zap className="w-4 h-4 text-emerald-400" />
-                                        {totalRounds} tur, her turda çift soru!
-                                    </li>
-                                </ul>
-
-                                <button
-                                    onClick={startGame}
-                                    className="px-8 py-4 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold rounded-xl hover:from-rose-400 hover:to-pink-400 transition-all flex items-center gap-3 mx-auto"
-                                >
-                                    <Play className="w-5 h-5" />
-                                    Teste Başla
-                                </button>
-                            </div>
+                            <Link2 size={52} className="text-white drop-shadow-lg" />
                         </motion.div>
-                    )}
 
+                        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent">
+                            🔗 Çift Mod Hafıza
+                        </h1>
+
+                        {/* Preview */}
+                        <div
+                            className="rounded-2xl p-5 mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            <div className="flex items-center justify-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-red-500" />
+                                <ArrowRight className="text-slate-400" size={20} />
+                                <span className="text-2xl">⭐</span>
+                                <span className="text-slate-500 mx-2">|</span>
+                                <span className="text-2xl">⭐</span>
+                                <ArrowRight className="text-slate-400" size={20} />
+                                <div className="w-8 h-8 rounded-lg bg-red-500" />
+                            </div>
+                            <p className="text-slate-400 text-sm">Çift yönlü eşleştirme!</p>
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                            <h3 className="text-lg font-bold text-rose-300 mb-3 flex items-center gap-2">
+                                <Eye size={20} /> Nasıl Oynanır?
+                            </h3>
+                            <ul className="space-y-2 text-slate-300 text-sm">
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-rose-400" />
+                                    <span>Şekil-renk eşleşmelerini <strong>ezberle</strong></span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-rose-400" />
+                                    <span><strong>Renk→Şekil</strong> ve <strong>Şekil→Renk</strong> sorularını cevapla</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-rose-400" />
+                                    <span>3 can, {totalRounds} tur, çift yönlü hafıza!</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* TUZÖ Badge */}
+                        <div className="bg-rose-500/10 text-rose-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-rose-500/30">
+                            TUZÖ 5.2.1 Görsel Hafıza
+                        </div>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05, y: -4 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={startGame}
+                            className="px-8 py-4 rounded-2xl font-bold text-lg"
+                            style={{
+                                background: 'linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(244, 63, 94, 0.4)'
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Play size={24} fill="currentColor" />
+                                <span>Teste Başla</span>
+                            </div>
+                        </motion.button>
+                    </motion.div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-rose-950 to-pink-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+            </div>
+
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
+
+                    <div className="flex items-center gap-4 flex-wrap">
+                        {/* Score */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(251, 191, 36, 0.3)'
+                            }}
+                        >
+                            <Star className="text-amber-400 fill-amber-400" size={18} />
+                            <span className="font-bold text-amber-400">{score}</span>
+                        </div>
+
+                        {/* Lives */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)'
+                            }}
+                        >
+                            {[...Array(3)].map((_, i) => (
+                                <Heart
+                                    key={i}
+                                    size={18}
+                                    className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Round */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.2) 0%, rgba(225, 29, 72, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(244, 63, 94, 0.3)'
+                            }}
+                        >
+                            <Target className="text-rose-400" size={18} />
+                            <span className="font-bold text-rose-400">{round}/{totalRounds}</span>
+                        </div>
+
+                        {/* Streak */}
+                        {streak > 0 && (
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(251, 191, 36, 0.5)'
+                                }}
+                            >
+                                <Zap className="text-amber-400" size={18} />
+                                <span className="font-bold text-amber-400">x{streak}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+                <AnimatePresence mode="wait">
                     {/* Memorize State */}
                     {gameState === 'memorize' && (
                         <motion.div
+                            key="memorize"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             className="text-center space-y-6 w-full max-w-lg"
                         >
                             <div className="flex items-center justify-center gap-2 mb-4">
-                                <Eye className="w-6 h-6 text-rose-400" />
-                                <span className="text-slate-400">Eşleşmeleri Ezberle:</span>
+                                <Eye className="text-rose-400" size={24} />
+                                <span className="text-slate-400">Ezberle:</span>
                                 <span className="text-3xl font-black text-white">{countdown}</span>
                             </div>
 
-                            {/* Pairs Display */}
-                            <div className="bg-slate-800/50 border border-white/10 rounded-3xl p-8">
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div
+                                className="rounded-3xl p-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-3 gap-4">
                                     {symbolColors.map((sc, idx) => (
                                         <motion.div
                                             key={idx}
                                             initial={{ opacity: 0, scale: 0 }}
                                             animate={{ opacity: 1, scale: 1 }}
                                             transition={{ delay: idx * 0.15 }}
-                                            className="bg-slate-700/50 rounded-2xl p-4 flex flex-col items-center gap-2"
+                                            className="bg-slate-800/50 rounded-2xl p-4 flex flex-col items-center gap-2"
                                         >
                                             <div
                                                 className="w-10 h-10 rounded-lg"
@@ -350,13 +481,11 @@ const DualBindGame = () => {
                                             <span className="text-4xl" style={{ color: sc.color }}>
                                                 {sc.symbol}
                                             </span>
-                                            <span className="text-xs text-slate-400">{sc.colorName}</span>
                                         </motion.div>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Progress Bar */}
                             <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                                 <motion.div
                                     className="h-full bg-gradient-to-r from-rose-500 to-pink-500"
@@ -371,11 +500,12 @@ const DualBindGame = () => {
                     {/* Question State */}
                     {gameState === 'question' && currentQuestion && (
                         <motion.div
+                            key="question"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
                             className="text-center space-y-6 w-full max-w-lg"
                         >
-                            {/* Question Type Indicator */}
                             <div className="flex justify-center gap-2 mb-2">
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${currentQuestionIndex === 0
                                     ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
@@ -391,11 +521,15 @@ const DualBindGame = () => {
                                 </span>
                             </div>
 
-                            {/* Question */}
-                            <div className="bg-slate-800/50 border border-white/10 rounded-3xl p-8">
+                            <div
+                                className="rounded-3xl p-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
                                 <p className="text-slate-400 text-sm mb-4">{currentQuestion.query}</p>
-
-                                {/* Hint Display */}
                                 {currentQuestion.type === 'color-to-symbol' ? (
                                     <div
                                         className="w-20 h-20 rounded-2xl mx-auto mb-4"
@@ -406,14 +540,11 @@ const DualBindGame = () => {
                                 )}
                             </div>
 
-                            {/* Options */}
                             <div className="grid grid-cols-2 gap-4">
                                 {currentQuestion.options.map((option, idx) => {
                                     const isSelected = selectedAnswer === option;
                                     const isCorrect = option === currentQuestion.correctAnswer;
                                     const showResult = showFeedback !== null;
-
-                                    // Renk sorusuysa renk göster
                                     const colorHex = COLORS.find(c => c.name === option)?.hex;
 
                                     return (
@@ -421,8 +552,8 @@ const DualBindGame = () => {
                                             key={idx}
                                             onClick={() => handleAnswer(option)}
                                             disabled={showFeedback !== null}
-                                            whileHover={{ scale: showFeedback ? 1 : 1.02 }}
-                                            whileTap={{ scale: showFeedback ? 1 : 0.98 }}
+                                            whileHover={{ scale: showFeedback ? 1 : 0.98 }}
+                                            whileTap={{ scale: showFeedback ? 1 : 0.95 }}
                                             style={currentQuestion.type === 'symbol-to-color' && colorHex ? { backgroundColor: colorHex } : {}}
                                             className={`p-5 rounded-2xl font-bold text-xl transition-all ${showResult
                                                 ? isCorrect
@@ -448,91 +579,115 @@ const DualBindGame = () => {
                                     );
                                 })}
                             </div>
-
-                            {/* Feedback */}
-                            <AnimatePresence>
-                                {showFeedback && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0 }}
-                                        className={`flex items-center justify-center gap-2 font-bold ${showFeedback === 'correct' ? 'text-emerald-400' : 'text-red-400'
-                                            }`}
-                                    >
-                                        {showFeedback === 'correct' ? (
-                                            <>
-                                                <CheckCircle2 className="w-6 h-6" />
-                                                Doğru!
-                                            </>
-                                        ) : (
-                                            <>
-                                                <XCircle className="w-6 h-6" />
-                                                Doğrusu: {currentQuestion.correctAnswer} idi
-                                            </>
-                                        )}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
                         </motion.div>
                     )}
 
-                    {/* Finished State */}
+                    {/* Game Over */}
                     {gameState === 'finished' && (
                         <motion.div
+                            key="finished"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6 w-full max-w-md"
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
-                            <div className="bg-gradient-to-br from-rose-500/20 to-pink-500/20 border border-rose-500/30 rounded-3xl p-8">
-                                <Trophy className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-                                <h2 className="text-3xl font-black text-white mb-2">Test Tamamlandı! 🎉</h2>
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                <div className="grid grid-cols-2 gap-4 my-6">
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">Toplam Puan</p>
-                                        <p className="text-2xl font-black text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-2xl font-black text-emerald-400">%{accuracy}</p>
-                                    </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">Ulaşılan Seviye</p>
-                                        <p className="text-2xl font-black text-rose-400">Lv.{level}</p>
-                                    </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">Çift Soru</p>
-                                        <p className="text-2xl font-black text-blue-400">{totalRounds * 2}</p>
-                                    </div>
-                                </div>
+                            <h2 className="text-3xl font-black text-rose-300 mb-2">
+                                {round >= totalRounds ? '🎉 Harika!' : 'İyi İş!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                Seviye {level}'e ulaştın!
+                            </p>
 
-                                <div className="flex items-center justify-center gap-2 text-sm text-slate-400 mb-6">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                    <span>{correctCount} Doğru</span>
-                                    <span className="text-slate-600">|</span>
-                                    <XCircle className="w-4 h-4 text-red-400" />
-                                    <span>{wrongCount} Yanlış</span>
-                                </div>
-
-                                <div className="flex justify-center gap-4">
-                                    <button
-                                        onClick={startGame}
-                                        className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold rounded-xl hover:from-rose-400 hover:to-pink-400 transition-all flex items-center gap-2"
-                                    >
-                                        <RotateCcw className="w-5 h-5" />
-                                        Tekrar Oyna
-                                    </button>
-                                    <Link
-                                        to="/atolyeler/bireysel-degerlendirme"
-                                        className="px-6 py-3 bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-600 transition-all"
-                                    >
-                                        Geri Dön
-                                    </Link>
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-2xl font-bold text-amber-400">{score}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Tur</p>
+                                        <p className="text-2xl font-bold text-rose-400">{round}/{totalRounds}</p>
+                                    </div>
                                 </div>
                             </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(244, 63, 94, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
+                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
                         </motion.div>
                     )}
-                </div>
+                </AnimatePresence>
+
+                {/* Feedback Overlay */}
+                <AnimatePresence>
+                    {showFeedback && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ y: 50 }}
+                                animate={{ y: 0 }}
+                                className={`px-12 py-8 rounded-3xl text-center ${showFeedback === 'correct'
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }`}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: showFeedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {showFeedback === 'correct'
+                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    }
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    ChevronLeft, RefreshCw, Trophy, Rocket, Timer,
-    Shield, Activity, Hash,
-    AlertCircle, CheckCircle2, LayoutGrid, EyeOff
+    ChevronLeft, RotateCcw, Trophy, Play, Timer,
+    Star, Heart, Zap, CheckCircle2, XCircle, Radar, Sparkles, Eye
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
@@ -11,10 +10,10 @@ import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // --- Sabitler ---
 const COLORS = [
-    { name: 'SİYAN', value: '#06b6d4', bg: 'bg-cyan-500/20', border: 'border-cyan-500', shadow: 'shadow-cyan-500/50' },
-    { name: 'AMBER', value: '#f59e0b', bg: 'bg-amber-500/20', border: 'border-amber-500', shadow: 'shadow-amber-500/50' },
-    { name: 'ROSE', value: '#f43f5e', bg: 'bg-rose-500/20', border: 'border-rose-500', shadow: 'shadow-rose-500/50' },
-    { name: 'ZÜMRÜT', value: '#10b981', bg: 'bg-emerald-500/20', border: 'border-emerald-500', shadow: 'shadow-emerald-500/50' },
+    { name: 'SİYAN', value: '#06b6d4' },
+    { name: 'AMBER', value: '#f59e0b' },
+    { name: 'ROSE', value: '#f43f5e' },
+    { name: 'ZÜMRÜT', value: '#10b981' },
 ];
 
 interface SignalItem {
@@ -27,6 +26,19 @@ interface SignalItem {
 
 type GameStatus = 'waiting' | 'display' | 'question' | 'result' | 'gameover';
 
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Harika! 🎯",
+    "Süper! ⭐",
+    "Doğru! 🎉",
+    "Bravo! 🌟",
+];
+
+const FAILURE_MESSAGES = [
+    "Dikkatli bak! 👀",
+    "Tekrar dene! 💪",
+];
+
 const SignalSumGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
@@ -34,14 +46,21 @@ const SignalSumGame: React.FC = () => {
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
+    const [lives, setLives] = useState(3);
     const [signals, setSignals] = useState<SignalItem[]>([]);
     const [targetColorIdx, setTargetColorIdx] = useState(0);
     const [options, setOptions] = useState<number[]>([]);
     const [correctAnswer, setCorrectAnswer] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(45);
     const [displayTimer, setDisplayTimer] = useState(5);
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
+    const [streak, setStreak] = useState(0);
     const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
+
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
     // --- Sinyal Üretme ---
     const generateSignals = useCallback((lvl: number) => {
@@ -92,13 +111,15 @@ const SignalSumGame: React.FC = () => {
         setStatus('display');
         setDisplayTimer(Math.max(2, 6 - Math.floor(lvl / 4)));
         setFeedback(null);
-        playSound('signal_appear');
-    }, [generateSignals, playSound]);
+    }, [generateSignals]);
 
     const startApp = useCallback(() => {
         setLevel(1);
         setScore(0);
-        setTimeLeft(45);
+        setLives(3);
+        setStreak(0);
+        hasSavedRef.current = false;
+        gameStartTimeRef.current = Date.now();
         startLevel(1);
     }, [startLevel]);
 
@@ -116,206 +137,465 @@ const SignalSumGame: React.FC = () => {
             interval = setInterval(() => setDisplayTimer(prev => prev - 1), 1000);
         } else if (status === 'display' && displayTimer === 0) {
             setStatus('question');
-            playSound('signal_disappear');
         }
         return () => clearInterval(interval);
-    }, [status, displayTimer, playSound]);
-
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (status === 'question' && timeLeft > 0) {
-            interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-        } else if (timeLeft === 0 && status === 'question') {
-            setStatus('gameover');
-        }
-        return () => clearInterval(interval);
-    }, [status, timeLeft]);
-
-    // Oyun başladığında süre başlat
-    useEffect(() => {
-        if (status === 'display') {
-            gameStartTimeRef.current = Date.now();
-        }
-    }, [status]);
+    }, [status, displayTimer]);
 
     // Oyun bittiğinde verileri kaydet
     useEffect(() => {
-        if (status === 'gameover' && gameStartTimeRef.current > 0) {
+        if (status === 'gameover' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
             saveGamePlay({
                 game_id: 'sinyal-toplami',
                 score_achieved: score,
                 duration_seconds: durationSeconds,
+                lives_remaining: lives,
                 metadata: {
                     level_reached: level,
                     game_name: 'Sinyal Toplamı',
                 }
             });
         }
-    }, [status, score, level, saveGamePlay]);
+    }, [status, score, level, lives, saveGamePlay]);
 
     const handleSelect = (val: number) => {
         if (status !== 'question' || feedback) return;
 
         if (val === correctAnswer) {
+            playSound('correct');
             setFeedback('correct');
-            playSound('signal_correct');
-            setScore(prev => prev + (level * 100) + (timeLeft * 2));
+            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            setStreak(prev => prev + 1);
+            setScore(prev => prev + (level * 100) + (streak * 10));
             setTimeout(() => {
                 setLevel(prev => prev + 1);
                 startLevel(level + 1);
             }, 1500);
         } else {
+            playSound('incorrect');
             setFeedback('wrong');
-            playSound('signal_wrong');
-            setTimeout(() => setStatus('gameover'), 1500);
+            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            setStreak(0);
+            setLives(l => l - 1);
+            setTimeout(() => {
+                if (lives <= 1) {
+                    setStatus('gameover');
+                } else {
+                    startLevel(level);
+                }
+            }, 1500);
         }
     };
 
+    // Welcome Screen
+    if (status === 'waiting') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 text-white">
+                {/* Decorative Background */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
+                </div>
+
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-center max-w-xl"
+                    >
+                        {/* 3D Gummy Icon */}
+                        <motion.div
+                            className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                                boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                            }}
+                            animate={{ y: [0, -8, 0] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                            <Radar size={52} className="text-white drop-shadow-lg" />
+                        </motion.div>
+
+                        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                            🎯 Sinyal Toplamı
+                        </h1>
+
+                        {/* Preview */}
+                        <div
+                            className="rounded-2xl p-5 mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            <div className="flex justify-center gap-4 text-3xl mb-2">
+                                <span style={{ color: COLORS[0].value }}>3</span>
+                                <span style={{ color: COLORS[1].value }}>7</span>
+                                <span style={{ color: COLORS[0].value }}>5</span>
+                                <span style={{ color: COLORS[2].value }}>2</span>
+                            </div>
+                            <p className="text-slate-400 text-sm">
+                                SİYAN rengin toplamı = <span className="text-cyan-400 font-bold">8</span>
+                            </p>
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                            <h3 className="text-lg font-bold text-blue-300 mb-3 flex items-center gap-2">
+                                <Eye size={20} /> Nasıl Oynanır?
+                            </h3>
+                            <ul className="space-y-2 text-slate-300 text-sm">
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-blue-400" />
+                                    <span>Ekranda <strong>renkli sayılar</strong> belirir</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-blue-400" />
+                                    <span>Sayılar kaybolduktan sonra <strong>hedef rengin toplamını</strong> bul</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-blue-400" />
+                                    <span>3 can! Dikkatli ol!</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* TUZÖ Badge */}
+                        <div className="bg-blue-500/10 text-blue-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-blue-500/30">
+                            TUZÖ 5.5.1 Seçici Dikkat
+                        </div>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05, y: -4 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={startApp}
+                            className="px-8 py-4 rounded-2xl font-bold text-lg"
+                            style={{
+                                background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(59, 130, 246, 0.4)'
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Play size={24} fill="currentColor" />
+                                <span>Teste Başla</span>
+                            </div>
+                        </motion.button>
+                    </motion.div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen pt-24 pb-12 px-6 relative overflow-hidden font-mono" style={{ background: '#020617' }}>
-            {/* Siber Izgara Arka Plan */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none">
-                <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(6,182,212,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.05)_1px,transparent_1px)] bg-[size:50px_50px]" />
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-cyan-500/5 via-transparent to-rose-500/5" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
             </div>
 
-            <div className="container mx-auto max-w-5xl relative z-10">
-                {/* HUD */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-cyan-500/20 pb-8">
-                    <div className="flex items-center gap-5">
-                        <Link to="/atolyeler/bireysel-degerlendirme" className="p-3 bg-cyan-500/5 rounded-2xl hover:bg-cyan-500/10 transition-all text-cyan-500 border border-cyan-500/20">
-                            <ChevronLeft />
-                        </Link>
-                        <div>
-                            <h1 className="text-4xl font-black tracking-tighter text-white flex items-center gap-3">
-                                SİNYAL <span className="text-cyan-400">TOPLAMI</span>
-                            </h1>
-                            <p className="text-[10px] text-cyan-500/60 font-bold uppercase tracking-[0.4em] mt-1 pl-1">Protocol: Working Memory / V.3.1</p>
-                        </div>
-                    </div>
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
 
-                    <div className="flex gap-4">
-                        <div className="bg-cyan-950/30 border border-cyan-500/20 px-8 py-3 rounded-2xl text-center shadow-2xl backdrop-blur-xl">
-                            <div className="text-[10px] uppercase text-cyan-400/40 font-black mb-1">LVL PKT</div>
-                            <div className="text-2xl font-black text-cyan-400">{level}</div>
+                    <div className="flex items-center gap-4 flex-wrap">
+                        {/* Score */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(251, 191, 36, 0.3)'
+                            }}
+                        >
+                            <Star className="text-amber-400 fill-amber-400" size={18} />
+                            <span className="font-bold text-amber-400">{score}</span>
                         </div>
-                        <div className="bg-cyan-950/30 border border-cyan-500/20 px-8 py-3 rounded-2xl text-center shadow-2xl backdrop-blur-xl">
-                            <div className="text-[10px] uppercase text-white/40 font-black mb-1">TOTAL XP</div>
-                            <div className="text-2xl font-black text-white">{score}</div>
-                        </div>
-                    </div>
-                </div>
 
-                <div className="flex flex-col items-center justify-center min-h-[500px]">
-                    {status === 'waiting' && (
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-10 bg-slate-900/40 p-16 rounded-[4rem] border border-cyan-500/10 backdrop-blur-3xl">
-                            <div className="relative mx-auto w-32 h-32 flex items-center justify-center">
-                                <LayoutGrid size={100} className="text-cyan-500/20 absolute animate-pulse" />
-                                <Hash size={80} className="text-cyan-400" />
-                                <Shield className="absolute bottom-0 right-0 text-cyan-300" size={32} />
-                            </div>
-                            <div className="max-w-md mx-auto space-y-6">
-                                <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Sinyal Filtreleme</h2>
-                                <p className="text-cyan-500/60 font-medium leading-relaxed italic">
-                                    Ekranda farklı renklerde rakamlar belirecek. Kaybolduktan sonra sadece sistemin istediği renkteki sayıların toplamını bulmalısın.
-                                </p>
-                            </div>
-                            <button onClick={startApp} className="group relative px-12 py-5 bg-cyan-500 text-slate-950 font-black text-xl rounded-3xl hover:bg-cyan-400 transition-all transform hover:scale-105 active:scale-95 shadow-[0_10px_30px_rgba(6,182,212,0.3)] flex items-center gap-4 mx-auto uppercase">
-                                ANALİZE BAŞLA <Rocket fill="currentColor" />
-                            </button>
-                        </motion.div>
-                    )}
-
-                    {status === 'display' && (
-                        <div className="relative w-full aspect-[16/9] bg-slate-950/80 rounded-[3rem] border border-cyan-500/10 overflow-hidden shadow-inner">
-                            <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-cyan-950/60 border border-cyan-500/20 px-6 py-2 rounded-full text-cyan-400 font-bold tracking-widest text-sm flex items-center gap-3">
-                                <Activity size={16} className="animate-pulse" /> TARAMA AKTİF: {displayTimer}s
-                            </div>
-                            {signals.map((s) => (
-                                <motion.div
-                                    key={s.id}
-                                    initial={{ scale: 0, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    style={{
-                                        position: 'absolute',
-                                        left: `${s.x}%`,
-                                        top: `${s.y}%`,
-                                        color: COLORS[s.colorIdx].value,
-                                        textShadow: `0 0 20px ${COLORS[s.colorIdx].value}88`
-                                    }}
-                                    className="text-6xl font-black transform -translate-x-1/2 -translate-y-1/2"
-                                >
-                                    {s.value}
-                                </motion.div>
+                        {/* Lives */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)'
+                            }}
+                        >
+                            {[...Array(3)].map((_, i) => (
+                                <Heart
+                                    key={i}
+                                    size={18}
+                                    className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                                />
                             ))}
                         </div>
-                    )}
 
-                    {status === 'question' && (
-                        <div className="w-full max-w-3xl space-y-12">
-                            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-900/60 p-12 rounded-[3.5rem] border border-cyan-500/20 backdrop-blur-xl text-center space-y-8 shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50" />
-                                <div className="flex flex-col items-center gap-6">
-                                    <EyeOff size={48} className="text-cyan-500/40" />
-                                    <h3 className="text-3xl font-black text-white leading-tight">
-                                        Sadece <span className="px-4 py-1 rounded-xl mx-2" style={{ backgroundColor: COLORS[targetColorIdx].value + '33', color: COLORS[targetColorIdx].value, border: `1px solid ${COLORS[targetColorIdx].value}66` }}>
-                                            {COLORS[targetColorIdx].name}
-                                        </span> renkli olan rakamların toplamı kaçtır?
-                                    </h3>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-6 mt-12">
-                                    {options.map((opt, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => handleSelect(opt)}
-                                            className="py-8 bg-slate-800/40 border-2 border-slate-700 hover:border-cyan-500/50 hover:bg-cyan-500/5 rounded-3xl text-3xl font-black text-white transition-all transform hover:scale-105 active:scale-95 shadow-xl"
-                                        >
-                                            {opt}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="mt-8 flex items-center justify-center gap-4 text-cyan-500/40 font-bold uppercase tracking-widest text-xs">
-                                    <Timer size={14} /> KALAN SÜRE: {timeLeft}s
-                                </div>
-                            </motion.div>
+                        {/* Level */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(29, 78, 216, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(59, 130, 246, 0.3)'
+                            }}
+                        >
+                            <Radar className="text-blue-400" size={18} />
+                            <span className="font-bold text-blue-400">Seviye {level}</span>
                         </div>
-                    )}
 
-                    <AnimatePresence>
-                        {feedback && (
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 1.2 }}
-                                className="fixed inset-0 flex items-center justify-center pointer-events-none z-[100] px-6"
+                        {/* Streak */}
+                        {streak > 0 && (
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(251, 191, 36, 0.5)'
+                                }}
                             >
-                                <div className={`flex flex-col items-center gap-4 px-12 py-8 rounded-[3rem] border-4 shadow-2xl backdrop-blur-2xl ${feedback === 'correct' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-rose-500/20 border-rose-500 text-rose-400'}`}>
-                                    {feedback === 'correct' ? <CheckCircle2 size={64} /> : <AlertCircle size={64} />}
-                                    <span className="text-4xl font-black uppercase italic tracking-tighter">{feedback === 'correct' ? 'SİSTEM DOĞRULANDI' : 'HATALI VERİ'}</span>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {status === 'gameover' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-8 w-full max-w-2xl bg-slate-900/80 p-16 rounded-[4rem] border-2 border-rose-500/20 shadow-2xl backdrop-blur-3xl">
-                            <div className="relative mx-auto w-40 h-40 bg-gradient-to-br from-cyan-500 to-cyan-700 text-white rounded-[2.5rem] flex items-center justify-center shadow-2xl rotate-12 mb-10 border-4 border-white/10">
-                                <Trophy size={100} />
+                                <Zap className="text-amber-400" size={18} />
+                                <span className="font-bold text-amber-400">x{streak}</span>
                             </div>
-                            <h2 className="text-6xl font-black text-white italic uppercase tracking-tighter leading-none">İŞLEM KESİLDİ</h2>
-                            <p className="text-cyan-400 font-black text-4xl mb-12 uppercase tracking-tight">KAZANIM: {score} XP</p>
+                        )}
+                    </div>
+                </div>
+            </div>
 
-                            <div className="space-y-4">
-                                <button onClick={startApp} className="w-full py-6 bg-cyan-500 text-slate-950 font-black text-2xl rounded-3xl hover:bg-cyan-400 transition-all flex items-center justify-center gap-4 shadow-[0_8px_0_#0891b2] active:translate-y-2 active:shadow-none mb-4 uppercase">
-                                    SİNYALİ YENİLE <RefreshCw />
-                                </button>
-                                <Link to="/atolyeler/bireysel-degerlendirme" className="text-cyan-500/40 hover:text-cyan-500 font-bold block transition-colors tracking-widest uppercase text-sm">Merkez Ofise Dön</Link>
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+                <AnimatePresence mode="wait">
+                    {/* Display Phase */}
+                    {status === 'display' && (
+                        <motion.div
+                            key="display"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="w-full max-w-2xl"
+                        >
+                            {/* Timer */}
+                            <div className="flex justify-center mb-4">
+                                <div
+                                    className="flex items-center gap-2 px-6 py-3 rounded-xl"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(29, 78, 216, 0.2) 100%)',
+                                        boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
+                                        border: '1px solid rgba(59, 130, 246, 0.5)'
+                                    }}
+                                >
+                                    <Timer className="text-blue-400 animate-pulse" size={20} />
+                                    <span className="font-bold text-blue-400 text-xl">{displayTimer}s</span>
+                                </div>
+                            </div>
+
+                            {/* Signal Area */}
+                            <div
+                                className="relative aspect-[16/9] rounded-3xl overflow-hidden"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                {signals.map((s) => (
+                                    <motion.div
+                                        key={s.id}
+                                        initial={{ scale: 0, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${s.x}%`,
+                                            top: `${s.y}%`,
+                                            color: COLORS[s.colorIdx].value,
+                                            textShadow: `0 0 20px ${COLORS[s.colorIdx].value}88`
+                                        }}
+                                        className="text-5xl lg:text-6xl font-black transform -translate-x-1/2 -translate-y-1/2"
+                                    >
+                                        {s.value}
+                                    </motion.div>
+                                ))}
                             </div>
                         </motion.div>
                     )}
-                </div>
+
+                    {/* Question Phase */}
+                    {status === 'question' && (
+                        <motion.div
+                            key="question"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="w-full max-w-xl"
+                        >
+                            <div
+                                className="rounded-3xl p-8 mb-8 text-center"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <p className="text-slate-400 text-sm mb-4">Sadece bu renkteki sayıların toplamını bul:</p>
+                                <div
+                                    className="inline-block px-6 py-3 rounded-xl text-2xl font-bold mb-4"
+                                    style={{
+                                        backgroundColor: COLORS[targetColorIdx].value + '33',
+                                        color: COLORS[targetColorIdx].value,
+                                        border: `2px solid ${COLORS[targetColorIdx].value}`
+                                    }}
+                                >
+                                    {COLORS[targetColorIdx].name}
+                                </div>
+                            </div>
+
+                            {/* Options */}
+                            <div className="grid grid-cols-2 gap-4">
+                                {options.map((opt, i) => (
+                                    <motion.button
+                                        key={i}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: i * 0.1 }}
+                                        onClick={() => handleSelect(opt)}
+                                        disabled={feedback !== null}
+                                        whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
+                                        whileTap={!feedback ? { scale: 0.95 } : {}}
+                                        className="py-6 rounded-2xl font-bold text-3xl transition-all"
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                            boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            color: '#fff',
+                                            cursor: feedback ? 'default' : 'pointer'
+                                        }}
+                                    >
+                                        {opt}
+                                    </motion.button>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Game Over */}
+                    {status === 'gameover' && (
+                        <motion.div
+                            key="gameover"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
+                        >
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
+
+                            <h2 className="text-3xl font-black text-blue-300 mb-2">
+                                {level >= 5 ? '🎉 Harika!' : 'İyi İş!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                Seviye {level}'e ulaştın!
+                            </p>
+
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-2xl font-bold text-amber-400">{score}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Seviye</p>
+                                        <p className="text-2xl font-bold text-blue-400">{level}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startApp}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(59, 130, 246, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
+                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Feedback Overlay */}
+                <AnimatePresence>
+                    {feedback && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ y: 50 }}
+                                animate={{ y: 0 }}
+                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }`}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {feedback === 'correct'
+                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    }
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
+                                {feedback === 'wrong' && (
+                                    <p className="text-white/80 mt-2">
+                                        Doğrusu: <span className="font-bold">{correctAnswer}</span>
+                                    </p>
+                                )}
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

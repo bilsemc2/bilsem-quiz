@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    ChevronLeft, RefreshCw, Trophy, Rocket, Timer,
-    Activity, Plus,
-    AlertCircle, CheckCircle2, LayoutGrid, EyeOff, Search
-} from 'lucide-react';
+import { ChevronLeft, RotateCcw, Trophy, Timer, Play, Star, Heart, Grid3X3, Eye, EyeOff, Plus, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
@@ -17,7 +13,20 @@ interface Card {
     isSolved: boolean;
 }
 
-type GameStatus = 'waiting' | 'preview' | 'playing' | 'solved' | 'gameover';
+type GameStatus = 'waiting' | 'preview' | 'playing' | 'gameover';
+
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Süper! 🎯",
+    "Doğru Toplam! 🏆",
+    "Harika! ⭐",
+    "Bravo! 🌟",
+];
+
+const FAILURE_MESSAGES = [
+    "Dikkatli bak! 👀",
+    "Tekrar dene! 💪",
+];
 
 const TargetGridGame: React.FC = () => {
     const { playSound } = useSound();
@@ -30,10 +39,17 @@ const TargetGridGame: React.FC = () => {
     const [targetSum, setTargetSum] = useState(0);
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
     const [currentSum, setCurrentSum] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(60);
     const [previewTimer, setPreviewTimer] = useState(3);
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
+    const [lives, setLives] = useState(3);
     const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
+    const totalRounds = 10;
+
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
     // --- Grid Generation Logic ---
     const generateGrid = useCallback((lvl: number) => {
@@ -64,7 +80,7 @@ const TargetGridGame: React.FC = () => {
         setTargetSum(sum);
         setSelectedIndices([]);
         setCurrentSum(0);
-        setPreviewTimer(Math.max(2, 4 - Math.floor(lvl / 5)));
+        setPreviewTimer(Math.max(2, 4 - Math.floor(lvl / 3)));
         setFeedback(null);
     }, []);
 
@@ -74,21 +90,23 @@ const TargetGridGame: React.FC = () => {
         playSound('signal_appear');
     }, [generateGrid, playSound]);
 
-    const startApp = useCallback(() => {
+    const startGame = useCallback(() => {
         setLevel(1);
         setScore(0);
-        setTimeLeft(60);
+        setLives(3);
+        hasSavedRef.current = false;
+        gameStartTimeRef.current = Date.now();
         startLevel(1);
     }, [startLevel]);
 
     // Handle Auto Start from HUB
     useEffect(() => {
         if (location.state?.autoStart && status === 'waiting') {
-            startApp();
+            startGame();
         }
-    }, [location.state, status, startApp]);
+    }, [location.state, status, startGame]);
 
-    // --- Timers ---
+    // --- Preview Timer ---
     useEffect(() => {
         let interval: NodeJS.Timeout;
         if (status === 'preview' && previewTimer > 0) {
@@ -101,38 +119,23 @@ const TargetGridGame: React.FC = () => {
         return () => clearInterval(interval);
     }, [status, previewTimer, playSound]);
 
+    // Save game data on finish
     useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (status === 'playing' && timeLeft > 0) {
-            interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-        } else if (timeLeft === 0 && status === 'playing') {
-            setStatus('gameover');
-        }
-        return () => clearInterval(interval);
-    }, [status, timeLeft]);
-
-    // Oyun başladığında süre başlat
-    useEffect(() => {
-        if (status === 'preview') {
-            gameStartTimeRef.current = Date.now();
-        }
-    }, [status]);
-
-    // Oyun bittiğinde verileri kaydet
-    useEffect(() => {
-        if (status === 'gameover' && gameStartTimeRef.current > 0) {
+        if (status === 'gameover' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
             saveGamePlay({
                 game_id: 'hedef-sayi',
                 score_achieved: score,
                 duration_seconds: durationSeconds,
+                lives_remaining: lives,
                 metadata: {
                     level_reached: level,
-                    game_name: 'Bak ve Bul',
+                    game_name: 'Hedef Sayı',
                 }
             });
         }
-    }, [status, score, level, saveGamePlay]);
+    }, [status, score, lives, level, saveGamePlay]);
 
     // --- Interaction ---
     const handleCardClick = (idx: number) => {
@@ -150,175 +153,416 @@ const TargetGridGame: React.FC = () => {
 
         if (newSum === targetSum) {
             setFeedback('correct');
-            playSound('grid_match');
-            setScore(prev => prev + (level * 200) + (timeLeft * 5));
+            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            playSound('correct');
+            setScore(prev => prev + (level * 100));
+
             setTimeout(() => {
-                setLevel(prev => prev + 1);
-                startLevel(level + 1);
+                setFeedback(null);
+                if (level >= totalRounds) {
+                    setStatus('gameover');
+                } else {
+                    setLevel(prev => prev + 1);
+                    startLevel(level + 1);
+                }
             }, 1500);
         } else if (newSum > targetSum) {
             setFeedback('wrong');
-            playSound('grid_fail');
+            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            playSound('incorrect');
+            setLives(l => l - 1);
+
             setTimeout(() => {
-                setCards(prev => prev.map(c => ({ ...c, isRevealed: false })));
-                setSelectedIndices([]);
-                setCurrentSum(0);
                 setFeedback(null);
-            }, 1000);
+                if (lives <= 1) {
+                    setStatus('gameover');
+                } else {
+                    setCards(prev => prev.map(c => ({ ...c, isRevealed: false })));
+                    setSelectedIndices([]);
+                    setCurrentSum(0);
+                }
+            }, 1500);
         }
     };
 
+    // Welcome Screen
+    if (status === 'waiting') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-violet-950 text-white">
+                {/* Decorative Background */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
+                </div>
+
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-center max-w-xl"
+                    >
+                        {/* 3D Gummy Icon */}
+                        <motion.div
+                            className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)',
+                                boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                            }}
+                            animate={{ y: [0, -8, 0] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                            <Grid3X3 size={52} className="text-white drop-shadow-lg" />
+                        </motion.div>
+
+                        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+                            🎯 Hedef Sayı
+                        </h1>
+
+                        {/* Example */}
+                        <div
+                            className="rounded-2xl p-5 mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            <p className="text-slate-400 text-sm mb-3">Örnek:</p>
+                            <div className="flex items-center justify-center gap-4 mb-3">
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[5, 3, 7, 2, 8, 4, 6, 1, 9].map((n, i) => (
+                                        <div
+                                            key={i}
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm"
+                                            style={{
+                                                background: i === 1 || i === 7 ? '#818CF8' : 'rgba(255,255,255,0.1)',
+                                                color: i === 1 || i === 7 ? '#fff' : 'rgba(255,255,255,0.5)'
+                                            }}
+                                        >
+                                            {n}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="text-center">
+                                    <span className="text-xs text-slate-400">Hedef</span>
+                                    <div className="text-xl font-bold text-indigo-400">4</div>
+                                    <span className="text-xs text-slate-400">3 + 1 = 4</span>
+                                </div>
+                            </div>
+                            <p className="text-slate-400 text-sm">Hedef sayıya ulaşan kartları bul!</p>
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                            <h3 className="text-lg font-bold text-indigo-300 mb-3 flex items-center gap-2">
+                                <Eye size={20} /> Nasıl Oynanır?
+                            </h3>
+                            <ul className="space-y-2 text-slate-300 text-sm">
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-indigo-400" />
+                                    <span>Sayıları <strong>ezberle</strong> - kısa sürede gizlenecek</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-indigo-400" />
+                                    <span>Hedef sayıya ulaşan <strong>kartları seç</strong></span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-indigo-400" />
+                                    <span>Toplamı aşma! 3 can ile başlıyorsun</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* TUZÖ Badge */}
+                        <div className="bg-indigo-500/10 text-indigo-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30">
+                            TUZÖ 5.4.2 Görsel Kısa Süreli Bellek + Sayısal Akıl Yürütme
+                        </div>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05, y: -4 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={startGame}
+                            className="px-8 py-4 rounded-2xl font-bold text-lg"
+                            style={{
+                                background: 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(129, 140, 248, 0.4)'
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Play size={24} fill="currentColor" />
+                                <span>Oyuna Başla</span>
+                            </div>
+                        </motion.button>
+                    </motion.div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen pt-24 pb-12 px-6 relative overflow-hidden font-sans" style={{ background: 'radial-gradient(circle at center, #1e1b4b 0%, #020617 100%)' }}>
-            {/* Background Decorations */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-violet-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
             </div>
 
-            <div className="container mx-auto max-w-6xl relative z-10">
-                {/* Header HUD */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
-                    <div className="flex items-center gap-6">
-                        <Link to="/atolyeler/bireysel-degerlendirme" className="p-4 bg-white/5 rounded-3xl hover:bg-white/10 transition-all text-white border border-white/10 shadow-2xl backdrop-blur-xl">
-                            <ChevronLeft />
-                        </Link>
-                        <div>
-                            <h1 className="text-4xl font-black tracking-tight text-white flex items-center gap-4">
-                                HEDEF <span className="text-indigo-400">SAYI</span>
-                            </h1>
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.3em] mt-1 pl-1">Spectrum Memory / Phase 6</p>
-                        </div>
-                    </div>
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
 
-                    <div className="flex gap-6">
-                        <div className="bg-white/5 border border-white/10 px-10 py-4 rounded-[2rem] text-center shadow-2xl backdrop-blur-3xl">
-                            <div className="text-[10px] uppercase text-slate-500 font-black mb-1 tracking-widest">LEVEL</div>
-                            <div className="text-3xl font-black text-indigo-400">{level}</div>
+                    <div className="flex items-center gap-4 flex-wrap">
+                        {/* Score */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(251, 191, 36, 0.3)'
+                            }}
+                        >
+                            <Star className="text-amber-400 fill-amber-400" size={18} />
+                            <span className="font-bold text-amber-400">{score}</span>
                         </div>
-                        <div className="bg-white/5 border border-white/10 px-10 py-4 rounded-[2rem] text-center shadow-2xl backdrop-blur-3xl">
-                            <div className="text-[10px] uppercase text-slate-500 font-black mb-1 tracking-widest">XP SCORE</div>
-                            <div className="text-3xl font-black text-white">{score}</div>
+
+                        {/* Lives */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)'
+                            }}
+                        >
+                            {[...Array(3)].map((_, i) => (
+                                <Heart
+                                    key={i}
+                                    size={18}
+                                    className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Level */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(129, 140, 248, 0.2) 0%, rgba(99, 102, 241, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(129, 140, 248, 0.3)'
+                            }}
+                        >
+                            <Grid3X3 className="text-indigo-400" size={18} />
+                            <span className="font-bold text-indigo-400">{level}/{totalRounds}</span>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center min-h-[600px]">
-                    {/* Left: Info & Controls */}
-                    <div className="lg:col-span-4 space-y-8">
-                        {status === 'waiting' ? (
-                            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} className="space-y-8 bg-white/5 p-10 rounded-[3rem] border border-white/10 backdrop-blur-3xl shadow-2xl">
-                                <div className="w-20 h-20 bg-indigo-500 rounded-3xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/40">
-                                    <LayoutGrid size={40} />
-                                </div>
-                                <div className="space-y-4">
-                                    <h2 className="text-3xl font-black text-white leading-none">Bak ve Bul</h2>
-                                    <p className="text-slate-400 font-medium leading-relaxed italic">
-                                        Izgaradaki sayıları hafızana al. Kartlar kapandığında verdiğimiz **Hedef Sayı**'ya ulaşmak için doğru kombinasyonu bul!
-                                    </p>
-                                </div>
-                                <button onClick={startApp} className="group w-full py-6 bg-indigo-500 text-white font-black text-xl rounded-2xl hover:bg-indigo-400 transition-all flex items-center justify-center gap-4 shadow-xl">
-                                    BAŞLAT <Rocket fill="currentColor" />
-                                </button>
-                            </motion.div>
-                        ) : (
-                            <div className="space-y-6">
-                                <div className="bg-indigo-500/10 border-2 border-indigo-500/30 p-10 rounded-[3rem] backdrop-blur-3xl shadow-2xl text-center relative overflow-hidden group">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
-                                    <div className="text-[12px] uppercase text-indigo-400 font-black mb-4 tracking-[0.4em]">HEDEF SAYI</div>
-                                    <motion.div
-                                        key={targetSum}
-                                        initial={{ scale: 0.8, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        className="text-8xl font-black text-white tracking-tighter drop-shadow-2xl"
-                                    >
-                                        {targetSum}
-                                    </motion.div>
-                                    <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-center gap-4 text-slate-400 font-bold">
-                                        <Plus size={20} className="text-indigo-400" /> TOPLAM: <span className="text-2xl text-white font-black">{currentSum}</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between px-10 py-6 bg-white/5 rounded-[2rem] border border-white/10 backdrop-blur-xl">
-                                    <div className="flex items-center gap-4">
-                                        <Timer className={`text-${timeLeft < 10 ? 'rose' : 'indigo'}-400 animate-pulse`} />
-                                        <span className="text-2xl font-black text-white">{timeLeft}s</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-slate-500 font-black text-[10px] tracking-widest uppercase">
-                                        <Activity size={12} /> Sync Active
-                                    </div>
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+                <AnimatePresence mode="wait">
+                    {(status === 'preview' || status === 'playing') && (
+                        <motion.div
+                            key="game"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="w-full max-w-lg"
+                        >
+                            {/* Target Sum Display */}
+                            <div
+                                className="rounded-2xl p-6 mb-6 text-center"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(129, 140, 248, 0.2) 0%, rgba(99, 102, 241, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '2px solid rgba(129, 140, 248, 0.3)'
+                                }}
+                            >
+                                <span className="text-sm font-bold text-indigo-400 uppercase tracking-wider">Hedef Sayı</span>
+                                <motion.div
+                                    key={targetSum}
+                                    initial={{ scale: 0.8 }}
+                                    animate={{ scale: 1 }}
+                                    className="text-5xl font-black text-white"
+                                >
+                                    {targetSum}
+                                </motion.div>
+                                <div className="flex items-center justify-center gap-2 mt-2 text-slate-400 text-sm">
+                                    <Plus size={14} />
+                                    <span>Toplam: </span>
+                                    <span className="text-lg font-bold text-white">{currentSum}</span>
                                 </div>
                             </div>
-                        )}
-                    </div>
 
-                    {/* Right: Grid */}
-                    <div className="lg:col-span-8 flex justify-center">
-                        {status !== 'waiting' && status !== 'gameover' ? (
-                            <div className="grid grid-cols-4 gap-4 md:gap-6 p-8 bg-white/5 rounded-[4rem] border border-white/10 backdrop-blur-3xl shadow-[0_30px_100px_rgba(0,0,0,0.5)]">
+                            {/* Preview Badge */}
+                            {status === 'preview' && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex items-center justify-center gap-3 mb-4 px-6 py-3 rounded-full"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)',
+                                        boxShadow: '0 4px 20px rgba(129, 140, 248, 0.4)'
+                                    }}
+                                >
+                                    <Timer size={20} className="animate-pulse" />
+                                    <span className="font-bold">Ezberle: {previewTimer}s</span>
+                                </motion.div>
+                            )}
+
+                            {/* Grid */}
+                            <div
+                                className="grid grid-cols-4 gap-3 p-6 rounded-3xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
                                 {cards.map((card, i) => (
                                     <motion.button
                                         key={card.id}
                                         initial={{ scale: 0.8, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
-                                        transition={{ delay: i * 0.05 }}
+                                        transition={{ delay: i * 0.03 }}
                                         onClick={() => handleCardClick(i)}
-                                        className={`w-16 h-16 md:w-24 md:h-24 rounded-3xl md:rounded-[2rem] flex items-center justify-center text-3xl md:text-5xl font-black transition-all transform hover:scale-105 active:scale-95 relative overflow-hidden group
-                                            ${card.isRevealed
-                                                ? 'bg-white text-slate-900 shadow-[0_0_30px_rgba(255,255,255,0.3)]'
-                                                : 'bg-white/10 border-2 border-white/10 text-transparent hover:border-indigo-500/50 hover:bg-white/15'
-                                            }`}
+                                        disabled={status === 'preview' || card.isRevealed || feedback !== null}
+                                        className="aspect-square rounded-2xl flex items-center justify-center font-bold text-2xl transition-all"
+                                        style={{
+                                            background: card.isRevealed
+                                                ? 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)'
+                                                : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                            boxShadow: card.isRevealed
+                                                ? '0 0 20px rgba(129, 140, 248, 0.4), inset 0 -4px 8px rgba(0,0,0,0.2)'
+                                                : 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.05)',
+                                            border: card.isRevealed ? '2px solid #818CF8' : '1px solid rgba(255,255,255,0.1)',
+                                            color: card.isRevealed ? '#fff' : 'transparent',
+                                            cursor: status === 'preview' || card.isRevealed ? 'default' : 'pointer'
+                                        }}
                                     >
-                                        {card.isRevealed ? card.value : <EyeOff className="text-white/20 group-hover:text-white/40 transition-colors" />}
-                                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+                                        {card.isRevealed ? card.value : <EyeOff className="text-white/20" size={20} />}
                                     </motion.button>
                                 ))}
                             </div>
-                        ) : status === 'gameover' ? (
-                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full text-center space-y-12 bg-white/5 p-20 rounded-[4rem] border border-white/10 backdrop-blur-3xl shadow-2xl">
-                                <div className="relative mx-auto w-40 h-40 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white rounded-[3rem] flex items-center justify-center shadow-2xl rotate-12 border-4 border-white/20">
-                                    <Trophy size={100} />
-                                </div>
-                                <div className="space-y-4">
-                                    <h2 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">ANALİZ BİTTİ</h2>
-                                    <p className="text-3xl font-black text-indigo-400 uppercase tracking-tight">TOPLAM XP: {score}</p>
-                                </div>
-                                <div className="space-y-4 max-w-sm mx-auto">
-                                    <button onClick={startApp} className="w-full py-6 bg-indigo-500 text-white font-black text-2xl rounded-2xl hover:bg-indigo-400 transition-all flex items-center justify-center gap-4 shadow-xl active:translate-y-1">
-                                        TEKRAR DENE <RefreshCw />
-                                    </button>
-                                    <Link to="/atolyeler/bireysel-degerlendirme" className="text-slate-500 hover:text-white font-bold block transition-colors tracking-widest uppercase text-xs">Atölyeye Dön</Link>
-                                </div>
+                        </motion.div>
+                    )}
+
+                    {/* Game Over */}
+                    {status === 'gameover' && (
+                        <motion.div
+                            key="gameover"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
+                        >
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: level >= 7
+                                        ? 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)'
+                                        : 'linear-gradient(135deg, #818CF8 0%, #EF4444 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
                             </motion.div>
-                        ) : null}
-                    </div>
-                </div>
+
+                            <h2 className="text-3xl font-black text-indigo-300 mb-2">
+                                {level >= 7 ? '🎉 Harika!' : 'Oyun Bitti!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                {level >= 7 ? 'Hesaplama ustasısın!' : 'Tekrar deneyelim!'}
+                            </p>
+
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Seviye</p>
+                                        <p className="text-3xl font-bold text-indigo-400">{level}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(129, 140, 248, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
+                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Feedback Overlay */}
                 <AnimatePresence>
                     {feedback && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
+                            initial={{ opacity: 0, scale: 0.5 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 1.2 }}
-                            className="fixed inset-0 flex items-center justify-center pointer-events-none z-[100] px-6"
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
                         >
-                            <div className={`flex flex-col items-center gap-6 px-16 py-10 rounded-[4rem] border-4 shadow-2xl backdrop-blur-3xl ${feedback === 'correct' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-rose-500/20 border-rose-500 text-rose-400'}`}>
-                                {feedback === 'correct' ? <CheckCircle2 size={80} strokeWidth={3} /> : <AlertCircle size={80} strokeWidth={3} />}
-                                <span className="text-5xl font-black uppercase italic tracking-tighter">{feedback === 'correct' ? 'MÜKEMMEL TOPLAM' : 'HATALI SEÇİM'}</span>
-                            </div>
+                            <motion.div
+                                initial={{ y: 50 }}
+                                animate={{ y: 0 }}
+                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }`}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {feedback === 'correct'
+                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    }
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
+                            </motion.div>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Preview Overlay */}
-                {status === 'preview' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed top-8 left-1/2 -translate-x-1/2 z-50">
-                        <div className="bg-indigo-500 px-10 py-4 rounded-full text-white font-black tracking-[0.2em] shadow-2xl flex items-center gap-4">
-                            <Search size={24} className="animate-bounce" /> Ezberle: {previewTimer}s
-                        </div>
-                    </motion.div>
-                )}
             </div>
         </div>
     );

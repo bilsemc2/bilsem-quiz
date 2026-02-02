@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Timer, CheckCircle2, XCircle, ChevronLeft, Zap, Hash } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Trophy, RotateCcw, Play, Star, Timer, CheckCircle2, ChevronLeft, Zap, Hash, Eye, Sparkles } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // Sembol seti - her biri benzersiz ve kolay ayırt edilebilir
@@ -19,6 +19,7 @@ const createSymbolMap = () => {
 
 const DigitSymbolGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [symbolMap, setSymbolMap] = useState<Record<number, string>>({});
     const [currentNumber, setCurrentNumber] = useState<number>(1);
@@ -28,13 +29,17 @@ const DigitSymbolGame: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState(60);
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
-    const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [lastAnswer, setLastAnswer] = useState<string | null>(null);
     const gameStartTimeRef = useRef<number>(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const hasSavedRef = useRef<boolean>(false);
 
     const gameDuration = 60; // 60 saniye
+
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
     // Yeni sayı üret
     const generateNewNumber = useCallback(() => {
@@ -52,13 +57,20 @@ const DigitSymbolGame: React.FC = () => {
         setTimeLeft(gameDuration);
         setStreak(0);
         setBestStreak(0);
-        setShowFeedback(null);
+        setFeedback(null);
         setLastAnswer(null);
         generateNewNumber();
         setGameState('playing');
         gameStartTimeRef.current = Date.now();
         hasSavedRef.current = false;
     }, [generateNewNumber]);
+
+    // Auto start from HUB
+    useEffect(() => {
+        if (location.state?.autoStart && gameState === 'idle') {
+            startGame();
+        }
+    }, [location.state, gameState, startGame]);
 
     // Zamanlayıcı
     useEffect(() => {
@@ -96,18 +108,18 @@ const DigitSymbolGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState]);
+    }, [gameState, score, correctCount, wrongCount, bestStreak, saveGamePlay]);
 
     // Cevap kontrolü
     const handleAnswer = (selectedSymbol: string) => {
-        if (showFeedback || gameState !== 'playing') return;
+        if (feedback || gameState !== 'playing') return;
 
         const correctSymbol = symbolMap[currentNumber];
         const isCorrect = selectedSymbol === correctSymbol;
         setLastAnswer(selectedSymbol);
 
         if (isCorrect) {
-            setShowFeedback('correct');
+            setFeedback('correct');
             setCorrectCount(prev => prev + 1);
             setStreak(prev => {
                 const newStreak = prev + 1;
@@ -117,14 +129,14 @@ const DigitSymbolGame: React.FC = () => {
             const streakBonus = Math.min(streak * 5, 50);
             setScore(prev => prev + 50 + streakBonus);
         } else {
-            setShowFeedback('wrong');
+            setFeedback('wrong');
             setWrongCount(prev => prev + 1);
             setStreak(0);
         }
 
         // Hızlı geçiş - işlem hızı testi
         setTimeout(() => {
-            setShowFeedback(null);
+            setFeedback(null);
             setLastAnswer(null);
             generateNewNumber();
         }, 300);
@@ -141,123 +153,210 @@ const DigitSymbolGame: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-950 to-slate-900 pt-24 pb-12 px-6">
-            <div className="container mx-auto max-w-4xl">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-6"
-                >
-                    <Link
-                        to="/atolyeler/bireysel-degerlendirme"
-                        className="inline-flex items-center gap-2 text-cyan-400 font-bold hover:text-cyan-300 transition-colors mb-4 uppercase text-xs tracking-widest"
-                    >
-                        <ChevronLeft size={16} />
-                        Bireysel Değerlendirme
-                    </Link>
-                    <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
-                        🔢 <span className="text-cyan-400">Simge</span> Kodlama
-                    </h1>
-                    <p className="text-slate-400">Sayıya ait sembolü bul - hızlı ol!</p>
-                </motion.div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-violet-950 to-indigo-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+            </div>
 
-                {/* Stats */}
-                <div className="flex justify-center gap-4 mb-6 flex-wrap">
-                    <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                        <Star className="w-5 h-5 text-amber-400" />
-                        <span className="text-white font-bold">{score}</span>
-                    </div>
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
+
                     {gameState === 'playing' && (
-                        <>
-                            <div className={`bg-slate-800/50 border rounded-xl px-5 py-2 flex items-center gap-2 ${timeLeft <= 10 ? 'border-red-500 animate-pulse' : 'border-white/10'}`}>
-                                <Timer className={`w-5 h-5 ${timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'}`} />
-                                <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-white'}`}>{formatTime(timeLeft)}</span>
+                        <div className="flex items-center gap-4 flex-wrap">
+                            {/* Score */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(251, 191, 36, 0.3)'
+                                }}
+                            >
+                                <Star className="text-amber-400 fill-amber-400" size={18} />
+                                <span className="font-bold text-amber-400">{score}</span>
                             </div>
-                            <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                                <Zap className="w-5 h-5 text-amber-400" />
-                                <span className="text-white font-bold">x{streak}</span>
+
+                            {/* Timer */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: timeLeft <= 10
+                                        ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)'
+                                        : 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: timeLeft <= 10
+                                        ? '1px solid rgba(239, 68, 68, 0.5)'
+                                        : '1px solid rgba(139, 92, 246, 0.3)',
+                                    animation: timeLeft <= 10 ? 'pulse 1s infinite' : 'none'
+                                }}
+                            >
+                                <Timer className={timeLeft <= 10 ? 'text-red-400' : 'text-violet-400'} size={18} />
+                                <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-violet-400'}`}>{formatTime(timeLeft)}</span>
                             </div>
-                            <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                                <span className="text-white font-bold">{correctCount}</span>
+
+                            {/* Streak */}
+                            {streak > 1 && (
+                                <div
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
+                                        boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(99, 102, 241, 0.3)'
+                                    }}
+                                >
+                                    <Zap className="text-indigo-400" size={18} />
+                                    <span className="font-bold text-indigo-400">x{streak}</span>
+                                </div>
+                            )}
+
+                            {/* Correct Count */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                                }}
+                            >
+                                <CheckCircle2 className="text-emerald-400" size={18} />
+                                <span className="font-bold text-emerald-400">{correctCount}</span>
                             </div>
-                        </>
+                        </div>
                     )}
                 </div>
+            </div>
 
-                {/* Game Area */}
-                <div className="flex flex-col items-center">
-                    {/* Idle State */}
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+                <AnimatePresence mode="wait">
+                    {/* Welcome Screen */}
                     {gameState === 'idle' && (
                         <motion.div
+                            key="welcome"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6"
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
-                            <div className="bg-slate-800/50 border border-white/10 rounded-3xl p-8 max-w-lg">
-                                <div className="text-6xl mb-4">🔢</div>
-                                <h2 className="text-2xl font-bold text-white mb-4">Simge Kodlama Testi</h2>
+                            {/* 3D Gummy Icon */}
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <Hash size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                <div className="bg-slate-700/50 rounded-xl p-4 mb-6">
-                                    <p className="text-slate-300 text-sm mb-3">Nasıl Oynanır:</p>
-                                    <div className="flex justify-center gap-2 mb-3 text-2xl">
-                                        {[1, 2, 3].map(n => (
-                                            <div key={n} className="flex flex-col items-center">
-                                                <span className="text-cyan-400 font-bold">{n}</span>
-                                                <span className="text-white">{['◯', '△', '□'][n - 1]}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-slate-400 text-sm">
-                                        Ekranda sayı gösterilecek, o sayıya ait sembolü seç!
-                                    </p>
+                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+                                🔢 Simge Kodlama
+                            </h1>
+
+                            {/* Example */}
+                            <div
+                                className="rounded-2xl p-5 mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <p className="text-slate-400 text-sm mb-3">Nasıl Oynanır:</p>
+                                <div className="flex justify-center gap-4 mb-3 text-2xl">
+                                    {[1, 2, 3].map(n => (
+                                        <div key={n} className="flex flex-col items-center">
+                                            <span className="text-violet-400 font-bold">{n}</span>
+                                            <span className="text-white">{['◯', '△', '□'][n - 1]}</span>
+                                        </div>
+                                    ))}
                                 </div>
+                                <p className="text-slate-400 text-sm">Ekranda sayı gösterilecek, o sayıya ait sembolü seç!</p>
+                            </div>
 
-                                <ul className="text-slate-400 text-sm space-y-2 text-left mb-6">
+                            {/* Instructions */}
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                                <h3 className="text-lg font-bold text-violet-300 mb-3 flex items-center gap-2">
+                                    <Eye size={20} /> Oyun Kuralları
+                                </h3>
+                                <ul className="space-y-2 text-slate-300 text-sm">
                                     <li className="flex items-center gap-2">
-                                        <Hash className="w-4 h-4 text-cyan-400" />
-                                        1-9 arası sayılar ve 9 farklı sembol
+                                        <Sparkles size={14} className="text-indigo-400" />
+                                        <span>1-9 arası sayılar ve 9 farklı sembol</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <Timer className="w-4 h-4 text-amber-400" />
-                                        {gameDuration} saniye süren
+                                        <Sparkles size={14} className="text-indigo-400" />
+                                        <span>{gameDuration} saniye süren</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <Zap className="w-4 h-4 text-pink-400" />
-                                        Ne kadar çok doğru, o kadar yüksek puan!
+                                        <Sparkles size={14} className="text-indigo-400" />
+                                        <span>Ne kadar çok doğru, o kadar yüksek puan!</span>
                                     </li>
                                 </ul>
-
-                                <button
-                                    onClick={startGame}
-                                    className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold rounded-xl hover:from-cyan-400 hover:to-teal-400 transition-all flex items-center gap-3 mx-auto"
-                                >
-                                    <Play className="w-5 h-5" />
-                                    Teste Başla
-                                </button>
                             </div>
+
+                            {/* TUZÖ Badge */}
+                            <div className="bg-violet-500/10 text-violet-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-violet-500/30">
+                                TUZÖ 5.5.1 İşlem Hızı
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="px-8 py-4 rounded-2xl font-bold text-lg"
+                                style={{
+                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(139, 92, 246, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Play size={24} fill="currentColor" />
+                                    <span>Teste Başla</span>
+                                </div>
+                            </motion.button>
                         </motion.div>
                     )}
 
-                    {/* Playing State */}
+                    {/* Playing */}
                     {gameState === 'playing' && (
                         <motion.div
+                            key="game"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             className="w-full max-w-2xl"
                         >
                             {/* Legend - Sayı-Sembol Haritası */}
-                            <div className="bg-slate-800/70 border border-white/20 rounded-2xl p-4 mb-6">
+                            <div
+                                className="rounded-2xl p-4 mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
                                 <p className="text-slate-400 text-xs text-center mb-3 uppercase tracking-wider">Referans Tablosu</p>
-                                <div className="flex justify-center gap-3 flex-wrap">
+                                <div className="flex justify-center gap-2 flex-wrap">
                                     {Object.entries(symbolMap).map(([num, symbol]) => (
                                         <div
                                             key={num}
-                                            className="flex flex-col items-center bg-slate-700/50 rounded-lg px-3 py-2 min-w-[50px]"
+                                            className="flex flex-col items-center bg-white/5 rounded-lg px-3 py-2 min-w-[45px]"
                                         >
-                                            <span className="text-cyan-400 font-bold text-lg">{num}</span>
-                                            <span className="text-white text-2xl">{symbol}</span>
+                                            <span className="text-violet-400 font-bold">{num}</span>
+                                            <span className="text-white text-xl">{symbol}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -271,14 +370,20 @@ const DigitSymbolGame: React.FC = () => {
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.8 }}
                                     transition={{ duration: 0.15 }}
-                                    className={`bg-slate-800/50 border-4 rounded-3xl p-8 mb-6 text-center ${showFeedback === 'correct' ? 'border-emerald-500 bg-emerald-500/10' :
-                                        showFeedback === 'wrong' ? 'border-red-500 bg-red-500/10' :
-                                            'border-white/10'
-                                        } transition-all`}
+                                    className="text-center mb-6"
                                 >
                                     <p className="text-slate-400 text-sm mb-2">Bu sayının sembolünü bul:</p>
-                                    <div className="text-8xl font-black text-cyan-400">
-                                        {currentNumber}
+                                    <div
+                                        className="rounded-3xl p-8"
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                            boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                            border: '1px solid rgba(255,255,255,0.1)'
+                                        }}
+                                    >
+                                        <div className="text-8xl font-black text-violet-400">
+                                            {currentNumber}
+                                        </div>
                                     </div>
                                 </motion.div>
                             </AnimatePresence>
@@ -288,7 +393,7 @@ const DigitSymbolGame: React.FC = () => {
                                 {SYMBOLS.map((symbol, idx) => {
                                     const isSelected = lastAnswer === symbol;
                                     const isCorrect = symbol === symbolMap[currentNumber];
-                                    const showResult = showFeedback !== null;
+                                    const showResult = feedback !== null;
 
                                     return (
                                         <motion.button
@@ -297,17 +402,23 @@ const DigitSymbolGame: React.FC = () => {
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.03 }}
                                             onClick={() => handleAnswer(symbol)}
-                                            disabled={showFeedback !== null}
-                                            whileHover={{ scale: showFeedback ? 1 : 1.05 }}
-                                            whileTap={{ scale: showFeedback ? 1 : 0.95 }}
-                                            className={`py-6 text-4xl font-bold rounded-2xl transition-all ${showResult
-                                                ? isCorrect
-                                                    ? 'bg-emerald-500/20 border-2 border-emerald-500'
-                                                    : isSelected
-                                                        ? 'bg-red-500/20 border-2 border-red-500'
-                                                        : 'bg-slate-800/50 border border-white/5 opacity-50'
-                                                : 'bg-slate-800/50 border border-white/10 hover:bg-slate-700/50 hover:border-cyan-500/50 active:scale-95'
-                                                }`}
+                                            disabled={feedback !== null}
+                                            whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
+                                            whileTap={!feedback ? { scale: 0.95 } : {}}
+                                            className="py-6 text-4xl font-bold rounded-[25%] transition-all"
+                                            style={{
+                                                background: showResult && isCorrect
+                                                    ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                                                    : showResult && isSelected && !isCorrect
+                                                        ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
+                                                        : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
+                                                border: showResult && isCorrect
+                                                    ? '2px solid #10B981'
+                                                    : '1px solid rgba(255,255,255,0.1)',
+                                                cursor: feedback ? 'default' : 'pointer',
+                                                opacity: showResult && !isCorrect && !isSelected ? 0.5 : 1
+                                            }}
                                         >
                                             {symbol}
                                         </motion.button>
@@ -317,63 +428,87 @@ const DigitSymbolGame: React.FC = () => {
                         </motion.div>
                     )}
 
-                    {/* Finished State */}
+                    {/* Game Over */}
                     {gameState === 'finished' && (
                         <motion.div
+                            key="gameover"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6 w-full max-w-md"
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
-                            <div className="bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-500/30 rounded-3xl p-8">
-                                <Trophy className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-                                <h2 className="text-3xl font-black text-white mb-2">Süre Doldu! ⏱️</h2>
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                <div className="grid grid-cols-2 gap-4 my-6">
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">Toplam Puan</p>
-                                        <p className="text-2xl font-black text-amber-400">{score}</p>
+                            <h2 className="text-3xl font-black text-amber-300 mb-2">
+                                {accuracy >= 80 ? '🎉 Süper!' : 'Süre Doldu!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                {accuracy >= 80 ? 'Muhteşem işlem hızı!' : 'Biraz daha pratik yap!'}
+                            </p>
+
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
                                     </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
+                                    <div className="text-center">
                                         <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-2xl font-black text-emerald-400">%{accuracy}</p>
+                                        <p className="text-3xl font-bold text-emerald-400">%{accuracy}</p>
                                     </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
+                                    <div className="text-center">
                                         <p className="text-slate-400 text-sm">Toplam Deneme</p>
-                                        <p className="text-2xl font-black text-cyan-400">{correctCount + wrongCount}</p>
+                                        <p className="text-3xl font-bold text-violet-400">{correctCount + wrongCount}</p>
                                     </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
+                                    <div className="text-center">
                                         <p className="text-slate-400 text-sm">En İyi Seri</p>
-                                        <p className="text-2xl font-black text-purple-400">x{bestStreak}</p>
+                                        <p className="text-3xl font-bold text-indigo-400">x{bestStreak}</p>
                                     </div>
-                                </div>
-
-                                <div className="flex items-center justify-center gap-2 text-sm text-slate-400 mb-6">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                    <span>{correctCount} Doğru</span>
-                                    <span className="text-slate-600">|</span>
-                                    <XCircle className="w-4 h-4 text-red-400" />
-                                    <span>{wrongCount} Yanlış</span>
-                                </div>
-
-                                <div className="flex justify-center gap-4">
-                                    <button
-                                        onClick={startGame}
-                                        className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold rounded-xl hover:from-cyan-400 hover:to-teal-400 transition-all flex items-center gap-2"
-                                    >
-                                        <RotateCcw className="w-5 h-5" />
-                                        Tekrar Oyna
-                                    </button>
-                                    <Link
-                                        to="/atolyeler/bireysel-degerlendirme"
-                                        className="px-6 py-3 bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-600 transition-all"
-                                    >
-                                        Geri Dön
-                                    </Link>
                                 </div>
                             </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(139, 92, 246, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
+                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
                         </motion.div>
                     )}
-                </div>
+                </AnimatePresence>
             </div>
         </div>
     );

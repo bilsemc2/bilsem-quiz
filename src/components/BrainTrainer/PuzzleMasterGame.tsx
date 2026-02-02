@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Play, Star, Timer, Target,
-    XCircle, ChevronLeft, Zap, Brain, Heart, Search, Scissors, LayoutGrid, AlertCircle
+    ChevronLeft, Zap, Brain, Heart, Search, Home,
+    CheckCircle2, XCircle, Sparkles
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
-// --- Puzzle Generator Utility (Migrated from original) ---
+// --- Puzzle Generator Utility ---
 class PuzzleGenerator {
     static generate(seed: string): string {
         const size = 512;
@@ -25,8 +26,8 @@ class PuzzleGenerator {
 
         const grad = ctx.createLinearGradient(0, 0, size, size);
         const baseHue = Math.floor(random(1) * 360);
-        grad.addColorStop(0, `hsl(${baseHue}, 40%, 90%)`);
-        grad.addColorStop(1, `hsl(${(baseHue + 60) % 360}, 40%, 85%)`);
+        grad.addColorStop(0, `hsl(${baseHue}, 50%, 85%)`);
+        grad.addColorStop(1, `hsl(${(baseHue + 60) % 360}, 50%, 80%)`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, size, size);
 
@@ -91,6 +92,21 @@ const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 const SELECTION_SIZE = 100;
 
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Mükemmel göz! 👁️",
+    "Harikasın! ⭐",
+    "Tam isabet! 🎯",
+    "Süpersin! 🌟",
+    "Keskin dikkat! 🔍",
+];
+
+const FAIL_MESSAGES = [
+    "Tekrar bak! 👀",
+    "Biraz daha dikkat! 🎯",
+    "Yaklaştın! 💪",
+];
+
 type Phase = 'welcome' | 'playing' | 'game_over' | 'victory';
 
 interface GameLevel {
@@ -101,6 +117,7 @@ interface GameLevel {
 
 const PuzzleMasterGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
@@ -112,6 +129,8 @@ const PuzzleMasterGame: React.FC = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [showFeedback, setShowFeedback] = useState(false);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
@@ -120,8 +139,8 @@ const PuzzleMasterGame: React.FC = () => {
     const generateLevel = useCallback(() => {
         setIsLoading(true);
         setIsCorrect(null);
+        setShowFeedback(false);
 
-        // Seed generation
         const seed = `puzzle-${Date.now()}-${Math.random()}`;
         const imageUrl = PuzzleGenerator.generate(seed);
 
@@ -165,6 +184,12 @@ const PuzzleMasterGame: React.FC = () => {
         return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     }, [phase, timeLeft]);
 
+    useEffect(() => {
+        if (location.state?.autoStart && phase === 'welcome') {
+            handleStart();
+        }
+    }, [location.state, phase]);
+
     const handleStart = useCallback(() => {
         setPhase('playing');
         setScore(0);
@@ -174,7 +199,7 @@ const PuzzleMasterGame: React.FC = () => {
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
         generateLevel();
-    }, [hasSavedRef, generateLevel]);
+    }, [generateLevel]);
 
     const handleGameOver = useCallback(async () => {
         if (hasSavedRef.current) return;
@@ -187,7 +212,7 @@ const PuzzleMasterGame: React.FC = () => {
             duration_seconds: duration,
             metadata: { levels_completed: levelNumber, final_lives: lives }
         });
-    }, [saveGamePlay, score, levelNumber, lives, hasSavedRef]);
+    }, [saveGamePlay, score, levelNumber, lives]);
 
     const handleVictory = useCallback(async () => {
         if (hasSavedRef.current) return;
@@ -200,7 +225,7 @@ const PuzzleMasterGame: React.FC = () => {
             duration_seconds: duration,
             metadata: { levels_completed: MAX_LEVEL, victory: true }
         });
-    }, [saveGamePlay, score, hasSavedRef]);
+    }, [saveGamePlay, score]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (phase !== 'playing' || isLoading || isCorrect !== null) return;
@@ -225,23 +250,39 @@ const PuzzleMasterGame: React.FC = () => {
 
         if (dx < 20 && dy < 20) {
             setIsCorrect(true);
+            setFeedbackMessage(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            setShowFeedback(true);
             setScore(prev => prev + 10 * levelNumber);
+
             if (levelNumber >= MAX_LEVEL) {
-                handleVictory();
+                setTimeout(() => {
+                    setShowFeedback(false);
+                    handleVictory();
+                }, 1500);
             } else {
                 setTimeout(() => {
+                    setShowFeedback(false);
                     setLevelNumber(prev => prev + 1);
                     generateLevel();
                 }, 1500);
             }
         } else {
             setIsCorrect(false);
+            setFeedbackMessage(FAIL_MESSAGES[Math.floor(Math.random() * FAIL_MESSAGES.length)]);
+            setShowFeedback(true);
             const newLives = lives - 1;
             setLives(newLives);
+
             if (newLives <= 0) {
-                handleGameOver();
+                setTimeout(() => {
+                    setShowFeedback(false);
+                    handleGameOver();
+                }, 1500);
             } else {
-                setTimeout(() => setIsCorrect(null), 1500);
+                setTimeout(() => {
+                    setShowFeedback(false);
+                    setIsCorrect(null);
+                }, 1500);
             }
         }
     };
@@ -252,199 +293,400 @@ const PuzzleMasterGame: React.FC = () => {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+
+    // =============== WELCOME SCREEN ===============
+    if (phase === 'welcome') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-rose-950 via-pink-950 to-slate-900 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                {/* Decorative Background */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-500/15 rounded-full blur-3xl animate-pulse" />
+                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/15 rounded-full blur-3xl" />
+                    <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-fuchsia-500/10 rounded-full blur-3xl" />
+                </div>
+
+                <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="bg-white/10 backdrop-blur-xl p-10 rounded-3xl border border-white/20 text-center max-w-xl relative z-10"
+                    style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}
+                >
+                    {/* 3D Gummy Icon */}
+                    <motion.div
+                        className="w-28 h-28 bg-gradient-to-br from-rose-400 to-pink-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                        style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                        <Search size={52} className="text-white drop-shadow-lg" />
+                    </motion.div>
+
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-rose-300 via-pink-300 to-fuchsia-300 bg-clip-text text-transparent">
+                        Puzzle Master
+                    </h1>
+
+                    <p className="text-slate-300 mb-6 text-lg">
+                        Parçayı bul, konumu işaretle! 🔍
+                    </p>
+
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="font-bold text-rose-300 mb-3 flex items-center gap-2">
+                            <Sparkles size={18} />
+                            Nasıl Oynanır?
+                        </h3>
+                        <ul className="text-sm text-slate-200 space-y-2">
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-rose-500/30 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                                Hedef parçayı incele
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-pink-500/30 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                                Büyük tabloda yerini bul
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-fuchsia-500/30 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                                Seçimi sürükle ve kontrol et
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-6 h-6 bg-purple-500/30 rounded-full flex items-center justify-center text-xs font-bold">🎯</span>
+                                20 seviyeyi tamamla!
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="flex flex-wrap justify-center gap-4 mb-6">
+                        <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/20">
+                            <Heart className="text-red-400" size={16} />
+                            <span className="text-sm text-slate-200">{INITIAL_LIVES} Can</span>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/20">
+                            <Timer className="text-blue-400" size={16} />
+                            <span className="text-sm text-slate-200">3 Dakika</span>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/20">
+                            <Target className="text-emerald-400" size={16} />
+                            <span className="text-sm text-slate-200">{MAX_LEVEL} Seviye</span>
+                        </div>
+                    </div>
+
+                    {/* TUZÖ Badge */}
+                    <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-rose-500/20 border border-rose-500/30 rounded-full">
+                        <span className="text-[9px] font-black text-rose-300 uppercase tracking-wider">TUZÖ</span>
+                        <span className="text-[9px] font-bold text-rose-400">5.3.2 Görsel Analiz</span>
+                    </div>
+
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleStart}
+                        className="px-10 py-5 bg-gradient-to-r from-rose-500 to-pink-600 rounded-2xl font-bold text-xl"
+                        style={{ boxShadow: '0 8px 32px rgba(244, 63, 94, 0.4)' }}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Play size={28} className="fill-white" />
+                            <span>Başla</span>
+                        </div>
+                    </motion.button>
+                </motion.div>
+            </div>
+        );
+    }
+
+    // =============== GAME SCREEN ===============
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white font-sans">
+        <div className="min-h-screen bg-gradient-to-br from-rose-950 via-pink-950 to-slate-900 text-white relative overflow-hidden">
+            {/* Decorative Background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-500/15 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/15 rounded-full blur-3xl" />
             </div>
 
+            {/* Feedback Overlay */}
+            <AnimatePresence>
+                {showFeedback && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ y: 50 }}
+                            animate={{ y: 0 }}
+                            className={`px-12 py-8 rounded-3xl text-center ${isCorrect
+                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                }`}
+                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                        >
+                            <motion.div
+                                animate={{ scale: [1, 1.2, 1], rotate: isCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                {isCorrect
+                                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                }
+                            </motion.div>
+                            <p className="text-3xl font-black text-white">{feedbackMessage}</p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <div className="relative z-10 p-4">
-                <div className="max-w-6xl mx-auto flex items-center justify-between">
-                    <Link to="/atolyeler/bireysel-degerlendirme" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                {/* Header */}
+                <div className="max-w-6xl mx-auto flex items-center justify-between mb-4">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                         <ChevronLeft size={20} />
-                        <span className="font-bold">Seviyeler</span>
+                        <span>Geri</span>
                     </Link>
 
                     {phase === 'playing' && (
-                        <div className="flex items-center gap-3 md:gap-6 scale-90 md:scale-100">
-                            <div className="flex items-center gap-2 bg-amber-500/20 px-3 py-1.5 md:px-4 md:py-2 rounded-xl">
+                        <div className="flex items-center gap-3 flex-wrap justify-end">
+                            {/* Score */}
+                            <div className="flex items-center gap-2 bg-amber-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-amber-500/30">
                                 <Star className="text-amber-400" size={18} />
                                 <span className="font-bold text-amber-400">{score}</span>
                             </div>
-                            <div className="flex items-center gap-2 bg-red-500/20 px-3 py-1.5 md:px-4 md:py-2 rounded-xl">
-                                <Heart className="text-red-400" size={18} />
-                                <span className="font-bold text-red-400">{lives}</span>
+
+                            {/* Lives */}
+                            <div className="flex items-center gap-1 bg-red-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-red-500/30">
+                                {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
+                                    <Heart
+                                        key={i}
+                                        size={14}
+                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'}
+                                    />
+                                ))}
                             </div>
-                            <div className="flex items-center gap-2 bg-blue-500/20 px-3 py-1.5 md:px-4 md:py-2 rounded-xl">
+
+                            {/* Timer */}
+                            <div className="flex items-center gap-2 bg-blue-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-blue-500/30">
                                 <Timer className="text-blue-400" size={18} />
                                 <span className={`font-bold ${timeLeft <= 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'}`}>
                                     {formatTime(timeLeft)}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-2 bg-emerald-500/20 px-3 py-1.5 md:px-4 md:py-2 rounded-xl">
+
+                            {/* Level */}
+                            <div className="flex items-center gap-2 bg-emerald-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-emerald-500/30">
                                 <Zap className="text-emerald-400" size={18} />
-                                <span className="font-bold text-emerald-400">Lvl {levelNumber}</span>
+                                <span className="font-bold text-emerald-400">Lv.{levelNumber}</span>
                             </div>
                         </div>
                     )}
                 </div>
-            </div>
 
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
-                <AnimatePresence mode="wait">
-                    {phase === 'welcome' && (
-                        <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-lg">
-                                <Brain size={48} className="text-white" />
+                {/* Main Game Area */}
+                {phase === 'playing' && (
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Left Panel - Target */}
+                        <div className="lg:col-span-3 space-y-4">
+                            <div className="bg-white/10 backdrop-blur-xl p-6 rounded-2xl border border-white/20">
+                                <p className="text-xs font-bold text-rose-300 mb-4 tracking-wider uppercase flex items-center gap-2">
+                                    <Search size={14} />
+                                    Bu Parçayı Bul
+                                </p>
+
+                                {/* 3D Gummy Target Card */}
+                                <motion.div
+                                    className="w-full aspect-square rounded-2xl overflow-hidden"
+                                    style={{
+                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1), 0 8px 24px rgba(0,0,0,0.3)',
+                                        border: '2px solid rgba(244, 63, 94, 0.4)',
+                                    }}
+                                >
+                                    {gameLevel?.targetThumbnail ? (
+                                        <img src={gameLevel.targetThumbnail} alt="Target" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full animate-pulse bg-slate-800" />
+                                    )}
+                                </motion.div>
                             </div>
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Puzzle Master</h1>
-                            <p className="text-slate-400 mb-8 font-medium">Hedef parçayı büyük görsel üzerinde bul ve işaretle. Dikkatli ol, sınırlı vaktin ve canın var!</p>
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/5">
-                                    <Heart className="text-red-400" size={16} />
-                                    <span className="text-sm text-slate-300">{INITIAL_LIVES} Can</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/5">
-                                    <Timer className="text-blue-400" size={16} />
-                                    <span className="text-sm text-slate-300">3 Dakika</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/5">
-                                    <Target className="text-emerald-400" size={16} />
-                                    <span className="text-sm text-slate-300">{MAX_LEVEL} Seviye</span>
-                                </div>
-                            </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl font-black text-lg shadow-xl shadow-indigo-500/20 flex items-center gap-3">
-                                <Play size={24} fill="currentColor" /> Başla
-                            </motion.button>
-                        </motion.div>
-                    )}
+                        </div>
 
-                    {phase === 'playing' && (
-                        <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
-                            <div className="lg:col-span-3 space-y-6 flex flex-col items-center">
-                                <div className="w-full bg-slate-800/50 backdrop-blur-xl p-6 rounded-3xl border border-white/5 shadow-xl flex flex-col items-center">
-                                    <p className="text-[10px] font-black text-indigo-400 mb-4 tracking-widest uppercase flex items-center gap-2">
-                                        <Search size={14} /> BU PARÇAYI BUL
-                                    </p>
-                                    <div className="w-40 h-40 bg-slate-900 rounded-2xl overflow-hidden border-2 border-indigo-500/50 shadow-inner">
-                                        {gameLevel?.targetThumbnail ? (
-                                            <img src={gameLevel.targetThumbnail} alt="Target" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full animate-pulse bg-slate-800" />
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="hidden lg:block w-full bg-slate-800/30 backdrop-blur-xl p-6 rounded-3xl border border-white/5">
-                                    <h3 className="text-[10px] font-black text-slate-400 mb-4 tracking-widest uppercase flex items-center gap-2">
-                                        <LayoutGrid size={14} /> REHBER
-                                    </h3>
-                                    <div className="space-y-3 text-[11px] font-bold text-slate-400">
-                                        <div className="flex gap-3 items-center">
-                                            <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-black">1</span>
-                                            <span>Hedef parçayı analiz et.</span>
-                                        </div>
-                                        <div className="flex gap-3 items-center">
-                                            <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-black">2</span>
-                                            <span>Tabloda konumunu bul.</span>
-                                        </div>
-                                        <div className="flex gap-3 items-center">
-                                            <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-black">3</span>
-                                            <span>Kontrol et ve ilerle!</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {isCorrect === false && (
-                                    <motion.div initial={{ x: -10 }} animate={{ x: 0 }} className="bg-red-500/10 border border-red-500/50 p-4 rounded-2xl flex items-start gap-3 w-full">
-                                        <AlertCircle className="text-red-400 shrink-0" size={20} />
-                                        <p className="text-xs text-red-200 font-bold">Bu sefer olmadı! <br /><span className="opacity-60 text-[10px]">Parçayı tekrar incele.</span></p>
-                                    </motion.div>
-                                )}
-                            </div>
-
-                            <div className="lg:col-span-9 bg-slate-800/40 backdrop-blur-2xl p-2 md:p-4 rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden">
-                                <div className="relative aspect-square bg-slate-950 rounded-[2rem] overflow-hidden cursor-crosshair border border-white/5 shadow-inner" onMouseDown={handleMouseDown} onMouseMove={(e) => isDragging && updateSelection(e)} onMouseUp={() => setIsDragging(false)} onMouseLeave={() => setIsDragging(false)}>
+                        {/* Main Puzzle Board */}
+                        <div className="lg:col-span-9">
+                            <div
+                                className="bg-white/10 backdrop-blur-xl p-4 rounded-3xl border border-white/20"
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}
+                            >
+                                <div
+                                    className="relative aspect-square rounded-2xl overflow-hidden cursor-crosshair"
+                                    onMouseDown={handleMouseDown}
+                                    onMouseMove={(e) => isDragging && updateSelection(e)}
+                                    onMouseUp={() => setIsDragging(false)}
+                                    onMouseLeave={() => setIsDragging(false)}
+                                    style={{
+                                        boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.05)',
+                                    }}
+                                >
                                     {isLoading && (
                                         <div className="absolute inset-0 z-20 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center">
-                                            <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                                            <p className="mt-4 text-indigo-400 font-black tracking-widest text-[10px]">ANALİZ EDİLİYOR</p>
+                                            <div className="w-12 h-12 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                                            <p className="mt-4 text-rose-400 font-bold text-sm">Yükleniyor...</p>
                                         </div>
                                     )}
-                                    {gameLevel?.imageUrl && <img src={gameLevel.imageUrl} className="w-full h-full object-cover select-none" draggable={false} alt="Puzzle Board" />}
 
-                                    <div className={`absolute pointer-events-none transition-all duration-150 rounded-xl border-4
-                    ${isCorrect === true ? 'border-emerald-500 shadow-[0_0_40px_rgba(16,185,129,0.4)]' : isCorrect === false ? 'border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.4)]' : 'border-white/90 shadow-2xl'}
-                  `} style={{ left: `${(selection.x / 512) * 100}%`, top: `${(selection.y / 512) * 100}%`, width: `${(SELECTION_SIZE / 512) * 100}%`, height: `${(SELECTION_SIZE / 512) * 100}%` }}>
-                                        <div className={`absolute -top-10 left-0 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest text-white backdrop-blur-md shadow-lg
-                      ${isCorrect === true ? 'bg-emerald-500' : isCorrect === false ? 'bg-red-500' : 'bg-indigo-600/90'}
-                    `}>
-                                            {isCorrect === true ? 'Buldun!' : isCorrect === false ? 'Hata!' : 'Hedef'}
-                                        </div>
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                                    {gameLevel?.imageUrl && (
+                                        <img src={gameLevel.imageUrl} className="w-full h-full object-cover select-none" draggable={false} alt="Puzzle Board" />
+                                    )}
+
+                                    {/* Selection Box */}
+                                    <div
+                                        className={`absolute pointer-events-none transition-all duration-150 rounded-xl border-4 ${isCorrect === true
+                                                ? 'border-emerald-400'
+                                                : isCorrect === false
+                                                    ? 'border-red-400'
+                                                    : 'border-white/80'
+                                            }`}
+                                        style={{
+                                            left: `${(selection.x / 512) * 100}%`,
+                                            top: `${(selection.y / 512) * 100}%`,
+                                            width: `${(SELECTION_SIZE / 512) * 100}%`,
+                                            height: `${(SELECTION_SIZE / 512) * 100}%`,
+                                            boxShadow: isCorrect === true
+                                                ? '0 0 30px rgba(52, 211, 153, 0.5)'
+                                                : isCorrect === false
+                                                    ? '0 0 30px rgba(248, 113, 113, 0.5)'
+                                                    : '0 0 20px rgba(255,255,255,0.3)',
+                                        }}
+                                    >
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-40">
                                             <div className="w-full h-px bg-white" />
                                             <div className="h-full w-px bg-white absolute" />
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
-                                    <div className="flex-1 text-center md:text-left">
-                                        <p className="text-xl md:text-2xl font-black italic tracking-tight text-white/90 mb-2">Desenin yerini belirle</p>
-                                        <div className="flex items-center justify-center md:justify-start gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Sistem Aktif</span>
-                                        </div>
-                                    </div>
-                                    <button onClick={handleCheck} disabled={isLoading || isCorrect !== null} className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-30 text-white px-12 py-5 rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest">
-                                        <Scissors size={20} /> Analiz Et
-                                    </button>
+                                {/* Action Button */}
+                                <div className="p-6 flex justify-center">
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={handleCheck}
+                                        disabled={isLoading || isCorrect !== null}
+                                        className="bg-gradient-to-r from-rose-500 to-pink-600 disabled:opacity-30 px-12 py-4 rounded-2xl font-bold flex items-center gap-3"
+                                        style={{ boxShadow: '0 8px 32px rgba(244, 63, 94, 0.4)' }}
+                                    >
+                                        <Target size={24} />
+                                        Kontrol Et
+                                    </motion.button>
                                 </div>
                             </div>
-                        </motion.div>
-                    )}
+                        </div>
+                    </div>
+                )}
 
-                    {phase === 'game_over' && (
-                        <motion.div key="game_over" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-3xl flex items-center justify-center shadow-lg shadow-red-500/20">
+                {/* Game Over Screen */}
+                {phase === 'game_over' && (
+                    <div className="flex items-center justify-center min-h-[calc(100vh-100px)]">
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 border border-white/20 text-center max-w-md w-full"
+                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                        >
+                            <motion.div
+                                className="w-24 h-24 bg-gradient-to-br from-rose-500 to-pink-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.3), 0 8px 32px rgba(244, 63, 94, 0.4)' }}
+                            >
                                 <XCircle size={48} className="text-white" />
-                            </div>
-                            <h2 className="text-3xl font-bold text-red-400 mb-4">Geliştirmen Gerekiyor</h2>
-                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-8 mb-8 border border-white/5">
-                                <div className="grid grid-cols-2 gap-8">
+                            </motion.div>
+
+                            <h2 className="text-3xl font-black text-rose-300 mb-2">Süre Doldu!</h2>
+                            <p className="text-slate-300 mb-6">Bir dahaki sefere daha dikkatli ol!</p>
+
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/20">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="text-center">
-                                        <p className="text-slate-400 text-xs uppercase tracking-widest font-bold mb-2">Puan</p>
-                                        <p className="text-4xl font-black text-amber-400">{score}</p>
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-2xl font-black text-amber-400">{score}</p>
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-slate-400 text-xs uppercase tracking-widest font-bold mb-2">Seviye</p>
-                                        <p className="text-4xl font-black text-emerald-400">{levelNumber}</p>
+                                        <p className="text-slate-400 text-sm">Seviye</p>
+                                        <p className="text-2xl font-black text-emerald-400">{levelNumber}</p>
                                     </div>
                                 </div>
                             </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl font-black text-lg shadow-xl shadow-indigo-500/20 flex items-center gap-3">
-                                <RotateCcw size={24} /> Baştan Başla
-                            </motion.button>
-                        </motion.div>
-                    )}
 
-                    {phase === 'victory' && (
-                        <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-3xl flex items-center justify-center shadow-lg shadow-amber-500/20 animate-bounce">
-                                <Trophy size={48} className="text-white" />
+                            <div className="flex flex-col gap-3">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={handleStart}
+                                    className="w-full px-6 py-4 bg-gradient-to-r from-rose-500 to-pink-600 rounded-2xl font-bold text-lg"
+                                    style={{ boxShadow: '0 8px 32px rgba(244, 63, 94, 0.4)' }}
+                                >
+                                    <div className="flex items-center justify-center gap-3">
+                                        <RotateCcw size={24} />
+                                        <span>Tekrar Oyna</span>
+                                    </div>
+                                </motion.button>
+                                <Link
+                                    to={backLink}
+                                    className="w-full px-6 py-4 bg-white/10 backdrop-blur-sm rounded-2xl font-bold flex items-center justify-center gap-2 border border-white/20"
+                                >
+                                    <Home size={20} />
+                                    <span>Çıkış</span>
+                                </Link>
                             </div>
-                            <h2 className="text-4xl font-black text-amber-400 mb-4 tracking-tight">ANALİZ ŞAMPİYONU!</h2>
-                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-[2.5rem] p-10 mb-8 border border-amber-500/20 shadow-2xl">
-                                <p className="text-6xl font-black text-amber-400 mb-2">{score}</p>
-                                <p className="text-slate-400 uppercase tracking-[0.3em] font-black text-xs">Maksimum Skor Başarımı</p>
-                            </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-4 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl font-black text-lg shadow-xl shadow-amber-500/20 flex items-center gap-3">
-                                <RotateCcw size={24} /> Yeniden Meydan Oku
-                            </motion.button>
                         </motion.div>
-                    )}
-                </AnimatePresence>
+                    </div>
+                )}
+
+                {/* Victory Screen */}
+                {phase === 'victory' && (
+                    <div className="flex items-center justify-center min-h-[calc(100vh-100px)]">
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 border border-white/20 text-center max-w-md w-full"
+                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                        >
+                            <motion.div
+                                className="w-24 h-24 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.4), 0 8px 32px rgba(251, 191, 36, 0.5)' }}
+                                animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                            >
+                                <Trophy size={48} className="text-white" />
+                            </motion.div>
+
+                            <h2 className="text-3xl font-black text-amber-300 mb-2">🎉 Puzzle Ustası!</h2>
+                            <p className="text-slate-300 mb-6">Tüm seviyeleri tamamladın!</p>
+
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/20">
+                                <p className="text-4xl font-black text-amber-400">{score}</p>
+                                <p className="text-slate-400 text-sm">Toplam Puan</p>
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={handleStart}
+                                    className="w-full px-6 py-4 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl font-bold text-lg"
+                                    style={{ boxShadow: '0 8px 32px rgba(251, 191, 36, 0.4)' }}
+                                >
+                                    <div className="flex items-center justify-center gap-3">
+                                        <RotateCcw size={24} />
+                                        <span>Tekrar Oyna</span>
+                                    </div>
+                                </motion.button>
+                                <Link
+                                    to={backLink}
+                                    className="w-full px-6 py-4 bg-white/10 backdrop-blur-sm rounded-2xl font-bold flex items-center justify-center gap-2 border border-white/20"
+                                >
+                                    <Home size={20} />
+                                    <span>Çıkış</span>
+                                </Link>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
             </div>
         </div>
     );

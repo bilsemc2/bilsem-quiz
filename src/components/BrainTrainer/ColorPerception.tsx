@@ -1,10 +1,12 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { Brain, Star, Trophy, Timer, RotateCcw, ChevronLeft, Play, Target } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Star, Trophy, Timer, RotateCcw, ChevronLeft, Play, Target, Sparkles, Heart, CheckCircle2, XCircle, Eye, Palette } from 'lucide-react';
+import { useSound } from '../../hooks/useSound';
+import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // Renk sabitleri
-const COLORS = {
+const COLORS: Record<string, string> = {
   kırmızı: '#FF5252',
   mavi: '#4285F4',
   sarı: '#FFC107',
@@ -12,13 +14,26 @@ const COLORS = {
 };
 
 // Seviyeye göre yanıp sönme süreleri (saniye)
-const LEVEL_DURATIONS = {
+const LEVEL_DURATIONS: Record<number, number> = {
   1: 5,
   2: 4,
   3: 3,
   4: 2,
   5: 1
 };
+
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+  "Harika! 🎨",
+  "Keskin Göz! 👁️",
+  "Süper! ⭐",
+  "Bravo! 🌟",
+];
+
+const FAILURE_MESSAGES = [
+  "Dikkatli bak! 👀",
+  "Tekrar dene! 💪",
+];
 
 interface GameState {
   level: number;
@@ -30,7 +45,9 @@ interface GameState {
 }
 
 const ColorPerception: React.FC = () => {
-  // Oyun durumu
+  const { playSound } = useSound();
+  const { saveGamePlay } = useGamePersistence();
+  const location = useLocation();
   const [gameState, setGameState] = useState<GameState>({
     level: 1,
     currentColors: [],
@@ -40,16 +57,20 @@ const ColorPerception: React.FC = () => {
     showingColors: false
   });
 
-  // Skor
   const [score, setScore] = useState<number>(0);
-  const [showLevelComplete, setShowLevelComplete] = useState<boolean>(false);
-
-  // Oyun başladı mı?
+  const [lives, setLives] = useState<number>(3);
+  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState('');
   const [gameStarted, setGameStarted] = useState<boolean>(false);
+  const gameStartTimeRef = useRef<number>(0);
+  const hasSavedRef = useRef<boolean>(false);
+
+  // Back link
+  const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+  const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
   // Rastgele renkler oluştur
   const generateColors = useCallback((level: number) => {
-    setShowLevelComplete(false);
     const colorNames = Object.keys(COLORS);
     const shuffled = [...colorNames].sort(() => 0.5 - Math.random());
     const selectedColors = shuffled.slice(0, 2);
@@ -63,7 +84,7 @@ const ColorPerception: React.FC = () => {
       showingColors: true
     }));
 
-    const duration = LEVEL_DURATIONS[level as keyof typeof LEVEL_DURATIONS] * 1000;
+    const duration = LEVEL_DURATIONS[level] * 1000;
 
     setTimeout(() => {
       setGameState(prev => ({
@@ -77,7 +98,7 @@ const ColorPerception: React.FC = () => {
 
   // Renk seçimini işle
   const handleColorSelect = (colorName: string) => {
-    if (!gameState.isUserTurn || gameState.gameOver || showLevelComplete) return;
+    if (!gameState.isUserTurn || gameState.gameOver || feedback) return;
 
     setGameState(prev => {
       const newUserSelections = [...prev.userSelections, colorName];
@@ -87,17 +108,37 @@ const ColorPerception: React.FC = () => {
         const isCorrect = newUserSelections.every(color => correctColors.has(color));
 
         if (isCorrect) {
-          setScore(prevScore => prevScore + prev.level * 10);
+          playSound('correct');
+          setScore(prevScore => prevScore + prev.level * 100);
+          setFeedback('correct');
+          setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
 
-          if (prev.level === 5) {
-            return { ...prev, userSelections: newUserSelections, isUserTurn: false, gameOver: true };
-          } else {
-            setTimeout(() => setShowLevelComplete(true), 500);
-            return { ...prev, userSelections: newUserSelections, isUserTurn: false };
-          }
+          setTimeout(() => {
+            setFeedback(null);
+            if (prev.level === 5) {
+              setGameState(s => ({ ...s, userSelections: newUserSelections, isUserTurn: false, gameOver: true }));
+            } else {
+              generateColors(prev.level + 1);
+            }
+          }, 1500);
+
+          return { ...prev, userSelections: newUserSelections, isUserTurn: false };
         } else {
-          setScore(prevScore => Math.max(0, prevScore - 5));
-          setTimeout(() => generateColors(prev.level), 1500);
+          playSound('incorrect');
+          setFeedback('wrong');
+          setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+          setLives(l => {
+            const newLives = l - 1;
+            if (newLives <= 0) {
+              setTimeout(() => setGameState(s => ({ ...s, gameOver: true })), 1500);
+            } else {
+              setTimeout(() => {
+                setFeedback(null);
+                generateColors(prev.level);
+              }, 1500);
+            }
+            return newLives;
+          });
           return { ...prev, userSelections: [], isUserTurn: false };
         }
       }
@@ -106,17 +147,54 @@ const ColorPerception: React.FC = () => {
     });
   };
 
-  const startGame = () => {
+  const startGame = useCallback(() => {
     setGameStarted(true);
     setScore(0);
-    setShowLevelComplete(false);
+    setLives(3);
+    setFeedback(null);
+    gameStartTimeRef.current = Date.now();
+    hasSavedRef.current = false;
+    setGameState({
+      level: 1,
+      currentColors: [],
+      isUserTurn: false,
+      userSelections: [],
+      gameOver: false,
+      showingColors: false
+    });
     generateColors(1);
-  };
+  }, [generateColors]);
+
+  // Handle Auto Start from HUB
+  useEffect(() => {
+    if (location.state?.autoStart && !gameStarted) {
+      startGame();
+    }
+  }, [location.state, gameStarted, startGame]);
+
+  // Save game data on game over
+  useEffect(() => {
+    if (gameState.gameOver && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+      hasSavedRef.current = true;
+      const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+      saveGamePlay({
+        game_id: 'renk-algilama',
+        score_achieved: score,
+        duration_seconds: durationSeconds,
+        lives_remaining: lives,
+        metadata: {
+          level_reached: gameState.level,
+          game_name: 'Renk Algılama',
+        }
+      });
+    }
+  }, [gameState.gameOver, score, lives, gameState.level, saveGamePlay]);
 
   const restartGame = () => {
     setGameStarted(false);
     setScore(0);
-    setShowLevelComplete(false);
+    setLives(3);
+    setFeedback(null);
     setGameState({
       level: 1,
       currentColors: [],
@@ -127,75 +205,217 @@ const ColorPerception: React.FC = () => {
     });
   };
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-8 select-none">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-white/60 backdrop-blur-lg p-8 rounded-[3rem] border border-white shadow-xl">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-purple-100 rounded-2xl text-purple-brand">
-            <Brain size={32} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-black text-gray-900">Renk Algılama</h1>
-            <p className="text-gray-500 font-medium tracking-tight">Görsel hafızanı ve tepki hızını test et!</p>
-          </div>
+  // Welcome Screen
+  if (!gameStarted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-fuchsia-950 to-purple-950 text-white">
+        {/* Decorative Background */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="px-6 py-3 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2">
-            <Trophy className="text-yellow-500" size={20} />
-            <span className="text-lg font-black text-gray-800">{score}</span>
-          </div>
-          <div className="px-6 py-3 bg-purple-brand text-white rounded-2xl shadow-lg shadow-purple-100 flex items-center gap-2">
-            <Star size={20} />
-            <span className="text-lg font-black uppercase tracking-wider">{gameState.level}/5. Seviye</span>
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center max-w-xl"
+          >
+            {/* 3D Gummy Icon */}
+            <motion.div
+              className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+              style={{
+                background: 'linear-gradient(135deg, #E879F9 0%, #C026D3 100%)',
+                boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+              }}
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Palette size={52} className="text-white drop-shadow-lg" />
+            </motion.div>
+
+            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
+              🎨 Renk Algılama
+            </h1>
+
+            {/* Example */}
+            <div
+              className="rounded-2xl p-5 mb-6"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}
+            >
+              <p className="text-slate-400 text-sm mb-3">Örnek:</p>
+              <div className="flex items-center justify-center gap-4 mb-3">
+                <div className="flex gap-1">
+                  <div className="w-10 h-16 rounded-lg" style={{ background: COLORS.kırmızı }} />
+                  <div className="w-10 h-16 rounded-lg" style={{ background: COLORS.mavi }} />
+                </div>
+                <span className="text-2xl">→</span>
+                <Eye size={24} className="text-fuchsia-400" />
+                <span className="text-2xl">→</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(COLORS).map(([name, code]) => (
+                    <div
+                      key={name}
+                      className="w-8 h-8 rounded-lg"
+                      style={{ background: code, opacity: name === 'kırmızı' || name === 'mavi' ? 1 : 0.3 }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <p className="text-slate-400 text-sm">Renkleri ezberle ve doğru seç!</p>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+              <h3 className="text-lg font-bold text-fuchsia-300 mb-3 flex items-center gap-2">
+                <Eye size={20} /> Nasıl Oynanır?
+              </h3>
+              <ul className="space-y-2 text-slate-300 text-sm">
+                <li className="flex items-center gap-2">
+                  <Sparkles size={14} className="text-fuchsia-400" />
+                  <span>2 rengi <strong>birkaç saniye</strong> göreceksin</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Sparkles size={14} className="text-fuchsia-400" />
+                  <span>Renkler gizlenince <strong>doğru seç</strong></span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Sparkles size={14} className="text-fuchsia-400" />
+                  <span>Her seviyede süre kısalıyor! 3 can!</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* TUZÖ Badge */}
+            <div className="bg-fuchsia-500/10 text-fuchsia-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-fuchsia-500/30">
+              TUZÖ 5.4.1 Görsel Kısa Süreli Bellek
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.05, y: -4 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={startGame}
+              className="px-8 py-4 rounded-2xl font-bold text-lg"
+              style={{
+                background: 'linear-gradient(135deg, #E879F9 0%, #C026D3 100%)',
+                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(232, 121, 249, 0.4)'
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <Play size={24} fill="currentColor" />
+                <span>Hemen Başla</span>
+              </div>
+            </motion.button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-fuchsia-950 to-purple-950 text-white">
+      {/* Decorative Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      </div>
+
+      {/* Header */}
+      <div className="relative z-10 p-4 pt-20">
+        <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
+          <Link
+            to={backLink}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+          >
+            <ChevronLeft size={20} />
+            <span>{backLabel}</span>
+          </Link>
+
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Score */}
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{
+                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                border: '1px solid rgba(251, 191, 36, 0.3)'
+              }}
+            >
+              <Star className="text-amber-400 fill-amber-400" size={18} />
+              <span className="font-bold text-amber-400">{score}</span>
+            </div>
+
+            {/* Lives */}
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)'
+              }}
+            >
+              {[...Array(3)].map((_, i) => (
+                <Heart
+                  key={i}
+                  size={18}
+                  className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                />
+              ))}
+            </div>
+
+            {/* Level */}
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{
+                background: 'linear-gradient(135deg, rgba(232, 121, 249, 0.2) 0%, rgba(192, 38, 211, 0.1) 100%)',
+                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                border: '1px solid rgba(232, 121, 249, 0.3)'
+              }}
+            >
+              <Target className="text-fuchsia-400" size={18} />
+              <span className="font-bold text-fuchsia-400">Seviye {gameState.level}/5</span>
+            </div>
+
+            {/* Timer */}
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{
+                background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.1) 100%)',
+                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                border: '1px solid rgba(6, 182, 212, 0.3)'
+              }}
+            >
+              <Timer className="text-cyan-400" size={18} />
+              <span className="font-bold text-cyan-400">{LEVEL_DURATIONS[gameState.level]}sn</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        {!gameStarted ? (
-          <motion.div
-            key="start"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white/80 backdrop-blur-lg p-12 rounded-[4rem] shadow-2xl border border-white text-center space-y-10"
-          >
-            <div className="space-y-4">
-              <h2 className="text-4xl font-black text-gray-900">Meydan Okumaya Hazır Mısın?</h2>
-              <p className="text-lg text-gray-600 max-w-xl mx-auto font-medium leading-relaxed">
-                Bu oyunda, sadece birkaç saniyeliğine gösterilen renkleri doğru bir şekilde belirlemen gerekiyor. Zorluk her seviyede katlanarak artacak!
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-              {[1, 2, 3, 4, 5].map(lvl => (
-                <div key={lvl} className={`p-4 rounded-3xl border-2 transition-all ${lvl === 1 ? 'border-purple-brand bg-purple-50 text-purple-brand' : 'border-gray-100 text-gray-400'}`}>
-                  <Timer className="mx-auto mb-2 opacity-60" size={20} />
-                  <span className="block font-black text-xs uppercase">S-{lvl}</span>
-                  <span className="block font-black text-xl">{LEVEL_DURATIONS[lvl as keyof typeof LEVEL_DURATIONS]}sn</span>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={startGame}
-              className="px-12 py-5 bg-purple-brand text-white font-black text-2xl rounded-full shadow-2xl hover:scale-105 transition-all flex items-center gap-3 mx-auto group"
+      {/* Main Content */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+        <AnimatePresence mode="wait">
+          {!gameState.gameOver && (
+            <motion.div
+              key="game"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="w-full max-w-md"
             >
-              Hemen Başla <Play className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="game"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-10"
-          >
-            {/* Game Main Area */}
-            <div className="bg-white/80 backdrop-blur-lg p-12 rounded-[4rem] shadow-2xl border border-white flex flex-col items-center">
-              <div className="relative w-full max-w-md aspect-square bg-gray-50 rounded-[3rem] overflow-hidden border-8 border-gray-100 shadow-inner group">
+              {/* Color Display Area */}
+              <div
+                className="rounded-3xl overflow-hidden mb-8 aspect-square relative"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                  boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                  border: '4px solid rgba(255,255,255,0.1)'
+                }}
+              >
                 <AnimatePresence>
                   {gameState.showingColors && (
                     <motion.div
@@ -204,136 +424,193 @@ const ColorPerception: React.FC = () => {
                       exit={{ opacity: 0 }}
                       className="absolute inset-0 flex flex-col"
                     >
-                      <div className="h-1/2 w-full transition-transform duration-500" style={{ backgroundColor: COLORS[gameState.currentColors[0] as keyof typeof COLORS] }} />
-                      <div className="h-1/2 w-full transition-transform duration-500" style={{ backgroundColor: COLORS[gameState.currentColors[1] as keyof typeof COLORS] }} />
+                      <div className="h-1/2 w-full" style={{ backgroundColor: COLORS[gameState.currentColors[0]] }} />
+                      <div className="h-1/2 w-full" style={{ backgroundColor: COLORS[gameState.currentColors[1]] }} />
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {!gameState.showingColors && !gameState.isUserTurn && !gameState.gameOver && (
+                {!gameState.showingColors && !gameState.isUserTurn && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center animate-bounce">
-                      <Brain size={64} className="text-purple-brand opacity-20 mb-4 mx-auto" />
-                      <p className="text-purple-brand font-black uppercase tracking-widest text-xl">Hazırlanıyor...</p>
-                    </div>
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="text-center"
+                    >
+                      <Palette size={64} className="text-fuchsia-400/30 mb-4 mx-auto" />
+                      <p className="text-fuchsia-300 font-bold">Hazırlanıyor...</p>
+                    </motion.div>
                   </div>
                 )}
 
                 {gameState.isUserTurn && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-6">
-                    <div className="w-16 h-16 bg-purple-brand text-white rounded-2xl flex items-center justify-center animate-pulse">
-                      <Target size={32} />
-                    </div>
-                    <h4 className="text-2xl font-black text-gray-900 leading-tight">Gördüğün renkleri aşağıdan seç!</h4>
-                    <div className="flex gap-3">
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="w-16 h-16 rounded-[25%] flex items-center justify-center"
+                      style={{
+                        background: 'linear-gradient(135deg, #E879F9 0%, #C026D3 100%)',
+                        boxShadow: '0 0 20px rgba(232, 121, 249, 0.4)'
+                      }}
+                    >
+                      <Target size={32} className="text-white" />
+                    </motion.div>
+                    <h4 className="text-xl font-bold text-white">Gördüğün renkleri seç!</h4>
+                    <div className="flex gap-4">
                       {[0, 1].map(i => (
-                        <div key={i} className={`w-12 h-12 rounded-xl border-4 border-dashed transition-all ${gameState.userSelections[i] ? 'border-solid border-purple-brand scale-110' : 'border-gray-200'}`} style={{ backgroundColor: gameState.userSelections[i] ? COLORS[gameState.userSelections[i] as keyof typeof COLORS] : 'transparent' }} />
+                        <div
+                          key={i}
+                          className="w-14 h-14 rounded-xl transition-all"
+                          style={{
+                            background: gameState.userSelections[i] ? COLORS[gameState.userSelections[i]] : 'rgba(255,255,255,0.1)',
+                            border: gameState.userSelections[i] ? '3px solid rgba(255,255,255,0.5)' : '3px dashed rgba(255,255,255,0.2)',
+                            boxShadow: gameState.userSelections[i] ? '0 0 20px rgba(255,255,255,0.2)' : 'none'
+                          }}
+                        />
                       ))}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Action Area */}
-              <div className="mt-10 min-h-[80px] flex items-center justify-center w-full">
-                {gameState.gameOver ? (
-                  <button onClick={restartGame} className="flex items-center gap-3 px-10 py-4 bg-gray-900 text-white font-black text-xl rounded-2xl shadow-xl hover:bg-purple-brand transition-all">
-                    <RotateCcw /> Yeniden Dene
-                  </button>
-                ) : !gameState.isUserTurn && !gameState.showingColors && gameState.userSelections.length === 2 && (
-                  <button onClick={() => generateColors(gameState.level + 1)} className="flex items-center gap-3 px-12 py-5 bg-purple-brand text-white font-black text-2xl rounded-full shadow-2xl animate-bounce">
-                    Sonraki Seviye <Play />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Controls Area */}
-            <div className={`bg-white/60 backdrop-blur-lg p-10 rounded-[4rem] border border-white shadow-xl overflow-hidden relative ${showLevelComplete ? 'pointer-events-none opacity-20' : ''}`}>
-              <div className={`grid grid-cols-2 md:grid-cols-4 gap-6 transition-all duration-500 ${gameState.isUserTurn ? 'opacity-100 translate-y-0' : 'opacity-20 translate-y-10 filter blur-sm pointer-events-none'}`}>
+              {/* Color Buttons */}
+              <div
+                className={`grid grid-cols-2 gap-4 transition-all duration-300 ${gameState.isUserTurn ? 'opacity-100' : 'opacity-30 pointer-events-none'
+                  }`}
+              >
                 {Object.entries(COLORS).map(([name, code]) => (
-                  <button
+                  <motion.button
                     key={name}
+                    whileHover={gameState.isUserTurn ? { scale: 0.98, y: -2 } : {}}
+                    whileTap={gameState.isUserTurn ? { scale: 0.95 } : {}}
                     onClick={() => handleColorSelect(name)}
-                    disabled={!gameState.isUserTurn || gameState.gameOver || showLevelComplete}
-                    className="group relative overflow-hidden p-8 rounded-3xl transition-all active:scale-95 shadow-lg border-b-4 border-black/10"
-                    style={{ backgroundColor: code }}
+                    disabled={!gameState.isUserTurn || gameState.gameOver || feedback !== null}
+                    className="p-6 rounded-2xl font-bold text-lg text-white uppercase transition-all"
+                    style={{
+                      background: code,
+                      boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2)',
+                      cursor: gameState.isUserTurn ? 'pointer' : 'default'
+                    }}
                   >
-                    <span className="relative z-10 text-white font-black text-xl uppercase tracking-tighter drop-shadow-md">{name}</span>
-                    <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
+                    {name}
+                  </motion.button>
                 ))}
               </div>
-            </div>
+            </motion.div>
+          )}
 
-            {/* Modern Overlay Screens */}
-            <AnimatePresence>
-              {(gameState.gameOver || showLevelComplete) && (
+          {/* Game Over */}
+          {gameState.gameOver && (
+            <motion.div
+              key="gameover"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="text-center max-w-xl"
+            >
+              <motion.div
+                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                style={{
+                  background: gameState.level === 5
+                    ? 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)'
+                    : 'linear-gradient(135deg, #E879F9 0%, #EF4444 100%)',
+                  boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                }}
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Trophy size={52} className="text-white drop-shadow-lg" />
+              </motion.div>
+
+              <h2 className="text-3xl font-black text-fuchsia-300 mb-2">
+                {gameState.level === 5 ? '🎉 Efsanesin!' : 'Oyun Bitti!'}
+              </h2>
+              <p className="text-slate-400 mb-6">
+                {gameState.level === 5 ? 'Tüm seviyeleri tamamladın!' : 'Tekrar deneyelim!'}
+              </p>
+
+              <div
+                className="rounded-2xl p-6 mb-8"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                  boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}
+              >
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="text-center">
+                    <p className="text-slate-400 text-sm">Skor</p>
+                    <p className="text-3xl font-bold text-amber-400">{score}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-slate-400 text-sm">Seviye</p>
+                    <p className="text-3xl font-bold text-fuchsia-400">{gameState.level}</p>
+                  </div>
+                </div>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={startGame}
+                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                style={{
+                  background: 'linear-gradient(135deg, #E879F9 0%, #C026D3 100%)',
+                  boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(232, 121, 249, 0.4)'
+                }}
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <RotateCcw size={24} />
+                  <span>Yeniden Başla</span>
+                </div>
+              </motion.button>
+
+              <Link
+                to={backLink}
+                className="block text-slate-500 hover:text-white transition-colors"
+              >
+                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Feedback Overlay */}
+        <AnimatePresence>
+          {feedback && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ y: 50 }}
+                animate={{ y: 0 }}
+                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
+                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                  }`}
+                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+              >
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-white/40 backdrop-blur-md"
+                  animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                  transition={{ duration: 0.5 }}
                 >
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                    className="bg-white rounded-[4rem] p-12 shadow-2xl border border-purple-100 text-center max-w-md w-full relative overflow-hidden"
-                  >
-                    {showLevelComplete ? (
-                      <>
-                        <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-lg animate-bounce">
-                          <Star size={48} fill="currentColor" />
-                        </div>
-                        <h2 className="text-4xl font-black text-gray-900 mb-4">Harika İş!</h2>
-                        <p className="text-lg text-gray-500 font-bold mb-10">
-                          {gameState.level}. seviyeyi başarıyla geçtin. <br />Daha hızlı olmaya hazır mısın?
-                        </p>
-                        <button
-                          onClick={() => generateColors(gameState.level + 1)}
-                          className="w-full py-6 bg-emerald-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 shadow-xl shadow-emerald-200 hover:scale-105 transition-all text-2xl group"
-                        >
-                          Sonraki Seviye <Play className="group-hover:translate-x-1 transition-transform" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-lg ${gameState.level === 5 ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-500'}`}>
-                          {gameState.level === 5 ? <Trophy size={48} fill="currentColor" /> : <Target size={48} />}
-                        </div>
-                        <h2 className="text-4xl font-black text-gray-900 mb-4">
-                          {gameState.level === 5 ? 'Efsanesin!' : 'Tekrar Deneyelim! 💪'}
-                        </h2>
-                        <p className="text-lg text-gray-500 font-bold mb-10 leading-relaxed">
-                          {gameState.level === 5
-                            ? `Tebrikler! Tüm seviyeleri tamamlayarak skorunu ${score}'a çıkardın!`
-                            : `Hata yaptın ama moralini bozma. <br/>Final Skorun: ${score}`}
-                        </p>
-                        <button
-                          onClick={restartGame}
-                          className="w-full py-6 bg-gray-900 text-white font-black rounded-3xl flex items-center justify-center gap-3 shadow-xl hover:bg-purple-brand transition-all text-2xl"
-                        >
-                          <RotateCcw /> Yeniden Başla
-                        </button>
-                      </>
-                    )}
-                  </motion.div>
+                  {feedback === 'correct'
+                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                  }
                 </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="flex justify-center pt-8">
-        <Link to="/beyin-antrenoru-merkezi" className="inline-flex items-center gap-2 text-gray-500 hover:text-purple-brand font-black transition-colors">
-          <ChevronLeft size={20} /> Antrenör Merkezine Dön
-        </Link>
+                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 };
-
 
 export default ColorPerception;

@@ -13,16 +13,16 @@ const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 
-// Soft Candy Color Palette
+// High Contrast Candy Color Palette - More Distinct Colors
 const COLORS = [
-    '#FF8FAB', // Soft Pink
-    '#7DD3FC', // Sky Blue
-    '#86EFAC', // Mint Green
-    '#FDE68A', // Lemon Cream
-    '#C4B5FD', // Lavender
-    '#FCA5A5', // Coral
-    '#67E8F9', // Aqua
-    '#FDBA74', // Peach
+    '#FF3366', // Vivid Pink
+    '#00BFFF', // Deep Sky Blue
+    '#00FF7F', // Spring Green
+    '#FFD700', // Gold
+    '#9B59B6', // Purple
+    '#FF6B35', // Orange Red
+    '#00CED1', // Dark Turquoise
+    '#E91E63', // Pink
 ];
 
 // Child-friendly feedback messages
@@ -126,6 +126,7 @@ const PatternPainterGame: React.FC = () => {
     // Feedback State
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackType, setFeedbackType] = useState<'correct' | 'wrong'>('correct');
+    const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
 
     // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -218,9 +219,14 @@ const PatternPainterGame: React.FC = () => {
         const messages = isCorrect ? CORRECT_MESSAGES : WRONG_MESSAGES;
         setFeedbackMessage(messages[Math.floor(Math.random() * messages.length)]);
         setFeedbackType(isCorrect ? 'correct' : 'wrong');
+        setShowCorrectAnswer(!isCorrect); // Show correct answer when wrong
         setPhase('feedback');
 
+        // Longer timeout for wrong answers to show correct solution
+        const timeout = isCorrect ? 1500 : 3000;
+
         setTimeout(() => {
+            setShowCorrectAnswer(false);
             if (isCorrect) {
                 if (level >= MAX_LEVEL) {
                     handleVictory();
@@ -241,7 +247,7 @@ const PatternPainterGame: React.FC = () => {
                     setPhase('playing');
                 }
             }
-        }, 1500);
+        }, timeout);
     }, [level, lives, handleVictory, handleGameOver, setupLevel]);
 
     // Check Answer
@@ -418,7 +424,7 @@ const PatternPainterGame: React.FC = () => {
                                             initial={{ y: 50 }}
                                             animate={{ y: 0 }}
                                             className={`
-                                                px-12 py-8 rounded-3xl text-center
+                                                px-12 py-8 rounded-3xl text-center max-w-sm
                                                 ${feedbackType === 'correct'
                                                     ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
                                                     : 'bg-gradient-to-br from-orange-500 to-amber-600'
@@ -435,7 +441,31 @@ const PatternPainterGame: React.FC = () => {
                                                     : <XCircle size={64} className="mx-auto mb-4 text-white" />
                                                 }
                                             </motion.div>
-                                            <p className="text-3xl font-black text-white">{feedbackMessage}</p>
+                                            <p className="text-3xl font-black text-white mb-4">{feedbackMessage}</p>
+
+                                            {/* Show Correct Answer When Wrong */}
+                                            {showCorrectAnswer && currentLevel && (
+                                                <div className="mt-4">
+                                                    <p className="text-white/80 text-sm mb-3">Doğrusu bu olmalıydı:</p>
+                                                    <div className="grid grid-cols-2 gap-2 w-24 h-24 mx-auto p-2 bg-white/20 rounded-xl">
+                                                        {currentLevel.correctOption.map((row, r) =>
+                                                            row.map((color, c) => (
+                                                                <motion.div
+                                                                    key={`correct-${r}-${c}`}
+                                                                    initial={{ scale: 0 }}
+                                                                    animate={{ scale: 1 }}
+                                                                    transition={{ delay: 0.3 + (r * 2 + c) * 0.1 }}
+                                                                    style={{
+                                                                        backgroundColor: color,
+                                                                        borderRadius: '30%',
+                                                                        boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.3)'
+                                                                    }}
+                                                                />
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </motion.div>
                                     </motion.div>
                                 )}

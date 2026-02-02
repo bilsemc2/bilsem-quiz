@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, RefreshCw, Play, Trophy, Brain, Sparkles, Smile, Heart, Clock } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { ChevronLeft, RotateCcw, Play, Trophy, Sparkles, Heart, Star, Timer, CheckCircle2, XCircle, Puzzle, Eye, RefreshCw } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
@@ -34,9 +34,23 @@ interface GameOption {
 const COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#A29BFE', '#55E6C1', '#FD79A8', '#FAB1A0', '#00D2D3', '#54A0FF', '#5F27CD', '#FF9F43'];
 const PATTERN_TYPES = ['dots', 'stripes', 'zigzag', 'waves', 'checkerboard', 'crosshatch', 'star', 'polygon', 'scribble', 'burst'];
 
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Harika! 🧩",
+    "Süper Göz! 👁️",
+    "Müthiş! ⭐",
+    "Bravo! 🌟",
+];
+
+const FAILURE_MESSAGES = [
+    "Dikkatli bak! 👀",
+    "Tekrar dene! 💪",
+];
+
 const PartWholeGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [gamePattern, setGamePattern] = useState<Pattern[]>([]);
@@ -44,12 +58,17 @@ const PartWholeGame: React.FC = () => {
     const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
     const [gameStarted, setGameStarted] = useState(false);
     const [gameOver, setGameOver] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
-    const [isCorrecting, setIsCorrecting] = useState(false);
+    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [timeLeft, setTimeLeft] = useState(30);
-    const [lives, setLives] = useState(5);
-    const [totalTime, setTotalTime] = useState(180); // 3 dakika = 180 saniye
+    const [lives, setLives] = useState(3);
     const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
+    const totalQuestions = 10;
+
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
     const svgSize = 300;
     const pieceSize = 100;
@@ -157,9 +176,8 @@ const PartWholeGame: React.FC = () => {
 
     // Mikro renk sapması
     const distortColor = (hex: string | undefined, intensity: number = 10): string => {
-        // Güvenlik kontrolü
         if (!hex || typeof hex !== 'string' || hex.length < 7) {
-            return '#888888'; // Fallback renk
+            return '#888888';
         }
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
@@ -195,147 +213,111 @@ const PartWholeGame: React.FC = () => {
         });
 
         setOptions([...distractors, correctOption].sort(() => Math.random() - 0.5));
-        setShowSuccess(false);
-        setIsCorrecting(false);
+        setFeedback(null);
         setTimeLeft(30);
     }, [level, generatePattern, getPatternDefs]);
 
     useEffect(() => {
-        if (gameStarted && !gameOver && !showSuccess && !isCorrecting) {
+        if (gameStarted && !gameOver && !feedback) {
             generateLevel();
         }
-    }, [gameStarted, gameOver, level, generateLevel, showSuccess, isCorrecting]);
+    }, [gameStarted, gameOver, level, generateLevel, feedback]);
 
-    // Soru zamanlayıcısı
+    // Timer
     useEffect(() => {
-        if (!gameStarted || gameOver || showSuccess || isCorrecting) return;
+        if (!gameStarted || gameOver || feedback) return;
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    playSound('complete');
-                    setIsCorrecting(true);
-                    setLives(l => {
-                        const newLives = l - 1;
-                        if (newLives <= 0) {
-                            setTimeout(() => setGameOver(true), 1500);
-                        } else {
-                            setTimeout(() => {
-                                setIsCorrecting(false);
-                                if (level === 20) {
-                                    setGameOver(true);
-                                } else {
-                                    setLevel(lv => lv + 1);
-                                }
-                            }, 1500);
-                        }
-                        return newLives;
-                    });
+                    setFeedback('wrong');
+                    setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+                    setLives(l => l - 1);
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [gameStarted, gameOver, showSuccess, isCorrecting, playSound, level]);
+    }, [gameStarted, gameOver, feedback]);
 
-    // Toplam süre zamanlayıcısı
+    // Handle feedback timeout
     useEffect(() => {
-        if (!gameStarted || gameOver) return;
-        const totalTimer = setInterval(() => {
-            setTotalTime(prev => {
-                if (prev <= 1) {
-                    clearInterval(totalTimer);
+        if (feedback) {
+            const timeout = setTimeout(() => {
+                setFeedback(null);
+                if (lives <= 0 && feedback === 'wrong') {
                     setGameOver(true);
-                    return 0;
+                } else if (level >= totalQuestions) {
+                    setGameOver(true);
+                } else {
+                    setLevel(l => l + 1);
                 }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(totalTimer);
-    }, [gameStarted, gameOver]);
+            }, 2000);
+            return () => clearTimeout(timeout);
+        }
+    }, [feedback, lives, level]);
 
     const handleOptionSelect = (option: GameOption) => {
-        if (isCorrecting || showSuccess) return;
+        if (feedback || gameOver) return;
 
         if (option.isCorrect) {
             playSound('correct');
-            setScore(s => s + timeLeft * 10);
-            if (level === 20) {
-                setGameOver(true);
-            } else {
-                setShowSuccess(true);
-                setTimeout(() => {
-                    setLevel(l => l + 1);
-                    setShowSuccess(false);
-                }, 1200);
-            }
+            setFeedback('correct');
+            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            setScore(s => s + (level * 100) + (timeLeft * 5));
         } else {
             playSound('incorrect');
-            setScore(s => Math.max(0, s - 10));
-            setIsCorrecting(true);
-            setLives(l => {
-                const newLives = l - 1;
-                if (newLives <= 0) {
-                    setTimeout(() => setGameOver(true), 1500);
-                } else {
-                    setTimeout(() => {
-                        setIsCorrecting(false);
-                        if (level === 20) {
-                            setGameOver(true);
-                        } else {
-                            setLevel(lv => lv + 1);
-                        }
-                    }, 1500);
-                }
-                return newLives;
-            });
+            setFeedback('wrong');
+            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            setLives(l => l - 1);
         }
     };
 
-    const restart = () => {
-        setOptions([]); // Önce seçenekleri temizle
-        setGamePattern([]); // Desenini temizle
+    const startGame = useCallback(() => {
+        setOptions([]);
+        setGamePattern([]);
         setLevel(1);
         setScore(0);
-        setLives(5);
-        setTotalTime(180);
+        setLives(3);
         setGameOver(false);
         setGameStarted(true);
-        setShowSuccess(false);
-        setIsCorrecting(false);
+        setFeedback(null);
         gameStartTimeRef.current = Date.now();
-    };
+        hasSavedRef.current = false;
+    }, []);
 
-    // Yeni soru yenileme fonksiyonu
-    const nextQuestion = useCallback(() => {
-        if (isCorrecting || showSuccess || gameOver) return;
-        setScore(s => Math.max(0, s - 15)); // Puan cezası
-        generateLevel();
-    }, [isCorrecting, showSuccess, gameOver, generateLevel]);
-
-    // Oyun başladığında süre başlat
+    // Handle Auto Start from HUB
     useEffect(() => {
-        if (gameStarted && !gameOver) {
-            gameStartTimeRef.current = Date.now();
+        if (location.state?.autoStart && !gameStarted) {
+            startGame();
         }
-    }, [gameStarted, gameOver]);
+    }, [location.state, gameStarted, startGame]);
 
-    // Oyun bittiğinde verileri kaydet
+    // Save game data on finish
     useEffect(() => {
-        if (gameOver && gameStartTimeRef.current > 0) {
+        if (gameOver && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
             saveGamePlay({
                 game_id: 'parca-butun',
                 score_achieved: score,
                 duration_seconds: durationSeconds,
+                lives_remaining: lives,
                 metadata: {
                     level_reached: level,
                     game_name: 'Parça Bütün İlişkisi',
                 }
             });
         }
-    }, [gameOver, score, level, saveGamePlay]);
+    }, [gameOver, score, lives, level, saveGamePlay]);
+
+    // Skip question with penalty
+    const skipQuestion = useCallback(() => {
+        if (feedback || gameOver) return;
+        setScore(s => Math.max(0, s - 50));
+        generateLevel();
+    }, [feedback, gameOver, generateLevel]);
 
     // ------------------ Render Component ------------------
     const PatternSVG = ({ pattern, size, viewBox, isMain = false }: { pattern: Pattern[], size: number, viewBox?: string, isMain?: boolean }) => (
@@ -343,7 +325,8 @@ const PartWholeGame: React.FC = () => {
             width={size}
             height={size}
             viewBox={viewBox || `0 0 ${svgSize} ${svgSize}`}
-            className="rounded-[2.5rem] bg-white shadow-xl overflow-hidden border-4 border-white"
+            className="rounded-[25%] overflow-hidden"
+            style={{ boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2)' }}
         >
             {pattern.map((p, i) => (
                 <React.Fragment key={`${p.id}-${i}`}>
@@ -364,200 +347,416 @@ const PartWholeGame: React.FC = () => {
                     width={pieceSize}
                     height={pieceSize}
                     fill="white"
-                    stroke="#f0f0f0"
-                    strokeWidth="1"
+                    stroke="rgba(255,255,255,0.5)"
+                    strokeWidth="3"
                     rx="15"
+                    style={{ filter: 'drop-shadow(0 0 10px rgba(0,0,0,0.3))' }}
                 />
             )}
         </svg>
     );
 
+    // Welcome Screen
     if (!gameStarted) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-6 pt-24 relative overflow-hidden">
-                {/* Background Effects */}
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[150px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-pink-600/15 rounded-full blur-[150px]" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] bg-indigo-600/10 rounded-full blur-[100px]" />
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-emerald-950 text-white">
+                {/* Decorative Background */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
+                </div>
 
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="bg-slate-800/50 backdrop-blur-xl p-12 rounded-[3rem] border border-white/10 text-center max-w-xl shadow-2xl relative z-10"
-                >
-                    <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-purple-500/30">
-                        <Brain size={48} className="text-white" />
-                    </div>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm font-bold uppercase tracking-widest mb-6">
-                        <Sparkles size={16} /> Beyin Egzersizi
-                    </div>
-                    <h1 className="text-4xl lg:text-5xl font-black text-white mb-4">Parça <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Bütün</span></h1>
-                    <p className="text-slate-400 font-medium mb-10 leading-relaxed text-lg">
-                        Milyarlarca farklı desenden eksik parçayı bulmaya hazır mısın?<br />Zihnini çalıştır ve resimleri tamamla!
-                    </p>
-                    <button
-                        onClick={() => setGameStarted(true)}
-                        className="px-10 py-5 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 flex items-center gap-4 mx-auto"
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-center max-w-xl"
                     >
-                        <Play fill="currentColor" size={24} /> Oyuna Başla
-                    </button>
-                </motion.div>
+                        {/* 3D Gummy Icon */}
+                        <motion.div
+                            className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, #14B8A6 0%, #059669 100%)',
+                                boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                            }}
+                            animate={{ y: [0, -8, 0] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                            <Puzzle size={52} className="text-white drop-shadow-lg" />
+                        </motion.div>
+
+                        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
+                            🧩 Parça Bütün
+                        </h1>
+
+                        {/* Example */}
+                        <div
+                            className="rounded-2xl p-5 mb-6"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            <p className="text-slate-400 text-sm mb-3">Örnek:</p>
+                            <div className="flex items-center justify-center gap-4 mb-3">
+                                <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center relative">
+                                    <div className="w-8 h-8 bg-white rounded-lg absolute" />
+                                </div>
+                                <span className="text-2xl">→</span>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[0, 1, 2, 3].map(i => (
+                                        <div
+                                            key={i}
+                                            className="w-8 h-8 rounded-lg"
+                                            style={{
+                                                background: i === 1
+                                                    ? 'linear-gradient(135deg, #14B8A6 0%, #06B6D4 100%)'
+                                                    : 'rgba(255,255,255,0.1)',
+                                                border: i === 1 ? '2px solid #14B8A6' : '1px solid rgba(255,255,255,0.1)'
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            <p className="text-slate-400 text-sm">Eksik parçanın desenini bul!</p>
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                            <h3 className="text-lg font-bold text-teal-300 mb-3 flex items-center gap-2">
+                                <Eye size={20} /> Nasıl Oynanır?
+                            </h3>
+                            <ul className="space-y-2 text-slate-300 text-sm">
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-teal-400" />
+                                    <span>Desendeki <strong>beyaz boşluğa</strong> dikkat et</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-teal-400" />
+                                    <span>Seçeneklerden <strong>doğru parçayı</strong> bul</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-teal-400" />
+                                    <span>Renkler ve desenler aynı olmalı! 3 can!</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* TUZÖ Badge */}
+                        <div className="bg-teal-500/10 text-teal-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-teal-500/30">
+                            TUZÖ 4.2.1 Parça-Bütün İlişkileri
+                        </div>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05, y: -4 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={startGame}
+                            className="px-8 py-4 rounded-2xl font-bold text-lg"
+                            style={{
+                                background: 'linear-gradient(135deg, #14B8A6 0%, #059669 100%)',
+                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(20, 184, 166, 0.4)'
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Play size={24} fill="currentColor" />
+                                <span>Oyuna Başla</span>
+                            </div>
+                        </motion.button>
+                    </motion.div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-6 pt-24 relative overflow-hidden flex flex-col items-center">
-            {/* Background Effects */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/15 rounded-full blur-[150px]" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-600/10 rounded-full blur-[150px]" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-emerald-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
+            </div>
 
-            <div className="container mx-auto max-w-5xl relative z-10 flex flex-col gap-8">
-                {/* Header Bar */}
-                <div className="flex items-center justify-between bg-slate-800/50 backdrop-blur-xl p-6 rounded-2xl border border-white/10">
-                    <Link to="/atolyeler/tablet-degerlendirme" className="flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold transition-all">
-                        <ChevronLeft size={24} /> Geri
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
                     </Link>
-                    <div className="flex items-center gap-6">
-                        {/* Canlar */}
-                        <div className="flex flex-col items-center">
-                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Can</span>
-                            <div className="flex gap-1">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <Heart
-                                        key={i}
-                                        size={20}
-                                        className={`transition-all ${i < lives ? 'text-red-500 fill-red-500' : 'text-slate-700'}`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Seviye</span>
-                            <div className="text-2xl font-black text-white">{level}<span className="text-slate-600 text-sm">/20</span></div>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Puan</span>
-                            <div className="text-2xl font-black text-emerald-400">{score}</div>
-                        </div>
-                        {/* Soru Süresi */}
-                        <div className="flex flex-col items-center min-w-[60px]">
-                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Soru</span>
-                            <div className={`text-2xl font-black font-mono ${timeLeft < 10 ? 'text-red-400 animate-pulse' : 'text-amber-400'} transition-all`}>
-                                {timeLeft}
-                            </div>
-                        </div>
-                        {/* Toplam Süre */}
-                        <div className="flex flex-col items-center min-w-[70px]">
-                            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Toplam</span>
-                            <div className={`flex items-center gap-1 text-xl font-black font-mono ${totalTime < 30 ? 'text-red-400 animate-pulse' : 'text-cyan-400'} transition-all`}>
-                                <Clock size={16} />
-                                {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}
-                            </div>
-                        </div>
-                    </div>
-                    <button
-                        onClick={nextQuestion}
-                        disabled={isCorrecting || showSuccess}
-                        className="p-3 bg-amber-500/20 text-amber-400 hover:text-amber-300 hover:bg-amber-500/30 rounded-xl transition-all border border-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        title="Yeni soru (puan cezası)"
-                    >
-                        <RefreshCw size={20} />
-                        <span className="text-sm font-bold hidden sm:inline">Soru Yenile</span>
-                    </button>
-                </div>
 
-                {/* Game Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-slate-800/50 backdrop-blur-xl p-10 rounded-3xl border border-white/10 space-y-6 flex flex-col items-center"
-                    >
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm font-bold">
-                            <Brain size={20} /> Deseni İncele
+                    <div className="flex items-center gap-4 flex-wrap">
+                        {/* Score */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(251, 191, 36, 0.3)'
+                            }}
+                        >
+                            <Star className="text-amber-400 fill-amber-400" size={18} />
+                            <span className="font-bold text-amber-400">{score}</span>
                         </div>
-                        <div className="relative p-6 bg-slate-900/50 rounded-2xl border border-white/5">
-                            <PatternSVG pattern={gamePattern} size={svgSize} isMain={true} />
-                        </div>
-                    </motion.div>
 
-                    <div className="bg-slate-800/50 backdrop-blur-xl p-10 rounded-3xl border border-white/10 flex flex-col items-center gap-8">
-                        <h2 className="text-2xl font-black text-white flex items-center gap-3">
-                            Doğru Parçayı Bul <Sparkles className="text-amber-400" size={24} />
-                        </h2>
-                        <div className="grid grid-cols-2 gap-6 w-full">
-                            {options.length > 0 && options.map((option, idx) => (
-                                <motion.button
-                                    key={idx}
-                                    whileHover={!isCorrecting && !showSuccess ? { scale: 1.05, y: -4 } : {}}
-                                    whileTap={!isCorrecting && !showSuccess ? { scale: 0.98 } : {}}
-                                    onClick={() => handleOptionSelect(option)}
-                                    className={`bg-slate-700/50 rounded-2xl p-4 transition-all border-2 relative group overflow-hidden ${isCorrecting && option.isCorrect
-                                        ? 'border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.3)] scale-105'
-                                        : 'border-white/5'
-                                        } ${!isCorrecting && !showSuccess ? 'hover:border-purple-500/50 hover:bg-slate-600/50' : ''}`}
-                                >
-                                    <PatternSVG
-                                        pattern={option.pattern}
-                                        size={140}
-                                        viewBox={`${targetPos.x} ${targetPos.y} ${pieceSize} ${pieceSize}`}
-                                    />
-                                </motion.button>
+                        {/* Lives */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)'
+                            }}
+                        >
+                            {[...Array(3)].map((_, i) => (
+                                <Heart
+                                    key={i}
+                                    size={18}
+                                    className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                                />
                             ))}
                         </div>
+
+                        {/* Level */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(20, 184, 166, 0.3)'
+                            }}
+                        >
+                            <Puzzle className="text-teal-400" size={18} />
+                            <span className="font-bold text-teal-400">{level}/{totalQuestions}</span>
+                        </div>
+
+                        {/* Timer */}
+                        <div
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: timeLeft <= 10
+                                    ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)'
+                                    : 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                border: timeLeft <= 10
+                                    ? '1px solid rgba(239, 68, 68, 0.5)'
+                                    : '1px solid rgba(6, 182, 212, 0.3)'
+                            }}
+                        >
+                            <Timer className={timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'} size={18} />
+                            <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'}`}>{timeLeft}s</span>
+                        </div>
+
+                        {/* Skip Button */}
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={skipQuestion}
+                            disabled={feedback !== null}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
+                                border: '1px solid rgba(251, 191, 36, 0.3)',
+                                opacity: feedback ? 0.5 : 1
+                            }}
+                        >
+                            <RefreshCw size={16} className="text-amber-400" />
+                            <span className="text-amber-400 text-sm font-bold">Atla</span>
+                        </motion.button>
                     </div>
                 </div>
+            </div>
 
-                <AnimatePresence>
-                    {showSuccess && (
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center p-4">
+                <AnimatePresence mode="wait">
+                    {!gameOver && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.3, y: 100 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.5, y: -100 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+                            key="game"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="w-full max-w-5xl"
                         >
-                            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-16 py-10 rounded-3xl font-black text-5xl shadow-2xl flex items-center gap-6 border border-white/20">
-                                <Smile size={60} fill="currentColor" /> Harika!
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                                {/* Main Pattern */}
+                                <div
+                                    className="rounded-3xl p-6 flex flex-col items-center"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
+                                    }}
+                                >
+                                    <div className="text-center mb-4">
+                                        <span className="text-sm font-bold text-teal-400 flex items-center justify-center gap-2">
+                                            <Puzzle size={16} />
+                                            Deseni İncele
+                                        </span>
+                                    </div>
+                                    <PatternSVG pattern={gamePattern} size={svgSize} isMain={true} />
+                                </div>
+
+                                {/* Options */}
+                                <div
+                                    className="rounded-3xl p-6 flex flex-col items-center"
+                                    style={{
+                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
+                                    }}
+                                >
+                                    <h2 className="text-xl font-bold text-center mb-6 flex items-center justify-center gap-2">
+                                        Doğru Parçayı Bul! <Sparkles className="text-yellow-400" size={20} />
+                                    </h2>
+
+                                    <div className="grid grid-cols-2 gap-4 w-full">
+                                        {options.length > 0 && options.map((option, idx) => {
+                                            const showResult = feedback !== null;
+                                            const isCorrect = option.isCorrect;
+
+                                            return (
+                                                <motion.button
+                                                    key={idx}
+                                                    whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
+                                                    whileTap={!feedback ? { scale: 0.95 } : {}}
+                                                    onClick={() => handleOptionSelect(option)}
+                                                    disabled={feedback !== null}
+                                                    className="p-4 rounded-2xl transition-all flex items-center justify-center"
+                                                    style={{
+                                                        background: showResult && isCorrect
+                                                            ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                                                            : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                                        boxShadow: showResult && isCorrect
+                                                            ? '0 0 30px rgba(16, 185, 129, 0.5)'
+                                                            : 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
+                                                        border: showResult && isCorrect
+                                                            ? '2px solid #10B981'
+                                                            : '1px solid rgba(255,255,255,0.1)',
+                                                        cursor: feedback ? 'default' : 'pointer',
+                                                        opacity: showResult && !isCorrect ? 0.5 : 1
+                                                    }}
+                                                >
+                                                    <PatternSVG
+                                                        pattern={option.pattern}
+                                                        size={120}
+                                                        viewBox={`${targetPos.x} ${targetPos.y} ${pieceSize} ${pieceSize}`}
+                                                    />
+                                                </motion.button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     )}
 
+                    {/* Game Over */}
                     {gameOver && (
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl"
+                            key="gameover"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
                             <motion.div
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="bg-slate-800/90 backdrop-blur-xl rounded-3xl p-16 border border-white/10 text-center max-w-lg w-full shadow-2xl relative"
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #14B8A6 0%, #EF4444 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
                             >
-                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-28 h-28 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-amber-500/30">
-                                    <Trophy size={56} />
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
+
+                            <h2 className="text-3xl font-black text-teal-300 mb-2">
+                                {level >= 7 ? '🎉 Harika!' : 'Oyun Bitti!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                {level >= 7 ? 'Desen ustasısın!' : 'Tekrar deneyelim!'}
+                            </p>
+
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Seviye</p>
+                                        <p className="text-3xl font-bold text-teal-400">{level}</p>
+                                    </div>
                                 </div>
-                                <h2 className="text-5xl font-black text-white mb-6 mt-8">Tekrar Deneyelim! 💪</h2>
-                                <p className="text-slate-400 font-medium text-xl mb-4">
-                                    {score > 0 ? "Milyarlarca desen içinden doğru yolu buldun!" : "Üzülme, bir sonraki sefer kesin yapacaksın!"}
-                                </p>
-                                <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-10">
-                                    Skor: {score}
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #14B8A6 0%, #059669 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(20, 184, 166, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
                                 </div>
-                                <div className="space-y-4">
-                                    <button
-                                        onClick={restart}
-                                        className="w-full py-5 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-2xl flex items-center justify-center gap-4 shadow-lg shadow-purple-500/30 hover:scale-105 transition-all text-xl"
-                                    >
-                                        <RefreshCw size={28} /> Tekrar Oyna
-                                    </button>
-                                    <Link
-                                        to="/atolyeler/tablet-degerlendirme"
-                                        className="block py-4 text-slate-400 font-bold text-lg hover:text-white transition-colors"
-                                    >
-                                        Kontrol Merkezine Dön
-                                    </Link>
-                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Feedback Overlay */}
+                <AnimatePresence>
+                    {feedback && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ y: 50 }}
+                                animate={{ y: 0 }}
+                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }`}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {feedback === 'correct'
+                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    }
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
                             </motion.div>
                         </motion.div>
                     )}

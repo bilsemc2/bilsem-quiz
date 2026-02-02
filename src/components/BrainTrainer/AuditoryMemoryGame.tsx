@@ -1,23 +1,37 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Volume2, CheckCircle2, XCircle, ChevronLeft, Zap, Headphones, Music } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, RotateCcw, Play, Star, Volume2, CheckCircle2, XCircle, ChevronLeft, Zap, Headphones, Music, Heart, Eye, Sparkles } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // Ses notaları - Web Audio API ile oluşturulacak
 const NOTES = [
-    { name: 'Do', frequency: 261.63, color: '#ef4444' },   // Kırmızı
-    { name: 'Re', frequency: 293.66, color: '#f97316' },   // Turuncu
-    { name: 'Mi', frequency: 329.63, color: '#eab308' },   // Sarı
-    { name: 'Fa', frequency: 349.23, color: '#22c55e' },   // Yeşil
-    { name: 'Sol', frequency: 392.00, color: '#06b6d4' },  // Cyan
-    { name: 'La', frequency: 440.00, color: '#3b82f6' },   // Mavi
-    { name: 'Si', frequency: 493.88, color: '#8b5cf6' },   // Mor
-    { name: 'Do2', frequency: 523.25, color: '#ec4899' },  // Pembe
+    { name: 'Do', frequency: 261.63, color: '#FF6B6B' },   // Kırmızı
+    { name: 'Re', frequency: 293.66, color: '#FFA07A' },   // Turuncu
+    { name: 'Mi', frequency: 329.63, color: '#FFD93D' },   // Sarı
+    { name: 'Fa', frequency: 349.23, color: '#6BCB77' },   // Yeşil
+    { name: 'Sol', frequency: 392.00, color: '#4ECDC4' },  // Cyan
+    { name: 'La', frequency: 440.00, color: '#4A90D9' },   // Mavi
+    { name: 'Si', frequency: 493.88, color: '#9B59B6' },   // Mor
+    { name: 'Do2', frequency: 523.25, color: '#FF9FF3' },  // Pembe
+];
+
+// Child-friendly messages
+const SUCCESS_MESSAGES = [
+    "Harika! 🎵",
+    "Süper Kulak! 👂",
+    "Müthiş! ⭐",
+    "Bravo! 🌟",
+];
+
+const FAILURE_MESSAGES = [
+    "Tekrar dene! 💪",
+    "Dikkatli dinle! 👂",
 ];
 
 const AuditoryMemoryGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'listening' | 'answering' | 'feedback' | 'finished'>('idle');
     const [sequence, setSequence] = useState<number[]>([]);
     const [playerSequence, setPlayerSequence] = useState<number[]>([]);
@@ -30,12 +44,17 @@ const AuditoryMemoryGame: React.FC = () => {
     const [bestLevel, setBestLevel] = useState(0);
     const [activeNote, setActiveNote] = useState<number | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+    const [feedbackMsg, setFeedbackMsg] = useState('');
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
     const audioContextRef = useRef<AudioContext | null>(null);
 
+    // Back link
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
     // Seviyeye göre dizi uzunluğu
-    const getSequenceLength = (lvl: number) => Math.min(2 + lvl, 9); // Level 1 = 3, Level 7 = 9
+    const getSequenceLength = (lvl: number) => Math.min(2 + lvl, 9);
 
     // Audio Context oluştur
     const getAudioContext = useCallback(() => {
@@ -109,7 +128,6 @@ const AuditoryMemoryGame: React.FC = () => {
 
     // Oyunu başlat
     const startGame = useCallback(() => {
-        // Resume audio context if suspended
         const ctx = getAudioContext();
         if (ctx.state === 'suspended') {
             ctx.resume();
@@ -127,6 +145,13 @@ const AuditoryMemoryGame: React.FC = () => {
         startNewRound(1);
     }, [getAudioContext, startNewRound]);
 
+    // Auto start from HUB
+    useEffect(() => {
+        if (location.state?.autoStart && gameState === 'idle') {
+            startGame();
+        }
+    }, [location.state, gameState, startGame]);
+
     // Oyuncu nota seçti
     const handleNoteClick = useCallback((noteIndex: number) => {
         if (gameState !== 'answering') return;
@@ -135,11 +160,11 @@ const AuditoryMemoryGame: React.FC = () => {
         const newPlayerSequence = [...playerSequence, noteIndex];
         setPlayerSequence(newPlayerSequence);
 
-        // Doğru mu kontrol et
         const currentIndex = newPlayerSequence.length - 1;
         if (newPlayerSequence[currentIndex] !== sequence[currentIndex]) {
             // Yanlış!
             setIsCorrect(false);
+            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
             setWrongCount(prev => prev + 1);
             setLives(prev => prev - 1);
             setGameState('feedback');
@@ -148,13 +173,13 @@ const AuditoryMemoryGame: React.FC = () => {
                 if (lives <= 1) {
                     setGameState('finished');
                 } else {
-                    // Aynı seviyeyi tekrar dene
                     startNewRound(level);
                 }
             }, 1500);
         } else if (newPlayerSequence.length === sequence.length) {
             // Tamamladı!
             setIsCorrect(true);
+            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
             setCorrectCount(prev => prev + 1);
             const levelBonus = level * 50;
             setScore(prev => prev + 100 + levelBonus);
@@ -188,7 +213,7 @@ const AuditoryMemoryGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState]);
+    }, [gameState, score, lives, correctCount, wrongCount, bestLevel, saveGamePlay]);
 
     // Sıra tekrar dinle
     const replaySequence = () => {
@@ -198,117 +223,195 @@ const AuditoryMemoryGame: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 pt-24 pb-12 px-6">
-            <div className="container mx-auto max-w-4xl">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-6"
-                >
-                    <Link
-                        to="/atolyeler/bireysel-degerlendirme"
-                        className="inline-flex items-center gap-2 text-indigo-400 font-bold hover:text-indigo-300 transition-colors mb-4 uppercase text-xs tracking-widest"
-                    >
-                        <ChevronLeft size={16} />
-                        Bireysel Değerlendirme
-                    </Link>
-                    <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
-                        🎵 <span className="text-indigo-400">İşitsel</span> Hafıza
-                    </h1>
-                    <p className="text-slate-400">Ses dizisini dinle ve tekrarla!</p>
-                </motion.div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 text-white">
+            {/* Decorative Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+            </div>
 
-                {/* Stats */}
-                <div className="flex justify-center gap-4 mb-6 flex-wrap">
-                    <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                        <Star className="w-5 h-5 text-amber-400" />
-                        <span className="text-white font-bold">{score}</span>
-                    </div>
+            {/* Header */}
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                    <Link
+                        to={backLink}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                        <span>{backLabel}</span>
+                    </Link>
+
                     {gameState !== 'idle' && gameState !== 'finished' && (
-                        <>
-                            <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
-                                <Music className="w-5 h-5 text-indigo-400" />
-                                <span className="text-white font-bold">Seviye {level}</span>
+                        <div className="flex items-center gap-4 flex-wrap">
+                            {/* Score */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(251, 191, 36, 0.3)'
+                                }}
+                            >
+                                <Star className="text-amber-400 fill-amber-400" size={18} />
+                                <span className="font-bold text-amber-400">{score}</span>
                             </div>
-                            <div className="bg-slate-800/50 border border-white/10 rounded-xl px-5 py-2 flex items-center gap-2">
+
+                            {/* Lives */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                                }}
+                            >
                                 {[...Array(3)].map((_, i) => (
-                                    <span key={i} className={`text-xl ${i < lives ? 'text-red-400' : 'text-slate-600'}`}>♥</span>
+                                    <Heart
+                                        key={i}
+                                        size={18}
+                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
+                                    />
                                 ))}
                             </div>
-                        </>
+
+                            {/* Level */}
+                            <div
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
+                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(99, 102, 241, 0.3)'
+                                }}
+                            >
+                                <Music className="text-indigo-400" size={18} />
+                                <span className="font-bold text-indigo-400">Seviye {level}</span>
+                            </div>
+                        </div>
                     )}
                 </div>
+            </div>
 
-                {/* Game Area */}
-                <div className="flex flex-col items-center">
-                    {/* Idle State */}
+            {/* Main Content */}
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+                <AnimatePresence mode="wait">
+                    {/* Welcome Screen */}
                     {gameState === 'idle' && (
                         <motion.div
+                            key="welcome"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6"
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
-                            <div className="bg-slate-800/50 border border-white/10 rounded-3xl p-8 max-w-lg">
-                                <div className="text-6xl mb-4">🎵</div>
-                                <h2 className="text-2xl font-bold text-white mb-4">İşitsel Hafıza Testi</h2>
+                            {/* 3D Gummy Icon */}
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <Headphones size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                <div className="bg-slate-700/50 rounded-xl p-4 mb-6">
-                                    <p className="text-slate-300 text-sm mb-3">Nasıl Oynanır:</p>
-                                    <div className="flex justify-center gap-2 mb-3">
-                                        {[0, 1, 2, 3].map(i => (
-                                            <div
-                                                key={i}
-                                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                                                style={{ backgroundColor: NOTES[i].color }}
-                                            >
-                                                {i + 1}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-slate-400 text-sm">
-                                        Sesleri dinle, aynı sırayla tekrarla!
-                                    </p>
+                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                                🎵 İşitsel Hafıza
+                            </h1>
+
+                            {/* Example */}
+                            <div
+                                className="rounded-2xl p-5 mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <p className="text-slate-400 text-sm mb-3">Nasıl Oynanır:</p>
+                                <div className="flex justify-center gap-2 mb-3">
+                                    {[0, 1, 2, 3].map(i => (
+                                        <div
+                                            key={i}
+                                            className="w-12 h-12 rounded-[30%] flex items-center justify-center text-white font-bold"
+                                            style={{
+                                                background: `linear-gradient(135deg, ${NOTES[i].color} 0%, ${NOTES[i].color}99 100%)`,
+                                                boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.2)'
+                                            }}
+                                        >
+                                            {i + 1}
+                                        </div>
+                                    ))}
                                 </div>
+                                <p className="text-slate-400 text-sm">Sesleri dinle, aynı sırayla tekrarla!</p>
+                            </div>
 
-                                <ul className="text-slate-400 text-sm space-y-2 text-left mb-6">
+                            {/* Instructions */}
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                                <h3 className="text-lg font-bold text-indigo-300 mb-3 flex items-center gap-2">
+                                    <Eye size={20} /> Nasıl Oynanır?
+                                </h3>
+                                <ul className="space-y-2 text-slate-300 text-sm">
                                     <li className="flex items-center gap-2">
-                                        <Headphones className="w-4 h-4 text-indigo-400" />
-                                        Ses dizisini <strong className="text-white">dikkatle dinle</strong>
+                                        <Sparkles size={14} className="text-purple-400" />
+                                        <span>Ses dizisini <strong>dikkatle dinle</strong></span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <Volume2 className="w-4 h-4 text-emerald-400" />
-                                        Aynı sırayla notaları tıkla
+                                        <Sparkles size={14} className="text-purple-400" />
+                                        <span>Aynı sırayla notaları tıkla</span>
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <Zap className="w-4 h-4 text-amber-400" />
-                                        Her seviyede dizi uzuyor, 3 can!
+                                        <Sparkles size={14} className="text-purple-400" />
+                                        <span>Her seviyede dizi uzuyor, 3 can!</span>
                                     </li>
                                 </ul>
-
-                                <button
-                                    onClick={startGame}
-                                    className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold rounded-xl hover:from-indigo-400 hover:to-purple-400 transition-all flex items-center gap-3 mx-auto"
-                                >
-                                    <Play className="w-5 h-5" />
-                                    Teste Başla
-                                </button>
                             </div>
+
+                            {/* TUZÖ Badge */}
+                            <div className="bg-indigo-500/10 text-indigo-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30">
+                                TUZÖ 5.4.3 İşitsel Kısa Süreli Bellek
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="px-8 py-4 rounded-2xl font-bold text-lg"
+                                style={{
+                                    background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(99, 102, 241, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Play size={24} fill="currentColor" />
+                                    <span>Teste Başla</span>
+                                </div>
+                            </motion.button>
                         </motion.div>
                     )}
 
                     {/* Playing States */}
                     {(gameState === 'listening' || gameState === 'answering' || gameState === 'feedback') && (
                         <motion.div
+                            key="game"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             className="w-full max-w-xl"
                         >
                             {/* Status */}
-                            <div className={`bg-slate-800/70 border-2 rounded-2xl p-4 mb-6 text-center ${gameState === 'listening' ? 'border-indigo-500' :
-                                gameState === 'feedback' ? (isCorrect ? 'border-emerald-500' : 'border-red-500') :
-                                    'border-amber-500'
-                                }`}>
+                            <div
+                                className="rounded-2xl p-4 mb-6 text-center"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: gameState === 'listening' ? '2px solid rgba(99, 102, 241, 0.5)' :
+                                        gameState === 'feedback' && isCorrect ? '2px solid rgba(16, 185, 129, 0.5)' :
+                                            gameState === 'feedback' && !isCorrect ? '2px solid rgba(239, 68, 68, 0.5)' :
+                                                '2px solid rgba(245, 158, 11, 0.5)'
+                                }}
+                            >
                                 {gameState === 'listening' && (
                                     <div className="flex items-center justify-center gap-3 text-indigo-400">
                                         <Volume2 className="w-6 h-6 animate-pulse" />
@@ -326,13 +429,13 @@ const AuditoryMemoryGame: React.FC = () => {
                                 {gameState === 'feedback' && isCorrect && (
                                     <div className="flex items-center justify-center gap-3 text-emerald-400">
                                         <CheckCircle2 className="w-6 h-6" />
-                                        <span className="text-lg font-bold">Doğru! +{100 + level * 50} puan</span>
+                                        <span className="text-lg font-bold">{feedbackMsg}</span>
                                     </div>
                                 )}
                                 {gameState === 'feedback' && isCorrect === false && (
                                     <div className="flex items-center justify-center gap-3 text-red-400">
                                         <XCircle className="w-6 h-6" />
-                                        <span className="text-lg font-bold">Bu sefer olmadı! {lives > 0 ? `${lives} can kaldı` : 'Tekrar deneyelim!'}</span>
+                                        <span className="text-lg font-bold">{feedbackMsg}</span>
                                     </div>
                                 )}
                             </div>
@@ -344,21 +447,20 @@ const AuditoryMemoryGame: React.FC = () => {
                                         key={index}
                                         onClick={() => handleNoteClick(index)}
                                         disabled={gameState !== 'answering'}
-                                        whileHover={{ scale: gameState === 'answering' ? 1.05 : 1 }}
-                                        whileTap={{ scale: gameState === 'answering' ? 0.95 : 1 }}
-                                        className={`aspect-square rounded-2xl flex flex-col items-center justify-center text-white font-bold transition-all ${activeNote === index
-                                            ? 'ring-4 ring-white scale-110'
-                                            : ''
-                                            } ${gameState !== 'answering'
-                                                ? 'opacity-60 cursor-not-allowed'
-                                                : 'hover:ring-2 hover:ring-white/50 cursor-pointer'
-                                            }`}
+                                        whileHover={gameState === 'answering' ? { scale: 1.05, y: -4 } : {}}
+                                        whileTap={gameState === 'answering' ? { scale: 0.95 } : {}}
+                                        className="aspect-square rounded-[30%] flex flex-col items-center justify-center text-white font-bold transition-all"
                                         style={{
-                                            backgroundColor: activeNote === index ? note.color : `${note.color}99`,
-                                            boxShadow: activeNote === index ? `0 0 30px ${note.color}` : 'none'
+                                            background: `linear-gradient(135deg, ${note.color} 0%, ${note.color}99 100%)`,
+                                            boxShadow: activeNote === index
+                                                ? `inset 0 -4px 8px rgba(0,0,0,0.2), 0 0 30px ${note.color}`
+                                                : 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2)',
+                                            transform: activeNote === index ? 'scale(1.1)' : undefined,
+                                            opacity: gameState !== 'answering' ? 0.6 : 1,
+                                            cursor: gameState === 'answering' ? 'pointer' : 'not-allowed'
                                         }}
                                     >
-                                        <span className="text-2xl lg:text-3xl">{note.name}</span>
+                                        <span className="text-2xl lg:text-3xl drop-shadow">{note.name}</span>
                                     </motion.button>
                                 ))}
                             </div>
@@ -366,13 +468,20 @@ const AuditoryMemoryGame: React.FC = () => {
                             {/* Replay Button */}
                             {gameState === 'answering' && (
                                 <div className="flex justify-center">
-                                    <button
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                         onClick={replaySequence}
-                                        className="px-6 py-3 bg-slate-700/50 border border-white/20 text-white font-bold rounded-xl hover:bg-slate-600/50 transition-all flex items-center gap-2"
+                                        className="px-6 py-3 rounded-xl font-bold flex items-center gap-2"
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                            boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
+                                            border: '1px solid rgba(255,255,255,0.2)'
+                                        }}
                                     >
                                         <RotateCcw className="w-5 h-5" />
                                         Tekrar Dinle
-                                    </button>
+                                    </motion.button>
                                 </div>
                             )}
 
@@ -383,63 +492,87 @@ const AuditoryMemoryGame: React.FC = () => {
                         </motion.div>
                     )}
 
-                    {/* Finished State */}
+                    {/* Game Over */}
                     {gameState === 'finished' && (
                         <motion.div
+                            key="gameover"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-center space-y-6 w-full max-w-md"
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="text-center max-w-xl"
                         >
-                            <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-3xl p-8">
-                                <Trophy className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-                                <h2 className="text-3xl font-black text-white mb-2">Tekrar Deneyelim! 💪🎵</h2>
+                            <motion.div
+                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                                style={{
+                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
+                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+                                }}
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                            >
+                                <Trophy size={52} className="text-white drop-shadow-lg" />
+                            </motion.div>
 
-                                <div className="grid grid-cols-2 gap-4 my-6">
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">Toplam Puan</p>
-                                        <p className="text-2xl font-black text-amber-400">{score}</p>
+                            <h2 className="text-3xl font-black text-amber-300 mb-2">
+                                {bestLevel >= 5 ? '🎉 Harika!' : 'Oyun Bitti!'}
+                            </h2>
+                            <p className="text-slate-400 mb-6">
+                                {bestLevel >= 5 ? 'Müthiş kulak hafızası!' : 'Tekrar deneyelim!'}
+                            </p>
+
+                            <div
+                                className="rounded-2xl p-6 mb-8"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">Skor</p>
+                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
                                     </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
-                                        <p className="text-slate-400 text-sm">En Yüksek Seviye</p>
-                                        <p className="text-2xl font-black text-indigo-400">{bestLevel}</p>
+                                    <div className="text-center">
+                                        <p className="text-slate-400 text-sm">En İyi Seviye</p>
+                                        <p className="text-3xl font-bold text-indigo-400">{bestLevel}</p>
                                     </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
+                                    <div className="text-center">
                                         <p className="text-slate-400 text-sm">Doğru Dizi</p>
-                                        <p className="text-2xl font-black text-emerald-400">{correctCount}</p>
+                                        <p className="text-3xl font-bold text-emerald-400">{correctCount}</p>
                                     </div>
-                                    <div className="bg-slate-800/50 rounded-xl p-4">
+                                    <div className="text-center">
                                         <p className="text-slate-400 text-sm">Max Uzunluk</p>
-                                        <p className="text-2xl font-black text-purple-400">{getSequenceLength(bestLevel)}</p>
+                                        <p className="text-3xl font-bold text-purple-400">{getSequenceLength(bestLevel)}</p>
                                     </div>
-                                </div>
-
-                                <div className="flex items-center justify-center gap-2 text-sm text-slate-400 mb-6">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                    <span>{correctCount} Doğru</span>
-                                    <span className="text-slate-600">|</span>
-                                    <XCircle className="w-4 h-4 text-red-400" />
-                                    <span>{wrongCount} Yanlış</span>
-                                </div>
-
-                                <div className="flex justify-center gap-4">
-                                    <button
-                                        onClick={startGame}
-                                        className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold rounded-xl hover:from-indigo-400 hover:to-purple-400 transition-all flex items-center gap-2"
-                                    >
-                                        <RotateCcw className="w-5 h-5" />
-                                        Tekrar Oyna
-                                    </button>
-                                    <Link
-                                        to="/atolyeler/bireysel-degerlendirme"
-                                        className="px-6 py-3 bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-600 transition-all"
-                                    >
-                                        Geri Dön
-                                    </Link>
                                 </div>
                             </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startGame}
+                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
+                                style={{
+                                    background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(99, 102, 241, 0.4)'
+                                }}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />
+                                    <span>Tekrar Oyna</span>
+                                </div>
+                            </motion.button>
+
+                            <Link
+                                to={backLink}
+                                className="block text-slate-500 hover:text-white transition-colors"
+                            >
+                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                            </Link>
                         </motion.div>
                     )}
-                </div>
+                </AnimatePresence>
             </div>
         </div>
     );
