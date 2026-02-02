@@ -1,5 +1,5 @@
 import React from 'react';
-import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle, Zap } from 'lucide-react';
+import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle, Zap, Route } from 'lucide-react';
 
 export interface ArcadeGame {
     id: string;
@@ -101,5 +101,15 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         color: "from-cyan-500 to-purple-600",
         icon: <Zap size={48} className="text-white" />,
         link: "/bilsem-zeka/chromabreak"
+    },
+    {
+        id: 'yol-bulmaca',
+        title: "Yol Bulmaca",
+        description: "Renkleri ve rakamları ezberle, doğru cevabın üzerinden geçerek hedefe ulaş!",
+        cost: 40,
+        color: "from-yellow-500 to-orange-600",
+        icon: <Route size={48} className="text-white" />,
+        link: "/bilsem-zeka/yol-bulmaca"
     }
 ];
+

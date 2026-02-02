@@ -106,6 +106,7 @@ const OruntuluTop = React.lazy(() => import('./components/Arcade/Games/OruntuluT
 const KartDedektifi = React.lazy(() => import('./components/Arcade/Games/KartDedektifi/KartDedektifi'));
 const NeseliBalonlar = React.lazy(() => import('./components/Arcade/Games/NeseliBalonlar/NeseliBalonlar'));
 const ChromaBreak = React.lazy(() => import('./components/Arcade/Games/chromabreak/ChromaBreak'));
+const YolBulmaca = React.lazy(() => import('./components/Arcade/Games/YolBulmaca/YolBulmaca'));
 
 
 // ============================================
@@ -233,6 +234,7 @@ const LocationAwareRouter: React.FC = () => {
             <Route path="/bilsem-zeka/kart-dedektifi" element={<RequireAuth><KartDedektifi /></RequireAuth>} />
             <Route path="/bilsem-zeka/neseli-balonlar" element={<RequireAuth><NeseliBalonlar /></RequireAuth>} />
             <Route path="/bilsem-zeka/chromabreak" element={<RequireAuth><ChromaBreak /></RequireAuth>} />
+            <Route path="/bilsem-zeka/yol-bulmaca" element={<RequireAuth><YolBulmaca /></RequireAuth>} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" />} />

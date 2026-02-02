@@ -100,6 +100,26 @@ VALUES ('/bilsem-zeka/[oyun-slug]', 40, '[Oyun Adı]');
 
 ---
 
+## Adım 6: Intelligence Types Eşleştirmesi
+
+`src/constants/intelligenceTypes.ts` dosyasına oyunu ekle:
+
+**OYUN_ZEKA_ESLESTIRMESI (Zeka Türü):**
+```typescript
+// Arcade Oyunları bölümüne ekle
+'[oyun-slug]': ZEKA_TURLERI.CALISMA_BELLEGI, // veya uygun zeka türü
+```
+
+**OYUN_WORKSHOP_ESLESTIRMESI (Workshop Türü):**
+```typescript
+// Arcade Oyunları bölümüne ekle
+'[oyun-slug]': 'arcade',
+```
+
+> ⚠️ Bu adım **zorunludur**! Eklenmezse `workshop_type` ve `intelligence_type` veritabanına `null` olarak kaydedilir.
+
+---
+
 ## Arcade-Specific Özellikler
 
 **CoinToss Akışı:**
