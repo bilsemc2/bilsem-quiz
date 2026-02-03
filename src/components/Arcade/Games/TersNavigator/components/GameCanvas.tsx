@@ -105,19 +105,19 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
 
     const renderArrowIcon = (dir: Direction) => {
         switch (dir) {
-            case 'UP': return <ArrowUp className="w-8 h-8" />;
-            case 'DOWN': return <ArrowDown className="w-8 h-8" />;
-            case 'LEFT': return <ArrowLeft className="w-8 h-8" />;
-            case 'RIGHT': return <ArrowRight className="w-8 h-8" />;
+            case 'UP': return <ArrowUp className="w-6 h-6 sm:w-8 sm:h-8" />;
+            case 'DOWN': return <ArrowDown className="w-6 h-6 sm:w-8 sm:h-8" />;
+            case 'LEFT': return <ArrowLeft className="w-6 h-6 sm:w-8 sm:h-8" />;
+            case 'RIGHT': return <ArrowRight className="w-6 h-6 sm:w-8 sm:h-8" />;
         }
     };
 
     return (
-        <div className="w-full h-full flex flex-col lg:flex-row gap-6 items-center">
+        <div className="w-full h-full flex flex-col lg:flex-row gap-4 sm:gap-6 items-center px-2 sm:px-0">
             {/* Grid World */}
-            <div className="flex-1 w-full aspect-square max-w-[500px] bg-slate-900 border-4 border-slate-800 rounded-3xl p-4 relative grid grid-cols-8 grid-rows-8 gap-1 shadow-2xl overflow-hidden">
+            <div className="flex-shrink-0 w-full aspect-square max-w-[280px] sm:max-w-[400px] lg:max-w-[500px] bg-slate-900 border-2 sm:border-4 border-slate-800 rounded-2xl sm:rounded-3xl p-2 sm:p-4 relative grid grid-cols-8 grid-rows-8 gap-0.5 sm:gap-1 shadow-2xl overflow-hidden">
                 {[...Array(GRID_SIZE * GRID_SIZE)].map((_, i) => (
-                    <div key={i} className="border border-slate-800/20 rounded-md" />
+                    <div key={i} className="border border-slate-800/20 rounded-sm sm:rounded-md" />
                 ))}
 
                 {/* Target */}
@@ -128,11 +128,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
                         height: `${100 / GRID_SIZE}%`,
                         left: `${(targetPos.x / GRID_SIZE) * 100}%`,
                         top: `${(targetPos.y / GRID_SIZE) * 100}%`,
-                        padding: '4px'
+                        padding: '2px'
                     }}
                 >
-                    <div className="w-full h-full bg-emerald-500/20 border-2 border-emerald-500 rounded-lg flex items-center justify-center animate-pulse">
-                        <Target className="text-emerald-400 w-2/3 h-2/3" />
+                    <div className="w-full h-full bg-emerald-500/20 border sm:border-2 border-emerald-500 rounded sm:rounded-lg flex items-center justify-center animate-pulse">
+                        <Target className="text-emerald-400 w-1/2 h-1/2 sm:w-2/3 sm:h-2/3" />
                     </div>
                 </div>
 
@@ -144,42 +144,47 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
                         height: `${100 / GRID_SIZE}%`,
                         left: `${(playerPos.x / GRID_SIZE) * 100}%`,
                         top: `${(playerPos.y / GRID_SIZE) * 100}%`,
-                        padding: '4px'
+                        padding: '2px'
                     }}
                 >
-                    <div className={`w-full h-full rounded-lg shadow-lg flex items-center justify-center transition-all duration-200 ${feedback === 'correct' ? 'bg-emerald-500 scale-110' : feedback === 'wrong' ? 'animate-shake bg-red-600 scale-90' : 'bg-indigo-600'}`}>
-                        <Navigation2 className="text-white w-2/3 h-2/3 fill-current rotate-45" />
+                    <div className={`w-full h-full rounded sm:rounded-lg shadow-lg flex items-center justify-center transition-all duration-200 ${feedback === 'correct' ? 'bg-emerald-500 scale-110' : feedback === 'wrong' ? 'animate-shake bg-red-600 scale-90' : 'bg-indigo-600'}`}>
+                        <Navigation2 className="text-white w-1/2 h-1/2 sm:w-2/3 sm:h-2/3 fill-current rotate-45" />
                     </div>
                 </div>
 
-                <div className="absolute top-4 left-4 flex items-center gap-2 bg-slate-950/90 px-3 py-1 rounded-full border border-slate-700 backdrop-blur-sm z-20">
-                    <ChevronRight className="w-3 h-3 text-indigo-400" />
-                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">Hedefe İlerle</span>
+                <div className="absolute top-2 sm:top-4 left-2 sm:left-4 flex items-center gap-1 sm:gap-2 bg-slate-950/90 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-slate-700 backdrop-blur-sm z-20">
+                    <ChevronRight className="w-2 h-2 sm:w-3 sm:h-3 text-indigo-400" />
+                    <span className="text-[8px] sm:text-[10px] font-bold text-slate-300 uppercase tracking-tighter">Hedefe İlerle</span>
                 </div>
             </div>
 
             {/* Controls */}
-            <div className="flex-1 w-full max-w-sm flex flex-col items-center justify-center gap-8 py-6">
-                <div className="text-center bg-slate-900/40 p-6 rounded-3xl border border-slate-800 w-full">
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] mb-4">GİTMEK İSTEDİĞİN YÖN</p>
-                    <div className={`text-6xl font-black transition-all duration-300 ${feedback === 'wrong' ? 'text-red-500' : feedback === 'correct' ? 'text-emerald-500' : 'text-white'}`}>
+            <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm flex flex-col items-center justify-center gap-4 sm:gap-8 py-2 sm:py-6">
+                <div className="text-center bg-slate-900/40 p-3 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-800 w-full">
+                    <p className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-2 sm:mb-4">GİTMEK İSTEDİĞİN YÖN</p>
+                    <div className={`text-4xl sm:text-6xl font-black transition-all duration-300 ${feedback === 'wrong' ? 'text-red-500' : feedback === 'correct' ? 'text-emerald-500' : 'text-white'}`}>
                         {currentMove?.word}
                     </div>
-                    <div className="mt-6 flex flex-col gap-2">
-                        <span className="inline-block px-3 py-1 bg-red-500/10 text-red-400 text-[10px] font-bold rounded-full border border-red-500/20">
+                    <div className="mt-3 sm:mt-6 flex flex-col gap-2">
+                        <span className="inline-block px-2 sm:px-3 py-0.5 sm:py-1 bg-red-500/10 text-red-400 text-[8px] sm:text-[10px] font-bold rounded-full border border-red-500/20">
                             KURAL: OKLAR TERS ÇALIŞIR!
                         </span>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 w-full">
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 w-full">
                     {currentMove?.buttons.map((btn, idx) => (
                         <button
                             key={idx}
                             onClick={() => handleDirectionClick(btn.iconDirection)}
-                            className={`group h-24 rounded-3xl border-2 transition-all flex items-center justify-center active:scale-90 shadow-xl
+                            onTouchStart={(e) => {
+                                e.preventDefault();
+                                handleDirectionClick(btn.iconDirection);
+                            }}
+                            className={`group h-16 sm:h-24 rounded-2xl sm:rounded-3xl border-2 transition-all flex items-center justify-center active:scale-90 shadow-xl touch-none
                 ${feedback === 'wrong' ? 'border-red-600 bg-red-600/10' : 'border-slate-800 bg-slate-900 hover:border-indigo-500 hover:bg-indigo-500/10'}
               `}
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
                         >
                             <div className={`transition-colors ${feedback === 'wrong' ? 'text-red-500' : 'text-slate-400 group-hover:text-indigo-400'}`}>
                                 {renderArrowIcon(btn.iconDirection)}

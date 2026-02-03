@@ -97,26 +97,26 @@ const TersNavigator: React.FC = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-4 pt-20 relative">
+        <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-2 sm:p-4 pt-16 sm:pt-20 relative touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
             {/* Back to Arcade */}
-            <div className="absolute top-20 left-4 z-50">
-                <Link to="/bilsem-zeka" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors bg-slate-900/50 backdrop-blur px-4 py-2 rounded-full border border-slate-800">
-                    <ChevronLeft className="w-5 h-5" />
-                    <span className="font-bold">BİLSEM Zeka</span>
+            <div className="absolute top-16 sm:top-20 left-2 sm:left-4 z-50">
+                <Link to="/bilsem-zeka" className="flex items-center gap-1.5 sm:gap-2 text-slate-400 hover:text-white transition-colors bg-slate-900/50 backdrop-blur px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-slate-800">
+                    <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="font-bold text-xs sm:text-sm">BİLSEM Zeka</span>
                 </Link>
             </div>
 
             {/* Timer During Play */}
             {gameState === GameState.PLAYING && (
-                <div className="absolute top-20 right-4 z-50 flex items-center gap-3 bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-full px-5 py-3 shadow-xl">
-                    <Timer className={`w-6 h-6 ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-indigo-400'}`} />
-                    <span className={`text-3xl font-black tabular-nums ${timeLeft <= 10 ? 'text-red-500' : 'text-white'}`}>{timeLeft}</span>
+                <div className="absolute top-16 sm:top-20 right-2 sm:right-4 z-50 flex items-center gap-1.5 sm:gap-3 bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-full px-3 sm:px-5 py-1.5 sm:py-3 shadow-xl">
+                    <Timer className={`w-4 h-4 sm:w-6 sm:h-6 ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-indigo-400'}`} />
+                    <span className={`text-xl sm:text-3xl font-black tabular-nums ${timeLeft <= 10 ? 'text-red-500' : 'text-white'}`}>{timeLeft}</span>
                 </div>
             )}
 
-            {/* Score During Play */}
+            {/* Score During Play - Hidden on very small screens to avoid clutter */}
             {gameState === GameState.PLAYING && (
-                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-full px-6 py-3 shadow-xl">
+                <div className="hidden sm:block absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-full px-6 py-3 shadow-xl">
                     <span className="text-2xl font-black text-yellow-400">{stats.score}</span>
                     <span className="text-slate-500 text-sm font-bold ml-2">puan</span>
                 </div>
