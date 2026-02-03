@@ -196,7 +196,7 @@ const YolBulmaca: React.FC = () => {
     };
 
     return (
-        <div className={`min-h-screen ${softColors.bg} flex flex-col items-center p-4 md:p-6 lg:p-8 pt-20`}>
+        <div className={`min-h-screen ${softColors.bg} flex flex-col items-center p-2 sm:p-4 md:p-6 lg:p-8 pt-16 sm:pt-20 touch-none`} style={{ WebkitTapHighlightColor: 'transparent' }}>
             {/* Soft background glow */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-[100px]" />
@@ -204,44 +204,43 @@ const YolBulmaca: React.FC = () => {
             </div>
 
             {/* Navigation */}
-            <div className="w-full flex justify-between items-center mb-6 relative z-10">
+            <div className="w-full flex justify-between items-center mb-4 sm:mb-6 relative z-10">
                 <Link
                     to="/bilsem-zeka"
-                    className={`flex items-center gap-2 ${softColors.muted} hover:${softColors.text} transition-colors font-semibold text-sm`}
+                    className={`flex items-center gap-1.5 sm:gap-2 ${softColors.muted} hover:${softColors.text} transition-colors font-semibold text-xs sm:text-sm`}
                 >
-                    <ChevronLeft size={18} />
-                    <span>Zeka Oyunları</span>
+                    <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    <span>BİLSEM</span>
                 </Link>
                 <Link
                     to="/"
                     className={`flex items-center gap-2 ${softColors.muted} hover:${softColors.text} transition-colors`}
                 >
-                    <Home size={18} />
+                    <Home size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </Link>
             </div>
 
             {/* Header */}
-            <header className="w-full flex justify-between items-center mb-8 relative z-10">
+            <header className="w-full flex justify-between items-center mb-4 sm:mb-8 relative z-10">
                 <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="w-6 h-6 text-purple-400" />
-                        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
+                        <h1 className="text-lg sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
                             Yol Bulmaca
                         </h1>
                     </div>
-                    <span className={`text-sm font-medium ${softColors.muted} flex items-center gap-1 mt-1`}>
-                        <Star size={14} className="text-amber-400" />
+                    <span className={`text-xs sm:text-sm font-medium ${softColors.muted} flex items-center gap-1 mt-0.5 sm:mt-1`}>
+                        <Star size={12} className="sm:w-3.5 sm:h-3.5 text-amber-400" />
                         Seviye {level}
                     </span>
                 </div>
-                <div className="text-right flex items-center gap-6">
-                    {/* Lives - Using hearts with soft glow */}
-                    <div className="flex gap-1.5">
+                <div className="text-right flex items-center gap-3 sm:gap-6">
+                    {/* Lives */}
+                    <div className="flex gap-1 sm:gap-1.5">
                         {[...Array(3)].map((_, i) => (
                             <Heart
                                 key={i}
-                                size={24}
-                                className={`transition-all duration-300 ${i < lives
+                                className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300 ${i < lives
                                     ? 'text-pink-400 fill-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]'
                                     : 'text-gray-600'
                                     }`}
@@ -249,9 +248,9 @@ const YolBulmaca: React.FC = () => {
                         ))}
                     </div>
                     {/* Score */}
-                    <div className={`${softColors.card} ${softColors.border} border rounded-2xl px-4 py-2`}>
-                        <div className={`text-xs font-medium ${softColors.muted}`}>Puan</div>
-                        <div className="text-2xl font-bold text-amber-400">{score}</div>
+                    <div className={`${softColors.card} ${softColors.border} border rounded-xl sm:rounded-2xl px-2.5 sm:px-4 py-1.5 sm:py-2`}>
+                        <div className={`text-[10px] sm:text-xs font-medium ${softColors.muted}`}>Puan</div>
+                        <div className="text-lg sm:text-2xl font-bold text-amber-400">{score}</div>
                     </div>
                 </div>
             </header>

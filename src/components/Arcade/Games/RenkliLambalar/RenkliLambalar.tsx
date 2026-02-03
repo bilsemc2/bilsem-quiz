@@ -195,7 +195,7 @@ const RenkliLambalar: React.FC = () => {
     }, [phase, targetColor, grid, foundTargets, totalTargets, level, lives, handleVictory, handleGameOver, startNextLevel]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 text-white">
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 text-white touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
             {/* Decorative Background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-10 left-10 w-32 h-32 bg-yellow-400/10 blur-3xl rounded-full" />
@@ -204,39 +204,38 @@ const RenkliLambalar: React.FC = () => {
             </div>
 
             {/* Header */}
-            <div className="relative z-10 p-4">
+            <div className="relative z-10 p-2 sm:p-4 pt-16 sm:pt-4">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
                     <Link
                         to="/bilsem-zeka"
-                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                        className="flex items-center gap-1.5 sm:gap-2 text-slate-400 hover:text-white transition-colors"
                     >
-                        <ChevronLeft size={20} />
-                        <span>Bilsem Zeka</span>
+                        <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
+                        <span className="text-xs sm:text-base">BİLSEM</span>
                     </Link>
 
                     {phase === 'playing' && (
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 sm:gap-4">
                             {/* Score */}
-                            <div className="flex items-center gap-2 bg-amber-500/20 px-3 py-1.5 rounded-xl">
-                                <Star className="text-amber-400" size={18} />
-                                <span className="font-bold text-amber-400">{score}</span>
+                            <div className="flex items-center gap-1.5 sm:gap-2 bg-amber-500/20 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl">
+                                <Star className="text-amber-400 w-4 h-4 sm:w-[18px] sm:h-[18px]" />
+                                <span className="font-bold text-amber-400 text-sm sm:text-base">{score}</span>
                             </div>
 
                             {/* Lives */}
-                            <div className="flex items-center gap-1 bg-red-500/20 px-3 py-1.5 rounded-xl">
+                            <div className="flex items-center gap-0.5 sm:gap-1 bg-red-500/20 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl">
                                 {Array.from({ length: GAME_CONFIG.INITIAL_LIVES }).map((_, i) => (
                                     <Heart
                                         key={i}
-                                        size={16}
-                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'}
+                                        className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'}`}
                                     />
                                 ))}
                             </div>
 
                             {/* Level */}
-                            <div className="flex items-center gap-2 bg-emerald-500/20 px-3 py-1.5 rounded-xl">
-                                <Zap className="text-emerald-400" size={18} />
-                                <span className="font-bold text-emerald-400">Lv.{level}</span>
+                            <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-500/20 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl">
+                                <Zap className="text-emerald-400 w-4 h-4 sm:w-[18px] sm:h-[18px]" />
+                                <span className="font-bold text-emerald-400 text-sm sm:text-base">Lv.{level}</span>
                             </div>
                         </div>
                     )}

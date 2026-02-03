@@ -182,28 +182,28 @@ const KartDedektifi: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white overflow-hidden relative font-sans">
+    <div className="min-h-screen bg-[#0f172a] text-white overflow-hidden relative font-sans touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
       {/* Arcade HUD */}
-      <div className="absolute top-8 left-4 right-4 z-30 flex justify-between items-center pointer-events-none">
-        <div className="flex gap-4 pointer-events-auto">
-          <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border border-white/20 hover:bg-white/20 transition-all">
-            <ChevronLeft className="w-5 h-5 text-sky-400" />
-            <span className="font-bold text-white/80">BİLSEM Zeka</span>
+      <div className="absolute top-16 sm:top-8 left-2 sm:left-4 right-2 sm:right-4 z-30 flex justify-between items-center pointer-events-none">
+        <div className="flex flex-wrap gap-2 sm:gap-4 pointer-events-auto">
+          <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-md px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1.5 sm:gap-2 border border-white/20 hover:bg-white/20 transition-all">
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400" />
+            <span className="font-bold text-white/80 text-xs sm:text-base">BİLSEM</span>
           </Link>
-          <div className="bg-white/10 backdrop-blur-md px-5 py-2 rounded-full shadow-lg flex items-center gap-2 border border-white/20">
-            <Trophy className="text-yellow-500 w-6 h-6" />
-            <span className="text-xl font-bold text-white leading-none">{gameState.score}</span>
+          <div className="bg-white/10 backdrop-blur-md px-3 sm:px-5 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1.5 sm:gap-2 border border-white/20">
+            <Trophy className="text-yellow-500 w-4 h-4 sm:w-6 sm:h-6" />
+            <span className="text-base sm:text-xl font-bold text-white leading-none">{gameState.score}</span>
           </div>
-          <div className="bg-white/10 backdrop-blur-md px-5 py-2 rounded-full shadow-lg flex items-center gap-2 border border-white/20">
-            <Target className="text-sky-400 w-6 h-6" />
-            <span className="text-xl font-bold text-white leading-none">Lvl {level}</span>
+          <div className="bg-white/10 backdrop-blur-md px-3 sm:px-5 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1.5 sm:gap-2 border border-white/20">
+            <Target className="text-sky-400 w-4 h-4 sm:w-6 sm:h-6" />
+            <span className="text-base sm:text-xl font-bold text-white leading-none">Lv {level}</span>
           </div>
         </div>
-        <div className="bg-white/10 backdrop-blur-md px-5 py-2 rounded-full shadow-lg flex items-center gap-2 border border-red-500/30">
+        <div className="bg-white/10 backdrop-blur-md px-3 sm:px-5 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1 sm:gap-2 border border-red-500/30">
           {Array.from({ length: 3 }).map((_, i) => (
             <Heart
               key={i}
-              className={`w-6 h-6 transition-all duration-300 ${i < lives ? 'text-red-500 fill-red-500 scale-110' : 'text-gray-600 scale-75 opacity-30'}`}
+              className={`w-4 h-4 sm:w-6 sm:h-6 transition-all duration-300 ${i < lives ? 'text-red-500 fill-red-500' : 'text-gray-600 opacity-30'}`}
             />
           ))}
         </div>

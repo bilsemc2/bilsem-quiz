@@ -126,25 +126,21 @@ const handleTouchStart = (e: React.TouchEvent) => {
 
 ---
 
-## 🔄 Already Fixed Games
+## Oyun Düzeltme Checklist
 
-| Oyun | Durum |
-|------|-------|
-| Ayna Ustası | ✅ Touch scroll fixed |
-| Renkli Balon | ✅ Full responsive |
-| Ters Navigator | ✅ Full responsive |
-| DarkMaze | ✅ Joystick + responsive |
-| Labirent Ustası | ✅ Joystick + responsive |
+### Tamamlanan ✅
+- [x] Ayna Ustası - Touch scroll fixed
+- [x] Renkli Balon - Full responsive  
+- [x] Ters Navigator - Full responsive
+- [x] DarkMaze - Virtual joystick
+- [x] Labirent Ustası - Virtual joystick
+- [x] Neşeli Balonlar - Full responsive
+- [x] Örüntülü Top - Responsive HUD
+- [x] Renkli Lambalar - Responsive HUD + touch-none
+- [x] Yol Bulmaca - Responsive HUD + touch-none
+- [x] Kart Dedektifi - Responsive HUD + touch-none
+- [x] ChromaBreak - Responsive header + touch-none
 
-## 🔧 Games Needing Work
-
-| Oyun | Durum |
-|------|-------|
-| Neşeli Balonlar | ⏳ Needs responsive |
-| Örüntülü Top | ⏳ Needs responsive |
-| Renkli Lambalar | ⏳ Needs responsive |
-| Yol Bulmaca | ⏳ Needs responsive |
-| Chroma Hafıza | ⏳ Needs responsive |
-| ChromaBreak | ⏳ Needs responsive |
-| Kart Dedektifi | ⏳ Needs responsive |
-| Paper | ⏳ Needs responsive |
+### Kalan ⬜
+- [ ] Chroma Hafıza (3D game)
+- [ ] KraftOrigami (Paper folder)

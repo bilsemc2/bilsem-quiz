@@ -97,7 +97,7 @@ const ChromaBreak: React.FC = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
+        <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
             {/* Background Effects */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600 rounded-full blur-[120px]" />
@@ -106,26 +106,26 @@ const ChromaBreak: React.FC = () => {
 
             {/* Header */}
             <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-700/50">
-                <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+                <div className="max-w-4xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
                     <Link
                         to="/bilsem-zeka"
-                        className="flex items-center gap-2 text-slate-300 hover:text-cyan-400 transition-colors"
+                        className="flex items-center gap-1.5 sm:gap-2 text-slate-300 hover:text-cyan-400 transition-colors"
                     >
-                        <ChevronLeft size={20} />
-                        <span className="text-sm font-medium">BİLSEM Zeka</span>
+                        <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
+                        <span className="text-xs sm:text-sm font-medium">BİLSEM</span>
                     </Link>
 
-                    <h1 className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+                    <h1 className="text-sm sm:text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
                         CHROMABREAK
                     </h1>
 
-                    <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                         <div className="flex items-center gap-1 text-yellow-400">
-                            <Trophy size={16} />
+                            <Trophy size={14} className="sm:w-4 sm:h-4" />
                             <span className="font-bold">{score}</span>
                         </div>
                         <div className="flex items-center gap-1 text-cyan-400">
-                            <Zap size={16} />
+                            <Zap size={14} className="sm:w-4 sm:h-4" />
                             <span className="font-bold">Lv.{level}</span>
                         </div>
                     </div>
