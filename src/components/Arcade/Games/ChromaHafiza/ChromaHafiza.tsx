@@ -249,16 +249,16 @@ const ChromaHafiza: React.FC = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 20 }}
-                            className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4"
+                            className="absolute bottom-4 sm:bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 sm:gap-4"
                         >
-                            <div className="px-6 py-4 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] flex items-center gap-5 shadow-2xl">
-                                <Target className="text-white/40" size={20} />
+                            <div className="px-3 sm:px-6 py-2 sm:py-4 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-xl sm:rounded-[2rem] flex items-center gap-2 sm:gap-5 shadow-2xl">
+                                <Target className="text-white/40 w-4 h-4 sm:w-5 sm:h-5" />
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Hedef Renk</span>
-                                    <span className="text-sm font-black uppercase tracking-widest">Bu Rengi Bul</span>
+                                    <span className="text-[8px] sm:text-[10px] font-bold text-white/40 uppercase tracking-[0.1em] sm:tracking-[0.2em]">Hedef Renk</span>
+                                    <span className="text-xs sm:text-sm font-black uppercase tracking-wider sm:tracking-widest">Bu Rengi Bul</span>
                                 </div>
                                 <div
-                                    className="w-14 h-9 rounded-xl shadow-inner shadow-black/40 border border-white/10"
+                                    className="w-10 h-6 sm:w-14 sm:h-9 rounded-lg sm:rounded-xl shadow-inner shadow-black/40 border border-white/10"
                                     style={{ backgroundColor: targetColor, boxShadow: `0 0 30px ${targetColor}66` }}
                                 />
                             </div>
@@ -267,10 +267,10 @@ const ChromaHafiza: React.FC = () => {
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="bg-white/10 px-4 py-2 rounded-full border border-white/20 flex items-center gap-2"
+                                    className="bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/20 flex items-center gap-1.5 sm:gap-2"
                                 >
-                                    <Info size={14} className="text-blue-400" />
-                                    <span className="text-xs font-bold uppercase tracking-tighter">Kontrol Ediliyor...</span>
+                                    <Info size={12} className="sm:w-3.5 sm:h-3.5 text-blue-400" />
+                                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-tighter">Kontrol Ediliyor...</span>
                                 </motion.div>
                             )}
                         </motion.div>

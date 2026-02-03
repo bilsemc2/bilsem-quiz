@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Float, ContactShadows } from '@react-three/drei';
 import Piece from './Piece';
@@ -13,6 +13,24 @@ interface GameSceneProps {
 
 const GameScene: React.FC<GameSceneProps> = ({ pieces, isRevealing, onPieceClick, isGameWon }) => {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
+    const [cameraDistance, setCameraDistance] = useState(12);
+
+    // Responsive camera - move further on small screens
+    useEffect(() => {
+        const updateCamera = () => {
+            const width = window.innerWidth;
+            if (width < 640) {
+                setCameraDistance(18); // Mobile - much further
+            } else if (width < 1024) {
+                setCameraDistance(15); // Tablet - slightly further
+            } else {
+                setCameraDistance(12); // Desktop
+            }
+        };
+        updateCamera();
+        window.addEventListener('resize', updateCamera);
+        return () => window.removeEventListener('resize', updateCamera);
+    }, []);
 
     return (
         <div className="w-full h-full relative">
@@ -26,7 +44,7 @@ const GameScene: React.FC<GameSceneProps> = ({ pieces, isRevealing, onPieceClick
                 }}
             >
                 <Suspense fallback={null}>
-                    <PerspectiveCamera makeDefault position={[12, 12, 12]} fov={40} />
+                    <PerspectiveCamera makeDefault position={[cameraDistance, cameraDistance, cameraDistance]} fov={40} />
                     <OrbitControls
                         enablePan={false}
                         enableZoom={false}
