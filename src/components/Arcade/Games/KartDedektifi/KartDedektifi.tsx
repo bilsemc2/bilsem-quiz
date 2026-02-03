@@ -27,6 +27,7 @@ const KartDedektifi: React.FC = () => {
   const [helperMessage, setHelperMessage] = useState<string>("Selam Dedektif! Hazırsan başlayalım.");
   const gameStartTimeRef = useRef<number>(0);
   const hasSavedRef = useRef<boolean>(false);
+  const consecutiveWrongRef = useRef<number>(0);
 
   // Auto-start from Hub
   useEffect(() => {
@@ -93,19 +94,34 @@ const KartDedektifi: React.FC = () => {
     }
   }, [currentCard, gameState.isGameOver, generateRandomCard]);
 
-  const updateHelperMessage = (isCorrect: boolean, newRule: RuleType) => {
-    const messages = isCorrect
-      ? ["Harika!", "Doğru!", "Mükemmel!", "Bunu biliyordun!", "Dedektif iş başında!"]
-      : ["Ups!", "Tekrar dene!", "Dikkat et!", "Bu sefer olmadı ama pes etme!", "İpucuna bak!"];
+  const updateHelperMessage = (isCorrect: boolean) => {
+    const correctMessages = [
+      "Harika! 🎉",
+      "Doğru! ⭐",
+      "Mükemmel! 🌟",
+      "Bunu biliyordun! 💫",
+      "Dedektif iş başında! 🔍"
+    ];
 
-    let msg = messages[Math.floor(Math.random() * messages.length)];
+    const wrongMessages = [
+      "Hmm, bu değildi! 🤔",
+      "Tekrar düşün! 💭",
+      "Dikkatli bak! 👀",
+      "Kurala odaklan! 🎯"
+    ];
 
+    let msg = isCorrect
+      ? correctMessages[Math.floor(Math.random() * correctMessages.length)]
+      : wrongMessages[Math.floor(Math.random() * wrongMessages.length)];
+
+    // Kural değişimi bildirimi
     if (gameState.consecutiveCorrect >= CONSECUTIVE_LIMIT - 1 && isCorrect) {
-      msg = "Kural değişiyor! Hazır mısın?";
-    } else {
-      if (newRule === RuleType.Color) msg += " Sıradaki ipucu: RENKLERE bak!";
-      if (newRule === RuleType.Shape) msg += " Sıradaki ipucu: ŞEKİLLERE bak!";
-      if (newRule === RuleType.Number) msg += " Sıradaki ipucu: SAYILARA bak!";
+      msg = "🔄 Kural değişiyor! Hazır mısın?";
+      consecutiveWrongRef.current = 0;
+    }
+    // Sadece 3+ ardışık yanlışta ipucu ver (daha zor)
+    else if (!isCorrect && consecutiveWrongRef.current >= 3) {
+      msg = "💡 İpucu: Aynı özelliği eşleştir!";
     }
 
     setHelperMessage(msg);
@@ -129,6 +145,9 @@ const KartDedektifi: React.FC = () => {
 
     if (!isCorrect) {
       setLives(prev => Math.max(0, prev - 1));
+      consecutiveWrongRef.current += 1;
+    } else {
+      consecutiveWrongRef.current = 0;
     }
 
     setGameState(prev => {
@@ -152,7 +171,7 @@ const KartDedektifi: React.FC = () => {
         history: [...prev.history, { isCorrect, ruleAtTime: prev.currentRule }],
       };
 
-      updateHelperMessage(isCorrect, nextRule);
+      updateHelperMessage(isCorrect);
       return newState;
     });
 

@@ -11,13 +11,13 @@ interface MazeCanvasProps {
   onMoveRequest?: (dr: number, dc: number) => void;
 }
 
-const MazeCanvas: React.FC<MazeCanvasProps> = ({ 
-  grid, 
-  solution, 
+const MazeCanvas: React.FC<MazeCanvasProps> = ({
+  grid,
+  solution,
   userPath,
-  playerPosition, 
-  cellSize = 20, 
-  onMoveRequest 
+  playerPosition,
+  cellSize = 20,
+  onMoveRequest
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -56,7 +56,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
 
     const pr = playerPosition[0];
     const pc = playerPosition[1];
-    
+
     // Start if touching exactly the player cell
     if (coords.r === pr && coords.c === pc) {
       setIsDrawing(true);
@@ -65,7 +65,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
 
   const handleMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !playerPosition || !onMoveRequest) return;
-    
+
     // Prevent scrolling on touch devices while drawing
     if ('touches' in e) {
       if (e.cancelable) e.preventDefault();
@@ -76,7 +76,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
 
     const { r, c } = coords;
     const [pr, pc] = playerPosition;
-    
+
     const dr = r - pr;
     const dc = c - pc;
 
@@ -100,7 +100,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
     const rows = grid.length;
     const cols = grid[0].length;
     const dpr = window.devicePixelRatio || 1;
-    
+
     canvas.width = cols * cellSize * dpr;
     canvas.height = rows * cellSize * dpr;
     canvas.style.width = `${cols * cellSize}px`;
@@ -124,8 +124,8 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
     grid.forEach((row, r) => {
       row.forEach((cell, c) => {
         if (cell.visited) {
-            ctx.fillStyle = 'rgba(30, 41, 59, 0.3)';
-            ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+          ctx.fillStyle = 'rgba(30, 41, 59, 0.3)';
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
         }
       });
     });
@@ -175,11 +175,18 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
     });
     ctx.stroke();
 
-    ctx.font = `${cellSize * 0.6}px sans-serif`;
+    // Draw start marker with green background
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.4)';
+    ctx.fillRect(0, 0, cellSize, cellSize);
+    ctx.font = `${cellSize * 0.7}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🏁', cellSize / 2, cellSize / 2);
-    ctx.fillText('🎯', (cols - 1) * cellSize + cellSize / 2, (rows - 1) * cellSize + cellSize / 2);
+    ctx.fillText('🚀', cellSize / 2, cellSize / 2);
+
+    // Draw finish marker with gold background
+    ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
+    ctx.fillRect((cols - 1) * cellSize, (rows - 1) * cellSize, cellSize, cellSize);
+    ctx.fillText('🏁', (cols - 1) * cellSize + cellSize / 2, (rows - 1) * cellSize + cellSize / 2);
 
     if (playerPosition) {
       const [pr, pc] = playerPosition;
@@ -196,8 +203,8 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
 
   return (
     <div className="relative bg-slate-900 rounded-lg p-4 shadow-2xl overflow-auto custom-scrollbar flex items-center justify-center min-h-[400px] touch-none">
-      <canvas 
-        ref={canvasRef} 
+      <canvas
+        ref={canvasRef}
         onMouseDown={handleStart}
         onMouseMove={handleMove}
         onMouseUp={handleEnd}
@@ -205,7 +212,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
         onTouchMove={handleMove}
         onTouchEnd={handleEnd}
         onMouseLeave={() => { setIsDrawing(false); }}
-        className={`rounded border border-slate-700 shadow-inner select-none ${isDrawing ? 'cursor-none' : 'cursor-default'}`} 
+        className={`rounded border border-slate-700 shadow-inner select-none ${isDrawing ? 'cursor-none' : 'cursor-default'}`}
       />
     </div>
   );

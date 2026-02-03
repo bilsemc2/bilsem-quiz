@@ -17,6 +17,7 @@ import {
     ArrowLeft,
     ArrowUp,
     ArrowDown,
+    ArrowRight,
     Compass
 } from 'lucide-react';
 
@@ -191,9 +192,32 @@ const LabirentUstasi: React.FC = () => {
                     <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400 tracking-tight mb-4">
                         Labirent Ustası
                     </h1>
-                    <p className="text-slate-400 font-medium text-lg mb-4 max-w-md mx-auto">
-                        Labirentten çıkış yolunu bul! Klavye okları veya ekrandaki butonları kullan.
+                    <p className="text-slate-400 font-medium text-lg mb-6 max-w-md mx-auto">
+                        🚀 Başlangıçtan 🏁 Bitişe ulaş!
                     </p>
+
+                    {/* How to play */}
+                    <div className="bg-slate-800/50 rounded-2xl p-4 mb-6 border border-slate-700/50">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div className="flex items-center gap-2 text-slate-300">
+                                <span className="text-lg">🚀</span>
+                                <span>Yeşil = Başla</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-300">
+                                <span className="text-lg">🏁</span>
+                                <span>Sarı = Hedef</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-300">
+                                <ArrowUp size={16} className="text-indigo-400" />
+                                <span>Yön tuşları</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-300">
+                                <span className="w-4 h-4 rounded-full bg-amber-400" />
+                                <span>Sen = Sarı top</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="bg-indigo-500/20 text-indigo-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30">
                         TUZÖ 3.1.1 Labirent Navigasyonu / Yön Bulma
                     </div>
@@ -303,14 +327,20 @@ const LabirentUstasi: React.FC = () => {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 p-4 flex items-center justify-center relative overflow-hidden">
+            <main className="flex-1 p-4 pb-56 md:pb-4 flex items-center justify-center relative overflow-hidden">
                 <div className="relative">
                     <MazeCanvas
                         grid={grid}
                         solution={solution}
                         userPath={userPath}
                         playerPosition={playerPosition}
-                        cellSize={Math.min(25, 600 / level.rows)}
+                        cellSize={Math.min(
+                            40, // Daha büyük maksimum hücre
+                            Math.min(
+                                (window.innerWidth - 40) / level.cols,
+                                (window.innerHeight - 350) / level.rows // Mobile controls için alan bırak
+                            )
+                        )}
                         onMoveRequest={movePlayer}
                     />
                 </div>
@@ -339,34 +369,58 @@ const LabirentUstasi: React.FC = () => {
                 )}
             </main>
 
-            {/* Mobile Controls */}
-            <div className="md:hidden fixed bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-10">
-                <button
-                    className="w-14 h-14 bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center active:bg-indigo-600"
-                    onTouchStart={(e) => { e.preventDefault(); movePlayer(-1, 0); }}
-                >
-                    <ArrowUp size={24} />
-                </button>
-                <div className="flex gap-3">
+            {/* Mobile Controls - Improved D-Pad */}
+            <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-10">
+                {/* D-Pad Container */}
+                <div className="relative w-48 h-48">
+                    {/* Center decorative circle */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-slate-700/50 border border-slate-600" />
+
+                    {/* Up Button */}
                     <button
-                        className="w-14 h-14 bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center active:bg-indigo-600"
-                        onTouchStart={(e) => { e.preventDefault(); movePlayer(0, -1); }}
+                        className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-16 bg-gradient-to-b from-indigo-500 to-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center active:scale-95 active:brightness-125 shadow-lg"
+                        style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
+                        onTouchStart={(e) => { e.preventDefault(); movePlayer(-1, 0); }}
+                        onClick={() => movePlayer(-1, 0)}
                     >
-                        <ArrowLeft size={24} />
+                        <ArrowUp size={28} className="text-white" />
                     </button>
+
+                    {/* Down Button */}
                     <button
-                        className="w-14 h-14 bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center active:bg-indigo-600"
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-16 bg-gradient-to-b from-indigo-500 to-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center active:scale-95 active:brightness-125 shadow-lg"
+                        style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
                         onTouchStart={(e) => { e.preventDefault(); movePlayer(1, 0); }}
+                        onClick={() => movePlayer(1, 0)}
                     >
-                        <ArrowDown size={24} />
+                        <ArrowDown size={28} className="text-white" />
                     </button>
+
+                    {/* Left Button */}
                     <button
-                        className="w-14 h-14 bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center active:bg-indigo-600"
-                        onTouchStart={(e) => { e.preventDefault(); movePlayer(0, 1); }}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-16 h-16 bg-gradient-to-r from-indigo-500 to-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center active:scale-95 active:brightness-125 shadow-lg"
+                        style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
+                        onTouchStart={(e) => { e.preventDefault(); movePlayer(0, -1); }}
+                        onClick={() => movePlayer(0, -1)}
                     >
-                        <ArrowLeft size={24} className="rotate-180" />
+                        <ArrowLeft size={28} className="text-white" />
+                    </button>
+
+                    {/* Right Button */}
+                    <button
+                        className="absolute right-0 top-1/2 -translate-y-1/2 w-16 h-16 bg-gradient-to-l from-indigo-500 to-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center active:scale-95 active:brightness-125 shadow-lg"
+                        style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
+                        onTouchStart={(e) => { e.preventDefault(); movePlayer(0, 1); }}
+                        onClick={() => movePlayer(0, 1)}
+                    >
+                        <ArrowRight size={28} className="text-white" />
                     </button>
                 </div>
+
+                {/* Hint text */}
+                <p className="text-center text-slate-500 text-xs mt-3 font-medium">
+                    Yön tuşlarına basarak ilerle
+                </p>
             </div>
         </div>
     );
