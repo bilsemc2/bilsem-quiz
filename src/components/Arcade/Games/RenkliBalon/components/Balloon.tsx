@@ -25,7 +25,12 @@ const Balloon: React.FC<BalloonProps> = ({ value, color, onClick, isPopping, isH
                     exit={{ scale: 2, opacity: 0, transition: { duration: 0.2 } }}
                     whileHover={{ scale: 1.1 }}
                     onClick={onClick}
-                    className={`relative cursor-pointer flex flex-col items-center select-none ${className}`}
+                    onTouchStart={(e) => {
+                        e.preventDefault();
+                        if (onClick) onClick(e as unknown as React.MouseEvent);
+                    }}
+                    className={`relative cursor-pointer flex flex-col items-center select-none touch-none ${className}`}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                     {isHighlighted && (
                         <motion.div

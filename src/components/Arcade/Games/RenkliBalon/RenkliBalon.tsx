@@ -220,33 +220,34 @@ const RenkliBalon: React.FC = () => {
     return (
         <div
             ref={gameContainerRef}
-            className="relative w-full min-h-screen overflow-hidden bg-gradient-to-br from-violet-950 via-indigo-950 to-slate-900 select-none flex flex-col items-center pt-16"
+            className="relative w-full h-screen overflow-hidden bg-gradient-to-br from-violet-950 via-indigo-950 to-slate-900 select-none flex flex-col items-center pt-16 touch-none"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
         >
             <Cloud top="10%" delay={0} duration={45} />
             <Cloud top="35%" delay={7} duration={60} />
             <Cloud top="65%" delay={20} duration={50} />
 
             {/* HUD */}
-            <div className="absolute top-20 left-4 right-4 z-30 flex justify-between items-center pointer-events-none">
-                <div className="flex gap-4 pointer-events-auto">
-                    <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 border border-white/20 hover:bg-white/20 transition-colors">
-                        <ChevronLeft className="w-5 h-5 text-amber-400" />
-                        <span className="font-bold text-white">BİLSEM Zeka</span>
+            <div className="absolute top-16 sm:top-20 left-2 right-2 sm:left-4 sm:right-4 z-30 flex flex-wrap gap-2 sm:gap-4 justify-between items-center pointer-events-none">
+                <div className="flex flex-wrap gap-2 sm:gap-4 pointer-events-auto">
+                    <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-xl px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1 sm:gap-2 border border-white/20 hover:bg-white/20 transition-colors">
+                        <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+                        <span className="font-bold text-white text-xs sm:text-sm">BİLSEM</span>
                     </Link>
-                    <div className="bg-amber-500/20 backdrop-blur-xl px-5 py-2 rounded-xl shadow-lg flex items-center gap-2 border border-amber-500/30">
-                        <Trophy className="text-amber-400 w-6 h-6" />
-                        <span className="text-xl font-bold text-amber-400">{gameState.score}</span>
+                    <div className="bg-amber-500/20 backdrop-blur-xl px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1.5 sm:gap-2 border border-amber-500/30">
+                        <Trophy className="text-amber-400 w-4 h-4 sm:w-6 sm:h-6" />
+                        <span className="text-base sm:text-xl font-bold text-amber-400">{gameState.score}</span>
                     </div>
-                    <div className="bg-emerald-500/20 backdrop-blur-xl px-5 py-2 rounded-xl shadow-lg flex items-center gap-2 border border-emerald-500/30">
-                        <Target className="text-emerald-400 w-6 h-6" />
-                        <span className="text-xl font-bold text-emerald-400">Seviye {gameState.level}</span>
+                    <div className="bg-emerald-500/20 backdrop-blur-xl px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1.5 sm:gap-2 border border-emerald-500/30">
+                        <Target className="text-emerald-400 w-4 h-4 sm:w-6 sm:h-6" />
+                        <span className="text-base sm:text-xl font-bold text-emerald-400">Lv {gameState.level}</span>
                     </div>
                 </div>
-                <div className="bg-red-500/20 backdrop-blur-xl px-5 py-2 rounded-xl shadow-lg flex items-center gap-2 border border-red-500/30 pointer-events-auto">
+                <div className="bg-red-500/20 backdrop-blur-xl px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1 sm:gap-2 border border-red-500/30 pointer-events-auto">
                     {Array.from({ length: 3 }).map((_, i) => (
                         <Heart
                             key={i}
-                            className={`w-6 h-6 transition-all duration-300 ${i < gameState.lives ? 'text-red-400 fill-red-400 scale-110' : 'text-red-400/30 scale-75'}`}
+                            className={`w-4 h-4 sm:w-6 sm:h-6 transition-all duration-300 ${i < gameState.lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'}`}
                         />
                     ))}
                 </div>
