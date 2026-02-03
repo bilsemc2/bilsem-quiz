@@ -20,9 +20,9 @@ const GameScene: React.FC<GameSceneProps> = ({ pieces, isRevealing, onPieceClick
         const updateCamera = () => {
             const width = window.innerWidth;
             if (width < 640) {
-                setCameraDistance(18); // Mobile - much further
+                setCameraDistance(20); // Mobile - much further
             } else if (width < 1024) {
-                setCameraDistance(15); // Tablet - slightly further
+                setCameraDistance(18); // Tablet - further
             } else {
                 setCameraDistance(12); // Desktop
             }

@@ -242,14 +242,14 @@ const ChromaHafiza: React.FC = () => {
                     isGameWon={gamePhase === 'success'}
                 />
 
-                {/* HUD Elements */}
+                {/* HUD Elements - Target Color */}
                 <AnimatePresence>
                     {(gamePhase === 'playing' || gamePhase === 'reveal') && (
                         <motion.div
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
-                            className="absolute bottom-4 sm:bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 sm:gap-4"
+                            exit={{ opacity: 0, y: -20 }}
+                            className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 sm:gap-4 z-20"
                         >
                             <div className="px-3 sm:px-6 py-2 sm:py-4 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-xl sm:rounded-[2rem] flex items-center gap-2 sm:gap-5 shadow-2xl">
                                 <Target className="text-white/40 w-4 h-4 sm:w-5 sm:h-5" />
@@ -307,37 +307,40 @@ const ChromaHafiza: React.FC = () => {
                             </button>
                         </div>
                     </motion.div>
-                )}
+                )
+                }
 
-                {gamePhase === 'game_over' && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-red-950/40 backdrop-blur-xl"
-                    >
-                        <div className="bg-black/90 p-12 rounded-[4rem] border border-red-500/30 shadow-2xl text-center space-y-8 max-w-sm">
-                            <div className="space-y-4">
-                                <h2 className="text-5xl font-black text-red-500 italic tracking-tighter leading-tight">OYUN BİTTİ</h2>
-                                <p className="text-white/50 font-medium">Toplam Puan: <span className="text-white font-bold">{score}</span></p>
-                                <p className="text-white/50 font-medium">Ulaşılan Seviye: <span className="text-white font-bold">{level + 1}</span></p>
+                {
+                    gamePhase === 'game_over' && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-red-950/40 backdrop-blur-xl"
+                        >
+                            <div className="bg-black/90 p-12 rounded-[4rem] border border-red-500/30 shadow-2xl text-center space-y-8 max-w-sm">
+                                <div className="space-y-4">
+                                    <h2 className="text-5xl font-black text-red-500 italic tracking-tighter leading-tight">OYUN BİTTİ</h2>
+                                    <p className="text-white/50 font-medium">Toplam Puan: <span className="text-white font-bold">{score}</span></p>
+                                    <p className="text-white/50 font-medium">Ulaşılan Seviye: <span className="text-white font-bold">{level + 1}</span></p>
+                                </div>
+                                <button
+                                    onClick={restart}
+                                    className="w-full py-5 bg-red-600 text-white font-black rounded-3xl flex items-center justify-center gap-2 hover:bg-red-500 transition-colors shadow-lg shadow-red-600/20"
+                                >
+                                    TEKRAR DENE <RotateCcw size={20} />
+                                </button>
+                                <Link
+                                    to={backLink}
+                                    className="block text-slate-500 hover:text-white transition-colors font-bold text-sm"
+                                >
+                                    Arcade'e Dön
+                                </Link>
                             </div>
-                            <button
-                                onClick={restart}
-                                className="w-full py-5 bg-red-600 text-white font-black rounded-3xl flex items-center justify-center gap-2 hover:bg-red-500 transition-colors shadow-lg shadow-red-600/20"
-                            >
-                                TEKRAR DENE <RotateCcw size={20} />
-                            </button>
-                            <Link
-                                to={backLink}
-                                className="block text-slate-500 hover:text-white transition-colors font-bold text-sm"
-                            >
-                                Arcade'e Dön
-                            </Link>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
+        </div >
     );
 };
 
