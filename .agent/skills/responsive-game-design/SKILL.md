@@ -140,7 +140,7 @@ const handleTouchStart = (e: React.TouchEvent) => {
 - [x] Yol Bulmaca - Responsive HUD + touch-none
 - [x] Kart Dedektifi - Responsive HUD + touch-none
 - [x] ChromaBreak - Responsive header + touch-none
+- [x] Chroma Hafıza - Responsive header + touch-none (3D game)
 
 ### Kalan ⬜
-- [ ] Chroma Hafıza (3D game)
 - [ ] KraftOrigami (Paper folder)

@@ -157,8 +157,8 @@ const ChromaHafiza: React.FC = () => {
     // Idle Screen
     if (gamePhase === 'idle') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-950 via-slate-950 to-purple-950 text-white pt-24 pb-12 flex flex-col items-center justify-center">
-                <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20 mx-4">
+            <div className="min-h-screen bg-gradient-to-br from-blue-950 via-slate-950 to-purple-950 text-white pt-16 sm:pt-24 pb-8 sm:pb-12 flex flex-col items-center justify-center touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
+                <div className="bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-6 sm:p-10 max-w-md w-full text-center border border-white/20 mx-4">
                     <motion.div
                         className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-blue-400 to-purple-600 rounded-[40%] flex items-center justify-center"
                         style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
@@ -197,7 +197,7 @@ const ChromaHafiza: React.FC = () => {
     }
 
     return (
-        <div className="relative w-screen h-screen bg-[#0a0a0c] text-white overflow-hidden flex flex-col font-sans">
+        <div className="relative w-screen h-screen bg-[#0a0a0c] text-white overflow-hidden flex flex-col font-sans touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
 
             {/* Background UI Accents */}
             <div className="absolute inset-0 pointer-events-none opacity-20">
@@ -206,31 +206,31 @@ const ChromaHafiza: React.FC = () => {
             </div>
 
             {/* Header UI */}
-            <header className="relative z-10 p-6 pt-24 flex justify-between items-center">
-                <div className="flex items-center gap-4">
+            <header className="relative z-10 p-3 sm:p-6 pt-16 sm:pt-24 flex justify-between items-center">
+                <div className="flex items-center gap-2 sm:gap-4">
                     <Link to={backLink} className="text-slate-500 hover:text-white transition-colors">
-                        <ArrowLeft size={20} />
+                        <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
                     </Link>
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-md">
-                        <Brain className="text-blue-400" size={24} />
+                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-md">
+                        <Brain className="text-blue-400 w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-extrabold tracking-tight">{GAME_NAME}</h1>
-                        <p className="text-xs text-white/40 font-medium tracking-widest uppercase">Seviye {level + 1}</p>
+                        <h1 className="text-base sm:text-xl font-extrabold tracking-tight">{GAME_NAME}</h1>
+                        <p className="text-[10px] sm:text-xs text-white/40 font-medium tracking-widest uppercase">Seviye {level + 1}</p>
                     </div>
                 </div>
 
-                <div className="flex gap-6 items-center">
+                <div className="flex gap-3 sm:gap-6 items-center">
                     {/* Lives */}
-                    <div className="flex items-center gap-1 px-3 py-2 bg-red-500/20 backdrop-blur-sm rounded-xl border border-red-500/30">
+                    <div className="flex items-center gap-0.5 sm:gap-1 px-2 sm:px-3 py-1.5 sm:py-2 bg-red-500/20 backdrop-blur-sm rounded-lg sm:rounded-xl border border-red-500/30">
                         {Array.from({ length: 3 }).map((_, i) => (
-                            <Heart key={i} size={16} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'} />
+                            <Heart key={i} className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'}`} />
                         ))}
                     </div>
                     {/* Score */}
-                    <div className="text-right px-4 py-2 bg-amber-500/20 backdrop-blur-sm rounded-xl border border-amber-500/30">
-                        <p className="text-xs text-white/40 uppercase tracking-widest">Puan</p>
-                        <p className="text-xl font-bold font-mono tracking-tighter">{score.toLocaleString()}</p>
+                    <div className="text-right px-2.5 sm:px-4 py-1 sm:py-2 bg-amber-500/20 backdrop-blur-sm rounded-lg sm:rounded-xl border border-amber-500/30">
+                        <p className="text-[9px] sm:text-xs text-white/40 uppercase tracking-widest">Puan</p>
+                        <p className="text-base sm:text-xl font-bold font-mono tracking-tighter">{score.toLocaleString()}</p>
                     </div>
                 </div>
             </header>
