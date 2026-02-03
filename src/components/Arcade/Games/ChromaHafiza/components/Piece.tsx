@@ -50,7 +50,7 @@ const Piece: React.FC<PieceProps> = ({
     const { color, positionZ, emissiveIntensity } = useSpring({
         color: isRevealed || isFilled ? piece.targetColor : '#5A5A6E',
         positionZ: isRevealed || isFilled ? 0.3 : 0,
-        emissiveIntensity: isRevealed ? 0.8 : (hovered ? 0.4 : 0.1),
+        emissiveIntensity: isRevealed ? 0.25 : (hovered ? 0.15 : 0.05),
         config: { mass: 1, tension: 120, friction: 14 }
     });
 
