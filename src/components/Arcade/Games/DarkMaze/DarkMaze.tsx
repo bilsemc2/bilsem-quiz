@@ -230,13 +230,13 @@ const DarkMaze: React.FC = () => {
     }, [gameState, score, saveGamePlay, energy, timeLeft, level]);
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white pt-24 pb-12 overflow-hidden flex flex-col items-center">
+        <div className="fixed inset-0 bg-[#050505] text-white pt-20 overflow-hidden flex flex-col items-center touch-none">
 
             <AnimatePresence>
                 {isIlluminated && <IlluminationEffect isIlluminated={isIlluminated} />}
             </AnimatePresence>
 
-            <div className="container mx-auto max-w-4xl relative z-10 px-6">
+            <div className="container mx-auto max-w-4xl relative z-10 px-4 flex flex-col items-center flex-1 overflow-hidden">
                 <GameHUD
                     energy={energy}
                     timeLeft={timeLeft}
@@ -245,16 +245,21 @@ const DarkMaze: React.FC = () => {
                     lastCollectionTime={lastCollectionTime}
                 />
 
-                <div className="relative flex justify-center">
+                <div className="flex flex-col items-center gap-4 flex-1 justify-center">
                     <div
-                        className="bg-slate-900/50 rounded-[2rem] p-4 border-4 border-white/5 shadow-2xl relative overflow-hidden transition-all duration-500"
-                        style={{ width: gridSize * CELL_SIZE + 32, height: gridSize * CELL_SIZE + 32 }}
+                        className="bg-slate-900/50 rounded-2xl sm:rounded-[2rem] p-2 sm:p-4 border-2 sm:border-4 border-white/5 shadow-2xl relative overflow-hidden transition-all duration-500"
+                        style={{
+                            width: Math.min(gridSize * CELL_SIZE + 32, window.innerWidth - 32),
+                            maxWidth: gridSize * CELL_SIZE + 32,
+                            aspectRatio: '1'
+                        }}
                     >
                         <canvas
                             ref={canvasRef}
                             width={gridSize * CELL_SIZE}
                             height={gridSize * CELL_SIZE}
-                            className="rounded-xl"
+                            className="rounded-xl w-full h-full object-contain"
+                            style={{ touchAction: 'none' }}
                         />
 
                         <AnimatePresence>
@@ -290,7 +295,7 @@ const DarkMaze: React.FC = () => {
                     <TouchControls onMove={move} />
                 </div>
 
-                <div className="mt-20 flex gap-8 justify-center items-start text-xs font-black uppercase tracking-widest text-slate-500">
+                <div className="hidden lg:flex gap-8 justify-center items-start text-xs font-black uppercase tracking-widest text-slate-500 py-4">
                     <div className="flex items-center gap-2"><Battery size={16} className="text-green-500" /> PİL: ENERJİ VERİR</div>
                     <div className="flex items-center gap-2"><Brain size={16} className="text-yellow-500" /> BEYİN: AYDINLATIR</div>
                 </div>
