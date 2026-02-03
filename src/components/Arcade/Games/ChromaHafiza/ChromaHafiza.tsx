@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
 import { GamePhase, PuzzlePiece } from './types';
@@ -22,8 +22,6 @@ const ChromaHafiza: React.FC = () => {
     const [isRevealing, setIsRevealing] = useState(false);
     const [score, setScore] = useState(0);
     const [lives, setLives] = useState(3);
-
-    const currentLevelConfig = useMemo(() => LEVEL_CONFIGS[level % LEVEL_CONFIGS.length], [level]);
 
     // Auto-start from Arcade Hub
     useEffect(() => {
