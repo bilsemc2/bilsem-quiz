@@ -1,11 +1,11 @@
 export const COLORS = [
-    '#FF3D71', // Vibrant Pink
-    '#00E096', // Emerald
-    '#0095FF', // Azure Blue
-    '#FFAA00', // Amber
-    '#8B3DFF', // Purple
-    '#FF7043', // Deep Orange
-    '#2DE2E2', // Cyan
+    '#E86B8A', // Soft Rose
+    '#4FD1A5', // Soft Mint
+    '#5BA8E8', // Soft Sky Blue
+    '#E8A84F', // Soft Honey
+    '#9F7AEA', // Soft Lavender
+    '#E89B7A', // Soft Coral
+    '#5BC5C5', // Soft Teal
 ];
 
 export const NEUTRAL_BASE = '#1A1A1E';
