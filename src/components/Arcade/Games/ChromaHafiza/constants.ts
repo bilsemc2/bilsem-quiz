@@ -1,6 +1,6 @@
 export const COLORS = [
     '#B85A73', // Dusty Rose
-    '#3DA882', // Muted Sage
+    '#6B7A8C', // Slate Gray
     '#4A8BC2', // Dusty Blue
     '#C48B3A', // Muted Ochre
     '#7C5DAB', // Dusty Violet
