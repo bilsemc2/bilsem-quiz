@@ -1,11 +1,11 @@
 export const COLORS = [
-    '#E86B8A', // Soft Rose
-    '#4FD1A5', // Soft Mint
-    '#5BA8E8', // Soft Sky Blue
-    '#E8A84F', // Soft Honey
-    '#9F7AEA', // Soft Lavender
-    '#E89B7A', // Soft Coral
-    '#5BC5C5', // Soft Teal
+    '#B85A73', // Dusty Rose
+    '#3DA882', // Muted Sage
+    '#4A8BC2', // Dusty Blue
+    '#C48B3A', // Muted Ochre
+    '#7C5DAB', // Dusty Violet
+    '#B87A5C', // Terracotta
+    '#4A9999', // Muted Teal
 ];
 
 export const NEUTRAL_BASE = '#1A1A1E';
