@@ -525,7 +525,7 @@ const TargetGridGame: React.FC = () => {
                                 to={backLink}
                                 className="block text-slate-500 hover:text-white transition-colors"
                             >
-                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
                             </Link>
                         </motion.div>
                     )}
@@ -544,8 +544,8 @@ const TargetGridGame: React.FC = () => {
                                 initial={{ y: 50 }}
                                 animate={{ y: 0 }}
                                 className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
                                     }`}
                                 style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
                             >

@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
     ChevronLeft, RotateCcw, Play, Trophy, Sparkles,
     Square, Circle, Triangle, Star, Heart, Diamond,
-    Box, Layers, Zap, Timer, Eye, CheckCircle2, XCircle
+    Box, Layers, Timer, Eye, CheckCircle2, XCircle
 } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
@@ -698,7 +698,7 @@ const MagicCubeGame: React.FC = () => {
                                 to={backLink}
                                 className="block text-slate-500 hover:text-white transition-colors"
                             >
-                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
                             </Link>
                         </motion.div>
                     )}
@@ -717,8 +717,8 @@ const MagicCubeGame: React.FC = () => {
                                 initial={{ y: 50 }}
                                 animate={{ y: 0 }}
                                 className={`px-12 py-8 rounded-3xl text-center ${showFeedback === 'correct'
-                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
                                     }`}
                                 style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
                             >

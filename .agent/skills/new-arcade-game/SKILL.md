@@ -13,6 +13,7 @@ Bu skill, **Zeka Arcade** hub'ına yeni bir premium oyun eklemek için gerekli a
 2. **Oyun Slug'ı**: Örn. "kristal-magarasi"
 3. **XP Maliyeti**: 30-50 arası önerilir
 4. **Gradient Renkleri**: Örn. "from-cyan-500 to-blue-600"
+5. **Kategori**: `memory` | `spatial` | `flexibility`
 
 ---
 
@@ -75,8 +76,18 @@ export const GAME_CONFIG = {
   icon: <Icon size={48} className="text-white" />,
   link: '/bilsem-zeka/[oyun-slug]',
   tuzo: '5.X.X TUZÖ Beceri Adı', // Zorunlu!
+  category: 'memory' // Zorunlu! 'memory' | 'spatial' | 'flexibility'
 }
 ```
+
+**Kategori Sistemi:**
+| Kategori | Slug | Hub Başlığı |
+|----------|------|-------------|
+| Hafıza Oyunları | `memory` | 🧠 Hafıza Oyunları |
+| Uzamsal Zeka | `spatial` | 🧩 Uzamsal Zeka |
+| Bilişsel Esneklik | `flexibility` | ⚡ Bilişsel Esneklik |
+
+> ⚠️ `category` alanı zorunludur! Hub sayfasında oyunlar kategorilere göre gruplandırılır.
 
 **Mevcut TUZÖ Kodları:**
 | Kod | Beceri |
@@ -91,6 +102,7 @@ export const GAME_CONFIG = {
 | 5.8.x | Kontrol/Esneklik |
 | 5.9.x | Çalışma Belleği |
 | 5.10.x | Sosyal Zeka |
+
 
 ---
 

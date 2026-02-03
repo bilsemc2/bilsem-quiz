@@ -143,24 +143,23 @@ const ChromaBreak: React.FC = () => {
                             exit={{ opacity: 0, scale: 0.9 }}
                             className="flex flex-col items-center justify-center min-h-[70vh] text-center"
                         >
-                            <motion.div
-                                animate={{ scale: [1, 1.05, 1] }}
-                                transition={{ repeat: Infinity, duration: 2 }}
-                                className="text-8xl mb-8"
+                            <div
+                                className="w-24 h-24 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
+                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
                             >
-                                🎮
-                            </motion.div>
-                            <h2 className="text-4xl font-bold text-white mb-4">ChromaBreak</h2>
+                                <span className="text-5xl">🎮</span>
+                            </div>
+                            <h2 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent mb-4">ChromaBreak</h2>
                             <p className="text-slate-400 max-w-md mb-8">
                                 Renkli blokları kır ve hafızanı test et!
                                 Her blok vurduğunda rengi hatırla - sonra quiz'de doğru cevapla!
                             </p>
 
                             <motion.button
-                                whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={startGame}
-                                className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full text-xl font-bold shadow-lg shadow-cyan-500/30"
+                                className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-2xl text-xl font-bold"
+                                style={{ boxShadow: '0 8px 32px rgba(6, 182, 212, 0.4)' }}
                             >
                                 <Play size={24} />
                                 Başla
@@ -179,6 +178,9 @@ const ChromaBreak: React.FC = () => {
                                     <div className="text-cyan-400 font-bold mb-1">📝 TEST</div>
                                     <div>Hafıza Quizi</div>
                                 </div>
+                            </div>
+                            <div className="mt-6 bg-cyan-500/20 text-cyan-300 text-xs px-4 py-2 rounded-full inline-block border border-cyan-500/30">
+                                TUZÖ 5.4.2 Görsel Kısa Süreli Bellek
                             </div>
                         </motion.div>
                     )}
@@ -266,10 +268,10 @@ const ChromaBreak: React.FC = () => {
                                         : 'Renk sıralamasını hatırlayamadın. Tekrar dene!'}
                             </p>
 
-                            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 mb-8">
+                            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mb-8">
                                 <div className="grid grid-cols-2 gap-8 text-center">
                                     <div>
-                                        <div className="text-3xl font-bold text-yellow-400">{score}</div>
+                                        <div className="text-3xl font-bold text-amber-400">{score}</div>
                                         <div className="text-sm text-slate-400">Skor</div>
                                     </div>
                                     <div>
@@ -281,17 +283,17 @@ const ChromaBreak: React.FC = () => {
 
                             <div className="flex gap-4">
                                 <motion.button
-                                    whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={startGame}
-                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full font-bold"
+                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-2xl font-bold"
+                                    style={{ boxShadow: '0 6px 24px rgba(6, 182, 212, 0.4)' }}
                                 >
                                     <Play size={20} />
                                     Tekrar Oyna
                                 </motion.button>
                                 <Link
                                     to="/bilsem-zeka"
-                                    className="flex items-center gap-2 px-6 py-3 bg-slate-700 text-white rounded-full font-bold hover:bg-slate-600"
+                                    className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-bold transition-colors"
                                 >
                                     BİLSEM Zeka'ya Dön
                                 </Link>

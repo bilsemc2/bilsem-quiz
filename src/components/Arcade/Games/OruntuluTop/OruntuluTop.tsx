@@ -118,6 +118,46 @@ const OruntuluTop: React.FC = () => {
     return { x, y };
   };
 
+  // Hedef rengi erişilebilir konumlara yerleştir (alt satırlar: 3-4)
+  const ensureTargetAccessible = useCallback((newBubbles: Bubble[], targetColor: BubbleColor) => {
+    // Alt satırlardaki (row 3 ve 4) balonları bul
+    const bottomRowBubbles = newBubbles.filter(b => b.row >= 3 && b.active);
+
+    // Hedef renkteki balonları say
+    const targetBubblesInBottom = bottomRowBubbles.filter(b => b.color === targetColor);
+
+    // Eğer alt satırlarda yeterli hedef renk yoksa, bazı balonları hedef renge çevir
+    const minRequired = 3; // En az 3 tane hedef renk alt satırlarda olmalı
+
+    if (targetBubblesInBottom.length < minRequired) {
+      const needed = minRequired - targetBubblesInBottom.length;
+
+      // Alt satırlardaki farklı renkteki balonlardan rastgele seç
+      const otherColorBubbles = bottomRowBubbles.filter(b => b.color !== targetColor);
+      const shuffled = otherColorBubbles.sort(() => 0.5 - Math.random());
+
+      for (let i = 0; i < Math.min(needed, shuffled.length); i++) {
+        shuffled[i].color = targetColor;
+      }
+    }
+
+    // Ayrıca kenar balonlarından da en az 1-2 tane hedef renk olsun
+    const edgeBubbles = newBubbles.filter(b =>
+      b.active && (b.col === 0 || b.col === GAME_CONFIG.GRID_COLS - 1 || (b.row % 2 !== 0 && b.col === GAME_CONFIG.GRID_COLS - 2))
+    );
+    const targetEdgeBubbles = edgeBubbles.filter(b => b.color === targetColor);
+
+    if (targetEdgeBubbles.length < 2) {
+      const needed = 2 - targetEdgeBubbles.length;
+      const otherEdgeBubbles = edgeBubbles.filter(b => b.color !== targetColor);
+      const shuffled = otherEdgeBubbles.sort(() => 0.5 - Math.random());
+
+      for (let i = 0; i < Math.min(needed, shuffled.length); i++) {
+        shuffled[i].color = targetColor;
+      }
+    }
+  }, []);
+
   const initGrid = useCallback((width: number) => {
     const newBubbles: Bubble[] = [];
     for (let r = 0; r < 5; r++) {
@@ -134,7 +174,12 @@ const OruntuluTop: React.FC = () => {
     }
     bubbles.current = newBubbles;
     generatePattern();
-  }, [generatePattern]);
+
+    // Pattern oluşturulduktan sonra hedef rengin erişilebilir olmasını garanti et
+    if (targetColorRef.current) {
+      ensureTargetAccessible(newBubbles, targetColorRef.current);
+    }
+  }, [generatePattern, ensureTargetAccessible]);
 
   const createExplosion = (x: number, y: number, color: string) => {
     for (let i = 0; i < 20; i++) {
@@ -177,9 +222,15 @@ const OruntuluTop: React.FC = () => {
 
     setTimeout(() => {
       setFeedback(null);
-      generatePattern();
+
       if (bubbles.current.filter(b => b.active).length < 10) {
         initGrid(canvasRef.current?.width || 800);
+      } else {
+        generatePattern();
+        // Yeni pattern için hedef rengin erişilebilir olmasını garanti et
+        if (targetColorRef.current) {
+          ensureTargetAccessible(bubbles.current, targetColorRef.current);
+        }
       }
     }, 1500);
   };
@@ -267,17 +318,148 @@ const OruntuluTop: React.FC = () => {
         if (b.active) drawBubble(ctx, b.x, b.y, GAME_CONFIG.BUBBLE_RADIUS - 1, b.color);
       });
 
-      // Kılavuz Çizgisi
+      // Kılavuz Çizgisi - Duvar Yansımalı Trajectory
       if (isDragging.current) {
-        ctx.beginPath();
-        ctx.setLineDash([4, 8]);
-        ctx.moveTo(anchorPos.current.x, anchorPos.current.y);
         const dx = anchorPos.current.x - ballPos.current.x;
         const dy = anchorPos.current.y - ballPos.current.y;
-        ctx.lineTo(anchorPos.current.x + dx * 6, anchorPos.current.y + dy * 6);
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-        ctx.stroke();
-        ctx.setLineDash([]);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 20) {
+          // Trajectory should go in the OPPOSITE direction of drag (slingshot physics)
+          // dx, dy already point from ball to anchor (the launch direction)
+          const speed = 1; // normalized speed
+          let velX = (dx / dist) * speed;
+          let velY = (dy / dist) * speed;
+
+          // Make sure we're going upward (negative Y)
+          if (velY > 0) {
+            velY = -Math.abs(velY);
+          }
+
+          // Calculate trajectory with wall bounces
+          const trajectoryPoints: { x: number; y: number }[] = [];
+          const bouncePoints: { x: number; y: number }[] = [];
+          let currentX = anchorPos.current.x;
+          let currentY = anchorPos.current.y;
+          const stepSize = 10;
+          const maxSteps = 100;
+
+          trajectoryPoints.push({ x: currentX, y: currentY });
+
+          for (let i = 0; i < maxSteps; i++) {
+            const nextX = currentX + velX * stepSize;
+            const nextY = currentY + velY * stepSize;
+
+            // Wall bounce detection - LEFT wall
+            if (nextX < GAME_CONFIG.BUBBLE_RADIUS) {
+              // Calculate exact bounce point
+              const t = (GAME_CONFIG.BUBBLE_RADIUS - currentX) / (velX * stepSize);
+              const bounceY = currentY + velY * stepSize * t;
+              bouncePoints.push({ x: GAME_CONFIG.BUBBLE_RADIUS, y: bounceY });
+              trajectoryPoints.push({ x: GAME_CONFIG.BUBBLE_RADIUS, y: bounceY });
+
+              currentX = GAME_CONFIG.BUBBLE_RADIUS + (nextX - GAME_CONFIG.BUBBLE_RADIUS) * -1;
+              currentY = nextY;
+              velX *= -1; // Bounce!
+            }
+            // Wall bounce detection - RIGHT wall
+            else if (nextX > canvas.width - GAME_CONFIG.BUBBLE_RADIUS) {
+              const rightWall = canvas.width - GAME_CONFIG.BUBBLE_RADIUS;
+              const t = (rightWall - currentX) / (velX * stepSize);
+              const bounceY = currentY + velY * stepSize * t;
+              bouncePoints.push({ x: rightWall, y: bounceY });
+              trajectoryPoints.push({ x: rightWall, y: bounceY });
+
+              currentX = rightWall - (nextX - rightWall);
+              currentY = nextY;
+              velX *= -1; // Bounce!
+            }
+            else {
+              currentX = nextX;
+              currentY = nextY;
+            }
+
+            trajectoryPoints.push({ x: currentX, y: currentY });
+
+            // Stop when reaching bubble area
+            if (currentY < 350) break;
+          }
+
+          // Draw trajectory with glow
+          ctx.save();
+
+          // Outer glow
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = 'rgba(100, 200, 255, 0.8)';
+
+          // Main trajectory line
+          ctx.beginPath();
+          ctx.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
+          for (let i = 1; i < trajectoryPoints.length; i++) {
+            ctx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
+          }
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+          ctx.lineWidth = 4;
+          ctx.setLineDash([12, 8]);
+          ctx.lineCap = 'round';
+          ctx.stroke();
+
+          // Inner bright line
+          ctx.shadowBlur = 0;
+          ctx.beginPath();
+          ctx.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
+          for (let i = 1; i < trajectoryPoints.length; i++) {
+            ctx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
+          }
+          ctx.strokeStyle = 'rgba(100, 220, 255, 0.6)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([12, 8]);
+          ctx.stroke();
+
+          ctx.setLineDash([]);
+          ctx.restore();
+
+          // Draw bounce markers (bright orange circles at wall bounce points)
+          bouncePoints.forEach(point => {
+            // Outer glow
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 14, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 150, 50, 0.3)';
+            ctx.fill();
+
+            // Inner circle
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+            const bounceGrad = ctx.createRadialGradient(point.x - 2, point.y - 2, 0, point.x, point.y, 8);
+            bounceGrad.addColorStop(0, '#ffdd00');
+            bounceGrad.addColorStop(1, '#ff8800');
+            ctx.fillStyle = bounceGrad;
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          });
+
+          // Draw aim target at end of trajectory
+          if (trajectoryPoints.length > 2) {
+            const endPoint = trajectoryPoints[trajectoryPoints.length - 1];
+            ctx.beginPath();
+            ctx.arc(endPoint.x, endPoint.y, 12, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 100, 100, 0.8)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Crosshair
+            ctx.beginPath();
+            ctx.moveTo(endPoint.x - 8, endPoint.y);
+            ctx.lineTo(endPoint.x + 8, endPoint.y);
+            ctx.moveTo(endPoint.x, endPoint.y - 8);
+            ctx.lineTo(endPoint.x, endPoint.y + 8);
+            ctx.strokeStyle = 'rgba(255, 100, 100, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
       }
 
       // Uçuş Fiziği
@@ -483,19 +665,26 @@ const OruntuluTop: React.FC = () => {
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-6"
           >
-            <div className="bg-[#111] rounded-[3rem] p-10 max-w-lg w-full text-center shadow-2xl border-[4px] border-indigo-500/50">
-              <div className="w-28 h-28 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner border border-indigo-500/30">
-                <Target className="w-14 h-14 text-indigo-400" />
+            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20">
+              <div
+                className="w-28 h-28 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
+                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+              >
+                <Target className="w-14 h-14 text-white" />
               </div>
-              <h1 className="text-5xl text-white mb-6 tracking-tighter font-black uppercase">Örüntü Avcısı</h1>
-              <div className="space-y-4 text-slate-400 mb-10 text-lg font-medium bg-white/5 p-6 rounded-2xl border border-white/5">
+              <h1 className="text-5xl bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent mb-6 tracking-tighter font-black uppercase">Örüntü Avcısı</h1>
+              <div className="space-y-4 text-slate-400 mb-10 text-lg font-medium bg-white/5 p-6 rounded-2xl border border-white/10">
                 <p>1. Örüntüdeki <span className="text-indigo-400 font-bold">eksik balonu</span> bul.</p>
-                <p>2. Sapanla o <span className="underline decoration-indigo-500/50">renktekii</span> balonu vur!</p>
+                <p>2. Sapanla o <span className="text-white">renkteki</span> balonu vur!</p>
                 <p>3. Yanlış renk can kaybettirir. <span className="text-red-400">Dikkatli ol!</span></p>
+              </div>
+              <div className="bg-indigo-500/20 text-indigo-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30">
+                TUZÖ 5.3.1 Örüntü Tamamlama
               </div>
               <button
                 onClick={startGame}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-3xl py-5 rounded-[2rem] shadow-xl transform active:scale-95 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest"
+                className="w-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-3xl py-5 rounded-2xl transform active:scale-95 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest"
+                style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
               >
                 <Play fill="white" className="w-8 h-8" /> BAŞLA!
               </button>
@@ -508,29 +697,30 @@ const OruntuluTop: React.FC = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute inset-0 bg-red-950/60 backdrop-blur-xl z-50 flex items-center justify-center p-6"
+            className="absolute inset-0 bg-black/70 backdrop-blur-xl z-50 flex items-center justify-center p-6"
           >
-            <div className="bg-[#111] rounded-[3rem] p-10 max-w-lg w-full text-center shadow-2xl border-[4px] border-red-500/50">
-              <h2 className="text-6xl text-red-500 mb-4 font-black tracking-tighter uppercase">OYUN BİTTİ</h2>
+            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20">
+              <h2 className="text-6xl text-rose-400 mb-4 font-black tracking-tighter uppercase">OYUN BİTTİ</h2>
               <p className="text-2xl text-slate-400 mb-8 font-bold italic">Örüntüyü kaçırdın!</p>
 
-              <div className="bg-red-500/10 rounded-[2rem] p-8 mb-10 border border-red-500/20 shadow-inner">
-                <p className="text-red-400/60 uppercase text-xs font-black tracking-[0.2em] mb-2">TOPLAM PUANIN</p>
+              <div className="bg-white/5 rounded-3xl p-8 mb-10 border border-white/10">
+                <p className="text-rose-400/60 uppercase text-xs font-black tracking-[0.2em] mb-2">TOPLAM PUANIN</p>
                 <p className="text-8xl font-black text-white tabular-nums tracking-tighter">{score}</p>
                 <div className="flex justify-center gap-4 mt-6">
-                  <div className="bg-white/5 px-6 py-2 rounded-full border border-white/10 text-slate-300 font-bold">
+                  <div className="bg-white/10 px-6 py-2 rounded-full border border-white/20 text-amber-400 font-bold">
                     Seviye {level}
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <Link to="/bilsem-zeka" className="bg-slate-800 hover:bg-slate-700 text-white text-xl py-4 rounded-2xl shadow-lg font-bold flex items-center justify-center gap-2 transition-all">
-                  Arcade
+                <Link to="/bilsem-zeka" className="bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xl py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all">
+                  Bilsem Zeka
                 </Link>
                 <button
                   onClick={startGame}
-                  className="bg-red-600 hover:bg-red-500 text-white text-xl py-4 rounded-2xl shadow-xl transform active:scale-95 transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest"
+                  className="bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xl py-4 rounded-2xl transform active:scale-95 transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest"
+                  style={{ boxShadow: '0 8px 32px rgba(244, 63, 94, 0.4)' }}
                 >
                   <RefreshCw className="w-6 h-6" /> Tekrar
                 </button>

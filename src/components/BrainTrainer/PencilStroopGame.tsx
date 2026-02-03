@@ -535,7 +535,7 @@ const PencilStroopGame: React.FC = () => {
                                 to={backLink}
                                 className="block text-slate-500 hover:text-white transition-colors"
                             >
-                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
                             </Link>
                         </motion.div>
                     )}

@@ -182,16 +182,26 @@ const AynaUstasi: React.FC = () => {
     if (gameState === 'idle') {
         return (
             <div className="min-h-screen bg-[#020617] text-white pt-24 pb-12 flex flex-col items-center justify-center">
-                <div className="text-center p-8">
-                    <h1 className="text-5xl md:text-7xl font-black text-blue-400 tracking-tight mb-4">
-                        Ayna <span className="text-rose-400">Ustası</span>
+                <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20 mx-4">
+                    <div
+                        className="w-24 h-24 bg-gradient-to-br from-blue-500 to-rose-500 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                        style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                    >
+                        <span className="text-5xl">🪞</span>
+                    </div>
+                    <h1 className="text-4xl font-black bg-gradient-to-r from-blue-400 to-rose-400 bg-clip-text text-transparent tracking-tight mb-4">
+                        Ayna Ustası
                     </h1>
-                    <p className="text-slate-400 font-medium text-lg mb-8 max-w-md mx-auto">
+                    <p className="text-slate-400 font-medium text-lg mb-4 max-w-md mx-auto">
                         Sol tarafta çiz, sağ tarafta ayna görüntüsüyle hedefleri vur!
                     </p>
+                    <div className="bg-blue-500/20 text-blue-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-blue-500/30">
+                        TUZÖ 3.2.1 Ayna Simetrisi / Görsel-Uzamsal Algı
+                    </div>
                     <button
                         onClick={startGame}
-                        className="px-12 py-4 bg-gradient-to-r from-blue-500 to-rose-500 text-white rounded-2xl font-black text-xl shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all"
+                        className="w-full px-12 py-4 bg-gradient-to-r from-blue-500 to-rose-500 text-white rounded-2xl font-black text-xl active:scale-95 transition-all"
+                        style={{ boxShadow: '0 8px 32px rgba(59, 130, 246, 0.4)' }}
                     >
                         BAŞLA
                     </button>
@@ -210,14 +220,20 @@ const AynaUstasi: React.FC = () => {
     if (gameState === 'finished') {
         return (
             <div className="min-h-screen bg-[#020617] text-white pt-24 pb-12 flex flex-col items-center justify-center">
-                <div className="text-center p-8">
-                    <div className="text-8xl mb-6">🏆</div>
-                    <h2 className="text-4xl md:text-5xl font-black mb-4 text-blue-400">Oyun Bitti!</h2>
+                <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20 mx-4">
+                    <div
+                        className="w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                        style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.4), 0 6px 16px rgba(0,0,0,0.3)' }}
+                    >
+                        <span className="text-4xl">🏆</span>
+                    </div>
+                    <h2 className="text-4xl font-black mb-4 bg-gradient-to-r from-blue-400 to-rose-400 bg-clip-text text-transparent">Oyun Bitti!</h2>
                     <p className="text-2xl text-white mb-2">Toplam Skor: <span className="text-rose-400 font-black">{totalScore}</span></p>
                     <p className="text-slate-400 mb-8">Tamamlanan Seviye: {currentLevelIdx + 1}</p>
                     <button
                         onClick={startGame}
-                        className="px-12 py-4 bg-gradient-to-r from-blue-500 to-rose-500 text-white rounded-2xl font-black text-xl shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all"
+                        className="w-full px-12 py-4 bg-gradient-to-r from-blue-500 to-rose-500 text-white rounded-2xl font-black text-xl active:scale-95 transition-all"
+                        style={{ boxShadow: '0 8px 32px rgba(59, 130, 246, 0.4)' }}
                     >
                         TEKRAR OYNA
                     </button>

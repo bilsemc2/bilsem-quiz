@@ -63,7 +63,7 @@ const ShadowDetectiveGame: React.FC = () => {
 
     // Back link
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
-    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+    const backLabel = location.state?.arcadeMode ? "Bilsem Zeka" : "Geri";
 
     // --- Uniklik İmzası Üretme ---
     const getPatternSignature = (items: PatternItem[]) => {
@@ -642,7 +642,7 @@ const ShadowDetectiveGame: React.FC = () => {
                                 to={backLink}
                                 className="block text-slate-500 hover:text-white transition-colors"
                             >
-                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
                             </Link>
                         </motion.div>
                     )}

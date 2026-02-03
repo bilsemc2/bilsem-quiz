@@ -144,19 +144,26 @@ const KraftOrigami: React.FC = () => {
     if (gameState === 'idle') {
         return (
             <div className="min-h-screen bg-[#0a0f1e] text-white pt-24 pb-12 flex flex-col items-center justify-center">
-                <div className="text-center p-8">
-                    <div className="w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/30">
-                        <Scissors size={40} className="text-white" />
+                <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20 mx-4">
+                    <div
+                        className="w-24 h-24 bg-gradient-to-br from-amber-500 to-orange-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                        style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                    >
+                        <Scissors size={48} className="text-white" />
                     </div>
-                    <h1 className="text-5xl md:text-7xl font-black text-amber-500 tracking-tight mb-4">
-                        Kraft <span className="text-orange-400">Origami</span>
+                    <h1 className="text-4xl font-black bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent tracking-tight mb-4">
+                        Kraft Origami
                     </h1>
-                    <p className="text-slate-400 font-medium text-lg mb-8 max-w-md mx-auto">
+                    <p className="text-slate-400 font-medium text-lg mb-4 max-w-md mx-auto">
                         Kağıdı katla, del ve açtığında simetrik desenleri keşfet!
                     </p>
+                    <div className="bg-amber-500/20 text-amber-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-amber-500/30">
+                        TUZÖ 5.5.1 Simetri Keşfi / Mental Katlama
+                    </div>
                     <button
                         onClick={startGame}
-                        className="px-12 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl font-black text-xl shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-3 mx-auto"
+                        className="w-full px-12 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl font-black text-xl active:scale-95 transition-all flex items-center gap-3 justify-center mx-auto"
+                        style={{ boxShadow: '0 8px 32px rgba(245, 158, 11, 0.4)' }}
                     >
                         <Play size={24} /> BAŞLA
                     </button>
@@ -176,14 +183,20 @@ const KraftOrigami: React.FC = () => {
         const score = finalPunches.length * 10 + state.folds.length * 50;
         return (
             <div className="min-h-screen bg-[#0a0f1e] text-white pt-24 pb-12 flex flex-col items-center justify-center">
-                <div className="text-center p-8">
-                    <Trophy size={80} className="text-amber-500 mx-auto mb-6" />
-                    <h2 className="text-4xl md:text-5xl font-black mb-4 text-amber-500">Harika Tasarım!</h2>
+                <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20 mx-4">
+                    <div
+                        className="w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                        style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.4), 0 6px 16px rgba(0,0,0,0.3)' }}
+                    >
+                        <Trophy size={40} className="text-white" />
+                    </div>
+                    <h2 className="text-4xl font-black mb-4 bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">Harika Tasarım!</h2>
                     <p className="text-2xl text-white mb-2">Skor: <span className="text-orange-400 font-black">{score}</span></p>
                     <p className="text-slate-400 mb-2">Katman: {Math.pow(2, state.folds.length)} | Delik: {finalPunches.length}</p>
                     <button
                         onClick={startGame}
-                        className="mt-8 px-12 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl font-black text-xl shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all"
+                        className="w-full mt-8 px-12 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl font-black text-xl active:scale-95 transition-all"
+                        style={{ boxShadow: '0 8px 32px rgba(245, 158, 11, 0.4)' }}
                     >
                         TEKRAR OYNA
                     </button>

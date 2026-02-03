@@ -277,20 +277,27 @@ const KartDedektifi: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="bg-[#111] rounded-[3rem] p-10 max-w-lg w-full text-center shadow-2xl border-[4px] border-sky-500/50"
+              className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20"
             >
-              <div className="w-28 h-28 bg-sky-500/20 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner border border-sky-500/30">
-                <Search className="w-14 h-14 text-sky-400" />
+              <div
+                className="w-28 h-28 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
+                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+              >
+                <Search className="w-14 h-14 text-white" />
               </div>
-              <h1 className="text-5xl text-white mb-6 tracking-tighter font-black uppercase">Kart Dedektifi</h1>
-              <div className="space-y-4 text-slate-400 mb-10 text-lg font-medium bg-white/5 p-6 rounded-2xl border border-white/5">
+              <h1 className="text-5xl bg-gradient-to-r from-sky-400 to-cyan-400 bg-clip-text text-transparent mb-6 tracking-tighter font-black uppercase">Kart Dedektifi</h1>
+              <div className="space-y-4 text-slate-400 mb-10 text-lg font-medium bg-white/5 p-6 rounded-2xl border border-white/10">
                 <p>1. Ortadaki kartı <span className="text-sky-400 font-bold text-xl">renk, şekil</span> veya <span className="text-sky-400 font-bold text-xl">sayıya</span> göre eşleştir.</p>
-                <p>2. Kural her 3 doğruda bir <span className="underline decoration-sky-500/50">rastgele değişir!</span></p>
+                <p>2. Kural her 3 doğruda bir <span className="text-white">rastgele değişir!</span></p>
                 <p>3. Yanlış eşleşme can kaybettirir. <span className="text-red-400">Dedektif dikkatli ol!</span></p>
+              </div>
+              <div className="bg-sky-500/20 text-sky-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-sky-500/30">
+                TUZÖ 5.2.2 Kural Keşfi / Esnek Düşünce
               </div>
               <button
                 onClick={startGame}
-                className="w-full bg-sky-600 hover:bg-sky-500 text-white text-3xl py-5 rounded-[2rem] shadow-xl transform active:scale-95 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest"
+                className="w-full bg-gradient-to-r from-sky-500 to-cyan-600 text-white text-3xl py-5 rounded-2xl transform active:scale-95 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest"
+                style={{ boxShadow: '0 8px 32px rgba(14, 165, 233, 0.4)' }}
               >
                 <Play fill="white" className="w-8 h-8" /> BAŞLA!
               </button>
@@ -301,31 +308,35 @@ const KartDedektifi: React.FC = () => {
               key="game_over"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-[#111] rounded-[3rem] p-10 max-w-lg w-full text-center shadow-2xl border-[4px] border-red-500/50"
+              className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20"
             >
-              <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30">
-                <GraduationCap className="w-12 h-12 text-red-400" />
+              <div
+                className="w-24 h-24 bg-gradient-to-br from-rose-500 to-pink-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+              >
+                <GraduationCap className="w-12 h-12 text-white" />
               </div>
-              <h2 className="text-6xl text-red-500 mb-4 font-black tracking-tighter uppercase leading-tight">GÖREV BİTTİ</h2>
+              <h2 className="text-6xl text-rose-400 mb-4 font-black tracking-tighter uppercase leading-tight">GÖREV BİTTİ</h2>
               <p className="text-2xl text-slate-400 mb-8 font-bold italic">İpuçları bitti dedektif!</p>
 
-              <div className="bg-red-500/10 rounded-[2rem] p-8 mb-10 border border-red-500/20 shadow-inner">
-                <p className="text-red-400/60 uppercase text-xs font-black tracking-[0.2em] mb-2">TOPLAM SKOR</p>
+              <div className="bg-white/5 rounded-3xl p-8 mb-10 border border-white/10">
+                <p className="text-rose-400/60 uppercase text-xs font-black tracking-[0.2em] mb-2">TOPLAM SKOR</p>
                 <p className="text-8xl font-black text-white tabular-nums tracking-tighter">{gameState.score}</p>
                 <div className="flex justify-center gap-4 mt-6">
-                  <div className="bg-white/5 px-6 py-2 rounded-full border border-white/10 text-slate-300 font-bold">
+                  <div className="bg-white/10 px-6 py-2 rounded-full border border-white/20 text-amber-400 font-bold">
                     Seviye {level}
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <Link to="/bilsem-zeka" className="bg-slate-800 hover:bg-slate-700 text-white text-xl py-4 rounded-2xl shadow-lg font-bold flex items-center justify-center gap-2 transition-all">
+                <Link to="/bilsem-zeka" className="bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xl py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all">
                   Arcade
                 </Link>
                 <button
                   onClick={startGame}
-                  className="bg-red-600 hover:bg-red-500 text-white text-xl py-4 rounded-2xl shadow-xl transform active:scale-95 transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest"
+                  className="bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xl py-4 rounded-2xl transform active:scale-95 transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest"
+                  style={{ boxShadow: '0 8px 32px rgba(244, 63, 94, 0.4)' }}
                 >
                   <RefreshCw className="w-6 h-6" /> TEKRAR
                 </button>

@@ -211,7 +211,7 @@ const RenkliLambalar: React.FC = () => {
                         className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
                     >
                         <ChevronLeft size={20} />
-                        <span>Zeka Arcade</span>
+                        <span>Bilsem Zeka</span>
                     </Link>
 
                     {phase === 'playing' && (

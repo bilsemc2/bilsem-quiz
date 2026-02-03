@@ -351,8 +351,8 @@ const NBackGame: React.FC = () => {
                             initial={{ y: 50 }}
                             animate={{ y: 0 }}
                             className={`px-12 py-8 rounded-3xl text-center ${isCorrectFeedback
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                : 'bg-gradient-to-br from-orange-500 to-amber-600'
                                 }`}
                             style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
                         >
@@ -499,8 +499,8 @@ const NBackGame: React.FC = () => {
                                     disabled={history.length <= nValue}
                                     onClick={() => handleDecision(true)}
                                     className={`p-6 rounded-2xl flex flex-col items-center gap-3 transition-all ${history.length <= nValue
-                                            ? 'opacity-30 cursor-not-allowed'
-                                            : 'cursor-pointer'
+                                        ? 'opacity-30 cursor-not-allowed'
+                                        : 'cursor-pointer'
                                         }`}
                                     style={{
                                         background: history.length > nValue
@@ -524,8 +524,8 @@ const NBackGame: React.FC = () => {
                                     disabled={history.length <= nValue}
                                     onClick={() => handleDecision(false)}
                                     className={`p-6 rounded-2xl flex flex-col items-center gap-3 transition-all ${history.length <= nValue
-                                            ? 'opacity-30 cursor-not-allowed'
-                                            : 'cursor-pointer'
+                                        ? 'opacity-30 cursor-not-allowed'
+                                        : 'cursor-pointer'
                                         }`}
                                     style={{
                                         background: history.length > nValue
@@ -605,7 +605,7 @@ const NBackGame: React.FC = () => {
                                     className="w-full px-6 py-4 bg-white/10 backdrop-blur-sm rounded-2xl font-bold flex items-center justify-center gap-2 border border-white/20"
                                 >
                                     <Home size={20} />
-                                    <span>{location.state?.arcadeMode ? "Arcade'e Dön" : "Çıkış"}</span>
+                                    <span>{location.state?.arcadeMode ? "Bilsem Zeka" : "Çıkış"}</span>
                                 </Link>
                             </div>
                         </motion.div>

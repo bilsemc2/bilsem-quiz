@@ -447,8 +447,8 @@ const CosmicMemoryGame: React.FC = () => {
 
                         {/* Mode Badge */}
                         <div className={`px-3 py-2 rounded-xl font-bold text-sm ${state.mode === 'REVERSE'
-                                ? 'bg-pink-500/20 border border-pink-500/30 text-pink-300'
-                                : 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-300'
+                            ? 'bg-pink-500/20 border border-pink-500/30 text-pink-300'
+                            : 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-300'
                             }`}>
                             {state.mode}
                         </div>
@@ -475,8 +475,8 @@ const CosmicMemoryGame: React.FC = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0 }}
                                 className={`mb-6 flex items-center gap-3 px-6 py-3 rounded-2xl font-bold ${state.status === 'DISPLAYING'
-                                        ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-300'
-                                        : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
+                                    ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-300'
+                                    : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
                                     }`}
                             >
                                 {state.status === 'DISPLAYING' ? (
@@ -607,7 +607,7 @@ const CosmicMemoryGame: React.FC = () => {
                                     className="w-full px-6 py-4 bg-white/10 backdrop-blur-sm rounded-2xl font-bold flex items-center justify-center gap-2 border border-white/20"
                                 >
                                     <Home size={20} />
-                                    <span>{location.state?.arcadeMode ? "Arcade'e Dön" : "Çıkış"}</span>
+                                    <span>{location.state?.arcadeMode ? "Bilsem Zeka" : "Geri Dön"}</span>
                                 </Link>
                             </div>
                         </motion.div>

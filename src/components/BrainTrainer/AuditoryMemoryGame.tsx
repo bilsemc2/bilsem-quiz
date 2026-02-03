@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Volume2, CheckCircle2, XCircle, ChevronLeft, Zap, Headphones, Music, Heart, Eye, Sparkles } from 'lucide-react';
+import { Trophy, RotateCcw, Play, Star, Volume2, CheckCircle2, XCircle, ChevronLeft, Headphones, Music, Heart, Eye, Sparkles } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
@@ -568,7 +568,7 @@ const AuditoryMemoryGame: React.FC = () => {
                                 to={backLink}
                                 className="block text-slate-500 hover:text-white transition-colors"
                             >
-                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
                             </Link>
                         </motion.div>
                     )}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Star, Timer, CheckCircle2, XCircle, ChevronLeft,
-    Zap, Target, AlertCircle, Heart, Play, Sparkles, Eye
+    Zap, Target, AlertCircle, Heart, Eye
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
@@ -679,7 +679,7 @@ const ReactionTimeGame: React.FC = () => {
                                 to={backLink}
                                 className="block text-slate-500 hover:text-white transition-colors"
                             >
-                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
                             </Link>
                         </motion.div>
                     )}
@@ -698,8 +698,8 @@ const ReactionTimeGame: React.FC = () => {
                                 initial={{ y: 50 }}
                                 animate={{ y: 0 }}
                                 className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
                                     }`}
                                 style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
                             >
