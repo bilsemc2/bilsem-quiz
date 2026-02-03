@@ -78,6 +78,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'chromabreak': ZEKA_TURLERI.GORSEL_HAFIZA,
     'yol-bulmaca': ZEKA_TURLERI.CALISMA_BELLEGI,
     'renkli-lambalar': ZEKA_TURLERI.GORSEL_HAFIZA,
+    'arcade-chroma-hafiza': ZEKA_TURLERI.GORSEL_HAFIZA,
     'desen-boyama': ZEKA_TURLERI.GORSEL_UZAMSAL,
 };
 
@@ -137,6 +138,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'chromabreak': 'arcade',
     'yol-bulmaca': 'arcade',
     'renkli-lambalar': 'arcade',
+    'arcade-chroma-hafiza': 'arcade',
 };
 
 // Workshop türü etiketleri

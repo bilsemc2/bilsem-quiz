@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { TwitterOutlined, InstagramOutlined, YoutubeOutlined } from '@ant-design/icons';
+import { XOutlined, InstagramOutlined, YoutubeOutlined } from '@ant-design/icons';
 
 export default function Footer() {
     return (
@@ -34,7 +34,7 @@ export default function Footer() {
                         <h3 className="text-xl font-bold mb-4">Bizi Takip Edin</h3>
                         <div className="flex justify-center md:justify-end space-x-6">
                             <a href="https://x.com/BilsemSinavi" className="hover:text-white transition-colors" aria-label="Twitter">
-                                <TwitterOutlined className="text-3xl" aria-hidden="true" />
+                                <XOutlined className="text-3xl" aria-hidden="true" />
                             </a>
                             <a href="https://www.instagram.com/bilsemc2/" className="hover:text-white transition-colors" aria-label="Instagram">
                                 <InstagramOutlined className="text-3xl" aria-hidden="true" />

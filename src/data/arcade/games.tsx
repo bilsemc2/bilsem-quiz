@@ -67,6 +67,17 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         tuzo: "5.9.2 Çalışma Belleği",
         category: 'memory'
     },
+    {
+        id: 'chroma-hafiza',
+        title: "Chroma Hafıza",
+        description: "3D parçaların renklerini ezberle ve hedef renkteki tüm parçaları bul!",
+        cost: 40,
+        color: "from-blue-500 to-purple-600",
+        icon: <Sparkles size={48} className="text-white" />,
+        link: "/bilsem-zeka/chroma-hafiza",
+        tuzo: "5.4.2 Görsel Kısa Süreli Bellek",
+        category: 'memory'
+    },
     // UZAMSAL ZEKA
     {
         id: 'dark-maze',
