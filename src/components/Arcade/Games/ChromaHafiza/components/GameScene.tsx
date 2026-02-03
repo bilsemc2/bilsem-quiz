@@ -47,7 +47,9 @@ const GameScene: React.FC<GameSceneProps> = ({ pieces, isRevealing, onPieceClick
                     <PerspectiveCamera makeDefault position={[cameraDistance, cameraDistance, cameraDistance]} fov={40} />
                     <OrbitControls
                         enablePan={false}
-                        enableZoom={false}
+                        enableZoom={true}
+                        minDistance={10}
+                        maxDistance={30}
                         minPolarAngle={Math.PI / 4}
                         maxPolarAngle={Math.PI / 2.5}
                     />
