@@ -47,6 +47,15 @@ const LabirentUstasi: React.FC = () => {
     const [showLevelWin, setShowLevelWin] = useState(false);
     const [moves, setMoves] = useState(0);
 
+    // Joystick State
+    const joystickRef = useRef<HTMLDivElement>(null);
+    const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const lastMoveRef = useRef<number>(0);
+    const JOYSTICK_RADIUS = 50;
+    const MOVE_THRESHOLD = 25;
+    const MOVE_COOLDOWN = 150;
+
     // Auto-start from Arcade Hub
     useEffect(() => {
         if (location.state?.autoStart && gameState === 'idle') {
@@ -141,6 +150,60 @@ const LabirentUstasi: React.FC = () => {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [movePlayer]);
+
+    // Joystick Handlers
+    const handleJoystickStart = useCallback(() => {
+        if (!joystickRef.current) return;
+        setIsDragging(true);
+    }, []);
+
+    const handleJoystickMove = useCallback((clientX: number, clientY: number) => {
+        if (!joystickRef.current || !isDragging) return;
+
+        const rect = joystickRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        let dx = clientX - centerX;
+        let dy = clientY - centerY;
+
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > JOYSTICK_RADIUS) {
+            dx = (dx / distance) * JOYSTICK_RADIUS;
+            dy = (dy / distance) * JOYSTICK_RADIUS;
+        }
+
+        setJoystickPos({ x: dx, y: dy });
+
+        const now = Date.now();
+        if (now - lastMoveRef.current > MOVE_COOLDOWN && distance > MOVE_THRESHOLD) {
+            lastMoveRef.current = now;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                movePlayer(0, dx > 0 ? 1 : -1);
+            } else {
+                movePlayer(dy > 0 ? 1 : -1, 0);
+            }
+        }
+    }, [isDragging, movePlayer, JOYSTICK_RADIUS, MOVE_COOLDOWN, MOVE_THRESHOLD]);
+
+    const handleJoystickEnd = useCallback(() => {
+        setIsDragging(false);
+        setJoystickPos({ x: 0, y: 0 });
+    }, []);
+
+    const getActiveDirection = () => {
+        const { x, y } = joystickPos;
+        const distance = Math.sqrt(x * x + y * y);
+        if (distance < MOVE_THRESHOLD) return null;
+
+        if (Math.abs(x) > Math.abs(y)) {
+            return x > 0 ? 'right' : 'left';
+        }
+        return y > 0 ? 'down' : 'up';
+    };
+
+    const activeDirection = getActiveDirection();
 
     const nextLevel = () => {
         setShowLevelWin(false);
@@ -327,22 +390,82 @@ const LabirentUstasi: React.FC = () => {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 p-4 pb-56 md:pb-4 flex items-center justify-center relative overflow-hidden">
-                <div className="relative">
-                    <MazeCanvas
-                        grid={grid}
-                        solution={solution}
-                        userPath={userPath}
-                        playerPosition={playerPosition}
-                        cellSize={Math.min(
-                            40, // Daha büyük maksimum hücre
-                            Math.min(
-                                (window.innerWidth - 40) / level.cols,
-                                (window.innerHeight - 350) / level.rows // Mobile controls için alan bırak
-                            )
-                        )}
-                        onMoveRequest={movePlayer}
-                    />
+            <main className="flex-1 p-4 flex items-start justify-center relative overflow-hidden">
+                {/* Game Area - Canvas + Joystick side by side on desktop */}
+                <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-6">
+                    {/* Maze Canvas */}
+                    <div className="relative">
+                        <MazeCanvas
+                            grid={grid}
+                            solution={solution}
+                            userPath={userPath}
+                            playerPosition={playerPosition}
+                            cellSize={Math.min(
+                                40,
+                                Math.min(
+                                    (window.innerWidth - 200) / level.cols,
+                                    (window.innerHeight - 250) / level.rows
+                                )
+                            )}
+                            onMoveRequest={movePlayer}
+                        />
+                    </div>
+
+                    {/* Virtual Joystick - Always visible */}
+                    <div className="flex flex-col items-center gap-3">
+                        <div
+                            ref={joystickRef}
+                            className="relative w-32 h-32 sm:w-40 sm:h-40 xl:w-44 xl:h-44 rounded-full bg-slate-800/60 backdrop-blur-md border-2 border-slate-700/50 shadow-2xl touch-none cursor-pointer"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                            onTouchStart={(e) => {
+                                e.preventDefault();
+                                handleJoystickStart();
+                            }}
+                            onTouchMove={(e) => {
+                                e.preventDefault();
+                                const touch = e.touches[0];
+                                handleJoystickMove(touch.clientX, touch.clientY);
+                            }}
+                            onTouchEnd={handleJoystickEnd}
+                            onMouseDown={() => handleJoystickStart()}
+                            onMouseMove={(e) => isDragging && handleJoystickMove(e.clientX, e.clientY)}
+                            onMouseUp={handleJoystickEnd}
+                            onMouseLeave={handleJoystickEnd}
+                        >
+                            {/* Direction indicators */}
+                            <div className={`absolute top-2 left-1/2 -translate-x-1/2 transition-all duration-150 ${activeDirection === 'up' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
+                                <ArrowUp size={20} strokeWidth={3} />
+                            </div>
+                            <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 transition-all duration-150 ${activeDirection === 'down' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
+                                <ArrowDown size={20} strokeWidth={3} />
+                            </div>
+                            <div className={`absolute left-2 top-1/2 -translate-y-1/2 transition-all duration-150 ${activeDirection === 'left' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
+                                <ArrowLeft size={20} strokeWidth={3} />
+                            </div>
+                            <div className={`absolute right-2 top-1/2 -translate-y-1/2 transition-all duration-150 ${activeDirection === 'right' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
+                                <ArrowRight size={20} strokeWidth={3} />
+                            </div>
+
+                            {/* Joystick knob */}
+                            <div
+                                className="absolute top-1/2 left-1/2 w-12 h-12 sm:w-14 sm:h-14 xl:w-16 xl:h-16 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg border-2 border-white/20 transition-transform duration-75"
+                                style={{
+                                    transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px)) scale(${isDragging ? 1.1 : 1})`,
+                                    boxShadow: isDragging
+                                        ? '0 0 20px rgba(99, 102, 241, 0.6), 0 4px 12px rgba(0,0,0,0.3)'
+                                        : '0 4px 12px rgba(0,0,0,0.3)'
+                                }}
+                            />
+                        </div>
+
+                        {/* Joystick hint */}
+                        <p className="text-slate-500 text-xs font-medium text-center hidden xl:block">
+                            Fare ile sürükle<br />veya klavye okları
+                        </p>
+                        <p className="text-slate-500 text-xs font-medium text-center xl:hidden">
+                            Joystick'i sürükle
+                        </p>
+                    </div>
                 </div>
 
                 {/* Level Win Overlay */}
@@ -354,74 +477,18 @@ const LabirentUstasi: React.FC = () => {
                                 Seviye {currentLevel + 1} Tamam!
                             </h2>
                             <p className="text-slate-400 mb-6">
-                                {currentLevel < LEVELS.length - 1
-                                    ? 'Sonraki seviyeye geçmeye hazır mısın?'
-                                    : 'Tüm seviyeleri tamamladın!'}
+                                +{Math.max(100, 500 - moves * 2)} puan
                             </p>
                             <button
                                 onClick={nextLevel}
-                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl"
+                                className="w-full px-8 py-3 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl font-black text-lg active:scale-95 transition-all"
                             >
-                                {currentLevel < LEVELS.length - 1 ? 'Sonraki Seviye' : 'Bitir'}
+                                {currentLevel >= LEVELS.length - 1 ? 'Bitir' : 'Sonraki Seviye'}
                             </button>
                         </div>
                     </div>
                 )}
             </main>
-
-            {/* Mobile Controls - Improved D-Pad */}
-            <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-10">
-                {/* D-Pad Container */}
-                <div className="relative w-48 h-48">
-                    {/* Center decorative circle */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-slate-700/50 border border-slate-600" />
-
-                    {/* Up Button */}
-                    <button
-                        className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-16 bg-gradient-to-b from-indigo-500 to-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center active:scale-95 active:brightness-125 shadow-lg"
-                        style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
-                        onTouchStart={(e) => { e.preventDefault(); movePlayer(-1, 0); }}
-                        onClick={() => movePlayer(-1, 0)}
-                    >
-                        <ArrowUp size={28} className="text-white" />
-                    </button>
-
-                    {/* Down Button */}
-                    <button
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-16 bg-gradient-to-b from-indigo-500 to-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center active:scale-95 active:brightness-125 shadow-lg"
-                        style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
-                        onTouchStart={(e) => { e.preventDefault(); movePlayer(1, 0); }}
-                        onClick={() => movePlayer(1, 0)}
-                    >
-                        <ArrowDown size={28} className="text-white" />
-                    </button>
-
-                    {/* Left Button */}
-                    <button
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-16 h-16 bg-gradient-to-r from-indigo-500 to-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center active:scale-95 active:brightness-125 shadow-lg"
-                        style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
-                        onTouchStart={(e) => { e.preventDefault(); movePlayer(0, -1); }}
-                        onClick={() => movePlayer(0, -1)}
-                    >
-                        <ArrowLeft size={28} className="text-white" />
-                    </button>
-
-                    {/* Right Button */}
-                    <button
-                        className="absolute right-0 top-1/2 -translate-y-1/2 w-16 h-16 bg-gradient-to-l from-indigo-500 to-indigo-600 border-2 border-indigo-400 rounded-2xl flex items-center justify-center active:scale-95 active:brightness-125 shadow-lg"
-                        style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
-                        onTouchStart={(e) => { e.preventDefault(); movePlayer(0, 1); }}
-                        onClick={() => movePlayer(0, 1)}
-                    >
-                        <ArrowRight size={28} className="text-white" />
-                    </button>
-                </div>
-
-                {/* Hint text */}
-                <p className="text-center text-slate-500 text-xs mt-3 font-medium">
-                    Yön tuşlarına basarak ilerle
-                </p>
-            </div>
         </div>
     );
 };

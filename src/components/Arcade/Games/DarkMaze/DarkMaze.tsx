@@ -355,8 +355,9 @@ const DarkMaze: React.FC = () => {
                     lastCollectionTime={lastCollectionTime}
                 />
 
-                {/* Game Canvas */}
-                <div ref={containerRef} className="relative flex justify-center mt-4">
+                {/* Game Area - Canvas + Joystick */}
+                <div ref={containerRef} className="relative flex flex-col xl:flex-row items-center xl:items-start justify-center gap-6 mt-4">
+                    {/* Canvas */}
                     <div
                         className="bg-slate-900/50 rounded-2xl sm:rounded-[2rem] p-2 sm:p-4 border-2 sm:border-4 border-white/5 shadow-2xl relative overflow-hidden transition-all duration-500"
                         style={{ width: canvasSize + 16, height: canvasSize + 16 }}
@@ -403,72 +404,77 @@ const DarkMaze: React.FC = () => {
                         {gameState === 'level_cleared' && <LevelClearedOverlay onNextLevel={nextLevel} />}
                         {gameState === 'finished' && <GameOverOverlay score={score} level={level} onRestart={startGame} />}
                     </div>
+
+                    {/* Virtual Joystick - Always visible when playing */}
+                    {gameState === 'playing' && (
+                        <div className="flex flex-col items-center gap-3">
+                            <div
+                                ref={joystickRef}
+                                className="relative w-32 h-32 sm:w-40 sm:h-40 xl:w-44 xl:h-44 rounded-full bg-slate-800/60 backdrop-blur-md border-2 border-slate-700/50 shadow-2xl touch-none cursor-pointer"
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
+                                onTouchStart={(e) => {
+                                    e.preventDefault();
+                                    handleJoystickStart();
+                                }}
+                                onTouchMove={(e) => {
+                                    e.preventDefault();
+                                    const touch = e.touches[0];
+                                    handleJoystickMove(touch.clientX, touch.clientY);
+                                }}
+                                onTouchEnd={handleJoystickEnd}
+                                onMouseDown={() => handleJoystickStart()}
+                                onMouseMove={(e) => isDragging && handleJoystickMove(e.clientX, e.clientY)}
+                                onMouseUp={handleJoystickEnd}
+                                onMouseLeave={handleJoystickEnd}
+                            >
+                                {/* Direction indicators */}
+                                <div className={`absolute top-2 left-1/2 -translate-x-1/2 transition-all duration-150 ${activeDirection === 'up' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
+                                    <ChevronUp size={20} strokeWidth={3} />
+                                </div>
+                                <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 transition-all duration-150 ${activeDirection === 'down' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
+                                    <ChevronDown size={20} strokeWidth={3} />
+                                </div>
+                                <div className={`absolute left-2 top-1/2 -translate-y-1/2 transition-all duration-150 ${activeDirection === 'left' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
+                                    <ChevronLeft size={20} strokeWidth={3} />
+                                </div>
+                                <div className={`absolute right-2 top-1/2 -translate-y-1/2 transition-all duration-150 ${activeDirection === 'right' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
+                                    <ChevronRight size={20} strokeWidth={3} />
+                                </div>
+
+                                {/* Joystick knob */}
+                                <motion.div
+                                    className="absolute top-1/2 left-1/2 w-12 h-12 sm:w-14 sm:h-14 xl:w-16 xl:h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg border-2 border-white/20"
+                                    style={{
+                                        x: joystickPos.x - KNOB_RADIUS,
+                                        y: joystickPos.y - KNOB_RADIUS,
+                                    }}
+                                    animate={{
+                                        scale: isDragging ? 1.1 : 1,
+                                        boxShadow: isDragging
+                                            ? '0 0 20px rgba(99, 102, 241, 0.6), 0 4px 12px rgba(0,0,0,0.3)'
+                                            : '0 4px 12px rgba(0,0,0,0.3)'
+                                    }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                />
+                            </div>
+
+                            {/* Joystick hint */}
+                            <p className="text-slate-500 text-xs font-medium text-center hidden xl:block">
+                                Fare ile sürükle<br />veya klavye okları
+                            </p>
+                        </div>
+                    )}
                 </div>
 
-                {/* Virtual Joystick */}
-                {gameState === 'playing' && (
-                    <div className="mt-6 flex justify-center lg:hidden">
-                        <div
-                            ref={joystickRef}
-                            className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-slate-800/60 backdrop-blur-md border-2 border-slate-700/50 shadow-2xl touch-none"
-                            style={{ WebkitTapHighlightColor: 'transparent' }}
-                            onTouchStart={(e) => {
-                                e.preventDefault();
-                                handleJoystickStart();
-                            }}
-                            onTouchMove={(e) => {
-                                e.preventDefault();
-                                const touch = e.touches[0];
-                                handleJoystickMove(touch.clientX, touch.clientY);
-                            }}
-                            onTouchEnd={handleJoystickEnd}
-                            onMouseDown={() => handleJoystickStart()}
-                            onMouseMove={(e) => isDragging && handleJoystickMove(e.clientX, e.clientY)}
-                            onMouseUp={handleJoystickEnd}
-                            onMouseLeave={handleJoystickEnd}
-                        >
-                            {/* Direction indicators */}
-                            <div className={`absolute top-2 left-1/2 -translate-x-1/2 transition-all duration-150 ${activeDirection === 'up' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
-                                <ChevronUp size={20} strokeWidth={3} />
-                            </div>
-                            <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 transition-all duration-150 ${activeDirection === 'down' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
-                                <ChevronDown size={20} strokeWidth={3} />
-                            </div>
-                            <div className={`absolute left-2 top-1/2 -translate-y-1/2 transition-all duration-150 ${activeDirection === 'left' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
-                                <ChevronLeft size={20} strokeWidth={3} />
-                            </div>
-                            <div className={`absolute right-2 top-1/2 -translate-y-1/2 transition-all duration-150 ${activeDirection === 'right' ? 'text-indigo-400 scale-125' : 'text-slate-600'}`}>
-                                <ChevronRight size={20} strokeWidth={3} />
-                            </div>
-
-                            {/* Joystick knob */}
-                            <motion.div
-                                className="absolute top-1/2 left-1/2 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg border-2 border-white/20"
-                                style={{
-                                    x: joystickPos.x - KNOB_RADIUS,
-                                    y: joystickPos.y - KNOB_RADIUS,
-                                }}
-                                animate={{
-                                    scale: isDragging ? 1.1 : 1,
-                                    boxShadow: isDragging
-                                        ? '0 0 20px rgba(99, 102, 241, 0.6), 0 4px 12px rgba(0,0,0,0.3)'
-                                        : '0 4px 12px rgba(0,0,0,0.3)'
-                                }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* Legend - Desktop only */}
-                <div className="hidden lg:flex mt-8 gap-8 justify-center items-start text-xs font-black uppercase tracking-widest text-slate-500">
-                    <div className="flex items-center gap-2"><Battery size={16} className="text-green-500" /> PİL: ENERJİ VERİR</div>
-                    <div className="flex items-center gap-2"><Brain size={16} className="text-yellow-500" /> BEYİN: AYDINLATIR</div>
+                {/* Legend */}
+                <div className="mt-6 flex gap-6 justify-center items-center text-xs font-black uppercase tracking-widest text-slate-500">
+                    <div className="flex items-center gap-2"><Battery size={16} className="text-green-500" /> PİL</div>
+                    <div className="flex items-center gap-2"><Brain size={16} className="text-yellow-500" /> AYDINLAT</div>
                 </div>
 
                 {/* Mobile hint */}
-                <p className="lg:hidden text-center text-slate-600 text-xs mt-4 font-medium">
-                    Joystick'i sürükleyerek hareket et
+                <p className="xl:hidden text-center text-slate-600 text-xs mt-3 font-medium">
+                    Joystick'i sürükle veya canvas üzerinde kaydır
                 </p>
             </div>
         </div>
