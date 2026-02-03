@@ -164,35 +164,35 @@ const NeseliBalonlar: React.FC = () => {
     const isSuccess = userGuesses.length === poppedIndices.length && userGuesses.every(g => poppedIndices.includes(g));
 
     return (
-        <div className="flex flex-col items-center min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 p-4 md:p-10 select-none pt-20">
+        <div className="flex flex-col items-center min-h-screen overflow-hidden bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 p-2 sm:p-4 md:p-10 select-none pt-16 sm:pt-20 touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
             {/* HUD */}
-            <div className="fixed top-20 left-4 right-4 z-30 flex justify-between items-center pointer-events-none">
-                <div className="flex gap-4 pointer-events-auto">
-                    <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 border border-white/20 hover:bg-white/20 transition-colors">
-                        <ChevronLeft className="w-5 h-5 text-pink-400" />
-                        <span className="font-bold text-white">BİLSEM Zeka</span>
+            <div className="fixed top-16 sm:top-20 left-2 sm:left-4 right-2 sm:right-4 z-30 flex justify-between items-center pointer-events-none">
+                <div className="flex gap-2 sm:gap-4 pointer-events-auto">
+                    <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-xl px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1.5 sm:gap-2 border border-white/20 hover:bg-white/20 transition-colors">
+                        <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-pink-400" />
+                        <span className="font-bold text-white text-xs sm:text-sm">BİLSEM</span>
                     </Link>
                 </div>
-                <div className="flex gap-3 pointer-events-auto">
-                    <div className="bg-emerald-500/20 backdrop-blur-xl px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 border border-emerald-500/30">
-                        <Star className="w-5 h-5 text-emerald-400 fill-emerald-400" />
-                        <span className="font-bold text-emerald-400">Bölüm {level}</span>
+                <div className="flex gap-2 sm:gap-3 pointer-events-auto">
+                    <div className="bg-emerald-500/20 backdrop-blur-xl px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1.5 sm:gap-2 border border-emerald-500/30">
+                        <Star className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 fill-emerald-400" />
+                        <span className="font-bold text-emerald-400 text-sm sm:text-base">Bölüm {level}</span>
                     </div>
-                    <div className="bg-amber-500/20 backdrop-blur-xl px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 border border-amber-500/30">
-                        <Trophy className="w-5 h-5 text-amber-400" />
-                        <span className="font-bold text-amber-400">{score.correct * 10}</span>
+                    <div className="bg-amber-500/20 backdrop-blur-xl px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1.5 sm:gap-2 border border-amber-500/30">
+                        <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+                        <span className="font-bold text-amber-400 text-sm sm:text-base">{score.correct * 10}</span>
                     </div>
                 </div>
             </div>
 
             {/* Ana Oyun Alanı */}
-            <div className="relative w-full max-w-5xl bg-white/10 backdrop-blur-xl rounded-[3rem] p-6 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 overflow-hidden mt-16">
-                <h1 className="text-center text-3xl md:text-4xl font-black bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-8 drop-shadow-sm">
+            <div className="relative w-full max-w-5xl bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-[3rem] p-3 sm:p-6 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 overflow-hidden mt-12 sm:mt-16">
+                <h1 className="text-center text-xl sm:text-3xl md:text-4xl font-black bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-4 sm:mb-8 drop-shadow-sm">
                     🎈 NEŞELİ BALONLAR 🎈
                 </h1>
 
                 {/* Balonlar Gösterim Alanı */}
-                <div className="flex flex-wrap justify-center gap-6 md:gap-10 min-h-[300px] items-start mb-10">
+                <div className="flex flex-wrap justify-center gap-3 sm:gap-6 md:gap-10 min-h-[200px] sm:min-h-[300px] items-start mb-6 sm:mb-10">
                     {balloons.map((balloon) => (
                         <div key={balloon.id} className="relative group">
                             <Balloon
@@ -225,17 +225,18 @@ const NeseliBalonlar: React.FC = () => {
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.8 }}
-                                className="flex flex-col items-center gap-4"
+                                className="flex flex-col items-center gap-3 sm:gap-4"
                             >
                                 <button
                                     onClick={startGame}
-                                    className="group relative px-16 py-6 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-3xl rounded-2xl transition-all flex items-center gap-4"
-                                    style={{ boxShadow: '0 8px 32px rgba(168, 85, 247, 0.4)' }}
+                                    onTouchStart={(e) => { e.preventDefault(); startGame(); }}
+                                    className="group relative px-10 sm:px-16 py-4 sm:py-6 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-xl sm:text-3xl rounded-xl sm:rounded-2xl transition-all flex items-center gap-3 sm:gap-4 touch-none"
+                                    style={{ boxShadow: '0 8px 32px rgba(168, 85, 247, 0.4)', WebkitTapHighlightColor: 'transparent' }}
                                 >
-                                    <Play className="w-8 h-8" fill="white" /> OYNA
+                                    <Play className="w-6 h-6 sm:w-8 sm:h-8" fill="white" /> OYNA
                                 </button>
-                                <div className="bg-pink-500/20 text-pink-300 text-xs px-4 py-2 rounded-full border border-pink-500/30">
-                                    TUZÖ 1.1.1 Renk-Sayı Hafızası / Geri Çağırma
+                                <div className="bg-pink-500/20 text-pink-300 text-[10px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-pink-500/30 text-center">
+                                    TÜZÖ 1.1.1 Renk-Sayı Hafızası
                                 </div>
                             </motion.div>
                         )}
