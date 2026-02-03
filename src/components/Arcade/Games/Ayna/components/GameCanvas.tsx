@@ -52,7 +52,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
 
     lCtx.clearRect(0, 0, canvasSize.w, canvasSize.h);
     rCtx.clearRect(0, 0, canvasSize.w, canvasSize.h);
-    
+
     drawGrid(lCtx);
     drawGrid(rCtx);
 
@@ -63,10 +63,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
       ctx.lineWidth = 6;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      
+
       const startX = isMirrored ? canvasSize.w - pathPoints[0].x : pathPoints[0].x;
       ctx.moveTo(startX, pathPoints[0].y);
-      
+
       pathPoints.forEach(p => {
         const x = isMirrored ? canvasSize.w - p.x : p.x;
         ctx.lineTo(x, p.y);
@@ -95,7 +95,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
       rCtx.arc(tx, ty, 18, 0, Math.PI * 2);
       rCtx.fillStyle = target.hit ? 'rgba(34, 197, 94, 0.2)' : 'rgba(244, 63, 94, 0.1)';
       rCtx.fill();
-      
+
       if (!target.hit) {
         rCtx.beginPath();
         rCtx.arc(tx, ty, 10, 0, Math.PI * 2);
@@ -119,12 +119,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
   }, [drawAll]);
 
   const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e) e.preventDefault();
     setIsDrawing(true);
     const pos = getPos(e);
     setCurrentPath([pos]);
   };
 
   const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e) e.preventDefault();
     if (!isDrawing) return;
     const pos = getPos(e);
     setCurrentPath(prev => [...prev, pos]);
@@ -136,7 +138,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
         const scaleY = canvasSize.h / 500;
         const tx = target.x * scaleX;
         const ty = target.y * scaleY;
-        
+
         const dist = Math.sqrt(Math.pow(mirroredX - tx, 2) + Math.pow(pos.y - ty, 2));
         if (dist < 25) {
           onTargetHit(target.id);
@@ -145,7 +147,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
     });
   };
 
-  const handleEnd = () => {
+  const handleEnd = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e) e.preventDefault();
     if (isDrawing) {
       setPaths(prev => [...prev, { points: currentPath, color: '#60a5fa' }]);
       setCurrentPath([]);
@@ -174,6 +177,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
             ref={leftCanvasRef}
             width={canvasSize.w}
             height={canvasSize.h}
+            className="touch-none cursor-crosshair"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
             onMouseDown={handleStart}
             onMouseMove={handleMove}
             onMouseUp={handleEnd}
