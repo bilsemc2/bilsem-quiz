@@ -1,12 +1,12 @@
 
-export type TestType = 
-  | 'single-note' 
-  | 'double-note' 
-  | 'triple-note' 
-  | 'rhythm' 
-  | 'melody' 
-  | 'melody-diff' 
-  | 'rhythm-diff' 
+export type TestType =
+  | 'single-note'
+  | 'double-note'
+  | 'triple-note'
+  | 'rhythm'
+  | 'melody'
+  | 'melody-diff'
+  | 'rhythm-diff'
   | 'song';
 
 export interface PerformanceResult {
@@ -42,6 +42,18 @@ export interface BeatDetectionResult {
   pattern: string;
 }
 
+export interface RhythmData {
+  name: string;
+  pattern: number[];
+  tempo: number;
+}
+
+export interface SongData {
+  name: string;
+  melody: string[];
+  lyrics: string;
+}
+
 export interface AIAudioContextType {
   startListening: () => Promise<void>;
   stopListening: () => void;
@@ -53,6 +65,6 @@ export interface AIAudioContextType {
   audioLevel: number;
   capturedNotes: string[];
   detectedBeats: number[];
-  analyzePerformance: (type: TestType, target: any, detected: any) => Promise<AIAnalysisResponse>;
+  analyzePerformance: (type: TestType, target: string[] | RhythmData | SongData | null, detected: string[] | number[]) => Promise<AIAnalysisResponse>;
   resetCapture: () => void;
 }

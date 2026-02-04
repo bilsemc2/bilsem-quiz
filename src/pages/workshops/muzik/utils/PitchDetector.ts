@@ -6,8 +6,6 @@
 export class PitchDetector {
   private audioContext: AudioContext;
   private analyser: AnalyserNode;
-  private MIN_SAMPLES = 0; 
-  private GOOD_ENOUGH_CORRELATION = 0.9;
 
   // Nota isimleri dizisi
   private noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -31,7 +29,7 @@ export class PitchDetector {
     for (let i = 0; i < SIZE; i++) {
       sum += buffer[i] * buffer[i];
     }
-    
+
     // Ses seviyesi çok düşükse null dön
     const rms = Math.sqrt(sum / SIZE);
     if (rms < 0.01) return null;
@@ -65,7 +63,7 @@ export class PitchDetector {
     }
 
     let T0 = maxpos;
-    
+
     // Parabolik interpolasyon ile hassas frekans bulma
     const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
     const a = (x1 + x3 - 2 * x2) / 2;

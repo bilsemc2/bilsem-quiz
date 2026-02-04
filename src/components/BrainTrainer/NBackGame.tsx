@@ -5,9 +5,10 @@ import {
     Brain, Target, Star, Heart, Home, CheckCircle2, XCircle,
     Square, Circle, Triangle, Pentagon, Hexagon, Sparkles
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 interface Shape {
     id: string;
@@ -46,7 +47,9 @@ type GameState = 'waiting' | 'playing' | 'feedback' | 'gameover';
 const NBackGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
     const location = useLocation();
+    const navigate = useNavigate();
     const [gameState, setGameState] = useState<GameState>('waiting');
     const [history, setHistory] = useState<Shape[]>([]);
     const [currentShape, setCurrentShape] = useState<Shape | null>(null);
@@ -65,6 +68,10 @@ const NBackGame: React.FC = () => {
     const hasSavedRef = useRef(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const shapeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || 45;
 
     const generateNewShape = useCallback(() => {
         const shouldBeMatch = Math.random() < 0.3 && history.length >= nValue;
@@ -96,19 +103,19 @@ const NBackGame: React.FC = () => {
         setHistory([]);
         setTrials(0);
         setCorrectCount(0);
-        setTimeLeft(45);
+        setTimeLeft(examMode ? examTimeLimit : 45);
         setLives(5);
         setShowFeedback(false);
         hasSavedRef.current = false;
         gameStartTimeRef.current = Date.now();
         generateNewShape();
-    }, [generateNewShape]);
+    }, [generateNewShape, examMode, examTimeLimit]);
 
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'waiting') {
+        if ((location.state?.autoStart || examMode) && gameState === 'waiting') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     useEffect(() => {
         if (gameState === 'playing' && timeLeft > 0) {
@@ -131,6 +138,14 @@ const NBackGame: React.FC = () => {
         if (shapeIntervalRef.current) clearInterval(shapeIntervalRef.current);
 
         const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+
+        // Exam mode: submit result and redirect
+        if (examMode) {
+            submitResult(score > 200, score, 1000, durationSeconds).then(() => {
+            navigate("/atolyeler/sinav-simulasyonu/devam"); });
+            return;
+        }
+
         saveGamePlay({
             game_id: 'n-geri-sifresi',
             score_achieved: score,
@@ -143,7 +158,7 @@ const NBackGame: React.FC = () => {
                 game_name: 'N-Geri Şifresi',
             }
         });
-    }, [score, nValue, level, correctCount, trials, saveGamePlay]);
+    }, [score, nValue, level, correctCount, trials, saveGamePlay, examMode, submitResult, navigate]);
 
     useEffect(() => {
         if (gameState === 'playing') {

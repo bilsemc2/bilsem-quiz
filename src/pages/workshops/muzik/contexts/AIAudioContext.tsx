@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
 import { PitchDetector } from '../utils/PitchDetector';
 import { BeatDetector } from '../utils/BeatDetector';
 import { AIAudioContextType, MicrophonePermission, TestType } from '../types';
@@ -34,26 +34,26 @@ export const AIAudioProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophonePermission('granted');
-      
+
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
-      
+
       if (!detectorRef.current) detectorRef.current = new PitchDetector(audioCtxRef.current);
-      
+
       const source = audioCtxRef.current.createMediaStreamSource(stream);
       const analyser = detectorRef.current.getAnalyser();
       if (!beatDetectorRef.current) beatDetectorRef.current = new BeatDetector(analyser);
-      
+
       source.connect(analyser);
       setIsListening(true);
       resetCapture();
 
       const buffer = new Float32Array(analyser.fftSize);
-      
+
       const update = () => {
         analyser.getFloatTimeDomainData(buffer);
-        
+
         // Pitch Detection
         const pitchRes = detectorRef.current?.detect(buffer);
         if (pitchRes) {
@@ -81,7 +81,7 @@ export const AIAudioProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // Ses Seviyesi
         setAudioLevel(beatDetectorRef.current?.getAudioLevel(buffer) || 0);
-        
+
         animationFrameRef.current = requestAnimationFrame(update);
       };
 
@@ -97,7 +97,7 @@ export const AIAudioProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsListening(false);
   }, []);
 
-  const analyzePerformance = useCallback(async (type: TestType, target: any, detected: any) => {
+  const analyzePerformance = useCallback(async (type: TestType, target: string[] | { name: string; pattern: number[]; tempo: number } | { name: string; melody: string[]; lyrics: string } | null, detected: string[] | number[]) => {
     return await analyzeMusicPerformance(type, target, detected);
   }, []);
 

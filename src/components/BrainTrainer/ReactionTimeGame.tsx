@@ -4,9 +4,10 @@ import {
     Trophy, RotateCcw, Star, Timer, CheckCircle2, XCircle, ChevronLeft,
     Zap, Target, AlertCircle, Heart, Eye
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useSound } from '../../hooks/useSound';
+import { useExam } from '../../contexts/ExamContext';
 
 type GameMode = 'simple' | 'selective';
 type RoundState = 'waiting' | 'ready' | 'go' | 'early' | 'result';
@@ -24,10 +25,21 @@ const FAILURE_MESSAGES = [
     "Bekle, sonra tıkla! 💪",
 ];
 
-const ReactionTimeGame: React.FC = () => {
+interface ReactionTimeGameProps {
+    examMode?: boolean;
+    examLevel?: number;
+    examTimeLimit?: number;
+}
+
+const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeProp = false }) => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
+
+    // examMode can come from props OR location.state (when navigating from ExamContinuePage)
+    const examMode = examModeProp || location.state?.examMode === true;
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [gameMode, setGameMode] = useState<GameMode>('simple');
     const [roundState, setRoundState] = useState<RoundState>('waiting');
@@ -110,12 +122,12 @@ const ReactionTimeGame: React.FC = () => {
         setTimeout(() => startRound(), 500);
     }, [startRound]);
 
-    // Handle Auto Start from HUB
+    // Handle Auto Start from HUB or Exam Mode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame('simple');
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     // Tıklama işlemi
     const handleClick = useCallback(() => {
@@ -243,6 +255,15 @@ const ReactionTimeGame: React.FC = () => {
                 : 0;
             const bestReaction = reactionTimes.length > 0 ? Math.min(...reactionTimes) : 0;
 
+            // Exam mode: submit result and navigate
+            if (examMode) {
+                const passed = reactionTimes.length >= 5 && avgReaction < 400;
+                submitResult(passed, score, 1000, durationSeconds).then(() => {
+                    navigate('/atolyeler/sinav-simulasyonu/devam');
+                });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'tepki-suresi',
                 score_achieved: score,
@@ -259,7 +280,7 @@ const ReactionTimeGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState, score, lives, streak, reactionTimes, gameMode, saveGamePlay]);
+    }, [gameState, score, lives, streak, reactionTimes, gameMode, saveGamePlay, examMode, navigate, submitResult]);
 
     const averageReaction = reactionTimes.length > 0
         ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)

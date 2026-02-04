@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Timer, CheckCircle2, ChevronLeft, Zap, Hash, Eye, Sparkles } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // Sembol seti - her biri benzersiz ve kolay ayırt edilebilir
 const SYMBOLS = ['◯', '△', '□', '◇', '★', '♡', '⬡', '⬢', '✕'];
@@ -19,7 +20,9 @@ const createSymbolMap = () => {
 
 const DigitSymbolGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
     const location = useLocation();
+    const navigate = useNavigate();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [symbolMap, setSymbolMap] = useState<Record<number, string>>({});
     const [currentNumber, setCurrentNumber] = useState<number>(1);
@@ -36,6 +39,10 @@ const DigitSymbolGame: React.FC = () => {
     const hasSavedRef = useRef<boolean>(false);
 
     const gameDuration = 60; // 60 saniye
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || gameDuration;
 
     // Back link
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
@@ -54,7 +61,7 @@ const DigitSymbolGame: React.FC = () => {
         setScore(0);
         setCorrectCount(0);
         setWrongCount(0);
-        setTimeLeft(gameDuration);
+        setTimeLeft(examMode ? examTimeLimit : gameDuration);
         setStreak(0);
         setBestStreak(0);
         setFeedback(null);
@@ -63,14 +70,14 @@ const DigitSymbolGame: React.FC = () => {
         setGameState('playing');
         gameStartTimeRef.current = Date.now();
         hasSavedRef.current = false;
-    }, [generateNewNumber]);
+    }, [generateNewNumber, examMode, examTimeLimit]);
 
-    // Auto start from HUB
+    // Auto start from HUB or examMode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     // Zamanlayıcı
     useEffect(() => {
@@ -94,6 +101,16 @@ const DigitSymbolGame: React.FC = () => {
         if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
             hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            const acc = correctCount + wrongCount > 0 ? correctCount / (correctCount + wrongCount) : 0;
+
+            // Exam mode: submit result and redirect
+            if (examMode) {
+                submitResult(acc >= 0.6, score, (correctCount + wrongCount) * 50, durationSeconds).then(() => {
+                    navigate("/atolyeler/sinav-simulasyonu/devam");
+                });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'simge-kodlama',
                 score_achieved: score,
@@ -108,7 +125,7 @@ const DigitSymbolGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState, score, correctCount, wrongCount, bestStreak, saveGamePlay]);
+    }, [gameState, score, correctCount, wrongCount, bestStreak, saveGamePlay, examMode, submitResult, navigate]);
 
     // Cevap kontrolü
     const handleAnswer = (selectedSymbol: string) => {

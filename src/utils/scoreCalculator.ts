@@ -3,7 +3,7 @@ export interface ScoreResult {
     xp: number;
 }
 
-export const calculateScore = (totalQuestions: number, correctAnswers: number): ScoreResult => {
+export const calculateScore = (_totalQuestions: number, correctAnswers: number): ScoreResult => {
     const POINTS_PER_CORRECT_ANSWER = 10;
     const XP_PERCENTAGE = 0.10; // 10%
 

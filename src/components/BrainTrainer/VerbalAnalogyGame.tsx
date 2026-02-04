@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Heart, CheckCircle2, XCircle, ChevronLeft, Zap, GitBranch, Loader2, AlertCircle, Sparkles, Eye } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 interface Option {
     id: string;
@@ -35,7 +36,9 @@ const FAILURE_MESSAGES = [
 const VerbalAnalogyGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
     const location = useLocation();
+    const navigate = useNavigate();
     const [gameState, setGameState] = useState<'idle' | 'loading' | 'playing' | 'finished' | 'error'>('idle');
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -53,6 +56,9 @@ const VerbalAnalogyGame: React.FC = () => {
     const hasSavedRef = useRef<boolean>(false);
 
     const totalQuestions = 10;
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
 
     // Back link
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
@@ -118,18 +124,27 @@ const VerbalAnalogyGame: React.FC = () => {
         fetchQuestions();
     }, [fetchQuestions]);
 
-    // Handle Auto Start from HUB
+    // Handle Auto Start from HUB or examMode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     // Oyun bittiğinde verileri kaydet
     useEffect(() => {
         if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
             hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            const acc = correctCount + wrongCount > 0 ? correctCount / (correctCount + wrongCount) : 0;
+
+            // Exam mode: submit result and redirect
+            if (examMode) {
+                submitResult(acc >= 0.6, score, totalQuestions * 100, durationSeconds).then(() => {
+                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'sozel-analoji',
                 score_achieved: score,
@@ -145,7 +160,7 @@ const VerbalAnalogyGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState, score, lives, correctCount, wrongCount, bestStreak, questions.length, saveGamePlay]);
+    }, [gameState, score, lives, correctCount, wrongCount, bestStreak, questions.length, saveGamePlay, examMode, submitResult, navigate]);
 
     // Cevap kontrolü
     const handleAnswer = (answerId: string) => {

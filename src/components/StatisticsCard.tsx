@@ -88,11 +88,11 @@ export const StatisticsCard: React.FC<StatisticsCardProps> = ({ stats }) => {
                                     fill="#8884d8"
                                     paddingAngle={5}
                                     dataKey="value"
-                                    label={({ name, value, percent }) => 
+                                    label={({ name, value, percent }) =>
                                         `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
                                     }
                                 >
-                                    {accuracyData.map((entry, index) => (
+                                    {accuracyData.map((_entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
@@ -107,7 +107,7 @@ export const StatisticsCard: React.FC<StatisticsCardProps> = ({ stats }) => {
                     <h4 className="text-sm font-medium text-gray-600 mb-4">Seviye İlerlemesi</h4>
                     <div className="h-20">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={[{ 
+                            <BarChart data={[{
                                 name: 'XP',
                                 current: stats.experience,
                                 remaining: stats.nextLevelExperience - stats.experience

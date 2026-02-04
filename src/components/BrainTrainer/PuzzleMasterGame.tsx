@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Play, Star, Timer, Target,
-    ChevronLeft, Zap, Brain, Heart, Search, Home,
+    ChevronLeft, Zap, Heart, Search, Home,
     CheckCircle2, XCircle, Sparkles
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // --- Puzzle Generator Utility ---
 class PuzzleGenerator {
@@ -118,6 +119,11 @@ interface GameLevel {
 const PuzzleMasterGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
@@ -184,11 +190,12 @@ const PuzzleMasterGame: React.FC = () => {
         return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     }, [phase, timeLeft]);
 
+    // Handle Auto Start from HUB or Exam Mode
     useEffect(() => {
-        if (location.state?.autoStart && phase === 'welcome') {
+        if ((location.state?.autoStart || examMode) && phase === 'welcome') {
             handleStart();
         }
-    }, [location.state, phase]);
+    }, [location.state, phase, examMode]);
 
     const handleStart = useCallback(() => {
         setPhase('playing');
@@ -206,26 +213,45 @@ const PuzzleMasterGame: React.FC = () => {
         hasSavedRef.current = true;
         setPhase('game_over');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+
+        // Exam mode: submit result and navigate
+        if (examMode) {
+            const passed = levelNumber >= 5;
+            submitResult(passed, score, 1000, duration).then(() => {
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            });
+            return;
+        }
+
         await saveGamePlay({
             game_id: 'puzzle-master',
             score_achieved: score,
             duration_seconds: duration,
             metadata: { levels_completed: levelNumber, final_lives: lives }
         });
-    }, [saveGamePlay, score, levelNumber, lives]);
+    }, [saveGamePlay, score, levelNumber, lives, examMode, submitResult, navigate]);
 
     const handleVictory = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
         setPhase('victory');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+
+        // Exam mode: submit result and navigate
+        if (examMode) {
+            submitResult(true, score, 1000, duration).then(() => {
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            });
+            return;
+        }
+
         await saveGamePlay({
             game_id: 'puzzle-master',
             score_achieved: score,
             duration_seconds: duration,
             metadata: { levels_completed: MAX_LEVEL, victory: true }
         });
-    }, [saveGamePlay, score]);
+    }, [saveGamePlay, score, examMode, submitResult, navigate]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (phase !== 'playing' || isLoading || isCorrect !== null) return;
@@ -415,8 +441,8 @@ const PuzzleMasterGame: React.FC = () => {
                             initial={{ y: 50 }}
                             animate={{ y: 0 }}
                             className={`px-12 py-8 rounded-3xl text-center ${isCorrect
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                : 'bg-gradient-to-br from-orange-500 to-amber-600'
                                 }`}
                             style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
                         >
@@ -537,10 +563,10 @@ const PuzzleMasterGame: React.FC = () => {
                                     {/* Selection Box */}
                                     <div
                                         className={`absolute pointer-events-none transition-all duration-150 rounded-xl border-4 ${isCorrect === true
-                                                ? 'border-emerald-400'
-                                                : isCorrect === false
-                                                    ? 'border-red-400'
-                                                    : 'border-white/80'
+                                            ? 'border-emerald-400'
+                                            : isCorrect === false
+                                                ? 'border-red-400'
+                                                : 'border-white/80'
                                             }`}
                                         style={{
                                             left: `${(selection.x / 512) * 100}%`,

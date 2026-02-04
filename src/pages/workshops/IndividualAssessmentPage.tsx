@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, ShieldX, Calculator } from 'lucide-react';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, ShieldX, Calculator, Sparkles, Info } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import './bireysel.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -57,6 +57,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'sayi-sihirbazi',
+            title: "Sayı Sihirbazı",
+            desc: "Renkli kartları hafızana al, sonra renk, sayı ve matematik sorularını çöz!",
+            icon: <Sparkles />,
+            color: "amber",
+            difficulty: "Orta",
+            link: "/games/sayi-sihirbazi",
+            isNew: true,
+            tuzo: "5.9.1 Çalışma Belleği (Güncelleme)"
+        },
+        {
             id: 'desen-boyama',
             title: "Desen Boyama",
             desc: "Örüntüdeki boşluğu doğru renklerle doldur! Desen analizi ve görsel tamamlama.",
@@ -64,7 +75,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "rose",
             difficulty: "Orta",
             link: "/games/desen-boyama",
-            isNew: true,
             tuzo: "5.3.2 Desen Analizi"
         },
         {
@@ -146,16 +156,6 @@ const IndividualAssessmentPage: React.FC = () => {
             difficulty: "Uzman",
             link: "/games/capraz-eslesme",
             tuzo: "5.9.1 Çalışma Belleği (İzleme)"
-        },
-        {
-            id: 'signal-sum',
-            title: "Sinyal Toplamı",
-            desc: "Neon sinyaller arasından doğru rengi filtrele ve zihninden topla. Üst düzey odaklanma gerektirir!",
-            icon: <Hash />,
-            color: "cyan",
-            difficulty: "Uzman",
-            link: "/games/sinyal-toplami",
-            tuzo: "5.7.2 Bölünmüş Dikkat"
         },
         {
             id: 'target-grid',
@@ -451,6 +451,45 @@ const IndividualAssessmentPage: React.FC = () => {
                         </div>
                     </motion.div>
                 </div>
+
+                {/* Sınav Simülasyonu CTA */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="mb-12"
+                >
+                    <Link to="/atolyeler/sinav-simulasyonu">
+                        <div className="bg-gradient-to-r from-red-600 to-rose-700 rounded-[2rem] p-6 sm:p-8 border-2 border-red-400/30 shadow-2xl shadow-red-500/20 hover:shadow-red-500/40 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer group overflow-hidden relative">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.15),_transparent_60%)]" />
+                            <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
+                                <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                    <TrendingUp size={40} className="text-white" />
+                                </div>
+                                <div className="flex-1 text-center sm:text-left">
+                                    <div className="flex items-center justify-center sm:justify-start gap-3 mb-2">
+                                        <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Sınav Simülasyonu</h3>
+                                        <span className="px-3 py-1 bg-emerald-500/80 text-white text-xs font-black uppercase rounded-full">Beta</span>
+                                        <div className="relative group/tooltip">
+                                            <Info size={18} className="text-white/60 cursor-help hover:text-white transition-colors" />
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 border border-white/20 shadow-xl">
+                                                Hatalar olabilir. Lütfen ekran resmi alıp bildirin!
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-red-100 font-medium text-sm sm:text-base">
+                                        Adaptif zorluk sistemiyle gerçek sınav deneyimini yaşa! Tüm modülleri tek seansta test et ve detaylı performans raporu al.
+                                    </p>
+                                </div>
+                                <div className="shrink-0">
+                                    <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                                        <ChevronLeft size={28} className="text-white rotate-180" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Link>
+                </motion.div>
 
                 {/* Modüller Listesi */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

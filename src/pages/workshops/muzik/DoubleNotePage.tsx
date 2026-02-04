@@ -9,9 +9,9 @@ const NOTES = ["C4", "D4", "E4", "F4", "G4", "A4", "B4"];
 
 const DoubleNotePage: React.FC = () => {
   const { playNote, startAudioContext, isSamplerReady } = useAudio();
-  const { 
-    startListening, stopListening, isListening, 
-    currentNote, audioLevel, capturedNotes, analyzePerformance 
+  const {
+    startListening, stopListening, isListening,
+    currentNote: _currentNote, audioLevel, capturedNotes, analyzePerformance
   } = useAIAudio();
 
   const [targetNotes, setTargetNotes] = useState<string[]>([]);
@@ -24,7 +24,7 @@ const DoubleNotePage: React.FC = () => {
     const n2 = NOTES[Math.floor(Math.random() * NOTES.length)];
     setTargetNotes([n1, n2]);
     setAnalysis(null);
-    
+
     // Notaları sırayla çal
     playNote(n1, "2n");
     setTimeout(() => playNote(n2, "2n"), 800);
@@ -66,7 +66,7 @@ const DoubleNotePage: React.FC = () => {
             </div>
 
             <MicrophoneButton isListening={isListening} audioLevel={audioLevel} onClick={handleMicToggle} disabled={!isSamplerReady} />
-            
+
             <div className="h-16 flex flex-col items-center justify-center w-full">
               {isListening && (
                 <div className="flex flex-wrap justify-center gap-2">
@@ -91,25 +91,25 @@ const DoubleNotePage: React.FC = () => {
 
       {analysis && !isAnalyzing && (
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100 animate-in slide-in-from-bottom-5">
-           <div className="flex items-center justify-between mb-6">
-             <h3 className="text-xl font-bold text-slate-800">Sonuç Raporu (%{analysis.accuracy})</h3>
-             <div className="text-2xl">⭐</div>
-           </div>
-           <p className="text-slate-600 italic mb-6">"{analysis.detailedAnalysis}"</p>
-           <div className="grid grid-cols-2 gap-4">
-             <div className="bg-emerald-50 p-4 rounded-2xl">
-               <h4 className="text-xs font-black text-emerald-700 uppercase mb-2">Başarılar</h4>
-               <ul className="text-sm text-emerald-800 space-y-1">
-                 {analysis.feedback.strengths.map((s, i) => <li key={i}>• {s}</li>)}
-               </ul>
-             </div>
-             <div className="bg-indigo-50 p-4 rounded-2xl">
-               <h4 className="text-xs font-black text-indigo-700 uppercase mb-2">Öneriler</h4>
-               <ul className="text-sm text-indigo-800 space-y-1">
-                 {analysis.feedback.tips.map((t, i) => <li key={i}>• {t}</li>)}
-               </ul>
-             </div>
-           </div>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-slate-800">Sonuç Raporu (%{analysis.accuracy})</h3>
+            <div className="text-2xl">⭐</div>
+          </div>
+          <p className="text-slate-600 italic mb-6">"{analysis.detailedAnalysis}"</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-emerald-50 p-4 rounded-2xl">
+              <h4 className="text-xs font-black text-emerald-700 uppercase mb-2">Başarılar</h4>
+              <ul className="text-sm text-emerald-800 space-y-1">
+                {analysis.feedback.strengths.map((s, i) => <li key={i}>• {s}</li>)}
+              </ul>
+            </div>
+            <div className="bg-indigo-50 p-4 rounded-2xl">
+              <h4 className="text-xs font-black text-indigo-700 uppercase mb-2">Öneriler</h4>
+              <ul className="text-sm text-indigo-800 space-y-1">
+                {analysis.feedback.tips.map((t, i) => <li key={i}>• {t}</li>)}
+              </ul>
+            </div>
+          </div>
         </div>
       )}
     </div>

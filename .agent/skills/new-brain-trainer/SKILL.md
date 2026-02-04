@@ -42,8 +42,9 @@ import {
   Trophy, RotateCcw, Play, Star, Timer, Target, 
   CheckCircle2, XCircle, ChevronLeft, Zap, Brain, Heart 
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // Game Constants
 const INITIAL_LIVES = 5;
@@ -52,10 +53,19 @@ const MAX_LEVEL = 20;
 
 type Phase = 'welcome' | 'playing' | 'game_over' | 'victory';
 
-const [SimulatorName]Game: React.FC = () => {
+interface [SimulatorName]GameProps {
+    examMode?: boolean;
+    examLevel?: number;
+    examTimeLimit?: number;
+}
+
+const [SimulatorName]Game: React.FC<[SimulatorName]GameProps> = ({ examMode = false }) => {
   // Persistence Hook
   const { saveGamePlay, hasSavedRef } = useGamePersistence();
-  
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { submitResult } = useExam();
+
   // Core State
   const [phase, setPhase] = useState<Phase>('welcome');
   const [score, setScore] = useState(0);
@@ -111,6 +121,13 @@ const [SimulatorName]Game: React.FC = () => {
     hasSavedRef.current = false;
   }, [hasSavedRef]);
 
+  // Handle Auto Start from HUB or Exam Mode
+  useEffect(() => {
+    if ((location.state?.autoStart || examMode) && phase === 'welcome') {
+      handleStart();
+    }
+  }, [location.state, examMode, phase, handleStart]);
+
   // Game Over Handler
   const handleGameOver = useCallback(async () => {
     if (hasSavedRef.current) return;
@@ -119,6 +136,14 @@ const [SimulatorName]Game: React.FC = () => {
     setPhase('game_over');
     
     const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+    
+    // Exam Mode: Submit result and navigate back
+    if (examMode) {
+      const passed = level >= 5; // Oyuna özel geçme kriteri
+      submitResult(passed, score, 1000, duration);
+      setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+      return;
+    }
     
     await saveGamePlay({
       game_id: '[simulator-slug]',
@@ -129,7 +154,7 @@ const [SimulatorName]Game: React.FC = () => {
         final_lives: lives,
       }
     });
-  }, [saveGamePlay, score, level, lives, hasSavedRef]);
+  }, [saveGamePlay, score, level, lives, hasSavedRef, examMode, submitResult, navigate]);
 
   // Victory Handler
   const handleVictory = useCallback(async () => {
@@ -140,6 +165,13 @@ const [SimulatorName]Game: React.FC = () => {
     
     const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
     
+    // Exam Mode: Submit result and navigate back
+    if (examMode) {
+      submitResult(true, score, 1000, duration);
+      setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+      return;
+    }
+    
     await saveGamePlay({
       game_id: '[simulator-slug]',
       score_achieved: score,
@@ -149,7 +181,7 @@ const [SimulatorName]Game: React.FC = () => {
         victory: true,
       }
     });
-  }, [saveGamePlay, score, hasSavedRef]);
+  }, [saveGamePlay, score, hasSavedRef, examMode, submitResult, navigate]);
 
   // Answer Handlers
   const handleCorrect = useCallback(() => {
@@ -480,6 +512,73 @@ VALUES ('/atolyeler/bireysel-degerlendirme/[simulator-slug]', 15, '[Simülatör 
 
 ---
 
+## Adım 6: Sınav Simülasyonu Modülü Ekle (Opsiyonel)
+
+Eğer oyun sınav simülasyonunda kullanılacaksa, `src/config/examModules.ts` dosyasına ekle:
+
+```typescript
+// EXAM_MODULES dizisine ekle
+{
+    id: '[simulator-slug]',
+    title: '[Simülatör Adı]',
+    link: '/games/[simulator-slug]',
+    tuzo: '5.X.X Beceri Adı',
+    category: 'memory' | 'logic' | 'attention' | 'verbal' | 'speed' | 'perception' | 'social',
+    timeLimit: 120, // saniye
+    active: true
+},
+```
+
+### examMode Props
+
+Oyun bileşeni bu props'ları desteklemelidir:
+
+```typescript
+interface GameProps {
+    examMode?: boolean;       // Sınav modunda mı?
+    examLevel?: number;       // Zorluk seviyesi (1-5)
+    examTimeLimit?: number;   // Özel süre limiti
+}
+```
+
+### examMode Entegrasyon Pattern'i
+
+```typescript
+// 1. Import'lar
+import { useNavigate } from 'react-router-dom';
+import { useExam } from '../../contexts/ExamContext';
+
+// 2. Hook'lar
+const navigate = useNavigate();
+const { submitResult } = useExam();
+
+// 3. Auto-start (examMode veya HUB'dan gelince)
+useEffect(() => {
+    if ((location.state?.autoStart || examMode) && phase === 'welcome') {
+        handleStart();
+    }
+}, [location.state, examMode, phase, handleStart]);
+
+// 4. Oyun bitişinde sonuç gönder
+if (examMode) {
+    const passed = /* oyuna özel geçme kriteri */;
+    submitResult(passed, score, maxScore, durationSeconds);
+    setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+    return;
+}
+```
+
+### Pass Kriterleri Örnekleri
+
+| Oyun Tipi | Geçme Kriteri |
+|-----------|---------------|
+| Hafıza | `correctCount >= questions.length / 2` |
+| Tepki Süresi | `successfulReactions >= 5 && avgReaction < 400ms` |
+| Dikkat | `accuracy >= 60%` |
+| Desen | `levelsCompleted >= 5` |
+
+---
+
 ## Tasarım Standartları - 3D Gummy Candy Stili
 
 ### 🍬 3D Gummy Candy Estetiği
@@ -664,6 +763,8 @@ transition={{ duration: 1.5, repeat: Infinity }}
 - [ ] `intelligenceTypes.ts`'e eklendi (zeka + workshop)
 - [ ] XP requirement veritabanına eklendi
 - [ ] Route eklendi ve test edildi
+- [ ] **examMode prop** eklendi (opsiyonel)
+- [ ] **examModules.ts**'e eklendi (opsiyonel)
 
 ---
 

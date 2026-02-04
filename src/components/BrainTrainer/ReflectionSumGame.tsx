@@ -4,9 +4,10 @@ import {
     ChevronLeft, RotateCcw, Trophy, Play, Timer,
     Star, Heart, Zap, CheckCircle2, XCircle, Calculator, FlipHorizontal, Sparkles, Eye
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // --- Tipler ---
 type GameStatus = 'waiting' | 'display' | 'input_sequence' | 'input_sum' | 'result' | 'gameover';
@@ -28,6 +29,11 @@ const ReflectionSumGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
@@ -76,12 +82,12 @@ const ReflectionSumGame: React.FC = () => {
         startLevel(1);
     }, [startLevel]);
 
-    // Handle Auto Start from HUB
+    // Handle Auto Start from HUB or Exam Mode
     useEffect(() => {
-        if (location.state?.autoStart && status === 'waiting') {
+        if ((location.state?.autoStart || examMode) && status === 'waiting') {
             startApp();
         }
-    }, [location.state, status, startApp]);
+    }, [location.state, status, startApp, examMode]);
 
     // Görünüm Fazı
     useEffect(() => {
@@ -117,6 +123,16 @@ const ReflectionSumGame: React.FC = () => {
         if (status === 'gameover' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
             hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+
+            // Exam mode: submit result and navigate
+            if (examMode) {
+                const passed = level >= 3;
+                submitResult(passed, score, 1000, durationSeconds).then(() => {
+                    navigate('/atolyeler/sinav-simulasyonu/devam');
+                });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'yansima-toplami',
                 score_achieved: score,
@@ -129,7 +145,7 @@ const ReflectionSumGame: React.FC = () => {
                 }
             });
         }
-    }, [status, score, level, lives, streak, saveGamePlay]);
+    }, [status, score, level, lives, streak, saveGamePlay, examMode, submitResult, navigate]);
 
     const handleDigitClick = (digit: number) => {
         if (status !== 'input_sequence' || feedback) return;

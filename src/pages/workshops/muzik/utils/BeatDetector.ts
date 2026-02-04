@@ -1,12 +1,11 @@
 
 export class BeatDetector {
-  private analyser: AnalyserNode;
   private threshold = 0.15; // Hassasiyet eşiği
   private lastBeatTime = 0;
   private minInterval = 150; // İki vuruş arası min ms (çift algılamayı önlemek için)
 
-  constructor(analyser: AnalyserNode) {
-    this.analyser = analyser;
+  constructor(_analyser: AnalyserNode) {
+    // Analyser is passed but detection uses buffer directly
   }
 
   /**

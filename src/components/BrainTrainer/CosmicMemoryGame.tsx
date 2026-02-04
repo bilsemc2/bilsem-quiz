@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, RotateCcw, Trophy,
     Star, Zap, Brain, Eye, Heart, Clock, Play, Home,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // ------------------ Tip Tanımları ------------------
 type GameMode = 'NORMAL' | 'REVERSE';
@@ -41,12 +42,19 @@ const FAIL_MESSAGES = [
 const CosmicMemoryGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
     const location = useLocation();
+    const navigate = useNavigate();
     const [gameStarted, setGameStarted] = useState(false);
     const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [showFeedback, setShowFeedback] = useState(false);
     const [isCorrectFeedback, setIsCorrectFeedback] = useState(true);
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || 180;
 
     const [state, setState] = useState<GameState>({
         level: 1,
@@ -59,7 +67,7 @@ const CosmicMemoryGame: React.FC = () => {
         mode: 'NORMAL'
     });
     const [lives, setLives] = useState(5);
-    const [totalTime, setTotalTime] = useState(180);
+    const [totalTime, setTotalTime] = useState(examMode ? examTimeLimit : 180);
 
     // ------------------ Oyun Mantığı ------------------
 
@@ -204,10 +212,10 @@ const CosmicMemoryGame: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (location.state?.autoStart && !gameStarted) {
+        if ((location.state?.autoStart || examMode) && !gameStarted) {
             restartGame();
         }
-    }, [location.state, gameStarted, restartGame]);
+    }, [location.state, gameStarted, restartGame, examMode]);
 
     useEffect(() => {
         if (gameStarted && state.status !== 'GAMEOVER') {
@@ -218,7 +226,7 @@ const CosmicMemoryGame: React.FC = () => {
     useEffect(() => {
         if (!gameStarted || state.status === 'GAMEOVER') return;
         const totalTimer = setInterval(() => {
-            setTotalTime(prev => {
+            setTotalTime((prev: number) => {
                 if (prev <= 1) {
                     clearInterval(totalTimer);
                     setState(p => ({ ...p, status: 'GAMEOVER' }));
@@ -231,8 +239,17 @@ const CosmicMemoryGame: React.FC = () => {
     }, [gameStarted, state.status]);
 
     useEffect(() => {
-        if (state.status === 'GAMEOVER' && gameStartTimeRef.current > 0) {
+        if (state.status === 'GAMEOVER' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+
+            // Exam mode: submit result and redirect
+            if (examMode) {
+                submitResult(state.score > 500, state.score, 3000, durationSeconds).then(() => {
+                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'kozmik-hafiza',
                 score_achieved: state.score,
@@ -245,7 +262,7 @@ const CosmicMemoryGame: React.FC = () => {
                 }
             });
         }
-    }, [state.status, state.score, state.level, state.mode, state.gridSize, saveGamePlay]);
+    }, [state.status, state.score, state.level, state.mode, state.gridSize, saveGamePlay, examMode, submitResult, navigate]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);

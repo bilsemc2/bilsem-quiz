@@ -4,9 +4,10 @@ import {
     Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft,
     Zap, Eye, Shapes, Heart, Sparkles
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useSound } from '../../hooks/useSound';
+import { useExam } from '../../contexts/ExamContext';
 
 interface SymbolColor {
     symbol: string;
@@ -50,7 +51,9 @@ const COLORS = [
 const SymbolMatchGame = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
     const location = useLocation();
+    const navigate = useNavigate();
     const [gameState, setGameState] = useState<'idle' | 'memorize' | 'question' | 'finished'>('idle');
     const [symbolColors, setSymbolColors] = useState<SymbolColor[]>([]);
     const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -69,6 +72,9 @@ const SymbolMatchGame = () => {
 
     const totalRounds = 15;
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
 
     // Back link
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
@@ -157,20 +163,28 @@ const SymbolMatchGame = () => {
         startRound();
     }, [startRound]);
 
-    // Handle Auto Start from HUB
+    // Handle Auto Start from HUB or examMode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
-    // Oyun bittiğinde verileri kaydet
+    // Oyun bittiginde verileri kaydet
     useEffect(() => {
         if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
             hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
             const correctCount = roundNumber - 1 - (3 - lives);
             const wrongCount = 3 - lives;
+
+            // Exam mode: submit result and redirect
+            if (examMode) {
+                submitResult(lives > 0, score, totalRounds * 150, durationSeconds).then(() => {
+                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'sekil-hafizasi',
                 score_achieved: score,
@@ -186,7 +200,7 @@ const SymbolMatchGame = () => {
                 }
             });
         }
-    }, [gameState, score, lives, level, streak, roundNumber, saveGamePlay]);
+    }, [gameState, score, lives, level, streak, roundNumber, saveGamePlay, examMode, submitResult, navigate]);
 
     // Ezberleme geri sayımı
     useEffect(() => {
@@ -650,7 +664,7 @@ const SymbolMatchGame = () => {
                                 to={backLink}
                                 className="block text-slate-500 hover:text-white transition-colors"
                             >
-                                {location.state?.arcadeMode ? 'Arcade Hub\'a Dön' : 'Geri Dön'}
+                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
                             </Link>
                         </motion.div>
                     )}

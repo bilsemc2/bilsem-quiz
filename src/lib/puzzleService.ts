@@ -3,7 +3,19 @@ import { supabase } from './supabase';
 export interface GridCell {
   type?: string;
   id?: string;
-  svg?: unknown;
+  svg?: {
+    props?: {
+      children?: {
+        props?: {
+          src?: string;
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
   [key: string]: unknown;
 }
 
@@ -385,24 +397,26 @@ export const fixProfessionImages = async () => {
 
     for (const puzzle of puzzles || []) {
       let updated = false;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const newGrid = puzzle.grid.map((row: any[]) =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        row.map((cell: any) => {
+      // Type assertion for legacy Supabase data structure
+      const grid = puzzle.grid as GridCell[][];
+      const newGrid = grid.map((row) =>
+        row.map((cell) => {
           if (!cell) return null;
           if (cell.type === 'profession') {
-            if (cell.id === 'construction' && cell.svg?.props?.children?.props?.src === '/images/professions/unknown.png') {
+            const svgProps = cell.svg?.props;
+            const childProps = svgProps?.children?.props;
+            if (cell.id === 'construction' && childProps?.src === '/images/professions/unknown.png') {
               updated = true;
               return {
                 ...cell,
                 svg: {
                   ...cell.svg,
                   props: {
-                    ...cell.svg.props,
+                    ...svgProps,
                     children: {
-                      ...cell.svg.props.children,
+                      ...svgProps?.children,
                       props: {
-                        ...cell.svg.props.children.props,
+                        ...childProps,
                         src: '/images/professions/construction.png'
                       }
                     }
@@ -410,18 +424,18 @@ export const fixProfessionImages = async () => {
                 }
               };
             }
-            if (cell.id === 'astronaut' && cell.svg?.props?.children?.props?.src === '/images/professions/unknown.png') {
+            if (cell.id === 'astronaut' && childProps?.src === '/images/professions/unknown.png') {
               updated = true;
               return {
                 ...cell,
                 svg: {
                   ...cell.svg,
                   props: {
-                    ...cell.svg.props,
+                    ...svgProps,
                     children: {
-                      ...cell.svg.props.children,
+                      ...svgProps?.children,
                       props: {
-                        ...cell.svg.props.children.props,
+                        ...childProps,
                         src: '/images/professions/astronaut.png'
                       }
                     }

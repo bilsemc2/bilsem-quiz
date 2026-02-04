@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Heart, CheckCircle2, XCircle, ChevronLeft, Zap, Smile, Timer, Sparkles, Eye } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // Duygu tanımları - emoji ve açıklamalarıyla
 const EMOTIONS = [
@@ -96,10 +97,21 @@ const FAILURE_MESSAGES = [
     "Tekrar dene! 💪",
 ];
 
-const FaceExpressionGame: React.FC = () => {
+interface FaceExpressionGameProps {
+    examMode?: boolean;
+    examLevel?: number;
+    examTimeLimit?: number;
+}
+
+const FaceExpressionGame: React.FC<FaceExpressionGameProps> = ({ examMode: examModeProp = false }) => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
+
+    // examMode can come from props OR location.state (when navigating from ExamContinuePage)
+    const examMode = examModeProp || location.state?.examMode === true;
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
     const [questionNumber, setQuestionNumber] = useState(0);
@@ -163,12 +175,12 @@ const FaceExpressionGame: React.FC = () => {
         setCurrentQuestion(generateQuestion());
     }, [generateQuestion]);
 
-    // Handle Auto Start from HUB
+    // Handle Auto Start from HUB or Exam Mode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     // Zamanlayıcı
     useEffect(() => {
@@ -196,6 +208,15 @@ const FaceExpressionGame: React.FC = () => {
                 ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
                 : 0;
 
+            // Exam mode: submit result and navigate
+            if (examMode) {
+                const passed = accuracy >= 60;
+                submitResult(passed, score, 1000, durationSeconds).then(() => {
+                    navigate('/atolyeler/sinav-simulasyonu/devam');
+                });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'yuz-ifadesi',
                 score_achieved: score,
@@ -211,7 +232,7 @@ const FaceExpressionGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState, score, lives, correctCount, wrongCount, bestStreak, saveGamePlay]);
+    }, [gameState, score, lives, correctCount, wrongCount, bestStreak, saveGamePlay, examMode, navigate, submitResult]);
 
     // Cevap kontrolü
     const handleAnswer = useCallback((emotionId: string) => {

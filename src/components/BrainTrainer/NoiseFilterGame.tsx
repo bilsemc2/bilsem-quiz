@@ -4,8 +4,9 @@ import {
     Trophy, RotateCcw, Play, Star, Timer, Volume2, VolumeX,
     XCircle, ChevronLeft, Headphones, CheckCircle2, Home, Sparkles
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 import {
     sounds, SoundItem, shuffleArray, getRandomElement,
     AUDIO_BASE_PATH, IMAGE_BASE_PATH, BACKGROUND_AUDIO
@@ -34,9 +35,21 @@ const WRONG_MESSAGES = [
 
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-const NoiseFilterGame: React.FC = () => {
+interface NoiseFilterGameProps {
+    examMode?: boolean;
+    examLevel?: number;
+    examTimeLimit?: number;
+}
+
+const NoiseFilterGame: React.FC<NoiseFilterGameProps> = ({ examMode: examModeProp = false }) => {
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
     const hasSavedRef = useRef(false);
+
+    // examMode can come from props OR location.state (when navigating from ExamContinuePage)
+    const examMode = examModeProp || location.state?.examMode === true;
 
     // Core State
     const [phase, setPhase] = useState<Phase>('welcome');
@@ -133,6 +146,13 @@ const NoiseFilterGame: React.FC = () => {
         setupRound();
     }, [backgroundVolume, setupRound]);
 
+    // Handle Auto Start from HUB or Exam Mode
+    useEffect(() => {
+        if ((location.state?.autoStart || examMode) && phase === 'welcome') {
+            handleStart();
+        }
+    }, [location.state, phase, handleStart, examMode]);
+
     // Game Over Handler
     const handleGameOver = useCallback(async () => {
         if (hasSavedRef.current) return;
@@ -144,6 +164,15 @@ const NoiseFilterGame: React.FC = () => {
 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
+        // Exam mode: submit result and navigate
+        if (examMode) {
+            const passed = score >= TARGET_SCORE / 2;
+            submitResult(passed, score, TARGET_SCORE, duration).then(() => {
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            });
+            return;
+        }
+
         await saveGamePlay({
             game_id: 'gurultu-filtresi',
             score_achieved: score,
@@ -154,7 +183,7 @@ const NoiseFilterGame: React.FC = () => {
                 distraction_level: backgroundVolume,
             }
         });
-    }, [saveGamePlay, score, attempts, backgroundVolume]);
+    }, [saveGamePlay, score, attempts, backgroundVolume, examMode, submitResult, navigate]);
 
     // Victory Handler
     const handleVictory = useCallback(async () => {
@@ -167,6 +196,14 @@ const NoiseFilterGame: React.FC = () => {
 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
+        // Exam mode: submit result and navigate
+        if (examMode) {
+            submitResult(true, score + 50, TARGET_SCORE, duration).then(() => {
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            });
+            return;
+        }
+
         await saveGamePlay({
             game_id: 'gurultu-filtresi',
             score_achieved: score + 50,
@@ -178,7 +215,7 @@ const NoiseFilterGame: React.FC = () => {
                 victory: true,
             }
         });
-    }, [saveGamePlay, score, attempts, backgroundVolume]);
+    }, [saveGamePlay, score, attempts, backgroundVolume, examMode, submitResult, navigate]);
 
     // Handle Option Click
     const handleOptionClick = useCallback((sound: SoundItem) => {

@@ -90,7 +90,7 @@ export const StatsManagement: React.FC = () => {
     fetchStats();
   }, []);
 
-  const calculateQuizStats = (quizData: Array<{ score: number; questions_answered: number; correct_answers: number; completed_at: string; profiles?: { full_name?: string; email?: string } | null }>): QuizStats => {
+  const calculateQuizStats = (quizData: Array<{ score: number; questions_answered: number; correct_answers: number; completed_at: string; profiles?: { full_name?: string; email?: string } | { full_name?: string; email?: string }[] | null }>): QuizStats => {
     const totalQuizzes = quizData.length;
     const totalQuestionsAnswered = quizData.reduce((sum, quiz) => sum + quiz.questions_answered, 0);
     const totalCorrectAnswers = quizData.reduce((sum, quiz) => sum + quiz.correct_answers, 0);
@@ -105,12 +105,16 @@ export const StatsManagement: React.FC = () => {
 
     // En yüksek skorlar
     const topScorers = quizData
-      .map(quiz => ({
-        name: quiz.profiles?.full_name || 'İsimsiz',
-        email: quiz.profiles?.email || '',
-        score: quiz.score,
-        date: new Date(quiz.completed_at).toLocaleDateString('tr-TR')
-      }))
+      .map(quiz => {
+        // Handle profiles as either array or single object
+        const profile = Array.isArray(quiz.profiles) ? quiz.profiles[0] : quiz.profiles;
+        return {
+          name: profile?.full_name || 'İsimsiz',
+          email: profile?.email || '',
+          score: quiz.score,
+          date: new Date(quiz.completed_at).toLocaleDateString('tr-TR')
+        };
+      })
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
 

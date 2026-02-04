@@ -14,9 +14,9 @@ const MELODIES = [
 
 const MelodyPage: React.FC = () => {
   const { playNote, startAudioContext, isSamplerReady } = useAudio();
-  const { 
-    startListening, stopListening, isListening, 
-    currentNote, audioLevel, capturedNotes, analyzePerformance 
+  const {
+    startListening, stopListening, isListening,
+    currentNote: _currentNote, audioLevel, capturedNotes, analyzePerformance
   } = useAIAudio();
 
   const [targetMelody, setTargetMelody] = useState<string[]>([]);
@@ -28,7 +28,7 @@ const MelodyPage: React.FC = () => {
     const melody = MELODIES[Math.floor(Math.random() * MELODIES.length)];
     setTargetMelody(melody);
     setAnalysis(null);
-    
+
     melody.forEach((note, i) => {
       setTimeout(() => playNote(note, "4n"), i * 600);
     });
@@ -71,19 +71,19 @@ const MelodyPage: React.FC = () => {
             </div>
 
             <MicrophoneButton isListening={isListening} audioLevel={audioLevel} onClick={handleMicToggle} disabled={!isSamplerReady} />
-            
+
             <div className="text-center h-16 flex items-center justify-center w-full">
-               {isListening && (
-                 <div className="flex flex-wrap justify-center gap-2">
-                   {capturedNotes.map((n, i) => (
-                     <div key={i} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold animate-in zoom-in shadow-sm">
-                       {n}
-                     </div>
-                   ))}
-                   {capturedNotes.length === 0 && <span className="text-slate-300 italic animate-pulse">Melodiyi bekleniyor...</span>}
-                 </div>
-               )}
-               {isAnalyzing && (
+              {isListening && (
+                <div className="flex flex-wrap justify-center gap-2">
+                  {capturedNotes.map((n, i) => (
+                    <div key={i} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold animate-in zoom-in shadow-sm">
+                      {n}
+                    </div>
+                  ))}
+                  {capturedNotes.length === 0 && <span className="text-slate-300 italic animate-pulse">Melodiyi bekleniyor...</span>}
+                </div>
+              )}
+              {isAnalyzing && (
                 <div className="flex items-center space-x-3 text-indigo-600 font-black animate-pulse bg-indigo-50 px-6 py-2 rounded-full border border-indigo-100">
                   <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
                   <span className="text-xs uppercase tracking-widest">Melodi Gemini Tarafından Analiz Ediliyor...</span>
@@ -99,25 +99,25 @@ const MelodyPage: React.FC = () => {
           <div className="p-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
             <h3 className="text-xl font-bold">Müzikal Geri Bildirim</h3>
             <div className="flex items-center space-x-2 mt-2">
-               <span className="text-sm opacity-80 uppercase font-bold tracking-widest">Hafıza & Duyum:</span>
-               <span className="text-lg font-black tracking-tighter">%{analysis.accuracy}</span>
+              <span className="text-sm opacity-80 uppercase font-bold tracking-widest">Hafıza & Duyum:</span>
+              <span className="text-lg font-black tracking-tighter">%{analysis.accuracy}</span>
             </div>
           </div>
           <div className="p-8 space-y-6">
             <p className="text-slate-700 leading-relaxed font-medium bg-slate-50 p-4 rounded-xl border border-slate-100 italic">"{analysis.detailedAnalysis}"</p>
             <div className="grid grid-cols-2 gap-6">
-               <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
-                 <h4 className="text-emerald-800 font-black text-xs mb-3 uppercase tracking-widest">Güçlü Melodik Duyum</h4>
-                 <ul className="text-xs text-emerald-700 space-y-2">
-                   {analysis.feedback.strengths.map((s, i) => <li key={i} className="flex items-center"><span className="mr-2">✓</span> {s}</li>)}
-                 </ul>
-               </div>
-               <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
-                 <h4 className="text-indigo-800 font-black text-xs mb-3 uppercase tracking-widest">Gelişim Önerisi</h4>
-                 <ul className="text-xs text-indigo-700 space-y-2">
-                   {analysis.feedback.tips.map((t, i) => <li key={i} className="flex items-center"><span className="mr-2">💡</span> {t}</li>)}
-                 </ul>
-               </div>
+              <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
+                <h4 className="text-emerald-800 font-black text-xs mb-3 uppercase tracking-widest">Güçlü Melodik Duyum</h4>
+                <ul className="text-xs text-emerald-700 space-y-2">
+                  {analysis.feedback.strengths.map((s, i) => <li key={i} className="flex items-center"><span className="mr-2">✓</span> {s}</li>)}
+                </ul>
+              </div>
+              <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
+                <h4 className="text-indigo-800 font-black text-xs mb-3 uppercase tracking-widest">Gelişim Önerisi</h4>
+                <ul className="text-xs text-indigo-700 space-y-2">
+                  {analysis.feedback.tips.map((t, i) => <li key={i} className="flex items-center"><span className="mr-2">💡</span> {t}</li>)}
+                </ul>
+              </div>
             </div>
           </div>
         </div>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Timer, CheckCircle2, XCircle, ChevronLeft, Zap, Target, Eye, Sparkles, Heart } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useSound } from '../../hooks/useSound';
+import { useExam } from '../../contexts/ExamContext';
 
 // Sembol seti - hedef ve dikkat dağıtıcılar
 const ALL_SYMBOLS = ['★', '●', '■', '▲', '◆', '♦', '♣', '♠', '♥', '○', '□', '△', '◇', '✕', '✓', '⬟'];
@@ -29,10 +30,21 @@ const FAILURE_MESSAGES = [
     "Tekrar dene! 💪",
 ];
 
-const VisualScanningGame: React.FC = () => {
+interface VisualScanningGameProps {
+    examMode?: boolean;
+    examLevel?: number;
+    examTimeLimit?: number;
+}
+
+const VisualScanningGame: React.FC<VisualScanningGameProps> = ({ examMode: examModeProp = false }) => {
     const { saveGamePlay } = useGamePersistence();
     const { playSound } = useSound();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
+
+    // examMode can come from props OR location.state (when navigating from ExamContinuePage)
+    const examMode = examModeProp || location.state?.examMode === true;
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [targetSymbol, setTargetSymbol] = useState<string>('★');
     const [grid, setGrid] = useState<CellData[]>([]);
@@ -132,12 +144,12 @@ const VisualScanningGame: React.FC = () => {
         startNewRound(1);
     }, [startNewRound]);
 
-    // Handle Auto Start from HUB
+    // Handle Auto Start from HUB or Exam Mode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     // Zamanlayıcı
     useEffect(() => {
@@ -164,6 +176,16 @@ const VisualScanningGame: React.FC = () => {
             hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
             const totalTargets = correctCount + missedCount;
+
+            // Exam mode: submit result and navigate
+            if (examMode) {
+                const passed = correctCount > wrongCount && correctCount >= 5;
+                submitResult(passed, score, 1000, durationSeconds).then(() => {
+                    navigate('/atolyeler/sinav-simulasyonu/devam');
+                });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'gorsel-tarama',
                 score_achieved: score,
@@ -180,7 +202,7 @@ const VisualScanningGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState, score, lives, correctCount, wrongCount, missedCount, bestStreak, level, saveGamePlay]);
+    }, [gameState, score, lives, correctCount, wrongCount, missedCount, bestStreak, level, saveGamePlay, examMode, navigate, submitResult]);
 
     // Tur tamamlandı mı kontrol et
     useEffect(() => {

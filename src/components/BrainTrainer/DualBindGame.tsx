@@ -4,9 +4,10 @@ import {
     ChevronLeft, RotateCcw, Trophy, Play, Star, Target, CheckCircle2, XCircle,
     Heart, Zap, Eye, Link2, ArrowRight, Sparkles
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useSound } from '../../hooks/useSound';
+import { useExam } from '../../contexts/ExamContext';
 
 interface SymbolColor {
     symbol: string;
@@ -52,6 +53,11 @@ const DualBindGame = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
     const [gameState, setGameState] = useState<'idle' | 'memorize' | 'question' | 'finished'>('idle');
     const [symbolColors, setSymbolColors] = useState<SymbolColor[]>([]);
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -162,18 +168,28 @@ const DualBindGame = () => {
         startRound();
     }, [startRound]);
 
-    // Handle Auto Start from HUB
+    // Handle Auto Start from HUB or Exam Mode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     // Oyun bittiğinde verileri kaydet
     useEffect(() => {
         if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
             hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+
+            // Exam mode: submit result and navigate
+            if (examMode) {
+                const passed = round >= 3;
+                submitResult(passed, score, 1000, durationSeconds).then(() => {
+                    navigate("/atolyeler/sinav-simulasyonu/devam");
+                });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'cift-mod-hafiza',
                 score_achieved: score,
@@ -187,7 +203,7 @@ const DualBindGame = () => {
                 }
             });
         }
-    }, [gameState, score, level, lives, streak, saveGamePlay, totalRounds]);
+    }, [gameState, score, level, lives, streak, saveGamePlay, totalRounds, round, examMode, submitResult, navigate]);
 
     // Ezberleme geri sayımı
     useEffect(() => {

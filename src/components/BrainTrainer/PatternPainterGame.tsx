@@ -5,8 +5,9 @@ import {
     XCircle, ChevronLeft, Zap, Palette, Heart, Home,
     Sparkles, CheckCircle2, HelpCircle
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // Game Constants - Rule of Three
 const INITIAL_LIVES = 5;
@@ -109,14 +110,22 @@ const createLevel = (levelIdx: number): GameLevel => {
 
 const PatternPainterGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
+    const location = useLocation();
+    const navigate = useNavigate();
     const hasSavedRef = useRef(false);
 
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
+    const examLevel = location.state?.examLevel || 1;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+
     // Core State
-    const [phase, setPhase] = useState<Phase>('welcome');
+    const [phase, setPhase] = useState<Phase>(examMode ? 'playing' : 'welcome');
     const [score, setScore] = useState(0);
     const [lives, setLives] = useState(INITIAL_LIVES);
-    const [level, setLevel] = useState(1);
-    const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+    const [level, setLevel] = useState(examLevel);
+    const [timeLeft, setTimeLeft] = useState(examMode ? examTimeLimit : TIME_LIMIT);
 
     // Game State
     const [currentLevel, setCurrentLevel] = useState<GameLevel | null>(null);
@@ -130,12 +139,19 @@ const PatternPainterGame: React.FC = () => {
 
     // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const startTimeRef = useRef<number>(0);
+    const startTimeRef = useRef<number>(examMode ? Date.now() : 0);
+
+    // Auto-start for exam mode
+    useEffect(() => {
+        if (examMode && phase === 'playing' && !currentLevel) {
+            setupLevel(examLevel);
+        }
+    }, [examMode, examLevel, phase, currentLevel]);
 
     // Timer Effect
     useEffect(() => {
         if (phase === 'playing' && timeLeft > 0) {
-            timerRef.current = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
+            timerRef.current = setTimeout(() => setTimeLeft((prev: number) => prev - 1), 1000);
         } else if (timeLeft === 0 && phase === 'playing') {
             handleGameOver();
         }
@@ -181,13 +197,20 @@ const PatternPainterGame: React.FC = () => {
 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
+        // Exam mode: submit result and redirect
+        if (examMode) {
+            submitResult(score > 0, score, MAX_LEVEL * 10 * MAX_LEVEL, duration).then(() => {
+            navigate("/atolyeler/sinav-simulasyonu/devam"); });
+            return;
+        }
+
         await saveGamePlay({
             game_id: 'desen-boyama',
             score_achieved: score,
             duration_seconds: duration,
             metadata: { levels_completed: level, final_lives: lives }
         });
-    }, [saveGamePlay, score, level, lives]);
+    }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate]);
 
     // Victory Handler
     const handleVictory = useCallback(async () => {
@@ -198,13 +221,20 @@ const PatternPainterGame: React.FC = () => {
 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
+        // Exam mode: submit result and redirect
+        if (examMode) {
+            submitResult(true, score, MAX_LEVEL * 10 * MAX_LEVEL, duration).then(() => {
+            navigate("/atolyeler/sinav-simulasyonu/devam"); });
+            return;
+        }
+
         await saveGamePlay({
             game_id: 'desen-boyama',
             score_achieved: score,
             duration_seconds: duration,
             metadata: { levels_completed: MAX_LEVEL, victory: true }
         });
-    }, [saveGamePlay, score]);
+    }, [saveGamePlay, score, examMode, submitResult, navigate]);
 
     // Paint Tile
     const handlePaintTile = (r: number, c: number) => {

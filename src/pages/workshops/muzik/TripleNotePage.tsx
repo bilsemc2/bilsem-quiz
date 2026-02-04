@@ -9,9 +9,9 @@ const NOTES = ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5"];
 
 const TripleNotePage: React.FC = () => {
   const { playNote, startAudioContext, isSamplerReady } = useAudio();
-  const { 
-    startListening, stopListening, isListening, 
-    currentNote, audioLevel, capturedNotes, analyzePerformance 
+  const {
+    startListening, stopListening, isListening,
+    currentNote: _currentNote, audioLevel, capturedNotes, analyzePerformance
   } = useAIAudio();
 
   const [targetNotes, setTargetNotes] = useState<string[]>([]);
@@ -25,7 +25,7 @@ const TripleNotePage: React.FC = () => {
     const n3 = NOTES[Math.floor(Math.random() * NOTES.length)];
     setTargetNotes([n1, n2, n3]);
     setAnalysis(null);
-    
+
     // Notaları 800ms aralıklarla çal
     playNote(n1, "2n");
     setTimeout(() => playNote(n2, "2n"), 800);
@@ -71,7 +71,7 @@ const TripleNotePage: React.FC = () => {
             </div>
 
             <MicrophoneButton isListening={isListening} audioLevel={audioLevel} onClick={handleMicToggle} disabled={!isSamplerReady} />
-            
+
             <div className="min-h-[60px] w-full flex flex-col items-center justify-center gap-2">
               {isListening && (
                 <div className="flex flex-wrap justify-center gap-2">
@@ -96,42 +96,42 @@ const TripleNotePage: React.FC = () => {
 
       {analysis && !isAnalyzing && (
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100 animate-in slide-in-from-bottom-5">
-           <div className="flex items-center justify-between mb-6 border-b pb-4">
-             <div>
-               <h3 className="text-xl font-bold text-slate-800">Başarı Skoru: %{analysis.accuracy}</h3>
-               <p className="text-indigo-600 font-bold text-sm">{analysis.encouragement}</p>
-             </div>
-             <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-               {analysis.score > 80 ? 'A' : analysis.score > 60 ? 'B' : 'C'}
-             </div>
-           </div>
-           
-           <div className="space-y-6">
-             <p className="text-slate-600 leading-relaxed text-sm bg-slate-50 p-4 rounded-xl border border-slate-100 italic">
-               "{analysis.detailedAnalysis}"
-             </p>
-             
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="space-y-3">
-                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Neler İyiydi?</h4>
-                 {analysis.feedback.strengths.map((s, i) => (
-                   <div key={i} className="flex items-center space-x-2 text-xs font-bold text-emerald-700">
-                     <span className="w-4 h-4 bg-emerald-100 rounded-full flex items-center justify-center">✓</span>
-                     <span>{s}</span>
-                   </div>
-                 ))}
-               </div>
-               <div className="space-y-3">
-                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nasıl Gelişir?</h4>
-                 {analysis.feedback.tips.map((t, i) => (
-                   <div key={i} className="flex items-center space-x-2 text-xs font-bold text-indigo-700">
-                     <span className="w-4 h-4 bg-indigo-100 rounded-full flex items-center justify-center">!</span>
-                     <span>{t}</span>
-                   </div>
-                 ))}
-               </div>
-             </div>
-           </div>
+          <div className="flex items-center justify-between mb-6 border-b pb-4">
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Başarı Skoru: %{analysis.accuracy}</h3>
+              <p className="text-indigo-600 font-bold text-sm">{analysis.encouragement}</p>
+            </div>
+            <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
+              {analysis.score > 80 ? 'A' : analysis.score > 60 ? 'B' : 'C'}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <p className="text-slate-600 leading-relaxed text-sm bg-slate-50 p-4 rounded-xl border border-slate-100 italic">
+              "{analysis.detailedAnalysis}"
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Neler İyiydi?</h4>
+                {analysis.feedback.strengths.map((s, i) => (
+                  <div key={i} className="flex items-center space-x-2 text-xs font-bold text-emerald-700">
+                    <span className="w-4 h-4 bg-emerald-100 rounded-full flex items-center justify-center">✓</span>
+                    <span>{s}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nasıl Gelişir?</h4>
+                {analysis.feedback.tips.map((t, i) => (
+                  <div key={i} className="flex items-center space-x-2 text-xs font-bold text-indigo-700">
+                    <span className="w-4 h-4 bg-indigo-100 rounded-full flex items-center justify-center">!</span>
+                    <span>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAudio } from './contexts/AudioContext';
 import { useAIAudio } from './contexts/AIAudioContext';
 import { MicrophoneButton } from './components/MicrophoneButton';
@@ -9,14 +9,14 @@ const NOTES = ["C4", "D4", "E4", "F4", "G4", "A4", "B4"];
 
 const SingleNotePage: React.FC = () => {
   const { playNote, startAudioContext, isSamplerReady } = useAudio();
-  const { 
-    startListening, 
-    stopListening, 
-    isListening, 
-    currentNote, 
+  const {
+    startListening,
+    stopListening,
+    isListening,
+    currentNote,
     audioLevel,
     capturedNotes,
-    analyzePerformance 
+    analyzePerformance
   } = useAIAudio();
 
   const [targetNote, setTargetNote] = useState<string>("");
@@ -48,13 +48,13 @@ const SingleNotePage: React.FC = () => {
     <div className="max-w-2xl mx-auto space-y-8 py-8">
       <div className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-100 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
-        
+
         <div className="flex justify-between items-center mb-10">
           <div>
             <h2 className="text-3xl font-black text-slate-800 tracking-tight">Tek Nota Tekrarı</h2>
             <p className="text-slate-400 font-medium">Duyduğun notayı sesinle canlandır.</p>
           </div>
-          <button 
+          <button
             onClick={startNewTest}
             className="p-4 bg-slate-50 hover:bg-indigo-50 text-indigo-600 rounded-2xl transition-all active:scale-95"
           >
@@ -75,13 +75,13 @@ const SingleNotePage: React.FC = () => {
             </div>
 
             <div className="flex flex-col items-center space-y-6 w-full">
-              <MicrophoneButton 
-                isListening={isListening} 
-                audioLevel={audioLevel} 
+              <MicrophoneButton
+                isListening={isListening}
+                audioLevel={audioLevel}
                 onClick={handleMicToggle}
                 disabled={!isSamplerReady}
               />
-              
+
               <div className="h-20 flex flex-col items-center justify-center">
                 {isListening && (
                   <div className="text-center animate-in fade-in zoom-in duration-300">
@@ -114,7 +114,7 @@ const SingleNotePage: React.FC = () => {
             </div>
             <div className="text-3xl font-black">%{analysis.accuracy}</div>
           </div>
-          
+
           <div className="p-8 space-y-8">
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-4">
@@ -140,12 +140,12 @@ const SingleNotePage: React.FC = () => {
             </div>
 
             <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 relative">
-               <div className="text-slate-700 font-medium leading-relaxed italic">
-                 "{analysis.detailedAnalysis}"
-               </div>
-               <div className="mt-4 text-indigo-600 font-black text-right">
-                 {analysis.encouragement} 🚀
-               </div>
+              <div className="text-slate-700 font-medium leading-relaxed italic">
+                "{analysis.detailedAnalysis}"
+              </div>
+              <div className="mt-4 text-indigo-600 font-black text-right">
+                {analysis.encouragement} 🚀
+              </div>
             </div>
           </div>
         </div>

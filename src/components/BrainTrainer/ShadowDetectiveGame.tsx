@@ -6,9 +6,10 @@ import {
     Circle, Square, Triangle, Hexagon, Star, Pentagon,
     Cross, Moon, Heart, CheckCircle2, XCircle, Sparkles, Zap
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // --- Şekil ve Renk Havuzu ---
 const SHAPE_ICONS = [Circle, Square, Triangle, Hexagon, Star, Pentagon, Cross, Moon, Heart];
@@ -47,7 +48,9 @@ type GameStatus = 'waiting' | 'preview' | 'deciding' | 'result' | 'gameover';
 const ShadowDetectiveGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
     const location = useLocation();
+    const navigate = useNavigate();
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
@@ -60,6 +63,11 @@ const ShadowDetectiveGame: React.FC = () => {
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [feedbackMsg, setFeedbackMsg] = useState("");
     const gameStartTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef<boolean>(false);
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || 60;
 
     // Back link
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
@@ -227,17 +235,18 @@ const ShadowDetectiveGame: React.FC = () => {
         setLevel(1);
         setScore(0);
         setLives(3);
-        setTimeLeft(60);
+        setTimeLeft(examMode ? examTimeLimit : 60);
         setFeedback(null);
+        hasSavedRef.current = false;
         startNewLevel();
-    }, [startNewLevel]);
+    }, [startNewLevel, examMode, examTimeLimit]);
 
-    // Handle Auto Start from HUB
+    // Handle Auto Start from HUB or examMode
     useEffect(() => {
-        if (location.state?.autoStart && status === 'waiting') {
+        if ((location.state?.autoStart || examMode) && status === 'waiting') {
             startApp();
         }
-    }, [location.state, status, startApp]);
+    }, [location.state, status, startApp, examMode]);
 
     // Oyun başladığında süre başlat
     useEffect(() => {
@@ -248,8 +257,17 @@ const ShadowDetectiveGame: React.FC = () => {
 
     // Oyun bittiğinde verileri kaydet
     useEffect(() => {
-        if (status === 'gameover' && gameStartTimeRef.current > 0) {
+        if (status === 'gameover' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
+            hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+
+            // Exam mode: submit result and redirect
+            if (examMode) {
+                submitResult(score > 200, score, 600, durationSeconds).then(() => {
+                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'golge-dedektifi',
                 score_achieved: score,
@@ -260,7 +278,7 @@ const ShadowDetectiveGame: React.FC = () => {
                 }
             });
         }
-    }, [status, score, level, saveGamePlay]);
+    }, [status, score, level, saveGamePlay, examMode, submitResult, navigate]);
 
     // Format Time
     const formatTime = (seconds: number) => {

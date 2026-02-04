@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Volume2, CheckCircle2, XCircle, ChevronLeft, Headphones, Music, Heart, Eye, Sparkles } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Trophy, RotateCcw, Play, Star, Heart, Volume2, ChevronLeft, Music, Sparkles, CheckCircle2, XCircle, Headphones, Eye } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
-
+import { useExam } from '../../contexts/ExamContext';
 // Ses notaları - Web Audio API ile oluşturulacak
 const NOTES = [
     { name: 'Do', frequency: 261.63, color: '#FF6B6B' },   // Kırmızı
@@ -19,19 +19,30 @@ const NOTES = [
 // Child-friendly messages
 const SUCCESS_MESSAGES = [
     "Harika! 🎵",
-    "Süper Kulak! 👂",
-    "Müthiş! ⭐",
+    "Süper! ⭐",
+    "Mükemmel! 🎉",
     "Bravo! 🌟",
 ];
 
 const FAILURE_MESSAGES = [
-    "Tekrar dene! 💪",
     "Dikkatli dinle! 👂",
+    "Tekrar dene! 💪",
 ];
 
-const AuditoryMemoryGame: React.FC = () => {
+interface AuditoryMemoryGameProps {
+    examMode?: boolean;
+    examLevel?: number;
+    examTimeLimit?: number;
+}
+
+const AuditoryMemoryGame: React.FC<AuditoryMemoryGameProps> = ({ examMode: examModeProp = false }) => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
+
+    // examMode can come from props OR location.state (when navigating from ExamContinuePage)
+    const examMode = examModeProp || location.state?.examMode === true;
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'listening' | 'answering' | 'feedback' | 'finished'>('idle');
     const [sequence, setSequence] = useState<number[]>([]);
     const [playerSequence, setPlayerSequence] = useState<number[]>([]);
@@ -145,12 +156,12 @@ const AuditoryMemoryGame: React.FC = () => {
         startNewRound(1);
     }, [getAudioContext, startNewRound]);
 
-    // Auto start from HUB
+    // Handle Auto Start from HUB or Exam Mode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     // Oyuncu nota seçti
     const handleNoteClick = useCallback((noteIndex: number) => {
@@ -199,21 +210,31 @@ const AuditoryMemoryGame: React.FC = () => {
         if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
             hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+
+            // Exam mode: submit result and navigate
+            if (examMode) {
+                const passed = score > 300;
+                (async () => {
+                    await submitResult(passed, score, 1000, durationSeconds);
+                    navigate('/atolyeler/sinav-simulasyonu/devam');
+                })();
+                return;
+            }
+
             saveGamePlay({
-                game_id: 'isitsel-hafiza',
+                game_id: 'isitsel-bellek',
                 score_achieved: score,
                 duration_seconds: durationSeconds,
                 lives_remaining: lives,
                 metadata: {
                     correct_count: correctCount,
                     wrong_count: wrongCount,
-                    best_level: bestLevel,
-                    max_sequence_length: getSequenceLength(bestLevel),
-                    game_name: 'İşitsel Hafıza',
+                    level_reached: level,
+                    game_name: 'İşitsel Bellek',
                 }
             });
         }
-    }, [gameState, score, lives, correctCount, wrongCount, bestLevel, saveGamePlay]);
+    }, [gameState, score, lives, correctCount, wrongCount, level, saveGamePlay, examMode, submitResult, navigate]);
 
     // Sıra tekrar dinle
     const replaySequence = () => {

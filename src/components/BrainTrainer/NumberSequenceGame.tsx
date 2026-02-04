@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Hash, TrendingUp, Eye, Sparkles, Heart } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 type PatternType = 'arithmetic' | 'geometric' | 'fibonacci' | 'square' | 'cube' | 'prime' | 'alternating' | 'doubleStep';
 
@@ -32,7 +33,9 @@ const FAILURE_MESSAGES = [
 
 const NumberSequenceGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
     const location = useLocation();
+    const navigate = useNavigate();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
     const [questionNumber, setQuestionNumber] = useState(0);
@@ -50,6 +53,9 @@ const NumberSequenceGame: React.FC = () => {
     const hasSavedRef = useRef<boolean>(false);
 
     const totalQuestions = 15;
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
 
     // Back link
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
@@ -182,18 +188,27 @@ const NumberSequenceGame: React.FC = () => {
         setShowFeedback(null);
     }, [generateQuestion]);
 
-    // Auto start from HUB
+    // Auto start from HUB or examMode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     // Oyun bittiğinde verileri kaydet
     useEffect(() => {
         if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
             hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+
+            // Exam mode: submit result and redirect
+            if (examMode) {
+                const passed = correctCount >= Math.floor(totalQuestions * 0.6);
+                submitResult(passed, score, totalQuestions * 150, durationSeconds).then(() => {
+                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'sayisal-dizi',
                 score_achieved: score,
@@ -210,7 +225,7 @@ const NumberSequenceGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState, score, lives, correctCount, wrongCount, level, bestStreak, saveGamePlay]);
+    }, [gameState, score, lives, correctCount, wrongCount, level, bestStreak, saveGamePlay, examMode, submitResult, navigate]);
 
     // Cevap kontrolü
     const handleAnswer = (answer: number) => {

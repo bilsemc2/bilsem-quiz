@@ -5,8 +5,9 @@ import {
     XCircle, ChevronLeft, Zap, Heart, Calculator,
     CheckCircle2, Home, Sparkles
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // Game Constants
 const INITIAL_LIVES = 5;
@@ -45,7 +46,13 @@ type Operator = typeof OPERATORS[number];
 
 const NumberCipherGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
     const hasSavedRef = useRef(false);
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
 
     // Core State
     const [phase, setPhase] = useState<Phase>('welcome');
@@ -290,6 +297,13 @@ const NumberCipherGame: React.FC = () => {
         hasSavedRef.current = false;
     }, [hasSavedRef]);
 
+    // Handle Auto Start from HUB or Exam Mode
+    useEffect(() => {
+        if ((location.state?.autoStart || examMode) && phase === 'welcome') {
+            handleStart();
+        }
+    }, [location.state, phase, examMode, handleStart]);
+
     const handleGameOver = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
@@ -298,13 +312,22 @@ const NumberCipherGame: React.FC = () => {
 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
+        // Exam mode: submit result and navigate
+        if (examMode) {
+            const passed = level >= 5;
+            submitResult(passed, score, 1000, duration).then(() => {
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            });
+            return;
+        }
+
         await saveGamePlay({
             game_id: 'sayisal-sifre',
             score_achieved: score,
             duration_seconds: duration,
             metadata: { levels_completed: level, final_lives: lives }
         });
-    }, [saveGamePlay, score, level, lives, hasSavedRef]);
+    }, [saveGamePlay, score, level, lives, hasSavedRef, examMode, submitResult, navigate]);
 
     const handleVictory = useCallback(async () => {
         if (hasSavedRef.current) return;
@@ -314,13 +337,21 @@ const NumberCipherGame: React.FC = () => {
 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
+        // Exam mode: submit result and navigate
+        if (examMode) {
+            submitResult(true, score + 100, 1000, duration).then(() => {
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            });
+            return;
+        }
+
         await saveGamePlay({
             game_id: 'sayisal-sifre',
             score_achieved: score + 100,
             duration_seconds: duration,
             metadata: { levels_completed: MAX_LEVEL, victory: true }
         });
-    }, [saveGamePlay, score, hasSavedRef]);
+    }, [saveGamePlay, score, hasSavedRef, examMode, submitResult, navigate]);
 
     const handleAnswer = useCallback((answer: number | string) => {
         if (!currentQuestion || selectedAnswer !== null) return;

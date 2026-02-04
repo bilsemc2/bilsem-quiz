@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, RotateCcw, Trophy, Play, Star, Timer, Zap, CheckCircle2, XCircle, Search, Move, Eye, Sparkles, Heart, Grid3X3, EyeOff } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 // --- Types ---
 interface CellData {
@@ -31,7 +32,9 @@ const FAILURE_MESSAGES = [
 const MatrixEchoGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
     const location = useLocation();
+    const navigate = useNavigate();
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
@@ -45,6 +48,9 @@ const MatrixEchoGame: React.FC = () => {
     const [showNumbers, setShowNumbers] = useState(true);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
+
+    // Exam Mode Props
+    const examMode = location.state?.examMode || false;
 
     // Back link
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
@@ -262,18 +268,26 @@ const MatrixEchoGame: React.FC = () => {
         }
     };
 
-    // Handle Auto Start from HUB
+    // Handle Auto Start from HUB or examMode
     useEffect(() => {
-        if (location.state?.autoStart && status === 'waiting') {
+        if ((location.state?.autoStart || examMode) && status === 'waiting') {
             startApp();
         }
-    }, [location.state, status, startApp]);
+    }, [location.state, status, startApp, examMode]);
 
     // Save game data on finish
     useEffect(() => {
         if (status === 'gameover' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
             hasSavedRef.current = true;
             const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+
+            // Exam mode: submit result and redirect
+            if (examMode) {
+                submitResult(score > 500, score, 2000, durationSeconds).then(() => {
+                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'matris-yankisi',
                 score_achieved: score,
@@ -285,7 +299,7 @@ const MatrixEchoGame: React.FC = () => {
                 }
             });
         }
-    }, [status, score, lives, level, saveGamePlay]);
+    }, [status, score, lives, level, saveGamePlay, examMode, submitResult, navigate]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-950 text-white">

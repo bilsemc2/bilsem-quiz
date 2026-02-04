@@ -133,8 +133,8 @@ export const AnimatedProgressBar: React.FC<AnimatedProgressBarProps> = ({
             <div
                 className={`absolute right-0 bottom-full mb-2 transform bg-gradient-to-br from-indigo-50 to-white p-3 rounded-lg shadow-lg 
                     transition-all duration-500 ease-in-out w-56 z-10 border-l-4 border-indigo-500 origin-bottom text-sm
-                    ${isHovered 
-                        ? 'opacity-100 scale-100 translate-y-0 visible' 
+                    ${isHovered
+                        ? 'opacity-100 scale-100 translate-y-0 visible'
                         : 'opacity-0 scale-95 translate-y-4 invisible'
                     }
                 `}
@@ -142,16 +142,16 @@ export const AnimatedProgressBar: React.FC<AnimatedProgressBarProps> = ({
                 <h4 className="font-medium text-indigo-700 mb-1.5">
                     {service.name}
                 </h4>
-                
+
                 {!service.isUnlocked ? (
                     <div className="text-gray-600">
                         <div className="flex items-center gap-1 mb-1">
                             <span className="text-amber-500">⭐️</span>
-                            <span className={`${stats?.level >= service.requiredLevel ? 'text-emerald-500' : ''}`}>
+                            <span className={`${(stats?.level ?? 0) >= service.requiredLevel ? 'text-emerald-500' : ''}`}>
                                 Seviye {service.requiredLevel}
                             </span>
                             <span className="mx-1">•</span>
-                            <span className={`${stats?.experience >= service.requiredProgress ? 'text-emerald-500' : ''}`}>
+                            <span className={`${(stats?.experience ?? 0) >= service.requiredProgress ? 'text-emerald-500' : ''}`}>
                                 {service.requiredProgress.toLocaleString()} XP
                             </span>
                         </div>
