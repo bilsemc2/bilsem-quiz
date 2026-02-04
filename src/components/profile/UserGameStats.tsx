@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Brain, Gamepad2, TrendingUp, Target, Clock, Award, Loader2, TrendingDown, Minus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Brain, Gamepad2, TrendingUp, Target, Clock, Award, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { ZEKA_RENKLERI, ZekaTuru } from '../../constants/intelligenceTypes';
@@ -100,6 +100,17 @@ const UserGameStats: React.FC = () => {
         lastWeek: { plays: 0, score: 0, avgScore: 0 },
         gameProgress: [],
     });
+
+    // Collapsible section states
+    const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+        intelligence: false,
+        recentGames: false,
+        gameProgress: false
+    });
+
+    const toggleSection = (section: string) => {
+        setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    };
 
     useEffect(() => {
         if (user) fetchStats();
@@ -263,312 +274,323 @@ const UserGameStats: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Özet İstatistikler */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="space-y-4">
+            {/* Özet İstatistikler - Compact 2x2 Grid */}
+            <div className="grid grid-cols-4 gap-2">
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-xl p-4"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-slate-800/90 border border-indigo-500/40 rounded-xl p-3 text-center"
                 >
-                    <div className="flex items-center gap-2 mb-2">
-                        <Gamepad2 className="w-5 h-5 text-indigo-400" />
-                        <span className="text-white/60 text-sm">Toplam Oyun</span>
-                    </div>
-                    <p className="text-2xl font-black text-white">{stats.totalPlays}</p>
+                    <Gamepad2 className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
+                    <p className="text-xl font-black bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">{stats.totalPlays}</p>
+                    <span className="text-white/50 text-[10px]">Oyun</span>
                 </motion.div>
 
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.05 }}
+                    className="bg-slate-800/90 border border-amber-500/40 rounded-xl p-3 text-center"
+                >
+                    <Award className="w-4 h-4 text-amber-400 mx-auto mb-1" />
+                    <p className="text-xl font-black bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">{stats.totalScore.toLocaleString()}</p>
+                    <span className="text-white/50 text-[10px]">Puan</span>
+                </motion.div>
+
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-4"
+                    className="bg-slate-800/90 border border-emerald-500/40 rounded-xl p-3 text-center"
                 >
-                    <div className="flex items-center gap-2 mb-2">
-                        <Award className="w-5 h-5 text-amber-400" />
-                        <span className="text-white/60 text-sm">Toplam Puan</span>
-                    </div>
-                    <p className="text-2xl font-black text-white">{stats.totalScore.toLocaleString()}</p>
+                    <Target className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
+                    <p className="text-xl font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">{stats.averageScore}</p>
+                    <span className="text-white/50 text-[10px]">Ort.</span>
                 </motion.div>
 
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-xl p-4"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.15 }}
+                    className="bg-slate-800/90 border border-cyan-500/40 rounded-xl p-3 text-center"
                 >
-                    <div className="flex items-center gap-2 mb-2">
-                        <Target className="w-5 h-5 text-emerald-400" />
-                        <span className="text-white/60 text-sm">Ort. Puan</span>
-                    </div>
-                    <p className="text-2xl font-black text-white">{stats.averageScore}</p>
-                </motion.div>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-xl p-4"
-                >
-                    <div className="flex items-center gap-2 mb-2">
-                        <Clock className="w-5 h-5 text-cyan-400" />
-                        <span className="text-white/60 text-sm">Toplam Süre</span>
-                    </div>
-                    <p className="text-2xl font-black text-white">{formatDuration(stats.totalDuration)}</p>
+                    <Clock className="w-4 h-4 text-cyan-400 mx-auto mb-1" />
+                    <p className="text-xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">{formatDuration(stats.totalDuration)}</p>
+                    <span className="text-white/50 text-[10px]">Süre</span>
                 </motion.div>
             </div>
 
-            {/* Haftalık Gelişim */}
+            {/* Haftalık Gelişim - Compact */}
             {(stats.thisWeek.plays > 0 || stats.lastWeek.plays > 0) && (
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.35 }}
-                    className="bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-2xl p-5"
+                    transition={{ delay: 0.2 }}
+                    className="bg-slate-800/90 border border-purple-500/30 rounded-xl p-4"
                 >
-                    <div className="flex items-center gap-2 mb-4">
-                        <TrendingUp className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-bold text-white">Haftalık Gelişim</h3>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                        {/* Oyun Sayısı */}
-                        <div className="text-center">
-                            <p className="text-white/50 text-xs mb-1">Oyun Sayısı</p>
-                            <div className="flex items-center justify-center gap-1">
-                                <span className="text-2xl font-black text-white">{stats.thisWeek.plays}</span>
-                                {stats.lastWeek.plays > 0 && (
-                                    <span className={`text-xs flex items-center gap-0.5 ${stats.thisWeek.plays > stats.lastWeek.plays ? 'text-emerald-400' :
-                                        stats.thisWeek.plays < stats.lastWeek.plays ? 'text-red-400' : 'text-white/40'
-                                        }`}>
-                                        {stats.thisWeek.plays > stats.lastWeek.plays ? (
-                                            <><TrendingUp className="w-3 h-3" /> +{stats.thisWeek.plays - stats.lastWeek.plays}</>
-                                        ) : stats.thisWeek.plays < stats.lastWeek.plays ? (
-                                            <><TrendingDown className="w-3 h-3" /> {stats.thisWeek.plays - stats.lastWeek.plays}</>
-                                        ) : (
-                                            <><Minus className="w-3 h-3" /> aynı</>
-                                        )}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-white/30 text-[10px]">bu hafta</p>
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-purple-400" />
+                            <span className="font-bold text-white text-sm">Bu Hafta</span>
                         </div>
-
-                        {/* Toplam Puan */}
-                        <div className="text-center">
-                            <p className="text-white/50 text-xs mb-1">Toplam Puan</p>
-                            <div className="flex items-center justify-center gap-1">
-                                <span className="text-2xl font-black text-amber-400">{stats.thisWeek.score}</span>
-                                {stats.lastWeek.score > 0 && (
-                                    <span className={`text-xs flex items-center gap-0.5 ${stats.thisWeek.score > stats.lastWeek.score ? 'text-emerald-400' :
-                                        stats.thisWeek.score < stats.lastWeek.score ? 'text-red-400' : 'text-white/40'
-                                        }`}>
-                                        {stats.thisWeek.score > stats.lastWeek.score ? (
-                                            <><TrendingUp className="w-3 h-3" /></>
-                                        ) : stats.thisWeek.score < stats.lastWeek.score ? (
-                                            <><TrendingDown className="w-3 h-3" /></>
-                                        ) : null}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-white/30 text-[10px]">bu hafta</p>
-                        </div>
-
-                        {/* Ortalama */}
-                        <div className="text-center">
-                            <p className="text-white/50 text-xs mb-1">Ort. Puan</p>
-                            <div className="flex items-center justify-center gap-1">
-                                <span className="text-2xl font-black text-emerald-400">{stats.thisWeek.avgScore}</span>
-                                {stats.lastWeek.avgScore > 0 && (
-                                    <span className={`text-xs flex items-center gap-0.5 ${stats.thisWeek.avgScore > stats.lastWeek.avgScore ? 'text-emerald-400' :
-                                        stats.thisWeek.avgScore < stats.lastWeek.avgScore ? 'text-red-400' : 'text-white/40'
-                                        }`}>
-                                        {stats.thisWeek.avgScore > stats.lastWeek.avgScore ? (
-                                            <><TrendingUp className="w-3 h-3" /> +{stats.thisWeek.avgScore - stats.lastWeek.avgScore}</>
-                                        ) : stats.thisWeek.avgScore < stats.lastWeek.avgScore ? (
-                                            <><TrendingDown className="w-3 h-3" /> {stats.thisWeek.avgScore - stats.lastWeek.avgScore}</>
-                                        ) : (
-                                            <><Minus className="w-3 h-3" /></>
-                                        )}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-white/30 text-[10px]">geçen hafta: {stats.lastWeek.avgScore || '-'}</p>
-                        </div>
-                    </div>
-
-                    {/* Motivasyon mesajı */}
-                    <div className="mt-4 pt-3 border-t border-white/10 text-center">
-                        <p className="text-white/50 text-xs">
+                        <span className="text-white/40 text-xs">
                             {stats.thisWeek.avgScore > stats.lastWeek.avgScore && stats.lastWeek.avgScore > 0
-                                ? '🎉 Harika! Geçen haftaya göre gelişim gösteriyorsun!'
+                                ? '🎉 Gelişim var!'
                                 : stats.thisWeek.plays >= 5
-                                    ? '💪 Bu hafta harika çalıştın, böyle devam!'
-                                    : '🚀 Daha fazla oyun oyna ve gelişimini takip et!'}
-                        </p>
+                                    ? '💪 Harika!'
+                                    : '🚀 Devam et!'}
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-slate-700/60 rounded-lg p-2 text-center">
+                            <p className="text-lg font-black text-white">{stats.thisWeek.plays}</p>
+                            <div className="flex items-center justify-center gap-1">
+                                <span className="text-white/50 text-[10px]">oyun</span>
+                                {stats.lastWeek.plays > 0 && stats.thisWeek.plays !== stats.lastWeek.plays && (
+                                    <span className={`text-[10px] ${stats.thisWeek.plays > stats.lastWeek.plays ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {stats.thisWeek.plays > stats.lastWeek.plays ? '↑' : '↓'}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="bg-slate-700/60 rounded-lg p-2 text-center">
+                            <p className="text-lg font-black bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">{stats.thisWeek.score}</p>
+                            <div className="flex items-center justify-center gap-1">
+                                <span className="text-white/50 text-[10px]">puan</span>
+                                {stats.lastWeek.score > 0 && stats.thisWeek.score !== stats.lastWeek.score && (
+                                    <span className={`text-[10px] ${stats.thisWeek.score > stats.lastWeek.score ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {stats.thisWeek.score > stats.lastWeek.score ? '↑' : '↓'}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="bg-slate-700/60 rounded-lg p-2 text-center">
+                            <p className="text-lg font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">{stats.thisWeek.avgScore}</p>
+                            <span className="text-white/50 text-[10px]">ortalama</span>
+                        </div>
                     </div>
                 </motion.div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Zeka Türü Dağılımı */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {/* Zeka Türü Dağılımı - Collapsible */}
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="bg-slate-800/50 border border-white/10 rounded-2xl p-6"
+                    className="bg-slate-800/90 border border-purple-500/30 rounded-xl overflow-hidden"
                 >
-                    <div className="flex items-center gap-3 mb-2">
-                        <Brain className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-bold text-white">Zeka Türü Dağılımı</h3>
-                    </div>
-                    <p className="text-white/40 text-xs mb-4">
-                        Çubuk uzunlukları oyun sayısını gösterir. Farklı oyunlar oynayarak zeka profilini dengele!
-                    </p>
-
-                    {Object.keys(stats.intelligenceBreakdown).length === 0 ? (
-                        <p className="text-white/40 text-sm text-center py-4">Henüz veri yok</p>
-                    ) : (
-                        <div className="space-y-4">
-                            {Object.entries(stats.intelligenceBreakdown)
-                                .sort((a, b) => b[1] - a[1])
-                                .map(([type, count]) => {
-                                    const info = ZEKA_ACIKLAMALARI[type];
-                                    return (
-                                        <div key={type} className="p-3 bg-white/5 rounded-xl">
-                                            <div className="flex items-start gap-3 mb-2">
-                                                <span className="text-2xl">{info?.icon || '🧠'}</span>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="text-white font-bold text-sm">{type}</span>
-                                                        <span className="text-white/50 text-xs bg-white/10 px-2 py-0.5 rounded-full">{count} oyun</span>
-                                                    </div>
-                                                    <p className="text-white/50 text-xs mb-2">{info?.desc || 'Bilişsel yetenek'}</p>
-                                                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                                        <motion.div
-                                                            initial={{ width: 0 }}
-                                                            animate={{ width: `${(count / maxIntelligence) * 100}%` }}
-                                                            transition={{ duration: 0.5, delay: 0.5 }}
-                                                            className="h-full rounded-full"
-                                                            style={{ backgroundColor: ZEKA_RENKLERI[type as ZekaTuru] || '#6366F1' }}
-                                                        />
-                                                    </div>
-                                                    {info?.skill && (
-                                                        <p className="text-[10px] text-white/30 mt-1.5">
-                                                            💪 {info.skill}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                    <button
+                        onClick={() => toggleSection('intelligence')}
+                        className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-violet-500 rounded-lg flex items-center justify-center">
+                                <Brain className="w-4 h-4 text-white" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-bold text-white text-sm">Zeka Dağılımı</h3>
+                                <p className="text-purple-300/60 text-[10px]">
+                                    {Object.keys(stats.intelligenceBreakdown).length} tür
+                                </p>
+                            </div>
                         </div>
-                    )}
+                        {expandedSections.intelligence ? (
+                            <ChevronUp className="w-4 h-4 text-purple-400" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4 text-purple-400" />
+                        )}
+                    </button>
+
+                    <AnimatePresence>
+                        {expandedSections.intelligence && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="px-3 pb-3 overflow-hidden"
+                            >
+
+                                {Object.keys(stats.intelligenceBreakdown).length === 0 ? (
+                                    <p className="text-white/40 text-sm text-center py-4">Henüz veri yok</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {Object.entries(stats.intelligenceBreakdown)
+                                            .sort((a, b) => b[1] - a[1])
+                                            .slice(0, 4)
+                                            .map(([type, count]) => {
+                                                const info = ZEKA_ACIKLAMALARI[type];
+                                                return (
+                                                    <div key={type} className="flex items-center gap-2 p-2 bg-slate-700/60 rounded-lg">
+                                                        <span className="text-base">{info?.icon || '🧠'}</span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-white font-medium text-xs truncate">{type}</span>
+                                                                <span className="text-white/60 text-[10px]">{count}</span>
+                                                            </div>
+                                                            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mt-1">
+                                                                <div
+                                                                    className="h-full rounded-full"
+                                                                    style={{
+                                                                        width: `${(count / maxIntelligence) * 100}%`,
+                                                                        backgroundColor: ZEKA_RENKLERI[type as ZekaTuru] || '#6366F1'
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
 
-                {/* Son Oyunlar */}
+                {/* Son Oyunlar - Collapsible */}
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="bg-slate-800/50 border border-white/10 rounded-2xl p-6"
+                    transition={{ delay: 0.3 }}
+                    className="bg-slate-800/90 border border-emerald-500/30 rounded-xl overflow-hidden"
                 >
-                    <div className="flex items-center gap-3 mb-4">
-                        <TrendingUp className="w-5 h-5 text-emerald-400" />
-                        <h3 className="font-bold text-white">Son Oyunlarım</h3>
-                    </div>
-
-                    {stats.recentGames.length === 0 ? (
-                        <p className="text-white/40 text-sm text-center py-4">Henüz oyun yok</p>
-                    ) : (
-                        <div className="space-y-3">
-                            {stats.recentGames.map((game, idx) => (
-                                <div
-                                    key={idx}
-                                    className="flex items-center justify-between p-3 bg-white/5 rounded-xl"
-                                >
-                                    <div>
-                                        <p className="text-white font-medium text-sm">{game.game_name}</p>
-                                        <p className="text-white/40 text-xs">{formatDate(game.created_at)}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-amber-400 font-bold">{game.score}</p>
-                                        <p className="text-white/30 text-xs">puan</p>
-                                    </div>
-                                </div>
-                            ))}
+                    <button
+                        onClick={() => toggleSection('recentGames')}
+                        className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
+                                <TrendingUp className="w-4 h-4 text-white" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-bold text-white text-sm">Son Oyunlar</h3>
+                                <p className="text-emerald-300/60 text-[10px]">
+                                    {stats.recentGames.length} oyun
+                                </p>
+                            </div>
                         </div>
-                    )}
+                        {expandedSections.recentGames ? (
+                            <ChevronUp className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4 text-emerald-400" />
+                        )}
+                    </button>
+
+                    <AnimatePresence>
+                        {expandedSections.recentGames && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="px-3 pb-3 overflow-hidden"
+                            >
+                                {stats.recentGames.length === 0 ? (
+                                    <p className="text-white/40 text-xs text-center py-2">Henüz oyun yok</p>
+                                ) : (
+                                    <div className="space-y-1.5">
+                                        {stats.recentGames.slice(0, 3).map((game, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="flex items-center justify-between p-2 bg-slate-700/60 rounded-lg"
+                                            >
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-white font-medium text-xs truncate">{game.game_name}</p>
+                                                    <p className="text-white/40 text-[10px]">{formatDate(game.created_at)}</p>
+                                                </div>
+                                                <p className="text-amber-400 font-bold text-sm ml-2">{game.score}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             </div>
 
-            {/* Oyun Bazında Gelişim */}
+            {/* Oyun Bazında Gelişim - Collapsible */}
             {stats.gameProgress.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="bg-slate-800/50 border border-white/10 rounded-2xl p-6"
+                    transition={{ delay: 0.4 }}
+                    className="bg-slate-800/90 border border-amber-500/30 rounded-xl overflow-hidden"
                 >
-                    <div className="flex items-center gap-3 mb-2">
-                        <Award className="w-5 h-5 text-amber-400" />
-                        <h3 className="font-bold text-white">Oyun Bazında Gelişim</h3>
-                    </div>
-                    <p className="text-white/40 text-xs mb-4">
-                        İlk oynamana göre son puanın ne kadar değişti?
-                    </p>
-
-                    <div className="space-y-3">
-                        {stats.gameProgress.map((game, idx) => (
-                            <div
-                                key={idx}
-                                className="p-4 bg-white/5 rounded-xl"
-                            >
-                                <div className="flex items-center justify-between mb-2">
-                                    <div>
-                                        <p className="text-white font-medium text-sm">{game.game_name}</p>
-                                        <p className="text-white/40 text-xs">{game.playCount} oynama</p>
-                                    </div>
-                                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm font-bold ${game.improvement > 0 ? 'bg-emerald-500/20 text-emerald-400' :
-                                        game.improvement < 0 ? 'bg-red-500/20 text-red-400' :
-                                            'bg-white/10 text-white/50'
-                                        }`}>
-                                        {game.improvement > 0 ? (
-                                            <><TrendingUp className="w-4 h-4" /> +{game.improvement}%</>
-                                        ) : game.improvement < 0 ? (
-                                            <><TrendingDown className="w-4 h-4" /> {game.improvement}%</>
-                                        ) : (
-                                            <><Minus className="w-4 h-4" /> Aynı</>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-2 text-center">
-                                    <div className="bg-white/5 rounded-lg p-2">
-                                        <p className="text-white/40 text-[10px]">İlk Puan</p>
-                                        <p className="text-white font-bold">{game.firstScore}</p>
-                                    </div>
-                                    <div className="bg-white/5 rounded-lg p-2">
-                                        <p className="text-white/40 text-[10px]">Son Puan</p>
-                                        <p className="text-amber-400 font-bold">{game.lastScore}</p>
-                                    </div>
-                                    <div className="bg-amber-500/10 rounded-lg p-2 border border-amber-500/20">
-                                        <p className="text-amber-400/60 text-[10px]">En İyi</p>
-                                        <p className="text-amber-400 font-bold">🏆 {game.bestScore}</p>
-                                    </div>
-                                </div>
+                    <button
+                        onClick={() => toggleSection('gameProgress')}
+                        className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
+                                <Award className="w-4 h-4 text-white" />
                             </div>
-                        ))}
-                    </div>
-
-                    {stats.gameProgress.filter(g => g.improvement > 0).length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-white/10 text-center">
-                            <p className="text-emerald-400/60 text-xs">
-                                🎯 {stats.gameProgress.filter(g => g.improvement > 0).length} oyunda gelişim gösteriyorsun!
-                            </p>
+                            <div className="text-left">
+                                <h3 className="font-bold text-white text-sm">Gelişim</h3>
+                                <p className="text-amber-300/60 text-[10px]">
+                                    {stats.gameProgress.filter(g => g.improvement > 0).length} oyun ↑
+                                </p>
+                            </div>
                         </div>
-                    )}
+                        {expandedSections.gameProgress ? (
+                            <ChevronUp className="w-4 h-4 text-amber-400" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4 text-amber-400" />
+                        )}
+                    </button>
+
+                    <AnimatePresence>
+                        {expandedSections.gameProgress && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="px-3 pb-3 overflow-hidden"
+                            >
+                                <div className="space-y-2">
+                                    {stats.gameProgress.slice(0, 2).map((game, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="p-2 bg-slate-700/60 rounded-lg"
+                                        >
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-white font-medium text-xs truncate">{game.game_name}</p>
+                                                    <p className="text-white/40 text-[10px]">{game.playCount}x</p>
+                                                </div>
+                                                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${game.improvement > 0 ? 'bg-emerald-500/20 text-emerald-400' :
+                                                    game.improvement < 0 ? 'bg-red-500/20 text-red-400' :
+                                                        'bg-white/10 text-white/50'
+                                                    }`}>
+                                                    {game.improvement > 0 ? `+${game.improvement}%` : game.improvement < 0 ? `${game.improvement}%` : '='}
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-3 gap-1 text-center">
+                                                <div className="bg-slate-600/50 rounded p-1">
+                                                    <p className="text-white/40 text-[8px]">İlk</p>
+                                                    <p className="text-white font-bold text-xs">{game.firstScore}</p>
+                                                </div>
+                                                <div className="bg-slate-600/50 rounded p-1">
+                                                    <p className="text-white/40 text-[8px]">Son</p>
+                                                    <p className="text-amber-400 font-bold text-xs">{game.lastScore}</p>
+                                                </div>
+                                                <div className="bg-amber-500/20 rounded p-1 border border-amber-500/20">
+                                                    <p className="text-amber-400/60 text-[8px]">🏆</p>
+                                                    <p className="text-amber-400 font-bold text-xs">{game.bestScore}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             )}
         </div>
