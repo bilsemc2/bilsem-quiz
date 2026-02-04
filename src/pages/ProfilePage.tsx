@@ -6,7 +6,7 @@ import EditProfileModal from '../components/EditProfileModal';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import {
-    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail, Music, Palette, Ticket, BarChart3
+    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail, Music, Palette, Ticket, BarChart3, TrendingUp
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { UserProfile, QuizStats, ClassStudent } from '@/types/profile';
@@ -16,6 +16,7 @@ import { showXPEarn } from '@/components/XPToast';
 import UserMessages from '@/components/UserMessages';
 import TimeXPGain from '@/components/profile/TimeXPGain';
 import UserGameStats from '@/components/profile/UserGameStats';
+import { useExam } from '@/contexts/ExamContext';
 
 
 // Hızlı Erişim Butonları
@@ -36,18 +37,19 @@ const QUICK_ACCESS_BUTTONS = [
         color: 'from-purple-500 to-indigo-500',
         link: '/bilsem-zeka'
     },
-    {
+    /*{
         id: 'quizizz',
         title: 'Quizizz Kodları',
         description: 'VIP quiz kodları',
         icon: Ticket,
         color: 'from-amber-500 to-orange-500',
         link: '/quizizz-kodlari'
-    },
+    },*/
 ];
 
 export const ProfilePage: React.FC = () => {
     const { user, profile, refreshProfile } = useAuth();
+    const { session } = useExam();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showReferral, setShowReferral] = useState(false);
@@ -633,6 +635,75 @@ export const ProfilePage: React.FC = () => {
                     </div>
                     <UserGameStats />
                 </motion.div>
+
+                {/* Sınav Simülasyonu Sonuçlarım */}
+                {session && session.status === 'completed' && session.results.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.28 }}
+                        className="mb-8"
+                    >
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-gradient-to-r from-rose-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-rose-500/20">
+                                <TrendingUp className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Son Sınav Sonucum</h2>
+                                <p className="text-white/50 text-sm">Sınav Simülasyonu performansı</p>
+                            </div>
+                        </div>
+
+                        <Link
+                            to="/atolyeler/sinav-simulasyonu/sonuc"
+                            className="block bg-gradient-to-r from-rose-600 to-red-700 rounded-2xl p-6 hover:shadow-xl hover:shadow-rose-500/20 transition-all group"
+                        >
+                            <div className="flex items-center gap-6">
+                                {/* BZP Score */}
+                                <div className="text-center">
+                                    {(() => {
+                                        const DIFFICULTY_MULTIPLIERS: Record<number, number> = { 1: 0.7, 2: 0.85, 3: 1.0, 4: 1.15, 5: 1.3 };
+                                        const weightedScores = session.results.map(r => {
+                                            const baseScore = r.maxScore > 0 ? r.score / r.maxScore : 0;
+                                            return baseScore * (DIFFICULTY_MULTIPLIERS[r.level] || 1.0);
+                                        });
+                                        const avgWeighted = weightedScores.reduce((a, b) => a + b, 0) / weightedScores.length;
+                                        const bzpScore = Math.round(Math.max(70, Math.min(145, 100 + (avgWeighted - 0.5) * 60)));
+                                        return (
+                                            <>
+                                                <div className="text-5xl font-black text-white">{bzpScore}</div>
+                                                <div className="text-rose-200 text-xs font-bold uppercase tracking-wider">BZP</div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+
+                                <div className="w-px h-16 bg-white/20" />
+
+                                {/* Stats */}
+                                <div className="flex-1 grid grid-cols-3 gap-4 text-center">
+                                    <div>
+                                        <div className="text-2xl font-black text-white">{session.results.filter(r => r.passed).length}</div>
+                                        <div className="text-rose-200 text-xs">Başarılı</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-2xl font-black text-white">{session.results.length}</div>
+                                        <div className="text-rose-200 text-xs">Modül</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-2xl font-black text-white">
+                                            {Math.round(session.results.reduce((a, r) => a + r.score, 0) / session.results.reduce((a, r) => a + r.maxScore, 0) * 100)}%
+                                        </div>
+                                        <div className="text-rose-200 text-xs">Başarı</div>
+                                    </div>
+                                </div>
+
+                                {/* Arrow */}
+                                <ChevronRight className="w-8 h-8 text-white/50 group-hover:text-white group-hover:translate-x-2 transition-all" />
+                            </div>
+                        </Link>
+                    </motion.div>
+                )}
 
 
 
