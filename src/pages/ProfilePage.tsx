@@ -355,10 +355,10 @@ export const ProfilePage: React.FC = () => {
                         <div className="text-center md:text-right">
                             <div className="flex items-center justify-center md:justify-end gap-2 mb-2">
                                 <Zap className="w-8 h-8 text-yellow-400" fill="currentColor" />
-                                <span className="text-4xl md:text-5xl font-black text-white">
+                                <span className="text-4xl md:text-5xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-pink-500 bg-clip-text text-transparent">
                                     {userData.experience || 0}
                                 </span>
-                                <span className="text-xl text-white/70 font-medium">XP</span>
+                                <span className="text-xl text-yellow-300/80 font-medium">XP</span>
                             </div>
 
                             {/* Level Progress */}
@@ -383,19 +383,44 @@ export const ProfilePage: React.FC = () => {
                     </div>
                 </motion.div>
 
+                {/* Hızlı Erişim Butonları - ÖNCELİKLİ */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8"
+                >
+                    {QUICK_ACCESS_BUTTONS.map((btn) => (
+                        <Link
+                            key={btn.id}
+                            to={btn.link}
+                            className="group flex items-center gap-4 bg-gradient-to-br from-slate-800/90 to-slate-900/90 hover:from-slate-700/90 hover:to-slate-800/90 border border-white/10 hover:border-white/20 rounded-2xl p-5 transition-all shadow-lg"
+                        >
+                            <div className={`w-14 h-14 bg-gradient-to-r ${btn.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
+                                <btn.icon className="w-7 h-7 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-white text-lg">{btn.title}</h3>
+                                <p className="text-white/60 text-sm">{btn.description}</p>
+                            </div>
+                            <ChevronRight className="w-6 h-6 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" />
+                        </Link>
+                    ))}
+                </motion.div>
+
                 {/* Yetenek Alanına Göre Atölye Kısayolları */}
                 {(userData.yetenek_alani) && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
+                        transition={{ delay: 0.15 }}
                         className="mb-8"
                     >
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
-                                <Sparkles className="w-4 h-4 text-yellow-400" />
+                            <div className="w-8 h-8 bg-gradient-to-r from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-lg">
+                                <Sparkles className="w-4 h-4 text-white" />
                             </div>
-                            <h2 className="text-lg font-bold text-white">Yetenek Atölyelerim</h2>
+                            <h2 className="text-lg font-bold bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent">Yetenek Atölyelerim</h2>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {(() => {
@@ -475,31 +500,6 @@ export const ProfilePage: React.FC = () => {
                         </div>
                     </motion.div>
                 )}
-
-                {/* Hızlı Erişim Butonları */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"
-                >
-                    {QUICK_ACCESS_BUTTONS.map((btn) => (
-                        <Link
-                            key={btn.id}
-                            to={btn.link}
-                            className="group flex items-center gap-4 bg-slate-800/70 hover:bg-slate-800 border border-white/10 hover:border-white/20 rounded-2xl p-5 transition-all"
-                        >
-                            <div className={`w-14 h-14 bg-gradient-to-r ${btn.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
-                                <btn.icon className="w-7 h-7 text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-white text-lg">{btn.title}</h3>
-                                <p className="text-white/50 text-sm">{btn.description}</p>
-                            </div>
-                            <ChevronRight className="w-6 h-6 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" />
-                        </Link>
-                    ))}
-                </motion.div>
 
                 {/* Mesajlarım Bölümü */}
                 <motion.div
@@ -645,12 +645,12 @@ export const ProfilePage: React.FC = () => {
                     className="mb-8"
                 >
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                        <div className="w-10 h-10 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
                             <BarChart3 className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white">Oyun İstatistiklerim</h2>
-                            <p className="text-white/50 text-sm">Zeka türü analizleri ve performans</p>
+                            <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">Oyun İstatistiklerim</h2>
+                            <p className="text-cyan-300/60 text-sm">Zeka türü analizleri ve performans</p>
                         </div>
                     </div>
                     <UserGameStats />
@@ -665,12 +665,12 @@ export const ProfilePage: React.FC = () => {
                         className="mb-8"
                     >
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 bg-gradient-to-r from-rose-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-rose-500/20">
+                            <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/30">
                                 <TrendingUp className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white">Son Sınav Sonucum</h2>
-                                <p className="text-white/50 text-sm">Sınav Simülasyonu performansı</p>
+                                <h2 className="text-xl font-bold bg-gradient-to-r from-pink-300 to-rose-400 bg-clip-text text-transparent">Son Sınav Sonucum</h2>
+                                <p className="text-pink-300/60 text-sm">Sınav Simülasyonu performansı</p>
                             </div>
                         </div>
 
@@ -730,12 +730,12 @@ export const ProfilePage: React.FC = () => {
                 >
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center">
+                            <div className="w-10 h-10 bg-gradient-to-r from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
                                 <Trophy className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white">Başarımlar</h2>
-                                <p className="text-white/50 text-sm">XP kazan, rozet aç!</p>
+                                <h2 className="text-xl font-bold bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent">Başarımlar</h2>
+                                <p className="text-amber-300/60 text-sm">XP kazan, rozet aç!</p>
                             </div>
                         </div>
                     </div>
