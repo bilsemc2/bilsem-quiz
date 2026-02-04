@@ -6,12 +6,13 @@ import {
     Brain, ChevronLeft, Play, Target, Scale,
     Zap, ChevronRight, AlertCircle, CheckCircle2,
     Clock, BookOpen, Trophy, BarChart3, Shield,
-    Lightbulb, Puzzle, Eye, MessageSquare, Gauge, Users, LucideIcon, Lock
+    Lightbulb, Puzzle, Eye, MessageSquare, Gauge, Users, LucideIcon
 } from 'lucide-react';
 import { useExam } from '../../contexts/ExamContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { EXAM_MODES, ExamMode } from '../../types/examTypes';
 import { getActiveModules, getModuleCountByCategory } from '../../config/examModules';
+import AccessDeniedScreen from '../../components/AccessDeniedScreen';
 
 // Category icons and colors
 const CATEGORY_CONFIG: Record<string, { icon: React.ElementType; gradient: string; bgColor: string }> = {
@@ -85,33 +86,12 @@ const ExamSimulatorPage: React.FC = () => {
     // Yetenek alanı kontrolü - Sadece Genel Yetenek kullanıcıları erişebilir
     if (!canAccess) {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-4">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="max-w-md w-full bg-slate-900/80 border border-slate-800 rounded-2xl p-8 text-center"
-                >
-                    <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center">
-                        <Lock size={40} className="text-white" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-white mb-3">
-                        Erişim Kısıtlı
-                    </h1>
-                    <p className="text-slate-400 mb-6">
-                        Sınav Simülasyonu şu an sadece <span className="text-indigo-400 font-semibold">Genel Yetenek</span> alanındaki öğrenciler için aktif.
-                    </p>
-                    <p className="text-slate-500 text-sm mb-6">
-                        Yakında diğer yetenek alanları için de simülasyonlar eklenecek! 🚀
-                    </p>
-                    <Link
-                        to="/atolyeler/bireysel-degerlendirme"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition-colors"
-                    >
-                        <ChevronLeft size={18} />
-                        Bireysel Değerlendirme
-                    </Link>
-                </motion.div>
-            </div>
+            <AccessDeniedScreen
+                requiredTalent="Genel Yetenek"
+                backLink="/atolyeler/bireysel-degerlendirme"
+                backLabel="Bireysel Değerlendirme"
+                additionalMessage="Yakında diğer yetenek alanları için de simülasyonlar eklenecek! 🚀"
+            />
         );
     }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Outlet, Link } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router-dom';
 import { AudioProvider } from './contexts/AudioContext';
 import { AIAudioProvider } from './contexts/AIAudioContext';
 import { Sidebar } from './components/Sidebar';
@@ -14,7 +14,8 @@ import SongPage from './SongPage';
 import MuzikPage from '../MuzikPage';
 import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../lib/supabase';
-import { Lock, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import AccessDeniedScreen from '../../../components/AccessDeniedScreen';
 
 /**
  * Test sayfaları için layout - Sidebar dahil + Yetenek kontrolü
@@ -79,36 +80,12 @@ const TestLayout: React.FC = () => {
     // Yetenek alanı uygun değil - Ana sayfaya yönlendir
     if (!hasMusicTalent) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
-                <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-8 max-w-md w-full text-center">
-                    <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Lock className="w-10 h-10 text-rose-400" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-white mb-4">Erişim Kısıtlı</h1>
-                    <p className="text-white/70 mb-6 leading-relaxed">
-                        Müzik AI Atölyesi testleri sadece yetenek alanı <strong className="text-indigo-400">Müzik</strong> olan öğrencilerimiz içindir.
-                        {userTalents.length > 0 && (
-                            <span className="block mt-2">
-                                Sizin yetenek alanınız: <strong className="text-amber-400">{userTalents.join(', ')}</strong>
-                            </span>
-                        )}
-                    </p>
-                    <div className="flex flex-col gap-3">
-                        <Link
-                            to="/atolyeler/muzik"
-                            className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-all text-center"
-                        >
-                            Tanıtım Sayfasına Dön
-                        </Link>
-                        <Link
-                            to="/profile"
-                            className="w-full py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all text-center border border-white/10"
-                        >
-                            Profilimi Görüntüle
-                        </Link>
-                    </div>
-                </div>
-            </div>
+            <AccessDeniedScreen
+                requiredTalent="Müzik"
+                backLink="/atolyeler/muzik"
+                backLabel="Tanıtım Sayfasına Dön"
+                userTalents={userTalents.length > 0 ? userTalents : undefined}
+            />
         );
     }
 
