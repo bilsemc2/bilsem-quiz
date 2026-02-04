@@ -2,15 +2,7 @@
 <html lang="tr">
 
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4476EBC4WF"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
 
-    gtag('config', 'G-4476EBC4WF');
-  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description"
@@ -261,6 +253,15 @@
   <div id="root"></div>
   <script defer src="/chunk-error-handler.js"></script>
   <script type="module" src="/src/main.tsx"></script>
+
+  <!-- Google Analytics - Deferred to end of body -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4476EBC4WF"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-4476EBC4WF');
+  </script>
 </body>
 
 </html>
