@@ -351,8 +351,9 @@ const HomePage: React.FC = () => {
                     <Link
                       to={workshop.link}
                       className="px-8 py-3 bg-purple-brand text-white font-black rounded-full hover:bg-gray-900 transition-colors inline-block"
+                      aria-label={`${workshop.title} atölyesini keşfet`}
                     >
-                      Hemen Keşfet
+                      Keşfet
                     </Link>
                   </div>
                 </div>
