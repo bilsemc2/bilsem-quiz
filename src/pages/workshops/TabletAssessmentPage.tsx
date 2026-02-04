@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Tablet, Brain, Layout, ChevronRight, Star, ChevronLeft, Box, ShieldX } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Tablet, Brain, Layout, ChevronRight, Star, ChevronLeft, Box } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import AccessDeniedScreen from '../../components/AccessDeniedScreen';
 
 // yetenek_alani erişim kontrolü
 const hasTabletAccess = (yetenekAlani: string[] | string | null | undefined): boolean => {
@@ -15,7 +16,6 @@ const hasTabletAccess = (yetenekAlani: string[] | string | null | undefined): bo
 
 const TabletAssessmentPage: React.FC = () => {
     const { profile, loading } = useAuth();
-    const navigate = useNavigate();
 
     // Erişim kontrolü
     const canAccess = hasTabletAccess(profile?.yetenek_alani);
@@ -30,27 +30,12 @@ const TabletAssessmentPage: React.FC = () => {
 
     if (!canAccess) {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-slate-900/80 backdrop-blur-xl rounded-3xl p-12 border border-red-500/30 max-w-lg text-center"
-                >
-                    <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <ShieldX className="w-10 h-10 text-red-400" />
-                    </div>
-                    <h2 className="text-2xl font-black text-white mb-4">Erişim İzni Gerekli</h2>
-                    <p className="text-slate-400 mb-8 leading-relaxed">
-                        Bu modüle erişim için <strong className="text-purple-400">Genel Yetenek - Tablet Değerlendirme</strong> yetkisine sahip olmanız gerekmektedir.
-                    </p>
-                    <button
-                        onClick={() => navigate('/atolyeler/genel-yetenek')}
-                        className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition-colors"
-                    >
-                        Genel Yetenek Sayfasına Dön
-                    </button>
-                </motion.div>
-            </div>
+            <AccessDeniedScreen
+                requiredTalent="Genel Yetenek - Tablet Değerlendirme"
+                backLink="/atolyeler/genel-yetenek"
+                backLabel="Genel Yetenek Sayfasına Dön"
+                iconType="shield"
+            />
         );
     }
 
