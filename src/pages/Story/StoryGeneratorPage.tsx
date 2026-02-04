@@ -4,7 +4,7 @@ import { generateStory } from './services/gpt';
 import { saveStory } from './services/stories';
 import { StoryTheme } from './types';
 import { ThemeSelector } from './components/ThemeSelector';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 export default function StoryGeneratorPage() {
   const navigate = useNavigate();
@@ -17,16 +17,16 @@ export default function StoryGeneratorPage() {
 
     try {
       setIsGenerating(true);
-      
+
       // Başlangıç bildirimi
       toast.success('Hikaye oluşturma süreci başladı. Lütfen bekleyin...', {
         duration: 3000,
         icon: '📚',
       });
-      
+
       setGenerationStep('Hikaye oluşturuluyor...');
       const storyData = await generateStory(selectedTheme);
-      
+
       // API'nin oluşturduğu başlığı kullanıyoruz (otomatik başlık üretimi)
       toast.success(`"${storyData.title}" başlıklı hikaye oluşturuldu!`, {
         duration: 3000,
@@ -34,16 +34,16 @@ export default function StoryGeneratorPage() {
 
       setGenerationStep('Hikaye kaydediliyor...');
       const savedStory = await saveStory(storyData);
-      
+
       setGenerationStep('Sorular oluşturuluyor...');
       // Burada sorular oluşturulacak (ileride implement edilebilir)
-      
+
       setGenerationStep('Sorular kaydediliyor...');
       // Burada sorular kaydedilecek (ileride implement edilebilir)
-      
+
       // Görüntü oluşturma adımı (ileride implement edilebilir)
       setGenerationStep('Görsel oluşturuluyor...');
-      
+
       // Tüm sürecin tamamlandığını bildiren son toast
       toast.success('🎉 Hikaye tamamen hazır! Yönlendiriliyorsunuz...', {
         duration: 3000,
@@ -54,7 +54,7 @@ export default function StoryGeneratorPage() {
       setTimeout(() => {
         navigate(`/stories/${savedStory.id}`);
       }, 1500);
-      
+
     } catch (error) {
       console.error('Hikaye oluşturma hatası:', error);
       toast.error('Hikaye oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.', {
@@ -80,8 +80,8 @@ export default function StoryGeneratorPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Hikaye Teması
             </label>
-            <ThemeSelector 
-              selectedTheme={selectedTheme} 
+            <ThemeSelector
+              selectedTheme={selectedTheme}
               onSelectTheme={setSelectedTheme}
               disabled={isGenerating}
             />
@@ -97,9 +97,8 @@ export default function StoryGeneratorPage() {
           <button
             type="submit"
             disabled={isGenerating}
-            className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
-              isGenerating ? 'bg-purple-400' : 'bg-purple-600 hover:bg-purple-700'
-            } transition-colors flex justify-center items-center gap-2 shadow-md hover:shadow-lg`}
+            className={`w-full py-3 px-4 rounded-lg text-white font-medium ${isGenerating ? 'bg-purple-400' : 'bg-purple-600 hover:bg-purple-700'
+              } transition-colors flex justify-center items-center gap-2 shadow-md hover:shadow-lg`}
           >
             {isGenerating ? (
               <>
@@ -124,22 +123,22 @@ export default function StoryGeneratorPage() {
                 <div className={`w-3 h-3 mr-2 rounded-full ${generationStep === 'Hikaye oluşturuluyor...' ? 'bg-purple-600 animate-pulse' : generationStep && generationStep !== 'Hikaye oluşturuluyor...' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <p className={`text-sm ${generationStep === 'Hikaye oluşturuluyor...' ? 'text-purple-700 font-medium' : generationStep && generationStep !== 'Hikaye oluşturuluyor...' ? 'text-green-600' : 'text-gray-600'}`}>Hikaye Oluşturma</p>
               </div>
-              
+
               <div className="flex items-center">
                 <div className={`w-3 h-3 mr-2 rounded-full ${generationStep === 'Hikaye kaydediliyor...' ? 'bg-purple-600 animate-pulse' : generationStep === 'Sorular oluşturuluyor...' || generationStep === 'Sorular kaydediliyor...' || generationStep === 'Görsel oluşturuluyor...' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <p className={`text-sm ${generationStep === 'Hikaye kaydediliyor...' ? 'text-purple-700 font-medium' : generationStep === 'Sorular oluşturuluyor...' || generationStep === 'Sorular kaydediliyor...' || generationStep === 'Görsel oluşturuluyor...' ? 'text-green-600' : 'text-gray-600'}`}>Hikaye Kaydetme</p>
               </div>
-              
+
               <div className="flex items-center">
                 <div className={`w-3 h-3 mr-2 rounded-full ${generationStep === 'Sorular oluşturuluyor...' ? 'bg-purple-600 animate-pulse' : generationStep === 'Sorular kaydediliyor...' || generationStep === 'Görsel oluşturuluyor...' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <p className={`text-sm ${generationStep === 'Sorular oluşturuluyor...' ? 'text-purple-700 font-medium' : generationStep === 'Sorular kaydediliyor...' || generationStep === 'Görsel oluşturuluyor...' ? 'text-green-600' : 'text-gray-600'}`}>Soru Oluşturma</p>
               </div>
-              
+
               <div className="flex items-center">
                 <div className={`w-3 h-3 mr-2 rounded-full ${generationStep === 'Sorular kaydediliyor...' ? 'bg-purple-600 animate-pulse' : generationStep === 'Görsel oluşturuluyor...' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <p className={`text-sm ${generationStep === 'Sorular kaydediliyor...' ? 'text-purple-700 font-medium' : generationStep === 'Görsel oluşturuluyor...' ? 'text-green-600' : 'text-gray-600'}`}>Soru Kaydetme</p>
               </div>
-              
+
               <div className="flex items-center">
                 <div className={`w-3 h-3 mr-2 rounded-full ${generationStep === 'Görsel oluşturuluyor...' ? 'bg-purple-600 animate-pulse' : 'bg-gray-300'}`}></div>
                 <p className={`text-sm ${generationStep === 'Görsel oluşturuluyor...' ? 'text-purple-700 font-medium' : 'text-gray-600'}`}>Görsel Oluşturma</p>

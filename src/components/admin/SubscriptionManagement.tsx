@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Package, UserSubscription } from '../../types/package';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import {
     Box,
     Paper,

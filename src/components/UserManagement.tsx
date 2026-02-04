@@ -30,7 +30,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { supabase } from '../lib/supabase';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface User {
   id: string;

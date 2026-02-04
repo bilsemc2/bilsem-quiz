@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import EditProfileModal from '../components/EditProfileModal';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import {
     Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail, Music, Palette, Ticket, BarChart3, TrendingUp

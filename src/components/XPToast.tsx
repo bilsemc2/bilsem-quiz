@@ -1,4 +1,4 @@
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Zap, TrendingDown, TrendingUp, Sparkles, AlertTriangle, Coins } from 'lucide-react';
 
@@ -106,21 +106,12 @@ const XPToast = ({ amount, reason, type }: XPToastOptions) => {
 // XP düşürme bildirimi - Daha dikkat çekici
 export const showXPDeduct = (amount: number, reason?: string) => {
     toast.custom(
-        (t) => (
+        () => (
             <motion.div
                 initial={{ opacity: 0, scale: 0.8, y: -50 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.8, y: -50 }}
-                className={`
-          ${t.visible ? '' : 'pointer-events-none'}
-          max-w-sm w-full 
-          bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900
-          shadow-2xl shadow-orange-500/20 
-          rounded-3xl 
-          border border-orange-500/30 
-          p-5
-          backdrop-blur-xl
-        `}
+                className="max-w-sm w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-2xl shadow-orange-500/20 rounded-3xl border border-orange-500/30 p-5 backdrop-blur-xl"
             >
                 <XPToast amount={amount} reason={reason} type="deduct" />
 
@@ -135,22 +126,12 @@ export const showXPDeduct = (amount: number, reason?: string) => {
 // XP kazanma bildirimi - Kutlama efekti
 export const showXPEarn = (amount: number, reason?: string) => {
     toast.custom(
-        (t) => (
+        () => (
             <motion.div
                 initial={{ opacity: 0, scale: 0.8, y: -50 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.8, y: -50 }}
-                className={`
-          ${t.visible ? '' : 'pointer-events-none'}
-          max-w-sm w-full 
-          bg-gradient-to-br from-slate-900 via-emerald-900/30 to-slate-900
-          shadow-2xl shadow-emerald-500/20 
-          rounded-3xl 
-          border border-emerald-500/30 
-          p-5
-          backdrop-blur-xl
-          relative overflow-hidden
-        `}
+                className="max-w-sm w-full bg-gradient-to-br from-slate-900 via-emerald-900/30 to-slate-900 shadow-2xl shadow-emerald-500/20 rounded-3xl border border-emerald-500/30 p-5 backdrop-blur-xl relative overflow-hidden"
             >
                 {/* Celebration particles */}
                 {[...Array(8)].map((_, i) => (
@@ -181,21 +162,12 @@ export const showXPEarn = (amount: number, reason?: string) => {
 // XP hata bildirimi
 export const showXPError = (message: string) => {
     toast.custom(
-        (t) => (
+        () => (
             <motion.div
                 initial={{ opacity: 0, scale: 0.8, y: -50 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.8, y: -50 }}
-                className={`
-          ${t.visible ? '' : 'pointer-events-none'}
-          max-w-sm w-full 
-          bg-gradient-to-br from-slate-900 via-red-900/30 to-slate-900
-          shadow-2xl shadow-red-500/20 
-          rounded-3xl 
-          border border-red-500/30 
-          p-5
-          backdrop-blur-xl
-        `}
+                className="max-w-sm w-full bg-gradient-to-br from-slate-900 via-red-900/30 to-slate-900 shadow-2xl shadow-red-500/20 rounded-3xl border border-red-500/30 p-5 backdrop-blur-xl"
             >
                 <div className="flex items-center gap-4">
                     <motion.div

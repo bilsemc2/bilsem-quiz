@@ -6,11 +6,10 @@ import HomePage from './pages/HomePage';
 import { AuthProvider } from './contexts/AuthContext';
 import { ExamProvider } from './contexts/ExamContext';
 import { SoundProvider } from './contexts/SoundContext';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'sonner';
 import AdminMessageNotification from './components/AdminMessageNotification';
 import GlobalXPTimer from './components/GlobalXPTimer';
 import ErrorBoundary from './components/ErrorBoundary';
-import toast from 'react-hot-toast';
 
 // Route Modules
 import {
@@ -94,18 +93,9 @@ function App() {
         <SoundProvider>
           <Toaster
             position="top-center"
-            toastOptions={{
-              duration: 4000,
-              className: 'modern-toast',
-              success: {
-                className: 'modern-toast modern-toast-success',
-                iconTheme: { primary: '#10b981', secondary: '#fff' }
-              },
-              error: {
-                className: 'modern-toast modern-toast-error',
-                iconTheme: { primary: '#ef4444', secondary: '#fff' }
-              }
-            }}
+            duration={4000}
+            richColors
+            closeButton
           />
           <Router>
             <ExamProvider>

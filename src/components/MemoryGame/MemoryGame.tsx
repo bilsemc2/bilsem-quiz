@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import './MemoryGame.css';
 import { soundManager } from './sounds';
 
@@ -22,7 +22,7 @@ const MemoryGame: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const previousState = location.state?.previousState;
-  
+
   // Durum değişkenleri
   const [cards, setCards] = useState<Card[]>([]);
   const [flippedPair, setFlippedPair] = useState<CardPair>({ first: null, second: null });
@@ -52,7 +52,7 @@ const MemoryGame: React.FC = () => {
           });
           throw new Error('Resim listesi alınamadı');
         }
-        
+
         // Burada API yanıtını bekleriz, ancak şu an statik liste kullanıyoruz
         // const data = await response.json();
         // Burada gerçek bir API olmadığı için statik bir liste kullanıyoruz
@@ -69,7 +69,7 @@ const MemoryGame: React.FC = () => {
           'mess1.webp', 'mess2.webp', 'mess3.webp', 'mess4.webp',
           'msss2.webp', 'mssspr.webp', 'mssss.webp', 'rbbt.webp',
         ];
-        
+
         setAvailableImages(imageList);
         setLoading(false);
       } catch (error) {
@@ -105,14 +105,14 @@ const MemoryGame: React.FC = () => {
       });
       return;
     }
-    
+
     // 4x4 düzen için 8 çift kart (toplam 16 kart)
     const numberOfPairs = 8;
-    
+
     // Kullanılabilir resimlerden rastgele seç
     const shuffledImages = [...availableImages].sort(() => 0.5 - Math.random());
     const selectedImages = shuffledImages.slice(0, numberOfPairs);
-    
+
     // Her resimden 2 adet olacak şekilde kart dizisini oluştur
     let newCards: Card[] = [];
     selectedImages.forEach((image, index) => {
@@ -123,7 +123,7 @@ const MemoryGame: React.FC = () => {
         flipped: false,
         matched: false
       });
-      
+
       // Eşleşen ikinci kart
       newCards.push({
         id: index * 2 + 1,
@@ -132,12 +132,12 @@ const MemoryGame: React.FC = () => {
         matched: false
       });
     });
-    
+
     // 4x4 için merkez karta gerek yok
-    
+
     // Kartları karıştır
     newCards = newCards.sort(() => 0.5 - Math.random());
-    
+
     // Oyun durumunu sıfırla
     setCards(newCards);
     setFlippedPair({ first: null, second: null });
@@ -157,10 +157,10 @@ const MemoryGame: React.FC = () => {
       });
       return;
     }
-    
+
     // Eğer kart zaten çevrilmiş veya eşleştirilmişse, hiçbir şey yapma
     if (selectedCard.flipped || selectedCard.matched) return;
-    
+
     // Eğer iki kart zaten çevriliyse, başka kart çeviremez
     if (flippedPair.first && flippedPair.second) {
       toast.error('Lütfen bekleyin!', {
@@ -172,41 +172,41 @@ const MemoryGame: React.FC = () => {
 
     // Ses efekti
     soundManager.play('flip');
-    
+
     // Seçilen kartı çevir
-    const updatedCards = cards.map(card => 
+    const updatedCards = cards.map(card =>
       card.id === selectedCard.id ? { ...card, flipped: true } : card
     );
-    
+
     // Çevrilen ilk veya ikinci kart
     if (!flippedPair.first) {
       setFlippedPair({ first: selectedCard, second: null });
     } else {
       setFlippedPair({ ...flippedPair, second: selectedCard });
       setMoves(prevMoves => prevMoves + 1);
-      
+
       // İşlem devam ettiğini işaretle
       setIsProcessing(true);
-      
+
       // Hamle sayısını artır
       setTimeout(() => {
         checkForMatch(selectedCard);
       }, 1000);
     }
-    
+
     setCards(updatedCards);
   };
 
   // Eşleşme kontrolü
   const checkForMatch = (secondCard: Card) => {
     if (!flippedPair.first) return;
-    
+
     const isMatch = flippedPair.first.imageUrl === secondCard.imageUrl;
-    
+
     if (isMatch) {
       // Ses efekti
       soundManager.play('match');
-      
+
       // Eşleşme bildirimi göster
       toast.success('Eşleşme bulundu!', {
         duration: 1500,
@@ -218,29 +218,29 @@ const MemoryGame: React.FC = () => {
           color: '#2E7D32',
         },
       });
-      
+
       // Eşleşen kartları güncelle - hem çevrilmiş hem de eşleşmiş olarak işaretle
-      const updatedCards = cards.map(card => 
+      const updatedCards = cards.map(card =>
         card.id === flippedPair.first?.id || card.id === secondCard.id
           ? { ...card, flipped: true, matched: true }
           : card
       );
-      
+
       setCards(updatedCards);
       setMatchedPairs(prev => prev + 1);
-      
+
       // Yeni eşleşme sayısını hesapla
       const newMatchedPairs = matchedPairs + 1;
-      
+
       // 4x4 düzen için gereken eşleşme sayısı 8
       if (newMatchedPairs === cards.length / 2) {
         // Son bir kontrol daha yap - tüm kartların gerçekten eşleşip eşleşmediğine bak
         const allMatched = updatedCards.every(card => card.matched);
-        
+
         if (allMatched) {
           // Oyun bitişi ses efekti
           soundManager.play('win');
-          
+
           // Oyun tamamlandı bildirimi
           toast.success('Tebrikler! Oyunu tamamladınız!', {
             duration: 5000,
@@ -253,7 +253,7 @@ const MemoryGame: React.FC = () => {
               fontWeight: 'bold',
             },
           });
-          
+
           setGameOver(true);
         }
       }
@@ -268,20 +268,20 @@ const MemoryGame: React.FC = () => {
           color: '#D32F2F',
         },
       });
-      
+
       setTimeout(() => {
-        const updatedCards = cards.map(card => 
+        const updatedCards = cards.map(card =>
           // Sadece bu hamledeki çevrilmiş ama eşleşmemiş kartları geri çevir
           (card.id === flippedPair.first?.id || card.id === secondCard.id) && !card.matched
             ? { ...card, flipped: false }
             : card
         );
-        
+
         setCards(updatedCards);
         setIsProcessing(false); // İşlem tamamlandı
       }, 1000);
     }
-    
+
     // Her durumda çevrilen kart çiftini sıfırla
     setFlippedPair({ first: null, second: null });
     setIsProcessing(false); // İşlem tamamlandı
@@ -301,24 +301,24 @@ const MemoryGame: React.FC = () => {
   const returnToResults = () => {
     const quizId = location.state?.quizId || previousState?.quizId;
     const quizResultPath = quizId ? `/quiz/${quizId}/results` : '/quiz/results';
-    
+
     toast('Sonuçlar sayfasına dönülüyor...', {
       duration: 2000,
       position: 'top-center',
       icon: '↩️',
     });
-    
-    navigate(quizResultPath, { 
-      state: { 
-        ...previousState, 
+
+    navigate(quizResultPath, {
+      state: {
+        ...previousState,
         memoryGameScore: {
           moves,
           pairs: matchedPairs,
           completed: gameOver
         },
-        fromMemoryGame: true 
-      }, 
-      replace: true 
+        fromMemoryGame: true
+      },
+      replace: true
     });
   };
 
@@ -343,7 +343,7 @@ const MemoryGame: React.FC = () => {
           <p className="mb-6 text-gray-600">
             Eşleşen kartları bulmaya çalış! Tüm çiftleri en az hamlede eşleştirmeye çalış.
           </p>
-          <button 
+          <button
             onClick={startGame}
             className="bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-6 rounded-lg shadow transition-colors"
           >
@@ -379,8 +379,8 @@ const MemoryGame: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 gap-2">
             {cards.map(card => (
-              <div 
-                key={card.id} 
+              <div
+                key={card.id}
                 onClick={() => !gameOver && flipCard(card)}
                 className={`relative aspect-square rounded-md shadow-sm cursor-pointer transition-transform duration-300 transform ${card.flipped ? 'rotate-y-180' : ''} ${card.matched ? 'opacity-70' : ''}`}
               >
@@ -388,12 +388,12 @@ const MemoryGame: React.FC = () => {
                 <div className={`absolute w-full h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-md flex items-center justify-center ${card.flipped || card.matched ? 'hidden' : 'block'}`}>
                   <span className="text-white text-2xl">?</span>
                 </div>
-                
+
                 {/* Arka yüz (açık hali) */}
                 <div className={`absolute w-full h-full rounded-md overflow-hidden ${card.flipped || card.matched ? 'block' : 'hidden'}`}>
-                  <img 
-                    src={card.imageUrl} 
-                    alt="Memory Card" 
+                  <img
+                    src={card.imageUrl}
+                    alt="Memory Card"
                     className="w-full h-full object-contain rounded-md p-1"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -416,13 +416,13 @@ const MemoryGame: React.FC = () => {
                 Tüm kartları {moves} hamlede eşleştirdin.
               </p>
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   onClick={restartGame}
                   className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded shadow transition-colors"
                 >
                   Tekrar Oyna
                 </button>
-                <button 
+                <button
                   onClick={returnToResults}
                   className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded shadow transition-colors"
                 >

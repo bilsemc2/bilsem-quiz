@@ -43,7 +43,7 @@ import TalentAnalytics from '../components/admin/TalentAnalytics';
 import StudentStatistics from '../components/admin/StudentStatistics';
 import StoryGeneratorPage from './Story/StoryGeneratorPage';
 import PackageManagement from '../components/admin/PackageManagement';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface Notification {
   id: string;
