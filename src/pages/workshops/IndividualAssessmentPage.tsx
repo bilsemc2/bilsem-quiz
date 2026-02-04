@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -386,6 +387,53 @@ const IndividualAssessmentPage: React.FC = () => {
 
     return (
         <div className="bireysel-workshop-container pt-24 pb-12 px-6">
+            {/* SEO Meta Tags */}
+            <Helmet>
+                <title>Bireysel Değerlendirme Atölyesi | BİLSEM 2. Aşama Hazırlık</title>
+                <meta name="description" content="BİLSEM bireysel değerlendirme sınavına hazırlık. 30+ interaktif simülatör ile zeka ölçeği testlerine hazırlan. Sözel, sayısal ve performans tabanlı değerlendirmeler." />
+                <meta name="keywords" content="BİLSEM bireysel değerlendirme, 2. aşama hazırlık, zeka ölçeği, mülakat hazırlık, WISC-R, sözel zeka, sayısal zeka" />
+                <link rel="canonical" href="https://bilsemc2.com/atolyeler/bireysel-degerlendirme" />
+
+                {/* Open Graph */}
+                <meta property="og:type" content="website" />
+                <meta property="og:title" content="Bireysel Değerlendirme Atölyesi | BİLSEM 2. Aşama" />
+                <meta property="og:description" content="30+ simülatör ile BİLSEM bireysel değerlendirme sınavına hazırlan." />
+                <meta property="og:url" content="https://bilsemc2.com/atolyeler/bireysel-degerlendirme" />
+
+                {/* Twitter Card */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Bireysel Değerlendirme | BİLSEM" />
+
+                {/* Structured Data - Course Schema */}
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "Course",
+                        "name": "Bireysel Değerlendirme Atölyesi",
+                        "description": "BİLSEM 2. aşama bireysel değerlendirme sınavına hazırlık. 30+ interaktif simülatör ile zeka ölçeği testlerine hazırlan.",
+                        "provider": {
+                            "@type": "EducationalOrganization",
+                            "name": "BilsemC2",
+                            "url": "https://bilsemc2.com"
+                        },
+                        "educationalLevel": "İlkokul - Ortaokul",
+                        "inLanguage": "tr",
+                        "isAccessibleForFree": false,
+                        "audience": {
+                            "@type": "EducationalAudience",
+                            "educationalRole": "student",
+                            "audienceType": "BİLSEM 2. aşama adayları"
+                        },
+                        "hasCourseInstance": {
+                            "@type": "CourseInstance",
+                            "courseMode": "online",
+                            "courseWorkload": "PT90M"
+                        },
+                        "teaches": ["Sözel zeka", "Sayısal zeka", "İşlem hızı", "Çalışma belleği", "Görsel-uzamsal beceriler"]
+                    })}
+                </script>
+            </Helmet>
+
             {/* Background Blobs */}
             <div className="bireysel-bg-blobs">
                 <div className="bireysel-blob bireysel-blob-1" />

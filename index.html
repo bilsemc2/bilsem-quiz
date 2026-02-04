@@ -28,7 +28,6 @@
   <link rel="alternate" hreflang="tr" href="https://bilsemc2.com/">
   <link rel="alternate" hreflang="x-default" href="https://bilsemc2.com/">
 
-  <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -55,6 +54,25 @@
       "addressLocality": "Pamukkale",
       "addressRegion": "Denizli",
       "addressCountry": "TR"
+    }
+  }
+  </script>
+
+  <!-- WebSite Schema - Enables SiteLinks SearchBox in Google -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "BilsemC2",
+    "alternateName": ["Beynini Kullan", "BİLSEM Sınavı Hazırlık"],
+    "url": "https://bilsemc2.com",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://bilsemc2.com/blog?search={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
     }
   }
   </script>

@@ -216,7 +216,7 @@ const NavBar = () => {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Link to="/" className="flex items-center gap-2">
-              <img src="/images/beyninikullan.webp" alt="Bilsemc2" className="h-12 w-auto" />
+              <img src="/images/beyninikullan.webp" alt="Bilsemc2" width={48} height={48} className="h-12 w-auto" />
             </Link>
           </div>
 

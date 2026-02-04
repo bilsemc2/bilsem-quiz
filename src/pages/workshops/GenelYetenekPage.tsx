@@ -63,20 +63,32 @@ const GenelYetenekPage: React.FC = () => {
                 <meta name="twitter:title" content="BİLSEM Genel Yetenek | Hazırlık" />
                 <meta name="twitter:description" content="Tablet ve bireysel değerlendirme hazırlık merkezi" />
 
-                {/* Structured Data */}
+                {/* Structured Data - Course Schema */}
                 <script type="application/ld+json">
                     {JSON.stringify({
                         "@context": "https://schema.org",
-                        "@type": "EducationalOccupationalProgram",
+                        "@type": "Course",
                         "name": "BİLSEM Genel Yetenek Hazırlık",
                         "description": "BİLSEM genel yetenek sınavına hazırlık programı - Tablet ve bireysel değerlendirme simülatörleri",
                         "provider": {
-                            "@type": "Organization",
-                            "name": "BİLSEM C2",
+                            "@type": "EducationalOrganization",
+                            "name": "BilsemC2",
                             "url": "https://bilsemc2.com"
                         },
-                        "educationalProgramMode": "online",
-                        "occupationalCategory": "Eğitim / Zeka Geliştirme"
+                        "educationalLevel": "İlkokul - Ortaokul",
+                        "inLanguage": "tr",
+                        "isAccessibleForFree": false,
+                        "audience": {
+                            "@type": "EducationalAudience",
+                            "educationalRole": "student",
+                            "audienceType": "BİLSEM adayları"
+                        },
+                        "hasCourseInstance": {
+                            "@type": "CourseInstance",
+                            "courseMode": "online",
+                            "courseWorkload": "PT60M"
+                        },
+                        "teaches": ["Mantık ve muhakeme", "Stratejik düşünme", "Hızlı analiz", "Problem çözme"]
                     })}
                 </script>
             </Helmet>

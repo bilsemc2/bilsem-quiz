@@ -117,20 +117,32 @@ const ResimPage: React.FC = () => {
                 <meta name="twitter:title" content="Resim AI Atölyesi | BİLSEM" />
                 <meta name="twitter:description" content="AI destekli görsel sanatlar yeteneği değerlendirmesi" />
 
-                {/* Structured Data */}
+                {/* Structured Data - Course Schema */}
                 <script type="application/ld+json">
                     {JSON.stringify({
                         "@context": "https://schema.org",
-                        "@type": "EducationalOccupationalProgram",
+                        "@type": "Course",
                         "name": "Resim AI Atölyesi",
-                        "description": "Yapay zeka destekli görsel sanatlar yetenek değerlendirme programı",
+                        "description": "Yapay zeka destekli görsel sanatlar yetenek değerlendirme programı. AI natürmort analizi ve yaratıcı çizim testi.",
                         "provider": {
-                            "@type": "Organization",
-                            "name": "BİLSEM C2",
+                            "@type": "EducationalOrganization",
+                            "name": "BilsemC2",
                             "url": "https://bilsemc2.com"
                         },
-                        "educationalProgramMode": "online",
-                        "occupationalCategory": "Görsel Sanatlar Eğitimi"
+                        "educationalLevel": "İlkokul - Ortaokul",
+                        "inLanguage": "tr",
+                        "isAccessibleForFree": false,
+                        "audience": {
+                            "@type": "EducationalAudience",
+                            "educationalRole": "student",
+                            "audienceType": "BİLSEM adayları"
+                        },
+                        "hasCourseInstance": {
+                            "@type": "CourseInstance",
+                            "courseMode": "online",
+                            "courseWorkload": "PT45M"
+                        },
+                        "teaches": ["Görsel algı", "Kompozisyon", "Yaratıcı çizim", "Natürmort analizi"]
                     })}
                 </script>
             </Helmet>

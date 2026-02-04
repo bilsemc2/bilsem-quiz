@@ -6,7 +6,7 @@ export default function Footer() {
         <footer className="bg-purple-brand text-white/90">
             <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
                 <div className="mb-10">
-                    <img src="/images/beyninikullan.webp" alt="Bilsemc2 Logo" className="h-24 w-auto drop-shadow-lg" />
+                    <img src="/images/beyninikullan.webp" alt="Bilsemc2 Logo" width={96} height={96} loading="lazy" className="h-24 w-auto drop-shadow-lg" />
                 </div>
 
                 <nav className="flex flex-wrap justify-center gap-x-12 gap-y-4 mb-10 font-bold">
@@ -53,26 +53,41 @@ export default function Footer() {
                         <img
                             src="https://www.paytr.com/oos-assets/logo/link-page/verified-visa.svg"
                             alt="Verified by Visa"
+                            width={80}
+                            height={32}
+                            loading="lazy"
                             className="h-8 w-auto"
                         />
                         <img
                             src="https://www.paytr.com/oos-assets/logo/link-page/mastercard.svg"
                             alt="Mastercard SecureCode"
+                            width={60}
+                            height={32}
+                            loading="lazy"
                             className="h-8 w-auto"
                         />
                         <img
                             src="https://www.paytr.com/oos-assets/logo/link-page/troy-gray.svg"
                             alt="Troy"
+                            width={48}
+                            height={32}
+                            loading="lazy"
                             className="h-8 w-auto"
                         />
                         <img
                             src="https://www.paytr.com/oos-assets/logo/link-page/pci.svg"
                             alt="PCI DSS Compliant"
+                            width={48}
+                            height={32}
+                            loading="lazy"
                             className="h-8 w-auto"
                         />
                         <img
                             src="https://www.paytr.com/oos-assets/logo/paytr-logo-footer-light.svg"
                             alt="PayTR"
+                            width={60}
+                            height={24}
+                            loading="lazy"
                             className="h-6 w-auto"
                         />
                     </div>

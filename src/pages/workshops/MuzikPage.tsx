@@ -120,20 +120,32 @@ const MuzikPage: React.FC = () => {
                 <meta name="twitter:title" content="Müzik AI Atölyesi | BİLSEM" />
                 <meta name="twitter:description" content="AI destekli müzik yeteneği değerlendirmesi" />
 
-                {/* Structured Data */}
+                {/* Structured Data - Course Schema */}
                 <script type="application/ld+json">
                     {JSON.stringify({
                         "@context": "https://schema.org",
-                        "@type": "EducationalOccupationalProgram",
+                        "@type": "Course",
                         "name": "Müzik AI Atölyesi",
-                        "description": "Yapay zeka destekli müzik yetenek değerlendirme programı",
+                        "description": "Yapay zeka destekli müzik yetenek değerlendirme programı. Pitch algılama, ritim analizi ve kişisel geri bildirim.",
                         "provider": {
-                            "@type": "Organization",
-                            "name": "BİLSEM C2",
+                            "@type": "EducationalOrganization",
+                            "name": "BilsemC2",
                             "url": "https://bilsemc2.com"
                         },
-                        "educationalProgramMode": "online",
-                        "occupationalCategory": "Müzik Eğitimi"
+                        "educationalLevel": "İlkokul - Ortaokul",
+                        "inLanguage": "tr",
+                        "isAccessibleForFree": false,
+                        "audience": {
+                            "@type": "EducationalAudience",
+                            "educationalRole": "student",
+                            "audienceType": "BİLSEM adayları"
+                        },
+                        "hasCourseInstance": {
+                            "@type": "CourseInstance",
+                            "courseMode": "online",
+                            "courseWorkload": "PT30M"
+                        },
+                        "teaches": ["Pitch algılama", "Ritim analizi", "Müzikal hafıza", "Nota tanıma"]
                     })}
                 </script>
             </Helmet>

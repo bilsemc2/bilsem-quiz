@@ -61,17 +61,19 @@ const HomePage: React.FC = () => {
                 <img
                   src="images/logo2.webp"
                   alt="Beynini Kullan!"
+                  width={600}
+                  height={200}
                   className="w-full max-w-[600px] drop-shadow-[0_20px_50px_rgba(126,48,225,0.3)]"
                 />
               </div>
-              <motion.p
+              <motion.h1
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5, duration: 1 }}
                 className="text-2xl lg:text-3xl font-poppins font-bold mt-8 text-purple-brand"
               >
                 Eğlenceli mantık sorularıyla zekanı geliştir! 🚀
-              </motion.p>
+              </motion.h1>
             </motion.div>
 
             <motion.div
@@ -254,6 +256,9 @@ const HomePage: React.FC = () => {
                 <motion.img
                   src="/images/logoDv.webp"
                   alt="DersimVar.com"
+                  width={256}
+                  height={256}
+                  loading="lazy"
                   className="w-48 lg:w-64 drop-shadow-2xl"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300 }}
@@ -326,6 +331,9 @@ const HomePage: React.FC = () => {
                   <img
                     src={workshop.image}
                     alt={workshop.title}
+                    width={300}
+                    height={200}
+                    loading="lazy"
                     className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700"
                   />
                 </div>
@@ -382,7 +390,7 @@ const HomePage: React.FC = () => {
               className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-purple-500/30 flex flex-col items-center text-center"
             >
               <div className="w-32 h-40 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
-                <img src="/images/bsm.webp" alt="Bilsem Sınavı" className="w-full h-full object-cover" />
+                <img src="/images/bsm.webp" alt="Bilsem Sınavı" width={128} height={160} loading="lazy" className="w-full h-full object-cover" />
               </div>
               <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
                 Bilsem Sınavı
@@ -407,7 +415,7 @@ const HomePage: React.FC = () => {
               className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-blue-500/30 flex flex-col items-center text-center"
             >
               <div className="w-32 h-40 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-                <img src="/images/ga.webp" alt="Görsel Analoji" className="w-full h-full object-cover" />
+                <img src="/images/ga.webp" alt="Görsel Analoji" width={128} height={160} loading="lazy" className="w-full h-full object-cover" />
               </div>
               <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
                 Görsel Analoji
@@ -432,7 +440,7 @@ const HomePage: React.FC = () => {
               className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-amber-500/30 flex flex-col items-center text-center"
             >
               <div className="w-32 h-40 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
-                <img src="/images/td.webp" alt="Türkçe Deyimler" className="w-full h-full object-cover" />
+                <img src="/images/td.webp" alt="Türkçe Deyimler" width={128} height={160} loading="lazy" className="w-full h-full object-cover" />
               </div>
               <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
                 Türkçe Deyimler
