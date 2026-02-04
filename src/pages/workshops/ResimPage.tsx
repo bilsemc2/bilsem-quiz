@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft, Lock, X, LogIn } from 'lucide-react';
+import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft, X, LogIn } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import ResimGame from '../../components/Workshops/Resim/ResimGame';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import './resim/resim.css';
+import AccessDeniedModal from '../../components/AccessDeniedModal';
 
 const ResimPage: React.FC = () => {
     const navigate = useNavigate();
@@ -282,54 +283,14 @@ const ResimPage: React.FC = () => {
             </div>
 
             {/* Yetenek Alanı Uyarı Modal */}
-            {showTalentWarning && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl border border-white/10 shadow-2xl p-8 max-w-md w-full text-center relative"
-                    >
-                        <button
-                            onClick={() => setShowTalentWarning(false)}
-                            className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
-                        >
-                            <X size={24} />
-                        </button>
-
-                        <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Lock className="w-10 h-10 text-rose-400" />
-                        </div>
-
-                        <h2 className="text-2xl font-bold text-white mb-4">
-                            Bu Atölye Profilinize Uygun Değil
-                        </h2>
-
-                        <p className="text-white/70 mb-6 leading-relaxed">
-                            Resim Atölyesi sadece yetenek alanı <strong className="text-pink-400">Resim</strong> olan öğrencilerimiz içindir.
-                            {userTalents.length > 0 && (
-                                <span className="block mt-2">
-                                    Sizin yetenek alanınız: <strong className="text-amber-400">{userTalents.join(', ')}</strong>
-                                </span>
-                            )}
-                        </p>
-
-                        <div className="flex flex-col gap-3">
-                            <button
-                                onClick={() => setShowTalentWarning(false)}
-                                className="w-full py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all border border-white/10"
-                            >
-                                Anladım, Sayfada Kalayım
-                            </button>
-                            <Link
-                                to="/profile"
-                                className="w-full py-3 bg-pink-600 text-white font-semibold rounded-xl hover:bg-pink-700 transition-all text-center"
-                            >
-                                Profilimi Görüntüle
-                            </Link>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
+            <AccessDeniedModal
+                isOpen={showTalentWarning}
+                onClose={() => setShowTalentWarning(false)}
+                workshopName="Resim Atölyesi"
+                requiredTalent="Resim"
+                userTalents={userTalents.length > 0 ? userTalents : undefined}
+                accentColor="pink"
+            />
 
             {/* Giriş Yapma Uyarı Modal */}
             {showLoginPrompt && (
