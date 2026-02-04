@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS exam_sessions (
     exam_mode VARCHAR(20) NOT NULL DEFAULT 'standard',
     results JSONB NOT NULL DEFAULT '[]'::jsonb,
     final_score INTEGER,
+    bzp_score INTEGER,                  -- BİLSEM Zeka Puanı (70-145)
     ability_estimate NUMERIC(4,2), -- -3.00 ile +3.00 arası IRT theta değeri
     created_at TIMESTAMPTZ DEFAULT NOW()
 );

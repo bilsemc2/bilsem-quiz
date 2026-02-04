@@ -190,6 +190,15 @@ export const ExamProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const passRate = session.results.filter(r => r.passed).length / session.results.length;
         const abilityEstimate = (passRate * 6) - 3; // -3 ile +3 arası
 
+        // BZP (BİLSEM Zeka Puanı) hesapla - zorluk çarpanlı
+        const DIFFICULTY_MULTIPLIERS: Record<number, number> = { 1: 0.7, 2: 0.85, 3: 1.0, 4: 1.15, 5: 1.3 };
+        const weightedScores = session.results.map(r => {
+            const baseScore = r.maxScore > 0 ? r.score / r.maxScore : 0;
+            return baseScore * (DIFFICULTY_MULTIPLIERS[r.level] || 1.0);
+        });
+        const avgWeighted = weightedScores.reduce((a, b) => a + b, 0) / weightedScores.length;
+        const bzpScore = Math.round(Math.max(70, Math.min(145, 100 + (avgWeighted - 0.5) * 60)));
+
         try {
             await supabase.from('exam_sessions').insert({
                 id: session.id,
@@ -199,6 +208,7 @@ export const ExamProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 module_count: session.modules.length,
                 results: session.results,
                 final_score: Math.round((totalScore / maxPossibleScore) * 100),
+                bzp_score: bzpScore,
                 ability_estimate: abilityEstimate.toFixed(2)
             });
         } catch (error) {
