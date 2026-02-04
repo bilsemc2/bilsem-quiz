@@ -64,8 +64,26 @@ const ExamSimulatorPage: React.FC = () => {
         navigate('/atolyeler/sinav-simulasyonu/devam');
     };
 
+    // Yetenek alanı erişim kontrolü - IndividualAssessmentPage ile aynı mantık
+    const hasExamAccess = (yetenekAlani: string[] | string | null | undefined): boolean => {
+        if (!yetenekAlani) return false;
+        const skills = Array.isArray(yetenekAlani) ? yetenekAlani : [yetenekAlani];
+        return skills.some(s => s === 'genel yetenek' || s === 'genel yetenek - bireysel');
+    };
+
+    const canAccess = hasExamAccess(profile?.yetenek_alani);
+
+    // Loading state
+    if (!profile) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     // Yetenek alanı kontrolü - Sadece Genel Yetenek kullanıcıları erişebilir
-    if (profile?.yetenek_alani && profile.yetenek_alani !== 'genel-yetenek') {
+    if (!canAccess) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-4">
                 <motion.div
@@ -96,6 +114,7 @@ const ExamSimulatorPage: React.FC = () => {
             </div>
         );
     }
+
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pt-20 pb-12 px-4 sm:px-6">
