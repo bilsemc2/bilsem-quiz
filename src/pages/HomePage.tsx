@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Rocket, Star, Users, Palette, Music, Lightbulb } from 'lucide-react';
+import { Rocket, Star, Users, Palette, Music, Lightbulb, Brain, Sparkles, Target, TrendingUp, Zap } from 'lucide-react';
 
 const HomePage: React.FC = () => {
   const stats = [
@@ -103,6 +103,139 @@ const HomePage: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SINAV SİMÜLASYONU SECTION - Eye-catching Banner */}
+      <section className="py-16 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-0 left-1/4 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+          {/* Floating icons */}
+          <motion.div
+            animate={{ y: [0, -20, 0], rotate: [0, 10, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-10 left-[10%] text-white/20"
+          >
+            <Brain size={60} />
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 15, 0], rotate: [0, -10, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            className="absolute bottom-10 right-[15%] text-white/20"
+          >
+            <Target size={50} />
+          </motion.div>
+          <motion.div
+            animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+            className="absolute top-1/2 right-[5%] text-yellow-300/30"
+          >
+            <Sparkles size={40} />
+          </motion.div>
+        </div>
+
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-10">
+            {/* Left content */}
+            <div className="text-center lg:text-left space-y-6 lg:max-w-xl">
+              <motion.div
+                initial={{ opacity: 0, x: -30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-md text-white text-sm font-bold rounded-full mb-4">
+                  <Zap className="w-4 h-4 text-yellow-300" />
+                  YENİ ÖZELLİK
+                </span>
+                <h2 className="text-4xl lg:text-5xl font-poppins font-black text-white leading-tight">
+                  BİLSEM Sınav
+                  <br />
+                  <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
+                    Simülasyonu
+                  </span>
+                </h2>
+              </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                className="text-lg text-white/90 font-medium"
+              >
+                25 farklı modülle gerçek sınav deneyimi yaşa!
+                Performansını ölç ve <strong className="text-yellow-300">BZP (Bilsemc2 Zeka Puanı)</strong> ile kendini değerlendir.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.6 }}
+                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+              >
+                <Link
+                  to="/atolyeler/sinav-simulasyonu"
+                  className="px-10 py-4 bg-white text-purple-600 font-poppins font-black text-lg rounded-full shadow-lg shadow-black/20 hover:shadow-xl hover:scale-105 transform transition-all duration-300 inline-flex items-center justify-center gap-3"
+                >
+                  <Brain className="w-6 h-6" />
+                  Simülasyona Başla
+                </Link>
+              </motion.div>
+            </div>
+
+            {/* Right - BZP Preview Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
+              whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="relative"
+            >
+              <div className="bg-white/10 backdrop-blur-xl rounded-[2rem] p-8 border border-white/20 shadow-2xl min-w-[300px]">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs font-medium">Senin Potansiyelin</p>
+                    <p className="text-white font-bold text-lg">BZP Skoru</p>
+                  </div>
+                </div>
+
+                {/* Score display */}
+                <div className="text-center py-6 border-y border-white/10">
+                  <motion.span
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="text-6xl font-black bg-gradient-to-r from-yellow-300 via-orange-300 to-pink-300 bg-clip-text text-transparent"
+                  >
+                    ???
+                  </motion.span>
+                  <p className="text-white/70 text-sm mt-2">Simülasyonu tamamla ve öğren!</p>
+                </div>
+
+                {/* Stats preview */}
+                <div className="grid grid-cols-3 gap-4 mt-6 text-center">
+                  <div>
+                    <p className="text-2xl font-bold text-white">25</p>
+                    <p className="text-xs text-white/60">Modül</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-emerald-400">6</p>
+                    <p className="text-xs text-white/60">Kategori</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-cyan-400">~45dk</p>
+                    <p className="text-xs text-white/60">Süre</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Decorative glow */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-yellow-400/20 to-pink-500/20 rounded-[3rem] blur-2xl -z-10" />
+            </motion.div>
           </div>
         </div>
       </section>
