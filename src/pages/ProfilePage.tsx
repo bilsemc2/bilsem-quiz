@@ -16,7 +16,6 @@ import { showXPEarn } from '@/components/XPToast';
 import UserMessages from '@/components/UserMessages';
 import TimeXPGain from '@/components/profile/TimeXPGain';
 import UserGameStats from '@/components/profile/UserGameStats';
-import { useExam } from '@/contexts/ExamContext';
 
 
 // Hızlı Erişim Butonları
@@ -49,12 +48,19 @@ const QUICK_ACCESS_BUTTONS = [
 
 export const ProfilePage: React.FC = () => {
     const { user, profile, refreshProfile } = useAuth();
-    const { session } = useExam();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showReferral, setShowReferral] = useState(false);
     const [promoCode, setPromoCode] = useState('');
     const [isRedeeming, setIsRedeeming] = useState(false);
+
+    // Son tamamlanmış sınav - Supabase'den çekilir
+    const [lastExamSession, setLastExamSession] = useState<{
+        bzp_score: number | null;
+        final_score: number;
+        results: Array<{ passed: boolean; score: number; maxScore: number; level: number }>;
+        completed_at: string;
+    } | null>(null);
     const [userData, setUserData] = useState<UserProfile>({
         name: "",
         email: user?.email || "",
@@ -118,6 +124,20 @@ export const ProfilePage: React.FC = () => {
                     levelBadge,
                     levelTitle
                 }));
+            }
+
+            // Son tamamlanmış sınavı çek
+            const { data: examData } = await supabase
+                .from('exam_sessions')
+                .select('bzp_score, final_score, results, completed_at')
+                .eq('user_id', user.id)
+                .not('completed_at', 'is', null)
+                .order('completed_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (examData) {
+                setLastExamSession(examData);
             }
         } catch (err) {
             console.error('Exception in fetchUserData:', err);
@@ -637,7 +657,7 @@ export const ProfilePage: React.FC = () => {
                 </motion.div>
 
                 {/* Sınav Simülasyonu Sonuçlarım */}
-                {session && session.status === 'completed' && session.results.length > 0 && (
+                {lastExamSession && lastExamSession.results.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -659,23 +679,14 @@ export const ProfilePage: React.FC = () => {
                             className="block bg-gradient-to-r from-rose-600 to-red-700 rounded-2xl p-6 hover:shadow-xl hover:shadow-rose-500/20 transition-all group"
                         >
                             <div className="flex items-center gap-6">
-                                {/* BZP Score */}
+                                {/* BZP Score - Veritabanından */}
                                 <div className="text-center">
-                                    {(() => {
-                                        const DIFFICULTY_MULTIPLIERS: Record<number, number> = { 1: 0.7, 2: 0.85, 3: 1.0, 4: 1.15, 5: 1.3 };
-                                        const weightedScores = session.results.map(r => {
-                                            const baseScore = r.maxScore > 0 ? r.score / r.maxScore : 0;
-                                            return baseScore * (DIFFICULTY_MULTIPLIERS[r.level] || 1.0);
-                                        });
-                                        const avgWeighted = weightedScores.reduce((a, b) => a + b, 0) / weightedScores.length;
-                                        const bzpScore = Math.round(Math.max(70, Math.min(145, 100 + (avgWeighted - 0.5) * 60)));
-                                        return (
-                                            <>
-                                                <div className="text-5xl font-black text-white">{bzpScore}</div>
-                                                <div className="text-rose-200 text-xs font-bold uppercase tracking-wider">BZP</div>
-                                            </>
-                                        );
-                                    })()}
+                                    <div className="text-5xl font-black text-white">
+                                        {lastExamSession.bzp_score || lastExamSession.final_score}
+                                    </div>
+                                    <div className="text-rose-200 text-xs font-bold uppercase tracking-wider">
+                                        {lastExamSession.bzp_score ? 'BZP' : 'Skor'}
+                                    </div>
                                 </div>
 
                                 <div className="w-px h-16 bg-white/20" />
@@ -683,16 +694,18 @@ export const ProfilePage: React.FC = () => {
                                 {/* Stats */}
                                 <div className="flex-1 grid grid-cols-3 gap-4 text-center">
                                     <div>
-                                        <div className="text-2xl font-black text-white">{session.results.filter(r => r.passed).length}</div>
+                                        <div className="text-2xl font-black text-white">
+                                            {lastExamSession.results.filter((r: { passed: boolean }) => r.passed).length}
+                                        </div>
                                         <div className="text-rose-200 text-xs">Başarılı</div>
                                     </div>
                                     <div>
-                                        <div className="text-2xl font-black text-white">{session.results.length}</div>
+                                        <div className="text-2xl font-black text-white">{lastExamSession.results.length}</div>
                                         <div className="text-rose-200 text-xs">Modül</div>
                                     </div>
                                     <div>
                                         <div className="text-2xl font-black text-white">
-                                            {Math.round(session.results.reduce((a, r) => a + r.score, 0) / session.results.reduce((a, r) => a + r.maxScore, 0) * 100)}%
+                                            {lastExamSession.final_score}%
                                         </div>
                                         <div className="text-rose-200 text-xs">Başarı</div>
                                     </div>
