@@ -58,7 +58,7 @@ export const ProfilePage: React.FC = () => {
     const [lastExamSession, setLastExamSession] = useState<{
         bzp_score: number | null;
         final_score: number;
-        results: Array<{ passed: boolean; score: number; maxScore: number; level: number }>;
+        results: Array<{ passed: boolean; score: number; maxScore: number; level: number; moduleTitle?: string; moduleId?: string }>;
         completed_at: string;
     } | null>(null);
     const [userData, setUserData] = useState<UserProfile>({
@@ -443,7 +443,7 @@ export const ProfilePage: React.FC = () => {
                                         {hasGeneral && (
                                             <Link
                                                 to="/atolyeler/bireysel-degerlendirme"
-                                                className="group flex items-center gap-4 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-2xl p-5 transition-all"
+                                                className="group flex items-center gap-4 bg-slate-800/90 hover:bg-slate-700/90 border border-indigo-500/40 rounded-2xl p-5 transition-all"
                                             >
                                                 <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-indigo-500/20">
                                                     <Brain className="w-7 h-7 text-white" />
@@ -458,7 +458,7 @@ export const ProfilePage: React.FC = () => {
                                         {hasMusic && (
                                             <Link
                                                 to="/atolyeler/muzik"
-                                                className="group flex items-center gap-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-2xl p-5 transition-all"
+                                                className="group flex items-center gap-4 bg-slate-800/90 hover:bg-slate-700/90 border border-emerald-500/40 rounded-2xl p-5 transition-all"
                                             >
                                                 <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/20">
                                                     <Music className="w-7 h-7 text-white" />
@@ -473,7 +473,7 @@ export const ProfilePage: React.FC = () => {
                                         {hasArt && (
                                             <Link
                                                 to="/atolyeler/resim"
-                                                className="group flex items-center gap-4 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 rounded-2xl p-5 transition-all"
+                                                className="group flex items-center gap-4 bg-slate-800/90 hover:bg-slate-700/90 border border-pink-500/40 rounded-2xl p-5 transition-all"
                                             >
                                                 <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-pink-500/20">
                                                     <Palette className="w-7 h-7 text-white" />
@@ -501,11 +501,90 @@ export const ProfilePage: React.FC = () => {
                     </motion.div>
                 )}
 
+                {/* Son Simülasyon Sonucum - Mesajların Üstünde */}
+                {lastExamSession && lastExamSession.results.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.15 }}
+                        className="mb-8"
+                    >
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/30">
+                                <TrendingUp className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold bg-gradient-to-r from-pink-300 to-rose-400 bg-clip-text text-transparent">Son Simülasyon Sonucum</h2>
+                                <p className="text-pink-300/60 text-sm">Sınav Simülasyonu performansı</p>
+                            </div>
+                        </div>
+
+                        <Link
+                            to="/atolyeler/sinav-simulasyonu/sonuc"
+                            className="block bg-gradient-to-r from-rose-600 to-red-700 rounded-2xl p-6 hover:shadow-xl hover:shadow-rose-500/20 transition-all group"
+                        >
+                            <div className="flex items-center gap-6">
+                                {/* BZP Score - Veritabanından */}
+                                <div className="text-center">
+                                    <div className="text-5xl font-black text-white">
+                                        {lastExamSession.bzp_score || lastExamSession.final_score}
+                                    </div>
+                                    <div className="text-rose-200 text-xs font-bold uppercase tracking-wider">
+                                        {lastExamSession.bzp_score ? 'BZP' : 'Skor'}
+                                    </div>
+                                </div>
+
+                                <div className="w-px h-16 bg-white/20" />
+
+                                {/* Stats */}
+                                <div className="flex-1 grid grid-cols-3 gap-4 text-center">
+                                    <div>
+                                        <div className="text-2xl font-black text-white">
+                                            {lastExamSession.results.filter((r: { passed: boolean }) => r.passed).length}
+                                        </div>
+                                        <div className="text-rose-200 text-xs">Başarılı</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-2xl font-black text-white">{lastExamSession.results.length}</div>
+                                        <div className="text-rose-200 text-xs">Modül</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-2xl font-black text-white">
+                                            {lastExamSession.final_score}%
+                                        </div>
+                                        <div className="text-rose-200 text-xs">Başarı</div>
+                                    </div>
+                                </div>
+
+                                {/* Arrow */}
+                                <ChevronRight className="w-8 h-8 text-white/50 group-hover:text-white group-hover:translate-x-2 transition-all" />
+                            </div>
+
+                            {/* Gayret Gösterilecek Modüller */}
+                            {lastExamSession.results.filter((r: { passed: boolean }) => !r.passed).length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-white/20">
+                                    <p className="text-rose-200/80 text-xs font-medium mb-2">💪 Gayret Gösterilecek Modüller:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {lastExamSession.results
+                                            .map((r, idx: number) => ({ ...r, idx }))
+                                            .filter((r) => !r.passed)
+                                            .map((r) => (
+                                                <span key={r.idx} className="bg-white/20 text-white text-xs px-2 py-1 rounded-lg">
+                                                    {r.moduleTitle || `Modül ${r.level}`}
+                                                </span>
+                                            ))}
+                                    </div>
+                                </div>
+                            )}
+                        </Link>
+                    </motion.div>
+                )}
+
                 {/* Mesajlarım Bölümü */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
+                    transition={{ delay: 0.18 }}
                     className="mb-8"
                 >
                     <div className="flex items-center gap-3 mb-6">
@@ -656,67 +735,7 @@ export const ProfilePage: React.FC = () => {
                     <UserGameStats />
                 </motion.div>
 
-                {/* Sınav Simülasyonu Sonuçlarım */}
-                {lastExamSession && lastExamSession.results.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.28 }}
-                        className="mb-8"
-                    >
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/30">
-                                <TrendingUp className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold bg-gradient-to-r from-pink-300 to-rose-400 bg-clip-text text-transparent">Son Sınav Sonucum</h2>
-                                <p className="text-pink-300/60 text-sm">Sınav Simülasyonu performansı</p>
-                            </div>
-                        </div>
 
-                        <Link
-                            to="/atolyeler/sinav-simulasyonu/sonuc"
-                            className="block bg-gradient-to-r from-rose-600 to-red-700 rounded-2xl p-6 hover:shadow-xl hover:shadow-rose-500/20 transition-all group"
-                        >
-                            <div className="flex items-center gap-6">
-                                {/* BZP Score - Veritabanından */}
-                                <div className="text-center">
-                                    <div className="text-5xl font-black text-white">
-                                        {lastExamSession.bzp_score || lastExamSession.final_score}
-                                    </div>
-                                    <div className="text-rose-200 text-xs font-bold uppercase tracking-wider">
-                                        {lastExamSession.bzp_score ? 'BZP' : 'Skor'}
-                                    </div>
-                                </div>
-
-                                <div className="w-px h-16 bg-white/20" />
-
-                                {/* Stats */}
-                                <div className="flex-1 grid grid-cols-3 gap-4 text-center">
-                                    <div>
-                                        <div className="text-2xl font-black text-white">
-                                            {lastExamSession.results.filter((r: { passed: boolean }) => r.passed).length}
-                                        </div>
-                                        <div className="text-rose-200 text-xs">Başarılı</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-2xl font-black text-white">{lastExamSession.results.length}</div>
-                                        <div className="text-rose-200 text-xs">Modül</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-2xl font-black text-white">
-                                            {lastExamSession.final_score}%
-                                        </div>
-                                        <div className="text-rose-200 text-xs">Başarı</div>
-                                    </div>
-                                </div>
-
-                                {/* Arrow */}
-                                <ChevronRight className="w-8 h-8 text-white/50 group-hover:text-white group-hover:translate-x-2 transition-all" />
-                            </div>
-                        </Link>
-                    </motion.div>
-                )}
 
 
 
