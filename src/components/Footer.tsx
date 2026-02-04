@@ -22,7 +22,7 @@ export default function Footer() {
                     {/* İletişim */}
                     <div className="text-center md:text-left">
                         <h3 className="text-xl font-bold mb-4">İletişim</h3>
-                        <ul className="space-y-2 opacity-80">
+                        <ul className="space-y-2 text-white/90">
 
                             <li>Whatsapp: +90 (541) 615 0721</li>
                             <li>Adres: Pamukkale, Denizli, Türkiye</li>
@@ -48,7 +48,7 @@ export default function Footer() {
 
                 {/* Güvenli Ödeme */}
                 <div className="mt-10 pt-8 border-t border-white/10 flex flex-col items-center">
-                    <p className="text-sm opacity-60 mb-4">Güvenli Ödeme</p>
+                    <p className="text-sm text-white/80 mb-4">Güvenli Ödeme</p>
                     <div className="flex flex-wrap justify-center items-center gap-3 bg-white/95 rounded-2xl px-6 py-4">
                         <img
                             src="https://www.paytr.com/oos-assets/logo/link-page/verified-visa.svg"
@@ -93,7 +93,7 @@ export default function Footer() {
                     </div>
                 </div>
 
-                <div className="mt-16 text-center opacity-60 text-sm">
+                <div className="mt-16 text-center text-white/80 text-sm">
                     <p>© {new Date().getFullYear()} BilsemC2. Tüm hakları saklıdır.</p>
                 </div>
             </div>

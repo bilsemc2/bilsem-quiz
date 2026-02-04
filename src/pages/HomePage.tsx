@@ -273,12 +273,12 @@ const HomePage: React.FC = () => {
                     Özel Ders
                   </span>
                   <h3 className="text-3xl lg:text-4xl font-poppins font-black text-gray-900 dark:text-white">
-                    Birebir Öğretmenle <span className="text-emerald-500">Öğren</span>
+                    Birebir Öğretmenle <span className="text-emerald-700 dark:text-emerald-400">Öğren</span>
                   </h3>
                 </div>
 
                 <p className="text-lg text-gray-600 dark:text-gray-400 font-medium max-w-xl">
-                  Online veya yüz yüze özel ders almak, konularını daha detaylı öğrenmek istiyorsan <strong className="text-emerald-600">DersimVar.com</strong> tam sana göre! Alanında uzman öğretmenlerle tanış.
+                  Online veya yüz yüze özel ders almak, konularını daha detaylı öğrenmek istiyorsan <strong className="text-emerald-700 dark:text-emerald-400">DersimVar.com</strong> tam sana göre! Alanında uzman öğretmenlerle tanış.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-center lg:justify-start">
@@ -424,7 +424,7 @@ const HomePage: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400 font-medium mb-4 text-sm">
                 Görsel düşünme ve analoji kurma becerilerini geliştir
               </p>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold rounded-full text-sm group-hover:bg-blue-500 group-hover:text-white transition-colors">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-bold rounded-full text-sm group-hover:bg-blue-500 group-hover:text-white transition-colors">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
                 </svg>
@@ -449,7 +449,7 @@ const HomePage: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400 font-medium mb-4 text-sm">
                 Türkçe deyimleri eğlenceli bir şekilde öğren ve pekiştir
               </p>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-bold rounded-full text-sm group-hover:bg-amber-500 group-hover:text-white transition-colors">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-bold rounded-full text-sm group-hover:bg-amber-500 group-hover:text-white transition-colors">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
                 </svg>
