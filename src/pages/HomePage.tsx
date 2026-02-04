@@ -63,6 +63,7 @@ const HomePage: React.FC = () => {
                   alt="Beynini Kullan!"
                   width={600}
                   height={200}
+                  fetchPriority="high"
                   className="w-full max-w-[600px] drop-shadow-[0_20px_50px_rgba(126,48,225,0.3)]"
                 />
               </div>
