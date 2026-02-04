@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Brain, Heart, Sparkles, Eye } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
 interface Round {
     word: string;
@@ -36,9 +37,20 @@ const FAILURE_MESSAGES = [
     "Dikkatli bak! 👀",
 ];
 
-const StroopGame: React.FC = () => {
+interface StroopGameProps {
+    examMode?: boolean;
+    examLevel?: number;
+    examTimeLimit?: number;
+}
+
+const StroopGame: React.FC<StroopGameProps> = ({ examMode: examModeProp = false }) => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { submitResult } = useExam();
+
+    // examMode can come from props OR location.state (when navigating from ExamContinuePage)
+    const examMode = examModeProp || location.state?.examMode === true;
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [currentRound, setCurrentRound] = useState<Round | null>(null);
     const [roundNumber, setRoundNumber] = useState(0);
@@ -99,12 +111,12 @@ const StroopGame: React.FC = () => {
         setRoundStartTime(Date.now());
     }, [generateRound]);
 
-    // Auto start from HUB
+    // Auto start from HUB or Exam Mode
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
             startGame();
         }
-    }, [location.state, gameState, startGame]);
+    }, [location.state, gameState, startGame, examMode]);
 
     // Save game data on finish
     useEffect(() => {
@@ -114,6 +126,19 @@ const StroopGame: React.FC = () => {
             const avgReaction = reactionTimes.length > 0
                 ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
                 : 0;
+
+            // Exam mode: submit result and navigate
+            if (examMode) {
+                const accuracy = correctCount + wrongCount > 0
+                    ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
+                    : 0;
+                const passed = accuracy >= 60 && correctCount >= 8;
+                submitResult(passed, score, 1000, durationSeconds).then(() => {
+                    navigate('/atolyeler/sinav-simulasyonu/devam');
+                });
+                return;
+            }
+
             saveGamePlay({
                 game_id: 'stroop-renk',
                 score_achieved: score,
@@ -129,7 +154,7 @@ const StroopGame: React.FC = () => {
                 }
             });
         }
-    }, [gameState, score, correctCount, wrongCount, bestStreak, reactionTimes, saveGamePlay]);
+    }, [gameState, score, correctCount, wrongCount, bestStreak, reactionTimes, saveGamePlay, examMode, navigate, submitResult]);
 
     // Handle answer
     const handleAnswer = useCallback((answer: string) => {
