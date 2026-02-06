@@ -64,6 +64,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'sayisal-sifre': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'gurultu-filtresi': ZEKA_TURLERI.SECICI_DIKKAT,
     'sayi-sihirbazi': ZEKA_TURLERI.CALISMA_BELLEGI,
+    'matris-bulmaca': ZEKA_TURLERI.MANTIKSAL_ZEKA,
 
     // Arcade Oyunları
     'arcade-dark-maze': ZEKA_TURLERI.GORSEL_UZAMSAL,
@@ -124,6 +125,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'gurultu-filtresi': 'bireysel',
     'desen-boyama': 'bireysel',
     'sayi-sihirbazi': 'bireysel',
+    'matris-bulmaca': 'bireysel',
 
     // Arcade Oyunları
     'arcade-dark-maze': 'arcade',

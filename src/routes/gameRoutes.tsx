@@ -39,6 +39,7 @@ const FaceExpressionGame = React.lazy(() => import('@/components/BrainTrainer/Fa
 const KnowledgeCardGame = React.lazy(() => import('@/components/BrainTrainer/KnowledgeCardGame'));
 const PuzzleMasterGame = React.lazy(() => import('@/components/BrainTrainer/PuzzleMasterGame'));
 const PatternPainterGame = React.lazy(() => import('@/components/BrainTrainer/PatternPainterGame'));
+const MatrixPuzzleGame = React.lazy(() => import('@/components/BrainTrainer/MatrixPuzzleGame'));
 
 /**
  * Brain Trainer Game Routes
@@ -81,4 +82,5 @@ export const gameRoutes = [
     <Route key="sifre" path="/games/sayisal-sifre" element={<RequireAuth><NumberCipherGame /></RequireAuth>} />,
     <Route key="gurultu" path="/games/gurultu-filtresi" element={<RequireAuth><NoiseFilterGame /></RequireAuth>} />,
     <Route key="desen" path="/games/desen-boyama" element={<RequireAuth><PatternPainterGame /></RequireAuth>} />,
+    <Route key="matris-bulmaca" path="/games/matris-bulmaca" element={<RequireAuth><MatrixPuzzleGame /></RequireAuth>} />,
 ];

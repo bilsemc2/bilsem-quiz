@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'matris-bulmaca',
+            title: "Matris Bulmaca",
+            desc: "3×3 ızgarada deseni analiz et! Döndürme, aynalama ve renk değişimi kurallarıyla gizli hücreyi bul.",
+            icon: <Grid3X3 />,
+            color: "violet",
+            difficulty: "Orta",
+            link: "/games/matris-bulmaca",
+            isNew: true,
+            tuzo: "5.5.2 Kural Çıkarsama"
+        },
+        {
             id: 'sayi-sihirbazi',
             title: "Sayı Sihirbazı",
             desc: "Renkli kartları hafızana al, sonra renk, sayı ve matematik sorularını çöz!",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "amber",
             difficulty: "Orta",
             link: "/games/sayi-sihirbazi",
-            isNew: true,
             tuzo: "5.9.1 Çalışma Belleği (Güncelleme)"
         },
         {

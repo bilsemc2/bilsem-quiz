@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Rocket, Star, Users, Palette, Music, Lightbulb, Brain, Sparkles, Target, TrendingUp, Zap } from 'lucide-react';
+import { Rocket, Star, Users, Palette, Music, Lightbulb, Brain, Sparkles, Target, TrendingUp, Zap, MessageSquare } from 'lucide-react';
 
 const HomePage: React.FC = () => {
   const stats = [
@@ -106,6 +106,22 @@ const HomePage: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* AI Assistant Button */}
+            <motion.a
+              href="https://notebooklm.google.com/notebook/bb1c2a85-28f9-4e35-964b-d8bf2720554e"
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.2 }}
+              whileHover={{ scale: 1.05 }}
+              className="mt-8 px-8 py-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white font-poppins font-bold text-lg rounded-full shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform transition-all duration-300 inline-flex items-center gap-3"
+            >
+              <MessageSquare size={24} className="animate-pulse" />
+              🤖 AI Asistan ile Konuş
+              <span className="px-2 py-1 bg-white/20 rounded-full text-xs">YENİ</span>
+            </motion.a>
           </div>
         </div>
       </section>
