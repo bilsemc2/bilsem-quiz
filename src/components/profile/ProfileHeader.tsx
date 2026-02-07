@@ -1,7 +1,5 @@
 import React from 'react';
-import EditIcon from '@mui/icons-material/Edit';
-import { Badge } from '@mui/material';
-import MailIcon from '@mui/icons-material/Mail';
+import { Pencil, Mail } from 'lucide-react';
 import { UserProfile } from '@/types/profile';
 
 interface ProfileHeaderProps {
@@ -26,17 +24,16 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData, unreadCount, on
             className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-2 hover:bg-blue-600 transition-colors"
             title="Profili Düzenle"
           >
-            <EditIcon />
+            <Pencil size={20} />
           </button>
           {unreadCount > 0 && (
             <div className="absolute -top-2 -right-2">
-              <Badge 
-                badgeContent={unreadCount} 
-                color="error"
-                overlap="circular"
-              >
-                <MailIcon color="action" />
-              </Badge>
+              <div className="relative">
+                <Mail size={20} className="text-gray-500" />
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  {unreadCount}
+                </span>
+              </div>
             </div>
           )}
         </div>

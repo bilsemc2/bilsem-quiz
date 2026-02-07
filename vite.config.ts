@@ -43,9 +43,6 @@ export default defineConfig({
       'react',
       'react-dom',
       'react-router-dom',
-      '@mui/material',
-      '@emotion/react',
-      '@emotion/styled'
     ]
   },
   build: {
@@ -54,7 +51,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'mui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled']
         },
         assetFileNames: (assetInfo) => {
           if (!assetInfo.name) return 'assets/[name].[hash][extname]';
