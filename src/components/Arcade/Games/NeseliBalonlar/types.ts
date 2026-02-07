@@ -11,11 +11,14 @@ export type BalloonState = {
     color: BalloonColor;
     isPopped: boolean;
     isVisible: boolean;
+    position: number; // 0-indexed position from left
 };
 
 export type GamePhase = 'idle' | 'watching' | 'popping' | 'guessing' | 'result';
 
 export enum QuestionType {
     COLOR = 'COLOR',
-    NUMBER = 'NUMBER'
+    NUMBER = 'NUMBER',
+    POSITION = 'POSITION',
+    ORDER = 'ORDER'
 }

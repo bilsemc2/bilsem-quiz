@@ -162,15 +162,14 @@ const ReflectionSumGame: React.FC = () => {
             setStreak(0);
             setLives(l => {
                 if (l <= 1) {
-                    setTimeout(() => setStatus('gameover'), 1500);
+                    setTimeout(() => { setFeedback(null); setStatus('gameover'); }, 1500);
                     return 0;
                 }
                 return l - 1;
             });
             setTimeout(() => {
                 if (lives > 1) {
-                    setUserSequence([]);
-                    setFeedback(null);
+                    startLevel(level); // Yeni soru üret, aynı soruda bırakma
                 }
             }, 1500);
             return;
@@ -204,15 +203,14 @@ const ReflectionSumGame: React.FC = () => {
             setStreak(0);
             setLives(l => {
                 if (l <= 1) {
-                    setTimeout(() => setStatus('gameover'), 1500);
+                    setTimeout(() => { setFeedback(null); setStatus('gameover'); }, 1500);
                     return 0;
                 }
                 return l - 1;
             });
             setTimeout(() => {
                 if (lives > 1) {
-                    setUserSum('');
-                    setFeedback(null);
+                    startLevel(level); // Yeni soru üret, aynı soruda bırakma
                 }
             }, 1500);
         }
