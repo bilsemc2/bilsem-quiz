@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import EditProfileModal from '../components/EditProfileModal';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import {
-    Gift, Zap, ChevronRight, Sparkles, Trophy, Star, Flame, Crown, Lock, Brain, Tablet, Gamepad2, Mail, Music, Palette, Ticket, BarChart3, TrendingUp
+    Gift, Zap, Sparkles, ChevronRight, Ticket, Mail, BarChart3
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { UserProfile, QuizStats, ClassStudent } from '@/types/profile';
@@ -17,34 +16,11 @@ import UserMessages from '@/components/UserMessages';
 import TimeXPGain from '@/components/profile/TimeXPGain';
 import UserGameStats from '@/components/profile/UserGameStats';
 
-
-// Hızlı Erişim Butonları
-const QUICK_ACCESS_BUTTONS = [
-    {
-        id: 'tablet',
-        title: 'Tablet Değerlendirme',
-        description: 'Hazırlık oyunları',
-        icon: Tablet,
-        color: 'from-blue-500 to-cyan-500',
-        link: '/atolyeler/tablet-degerlendirme'
-    },
-    {
-        id: 'arcade',
-        title: 'BİLSEM Zeka',
-        description: 'Jeton at, oyununa başla!',
-        icon: Gamepad2,
-        color: 'from-purple-500 to-indigo-500',
-        link: '/bilsem-zeka'
-    },
-    /*{
-        id: 'quizizz',
-        title: 'Quizizz Kodları',
-        description: 'VIP quiz kodları',
-        icon: Ticket,
-        color: 'from-amber-500 to-orange-500',
-        link: '/quizizz-kodlari'
-    },*/
-];
+// Extracted Sub-Components
+import QuickAccessSection from '@/components/profile/QuickAccessSection';
+import TalentWorkshopsSection from '@/components/profile/TalentWorkshopsSection';
+import ExamResultSection from '@/components/profile/ExamResultSection';
+import AchievementsSection from '@/components/profile/AchievementsSection';
 
 export const ProfilePage: React.FC = () => {
     const { user, profile, refreshProfile } = useAuth();
@@ -54,13 +30,13 @@ export const ProfilePage: React.FC = () => {
     const [promoCode, setPromoCode] = useState('');
     const [isRedeeming, setIsRedeeming] = useState(false);
 
-    // Son tamamlanmış sınav - Supabase'den çekilir
     const [lastExamSession, setLastExamSession] = useState<{
         bzp_score: number | null;
         final_score: number;
         results: Array<{ passed: boolean; score: number; maxScore: number; level: number; moduleTitle?: string; moduleId?: string }>;
         completed_at: string;
     } | null>(null);
+
     const [userData, setUserData] = useState<UserProfile>({
         name: "",
         email: user?.email || "",
@@ -126,7 +102,6 @@ export const ProfilePage: React.FC = () => {
                 }));
             }
 
-            // Son tamamlanmış sınavı çek
             const { data: examData } = await supabase
                 .from('exam_sessions')
                 .select('bzp_score, final_score, results, completed_at')
@@ -146,7 +121,6 @@ export const ProfilePage: React.FC = () => {
         }
     };
 
-    // Keep stats in sync with global profile XP (from AuthContext)
     useEffect(() => {
         if (profile?.experience !== undefined) {
             const levelInfo = calculateLevelInfo(profile.experience);
@@ -185,7 +159,6 @@ export const ProfilePage: React.FC = () => {
         setIsRedeeming(true);
 
         try {
-            // 1. Kodu kontrol et
             const { data: codeData, error: codeError } = await supabase
                 .from('promo_codes')
                 .select('*')
@@ -196,17 +169,14 @@ export const ProfilePage: React.FC = () => {
                 toast.error('Bu kod galiba paralel evrenden gelmiş, bizim sistemde kaydı yok! 🛸');
                 return;
             }
-            // 2. Süre kontrolü
             if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
                 toast.error('Tüh! Bu kodun son kullanma tarihi geçmiş, antika olmuş! 🏺');
                 return;
             }
-            // 3. Kullanım limiti kontrolü
             if (codeData.current_uses >= codeData.max_uses) {
                 toast.error('Hızlı olan kazanır! Bu kodun tüm ödülleri çoktan kapışılmış... 🏃‍♂️💨');
                 return;
             }
-            // 4. Daha önce kullanılmış mı kontrol et
             const { data: usageData } = await supabase
                 .from('promo_code_usage')
                 .select('*')
@@ -218,15 +188,12 @@ export const ProfilePage: React.FC = () => {
                 toast.error('Hafızan harika ama bu kodu zaten cebe indirdin! Başka maceralara yelken açma zamanı... 🏴‍☠️✨');
                 return;
             }
-            // 5. İşlemi gerçekleştir
-            // Transaction benzeri bir akış (yetenek_alani'na göre XP ekleme)
             const { error: usageError } = await supabase
                 .from('promo_code_usage')
                 .insert([{ promo_code_id: codeData.id, student_id: user.id }]);
 
             if (usageError) throw usageError;
 
-            // XP'yi güncelle
             const newXP = (profile?.experience || 0) + codeData.xp_reward;
             const { error: profileError } = await supabase
                 .from('profiles')
@@ -235,16 +202,13 @@ export const ProfilePage: React.FC = () => {
 
             if (profileError) throw profileError;
 
-            // Kullanım sayısını artır
             await supabase
                 .from('promo_codes')
                 .update({ current_uses: codeData.current_uses + 1 })
                 .eq('id', codeData.id);
 
-            // Global state'i tazele
             await refreshProfile();
 
-            // Eğlenceli geri bildirim: Konfeti patlat!
             confetti({
                 particleCount: 150,
                 spread: 70,
@@ -252,11 +216,8 @@ export const ProfilePage: React.FC = () => {
                 colors: ['#6366f1', '#ec4899', '#8b5cf6', '#FACC15']
             });
 
-            // Gerçek XP miktarını gösteren şık toast
             showXPEarn(codeData.xp_reward, `${codeData.code} Promo Kodu Bonusunuz!`);
-
             setPromoCode('');
-            // local state update triggers level animation etc if handled by context
         } catch (error) {
             console.error('Promo code redemption error:', error);
             toast.error('Kod kullanılırken bir teknik sorun oluştu. 🛠️');
@@ -280,7 +241,6 @@ export const ProfilePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
-            {/* Edit Modal */}
             {isEditModalOpen && (
                 <EditProfileModal
                     onClose={() => setIsEditModalOpen(false)}
@@ -296,14 +256,12 @@ export const ProfilePage: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="relative bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-3xl p-8 mb-8 overflow-hidden"
                 >
-                    {/* Background effects */}
                     <div className="absolute inset-0 overflow-hidden">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
                         <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/20 rounded-full blur-2xl" />
                     </div>
 
                     <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                        {/* Sol - Profil Bilgisi */}
                         <div className="flex items-center gap-5">
                             <div className="relative">
                                 <img
@@ -351,7 +309,6 @@ export const ProfilePage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Sağ - XP Göstergesi */}
                         <div className="text-center md:text-right">
                             <div className="flex items-center justify-center md:justify-end gap-2 mb-2">
                                 <Zap className="w-8 h-8 text-yellow-400" fill="currentColor" />
@@ -360,8 +317,6 @@ export const ProfilePage: React.FC = () => {
                                 </span>
                                 <span className="text-xl text-yellow-300/80 font-medium">XP</span>
                             </div>
-
-                            {/* Level Progress */}
                             <div className="w-64 mx-auto md:mx-0">
                                 <div className="flex justify-between text-xs text-white/60 mb-1">
                                     <span>Seviye {quizStats.currentLevel}</span>
@@ -383,204 +338,12 @@ export const ProfilePage: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* Hızlı Erişim Butonları - ÖNCELİKLİ */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8"
-                >
-                    {QUICK_ACCESS_BUTTONS.map((btn) => (
-                        <Link
-                            key={btn.id}
-                            to={btn.link}
-                            className="group flex items-center gap-4 bg-gradient-to-br from-slate-800/90 to-slate-900/90 hover:from-slate-700/90 hover:to-slate-800/90 border border-white/10 hover:border-white/20 rounded-2xl p-5 transition-all shadow-lg"
-                        >
-                            <div className={`w-14 h-14 bg-gradient-to-r ${btn.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
-                                <btn.icon className="w-7 h-7 text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-white text-lg">{btn.title}</h3>
-                                <p className="text-white/60 text-sm">{btn.description}</p>
-                            </div>
-                            <ChevronRight className="w-6 h-6 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" />
-                        </Link>
-                    ))}
-                </motion.div>
+                {/* Extracted Sections */}
+                <QuickAccessSection />
+                <TalentWorkshopsSection userData={userData} />
+                <ExamResultSection lastExamSession={lastExamSession} />
 
-                {/* Yetenek Alanına Göre Atölye Kısayolları */}
-                {(userData.yetenek_alani) && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 }}
-                        className="mb-8"
-                    >
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 bg-gradient-to-r from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-lg">
-                                <Sparkles className="w-4 h-4 text-white" />
-                            </div>
-                            <h2 className="text-lg font-bold bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent">Yetenek Atölyelerim</h2>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {(() => {
-                                const talentsInput = userData.yetenek_alani;
-                                let talents: string[] = [];
-                                if (Array.isArray(talentsInput)) {
-                                    talents = talentsInput;
-                                } else if (typeof talentsInput === 'string') {
-                                    talents = talentsInput.split(/[,,;]/).map(t => t.trim()).filter(Boolean);
-                                } else if (talentsInput) {
-                                    talents = [String(talentsInput)];
-                                }
-
-                                const hasMusic = talents.some(t => t.toLowerCase().includes('müzik'));
-                                const hasArt = talents.some(t => t.toLowerCase().includes('resim'));
-                                const hasGeneral = talents.some(t => t.toLowerCase().includes('genel yetenek') || t.toLowerCase().includes('genel zihinsel'));
-
-                                return (
-                                    <>
-                                        {hasGeneral && (
-                                            <Link
-                                                to="/atolyeler/bireysel-degerlendirme"
-                                                className="group flex items-center gap-4 bg-slate-800/90 hover:bg-slate-700/90 border border-indigo-500/40 rounded-2xl p-5 transition-all"
-                                            >
-                                                <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-indigo-500/20">
-                                                    <Brain className="w-7 h-7 text-white" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <h3 className="font-bold text-white text-lg">Bireysel Değerlendirme</h3>
-                                                    <p className="text-indigo-400/70 text-sm">2. Aşama simülasyonları</p>
-                                                </div>
-                                                <ChevronRight className="w-6 h-6 text-indigo-500/50 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
-                                            </Link>
-                                        )}
-                                        {hasMusic && (
-                                            <Link
-                                                to="/atolyeler/muzik"
-                                                className="group flex items-center gap-4 bg-slate-800/90 hover:bg-slate-700/90 border border-emerald-500/40 rounded-2xl p-5 transition-all"
-                                            >
-                                                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/20">
-                                                    <Music className="w-7 h-7 text-white" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <h3 className="font-bold text-white text-lg">Müzik Atölyesi</h3>
-                                                    <p className="text-emerald-400/70 text-sm">Yetenek parkuruna katıl</p>
-                                                </div>
-                                                <ChevronRight className="w-6 h-6 text-emerald-500/50 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
-                                            </Link>
-                                        )}
-                                        {hasArt && (
-                                            <Link
-                                                to="/atolyeler/resim"
-                                                className="group flex items-center gap-4 bg-slate-800/90 hover:bg-slate-700/90 border border-pink-500/40 rounded-2xl p-5 transition-all"
-                                            >
-                                                <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-pink-500/20">
-                                                    <Palette className="w-7 h-7 text-white" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <h3 className="font-bold text-white text-lg">Resim Atölyesi</h3>
-                                                    <p className="text-pink-400/70 text-sm">Yaratıcılığını sergile</p>
-                                                </div>
-                                                {/* Analiz Hakkı Göstergesi */}
-                                                {'resim_analiz_hakki' in userData && typeof userData.resim_analiz_hakki === 'number' && (
-                                                    <div className="bg-pink-500/20 px-3 py-1.5 rounded-xl border border-pink-500/30">
-                                                        <span className="text-xs text-pink-300">Analiz: </span>
-                                                        <span className={`font-bold ${(userData as UserProfile & { resim_analiz_hakki?: number }).resim_analiz_hakki! > 0 ? 'text-pink-400' : 'text-rose-400'}`}>
-                                                            {(userData as UserProfile & { resim_analiz_hakki?: number }).resim_analiz_hakki}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                <ChevronRight className="w-6 h-6 text-pink-500/50 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
-                                            </Link>
-                                        )}
-                                    </>
-                                );
-                            })()}
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* Son Simülasyon Sonucum - Mesajların Üstünde */}
-                {lastExamSession && lastExamSession.results.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 }}
-                        className="mb-8"
-                    >
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/30">
-                                <TrendingUp className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold bg-gradient-to-r from-pink-300 to-rose-400 bg-clip-text text-transparent">Son Simülasyon Sonucum</h2>
-                                <p className="text-pink-300/60 text-sm">Sınav Simülasyonu performansı</p>
-                            </div>
-                        </div>
-
-                        <Link
-                            to="/atolyeler/sinav-simulasyonu/sonuc"
-                            className="block bg-gradient-to-r from-rose-600 to-red-700 rounded-2xl p-6 hover:shadow-xl hover:shadow-rose-500/20 transition-all group"
-                        >
-                            <div className="flex items-center gap-6">
-                                {/* BZP Score - Veritabanından */}
-                                <div className="text-center">
-                                    <div className="text-5xl font-black text-white">
-                                        {lastExamSession.bzp_score || lastExamSession.final_score}
-                                    </div>
-                                    <div className="text-rose-200 text-xs font-bold uppercase tracking-wider">
-                                        {lastExamSession.bzp_score ? 'BZP' : 'Skor'}
-                                    </div>
-                                </div>
-
-                                <div className="w-px h-16 bg-white/20" />
-
-                                {/* Stats */}
-                                <div className="flex-1 grid grid-cols-3 gap-4 text-center">
-                                    <div>
-                                        <div className="text-2xl font-black text-white">
-                                            {lastExamSession.results.filter((r: { passed: boolean }) => r.passed).length}
-                                        </div>
-                                        <div className="text-rose-200 text-xs">Başarılı</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-2xl font-black text-white">{lastExamSession.results.length}</div>
-                                        <div className="text-rose-200 text-xs">Modül</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-2xl font-black text-white">
-                                            {lastExamSession.final_score}%
-                                        </div>
-                                        <div className="text-rose-200 text-xs">Başarı</div>
-                                    </div>
-                                </div>
-
-                                {/* Arrow */}
-                                <ChevronRight className="w-8 h-8 text-white/50 group-hover:text-white group-hover:translate-x-2 transition-all" />
-                            </div>
-
-                            {/* Gayret Gösterilecek Modüller */}
-                            {lastExamSession.results.filter((r: { passed: boolean }) => !r.passed).length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-white/20">
-                                    <p className="text-rose-200/80 text-xs font-medium mb-2">💪 Gayret Gösterilecek Modüller:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {lastExamSession.results
-                                            .map((r, idx: number) => ({ ...r, idx }))
-                                            .filter((r) => !r.passed)
-                                            .map((r) => (
-                                                <span key={r.idx} className="bg-white/20 text-white text-xs px-2 py-1 rounded-lg">
-                                                    {r.moduleTitle || `Modül ${r.level}`}
-                                                </span>
-                                            ))}
-                                    </div>
-                                </div>
-                            )}
-                        </Link>
-                    </motion.div>
-                )}
-
-                {/* Mesajlarım Bölümü */}
+                {/* Mesajlarım */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -651,7 +414,7 @@ export const ProfilePage: React.FC = () => {
                             <TimeXPGain />
                         </div>
 
-                        {/* Promo Kodu Gir Kartı */}
+                        {/* Promo Kodu */}
                         <div className="bg-slate-800/50 border border-violet-500/20 rounded-2xl p-5">
                             <div className="flex items-center gap-4 mb-4">
                                 <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center">
@@ -662,7 +425,6 @@ export const ProfilePage: React.FC = () => {
                                     <p className="text-white/50 text-sm">Hediye kodunu kullan</p>
                                 </div>
                             </div>
-
                             <div className="flex gap-2">
                                 <input
                                     type="text"
@@ -684,7 +446,7 @@ export const ProfilePage: React.FC = () => {
                             </p>
                         </div>
 
-                        {/* Arkadaş Davet Et Kartı */}
+                        {/* Arkadaş Davet */}
                         <div className="bg-slate-800/50 border border-pink-500/20 rounded-2xl p-5">
                             <button
                                 onClick={() => setShowReferral(!showReferral)}
@@ -735,61 +497,8 @@ export const ProfilePage: React.FC = () => {
                     <UserGameStats />
                 </motion.div>
 
-
-
-
-
-
-                {/* Başarımlar Önizleme */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="mt-8 bg-slate-800/50 border border-white/10 rounded-2xl p-6"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-r from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
-                                <Trophy className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent">Başarımlar</h2>
-                                <p className="text-amber-300/60 text-sm">XP kazan, rozet aç!</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-4">
-                        {[
-                            { icon: Star, unlocked: quizStats.currentLevel >= 1, name: 'İlk Adım' },
-                            { icon: Flame, unlocked: quizStats.currentLevel >= 5, name: '5. Seviye' },
-                            { icon: Crown, unlocked: quizStats.currentLevel >= 10, name: '10. Seviye' },
-                            { icon: Trophy, unlocked: false, name: 'Şampiyon' },
-                        ].map((badge, idx) => (
-                            <div
-                                key={idx}
-                                className={`relative flex flex-col items-center p-4 rounded-xl ${badge.unlocked
-                                    ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-500/30'
-                                    : 'bg-slate-700/30 border border-white/5'
-                                    }`}
-                            >
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${badge.unlocked
-                                    ? 'bg-gradient-to-r from-yellow-500 to-amber-500'
-                                    : 'bg-slate-600'
-                                    }`}>
-                                    {badge.unlocked ? (
-                                        <badge.icon className="w-6 h-6 text-white" />
-                                    ) : (
-                                        <Lock className="w-5 h-5 text-white/30" />
-                                    )}
-                                </div>
-                                <span className={`text-xs mt-2 ${badge.unlocked ? 'text-yellow-400' : 'text-white/30'}`}>
-                                    {badge.name}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </motion.div>
+                {/* Başarımlar */}
+                <AchievementsSection currentLevel={quizStats.currentLevel} />
             </div>
         </div>
     );

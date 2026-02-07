@@ -190,13 +190,24 @@ const NumberCipherGame: React.FC = () => {
         const selected = rules[Math.floor(Math.random() * rules.length)];
 
         const examples: { input: number; output: number }[] = [];
-        const nums = [3, 4, 7, 8, 2, 9];
-        const shuffled = nums.sort(() => Math.random() - 0.5);
-        for (let i = 0; i < 3; i++) {
-            examples.push({ input: shuffled[i], output: selected.fn(shuffled[i]) });
-        }
+        // Hem tek hem çift sayı içeren örnekler üret (kuralı anlayabilmek için)
+        const oddNums = [3, 5, 7, 9];
+        const evenNums = [2, 4, 6, 8];
+        const selectedOdd = oddNums[Math.floor(Math.random() * oddNums.length)];
+        const selectedEven = evenNums[Math.floor(Math.random() * evenNums.length)];
+        examples.push({ input: selectedOdd, output: selected.fn(selectedOdd) });
+        examples.push({ input: selectedEven, output: selected.fn(selectedEven) });
+        // Üçüncü örnek rastgele
+        const thirdNum = Math.random() > 0.5
+            ? oddNums.filter(n => n !== selectedOdd)[Math.floor(Math.random() * 3)]
+            : evenNums.filter(n => n !== selectedEven)[Math.floor(Math.random() * 3)];
+        examples.push({ input: thirdNum, output: selected.fn(thirdNum) });
 
-        const qNum = shuffled[3];
+        // Soru için örneklerde olmayan bir sayı seç
+        const allNums = [...oddNums, ...evenNums];
+        const usedNums = examples.map(e => e.input);
+        const availableNums = allNums.filter(n => !usedNums.includes(n));
+        const qNum = availableNums[Math.floor(Math.random() * availableNums.length)];
         const answer = selected.fn(qNum);
 
         const options = [answer];
