@@ -129,11 +129,11 @@ serve(async (req) => {
         // Admin kontrolü (profil tablosundan)
         const { data: profile } = await supabase
             .from('profiles')
-            .select('role')
+            .select('is_admin')
             .eq('id', user.id)
             .single();
 
-        if (!profile || profile.role !== 'admin') {
+        if (!profile || !profile.is_admin) {
             return new Response(JSON.stringify({ error: 'Admin yetkisi gerekli' }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 403,
