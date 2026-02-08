@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
+import { registerSW } from 'virtual:pwa-register'
 import { HelmetProvider } from 'react-helmet-async'
 
 // Tema başlangıcı: localStorage ve sistem tercihine göre dark sınıfı ekle/çıkar
@@ -40,4 +41,16 @@ const hideLoader = () => {
 // React render tamamlandığında çalıştır
 requestAnimationFrame(() => {
   requestAnimationFrame(hideLoader);
+});
+
+// PWA Service Worker kaydı
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm('Yeni bir güncelleme mevcut. Sayfayı yenilemek ister misiniz?')) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('Uygulama çevrimdışı kullanıma hazır!');
+  }
 });
