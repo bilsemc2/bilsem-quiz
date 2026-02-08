@@ -47,8 +47,10 @@ async function sendWebPush(
     const unsignedToken = `${headerB64}.${payloadB64}`;
 
     // VAPID private key'i import et
+    const paddedKey = vapidPrivateKey.replace(/-/g, '+').replace(/_/g, '/');
+    const padding = '='.repeat((4 - (paddedKey.length % 4)) % 4);
     const privateKeyRaw = Uint8Array.from(
-        atob(vapidPrivateKey.replace(/-/g, '+').replace(/_/g, '/') + '=='),
+        atob(paddedKey + padding),
         c => c.charCodeAt(0)
     );
 
