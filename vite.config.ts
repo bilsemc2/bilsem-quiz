@@ -44,7 +44,8 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        // globPatterns default olarak bırakıldı (dev modda uyarı vermemesi için)
+        // manuel olarak ihtiyaç olursa eklenebilir
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
         importScripts: ['/sw-push.js'],
         runtimeCaching: [
@@ -90,7 +91,7 @@ export default defineConfig({
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
         "font-src 'self' https://fonts.gstatic.com data: blob:;",
         "img-src 'self' data: blob: https:;",
-        "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.elevenlabs.io https://evmos-evm.publicnode.com/ https://*.google.com https://*.googleapis.com https://*.googlesyndication.com https://*.adtrafficquality.google/ https://*.doubleclick.net https://*.openai.com https://www.google-analytics.com https://region1.google-analytics.com https://*.googletagmanager.com data:;",
+        "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.elevenlabs.io https://evmos-evm.publicnode.com/ https://*.google.com https://*.googleapis.com https://fonts.gstatic.com https://*.googlesyndication.com https://*.adtrafficquality.google/ https://*.doubleclick.net https://*.openai.com https://www.google-analytics.com https://region1.google-analytics.com https://*.googletagmanager.com data:;",
         "frame-src 'self' https://www.google.com https://pagead2.googlesyndication.com https://*.doubleclick.net https://*.adtrafficquality.google https://www.youtube.com https://youtube.com;",
         "worker-src 'self' blob: data:;",
         "child-src 'self' blob: data:;"
@@ -110,7 +111,7 @@ export default defineConfig({
   },
   base: '/',
   publicDir: 'public',
-  assetsInclude: ['**/*.webp', '**/*.svg'], // WebP ve SVG dosyalarını asset olarak işle
+  assetsInclude: ['**/*.webp', '**/*.svg'],
   optimizeDeps: {
     include: [
       'react',
@@ -140,4 +141,4 @@ export default defineConfig({
       },
     },
   },
-})
+});

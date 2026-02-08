@@ -107,6 +107,8 @@ serve(async (req: Request) => {
         let failCount = 0;
         const expiredEndpoints: string[] = [];
 
+        console.log(`${subscriptions.length} aboneye gönderim başlıyor...`);
+
         for (const sub of subscriptions) {
             try {
                 const pushSubscription = {
@@ -117,13 +119,16 @@ serve(async (req: Request) => {
                     }
                 };
 
+                console.log(`Gönderiliyor: ${sub.endpoint.substring(0, 50)}...`);
                 await webpush.sendNotification(pushSubscription, notificationPayload);
                 successCount++;
+                console.log(`Başarılı: ${sub.endpoint.substring(0, 50)}...`);
             } catch (error: unknown) {
                 const pushError = error as { statusCode?: number; message?: string };
                 if (pushError.statusCode === 410 || pushError.statusCode === 404) {
                     // Expired subscription — sil
                     expiredEndpoints.push(sub.endpoint);
+                    console.log(`Abone süresi dolmuş, temizlenecek: ${sub.endpoint.substring(0, 50)}...`);
                 }
                 failCount++;
                 console.error(`Push başarısız (${sub.endpoint.substring(0, 50)}...): ${pushError.statusCode || 'unknown'} - ${pushError.message || 'unknown error'}`);

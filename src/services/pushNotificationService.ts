@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+const VAPID_PUBLIC_KEY_FALLBACK = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
 /**
  * Base64 URL string'i Uint8Array'e çevirir (VAPID key için gerekli)
@@ -47,6 +47,9 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
  * Push subscription oluşturur ve Supabase'e kaydeder
  */
 export async function subscribeToPush(): Promise<boolean> {
+    const publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    console.log('Push aboneliği başlatılıyor, VAPID Key mevcut mu:', !!publicKey);
+
     try {
         if (!isPushSupported()) {
             console.warn('Push notifications desteklenmiyor');
@@ -65,24 +68,27 @@ export async function subscribeToPush(): Promise<boolean> {
         // Mevcut subscription varsa kontrol et
         const existingSubscription = await registration.pushManager.getSubscription();
         if (existingSubscription) {
+            console.log('Mevcut subscription bulundu, güncelleniyor');
             // Zaten abone, Supabase'de olduğundan emin ol
             await saveSubscriptionToSupabase(existingSubscription);
             return true;
         }
 
         // Yeni subscription oluştur
-        if (!VAPID_PUBLIC_KEY) {
-            console.error('VITE_VAPID_PUBLIC_KEY tanımlanmamış. Push aboneliği oluşturulamıyor.');
+        if (!publicKey) {
+            console.error('VITE_VAPID_PUBLIC_KEY tanımlanmamış. .env dosyasını ve sayfayı yenileyip yenilemediğinizi kontrol edin.');
             return false;
         }
 
+        console.log('Yeni push subscription oluşturuluyor...');
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer
+            applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer
         });
 
         // Supabase'e kaydet
         await saveSubscriptionToSupabase(subscription);
+        console.log('Push aboneliği başarıyla tamamlandı');
         return true;
     } catch (error) {
         console.error('Push subscription hatası:', error);
