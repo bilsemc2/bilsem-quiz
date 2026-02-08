@@ -28,6 +28,7 @@ import {
   ConfirmationNumber as TicketIcon,
   Psychology as BrainIcon,
   Inventory as PackageIcon,
+  NotificationsActive as NotifIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -43,6 +44,7 @@ import TalentAnalytics from '../components/admin/TalentAnalytics';
 import StudentStatistics from '../components/admin/StudentStatistics';
 import StoryGeneratorPage from './Story/StoryGeneratorPage';
 import PackageManagement from '../components/admin/PackageManagement';
+import PushNotificationAdmin from '../components/admin/PushNotificationAdmin';
 import { toast } from 'sonner';
 
 interface Notification {
@@ -141,6 +143,13 @@ const AdminPage: React.FC = () => {
       icon: <PackageIcon />,
       component: <PackageManagement />,
       path: '/admin/packages',
+    },
+    {
+      id: 'push-notifications',
+      title: 'Push Bildirim',
+      icon: <NotifIcon />,
+      component: <PushNotificationAdmin />,
+      path: '/admin/push-notifications',
     },
   ]);
 
