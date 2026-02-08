@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-const VAPID_PUBLIC_KEY_FALLBACK = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
 
 /**
  * Base64 URL string'i Uint8Array'e çevirir (VAPID key için gerekli)
