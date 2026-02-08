@@ -9,6 +9,7 @@ import { SoundProvider } from './contexts/SoundContext';
 import { Toaster, toast } from 'sonner';
 import AdminMessageNotification from './components/AdminMessageNotification';
 import GlobalXPTimer from './components/GlobalXPTimer';
+import PushNotificationPrompt from './components/PushNotificationPrompt';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Route Modules
@@ -101,6 +102,7 @@ function App() {
             <ExamProvider>
               <AdminMessageNotification />
               <GlobalXPTimer />
+              <PushNotificationPrompt />
               <LocationAwareRouter />
             </ExamProvider>
           </Router>
