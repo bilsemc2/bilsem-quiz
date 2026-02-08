@@ -76,7 +76,8 @@ export async function subscribeToPush(): Promise<boolean> {
 
         // Yeni subscription oluştur
         if (!publicKey) {
-            console.error('VITE_VAPID_PUBLIC_KEY tanımlanmamış. .env dosyasını ve sayfayı yenileyip yenilemediğinizi kontrol edin.');
+            console.error('VITE_VAPID_PUBLIC_KEY tanımlanmamış.');
+            console.warn('Canlı ortamda (Netlify/Vercel) bu değişkeni Site Settings > Environment Variables kısmına eklemeniz gerekir.');
             return false;
         }
 
