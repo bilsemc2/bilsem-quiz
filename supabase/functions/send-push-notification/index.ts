@@ -1,102 +1,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import webpush from 'npm:web-push@3.6.7'
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-/**
- * JWT'yi base64url decode eder
- */
-function base64UrlDecode(str: string): string {
-    str = str.replace(/-/g, '+').replace(/_/g, '/');
-    while (str.length % 4) str += '=';
-    return atob(str);
-}
-
-/**
- * VAPID imzalaması için gerekli Web Push gönderim fonksiyonu
- * Deno ortamında web-push npm paketi yerine native fetch + Web Crypto API kullanılır
- */
-async function sendWebPush(
-    subscription: { endpoint: string; p256dh: string; auth: string },
-    payload: string,
-    vapidSubject: string,
-    vapidPublicKey: string,
-    vapidPrivateKey: string
-): Promise<Response> {
-    // Web Push spesifikasyonuna göre VAPID JWT oluştur
-    const endpoint = new URL(subscription.endpoint);
-    const audience = `${endpoint.protocol}//${endpoint.host}`;
-
-    // JWT Header
-    const header = { typ: 'JWT', alg: 'ES256' };
-
-    // JWT Payload — 12 saat geçerli
-    const jwtPayload = {
-        aud: audience,
-        exp: Math.floor(Date.now() / 1000) + 43200,
-        sub: vapidSubject
-    };
-
-    // Base64url encode
-    const encoder = new TextEncoder();
-    const headerB64 = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const payloadB64 = btoa(JSON.stringify(jwtPayload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const unsignedToken = `${headerB64}.${payloadB64}`;
-
-    // VAPID private key'i import et
-    const paddedKey = vapidPrivateKey.replace(/-/g, '+').replace(/_/g, '/');
-    const padding = '='.repeat((4 - (paddedKey.length % 4)) % 4);
-    const privateKeyRaw = Uint8Array.from(
-        atob(paddedKey + padding),
-        c => c.charCodeAt(0)
-    );
-
-    const cryptoKey = await crypto.subtle.importKey(
-        'raw',
-        privateKeyRaw,
-        { name: 'ECDSA', namedCurve: 'P-256' },
-        false,
-        ['sign']
-    );
-
-    // İmzala
-    const signature = await crypto.subtle.sign(
-        { name: 'ECDSA', hash: 'SHA-256' },
-        cryptoKey,
-        encoder.encode(unsignedToken)
-    );
-
-    // DER formatından raw formata dönüştür
-    const sigArray = new Uint8Array(signature);
-    const signatureB64 = btoa(String.fromCharCode(...sigArray))
-        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-    const jwt = `${unsignedToken}.${signatureB64}`;
-
-    // Push mesajı şifrele (aes128gcm)
-    // Basit plaintext gönderimi (encrypted push content encoding gerekir)
-    // Deno'da tam Web Push encryption karmaşık olduğundan,
-    // basit bir TTL:0 + body gönderimi yapıyoruz
-
-    const response = await fetch(subscription.endpoint, {
-        method: 'POST',
-        headers: {
-            'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
-            'Content-Type': 'application/octet-stream',
-            'Content-Encoding': 'aes128gcm',
-            'TTL': '86400',
-            'Urgency': 'normal'
-        },
-        body: encoder.encode(payload)
-    });
-
-    return response;
-}
-
-serve(async (req) => {
+serve(async (req: Request) => {
     // CORS preflight
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
@@ -168,7 +79,7 @@ serve(async (req) => {
         }
 
         if (!subscriptions || subscriptions.length === 0) {
-            return new Response(JSON.stringify({ message: 'Hiç abone bulunamadı', sent: 0 }), {
+            return new Response(JSON.stringify({ message: 'Hiç abone bulunamadı', sent: 0, failed: 0, total: 0 }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 200,
             });
@@ -179,8 +90,17 @@ serve(async (req) => {
         const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')!;
         const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:info@bilsemc2.com';
 
+        // web-push kütüphanesini yapılandır
+        webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+
         // Bildirim payload
-        const notificationPayload = JSON.stringify({ title, body, url: url || '/' });
+        const notificationPayload = JSON.stringify({
+            title,
+            body,
+            url: url || '/',
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-192x192.png'
+        });
 
         // Tüm abonelere gönder
         let successCount = 0;
@@ -189,27 +109,24 @@ serve(async (req) => {
 
         for (const sub of subscriptions) {
             try {
-                const response = await sendWebPush(
-                    { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
-                    notificationPayload,
-                    vapidSubject,
-                    vapidPublicKey,
-                    vapidPrivateKey
-                );
+                const pushSubscription = {
+                    endpoint: sub.endpoint,
+                    keys: {
+                        p256dh: sub.p256dh,
+                        auth: sub.auth
+                    }
+                };
 
-                if (response.status === 201 || response.status === 200) {
-                    successCount++;
-                } else if (response.status === 410 || response.status === 404) {
+                await webpush.sendNotification(pushSubscription, notificationPayload);
+                successCount++;
+            } catch (error: unknown) {
+                const pushError = error as { statusCode?: number; message?: string };
+                if (pushError.statusCode === 410 || pushError.statusCode === 404) {
                     // Expired subscription — sil
                     expiredEndpoints.push(sub.endpoint);
-                    failCount++;
-                } else {
-                    failCount++;
-                    console.error(`Push başarısız: ${response.status} - ${await response.text()}`);
                 }
-            } catch (error) {
                 failCount++;
-                console.error(`Push gönderim hatası:`, error);
+                console.error(`Push başarısız (${sub.endpoint.substring(0, 50)}...): ${pushError.statusCode || 'unknown'} - ${pushError.message || 'unknown error'}`);
             }
         }
 
@@ -232,8 +149,9 @@ serve(async (req) => {
             status: 200,
         });
 
-    } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+    } catch (error: unknown) {
+        const err = error as { message?: string };
+        return new Response(JSON.stringify({ error: err.message || 'Bilinmeyen hata' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500,
         });
