@@ -14,14 +14,27 @@ const PushNotificationPrompt: React.FC = () => {
     const [isSubscribing, setIsSubscribing] = useState(false);
 
     useEffect(() => {
-        // Koşullar: giriş yapmış, push destekleniyor, daha önce sorulmamış, izin henüz verilmemiş
-        if (
-            user &&
-            isPushSupported() &&
-            !hasBeenAskedForPermission() &&
-            getNotificationPermission() === 'default'
-        ) {
-            // Sayfa yüklendikten 5 saniye sonra göster (kullanıcıyı hemen rahatsız etme)
+        if (!user || !isPushSupported()) return;
+
+        const permission = getNotificationPermission();
+
+        if (permission === 'granted') {
+            // İzin zaten verilmiş — subscription yoksa oluştur (sessizce)
+            const autoSubscribe = async () => {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    const existingSub = await registration.pushManager.getSubscription();
+                    if (!existingSub) {
+                        // Subscription yok, oluştur ve Supabase'e kaydet
+                        await subscribeToPush();
+                    }
+                } catch (err) {
+                    console.error('Otomatik push subscription hatası:', err);
+                }
+            };
+            autoSubscribe();
+        } else if (permission === 'default' && !hasBeenAskedForPermission()) {
+            // Henüz sorulmamış — banner göster
             const timer = setTimeout(() => setShowPrompt(true), 5000);
             return () => clearTimeout(timer);
         }
