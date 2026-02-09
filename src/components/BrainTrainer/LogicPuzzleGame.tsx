@@ -594,17 +594,6 @@ const LogicPuzzleGame: React.FC<LogicPuzzleGameProps> = ({ examMode = false }) =
                                         />
                                     ))}
                                 </div>
-
-                                {/* Rule reveal on feedback */}
-                                {phase === 'feedback' && (
-                                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                                        className="mt-4 bg-white/5 rounded-2xl p-4 border border-white/10 text-center">
-                                        <p className="text-xs text-slate-400">
-                                            <span className="font-bold text-white">Kural: </span>
-                                            {puzzle.ruleDescription}
-                                        </p>
-                                    </motion.div>
-                                )}
                             </div>
                         </motion.div>
                     )}
@@ -665,7 +654,15 @@ const LogicPuzzleGame: React.FC<LogicPuzzleGameProps> = ({ examMode = false }) =
                                 <motion.div animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }} transition={{ duration: 0.5 }}>
                                     {feedbackCorrect ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" /> : <XCircle size={64} className="mx-auto mb-4 text-white" />}
                                 </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
+                                <p className="text-3xl font-black text-white mb-3">{feedbackMessage}</p>
+                                {puzzle && (
+                                    <div className="mt-2 bg-white/15 rounded-xl px-5 py-3">
+                                        <p className="text-sm text-white/90">
+                                            <span className="font-bold">Kural: </span>
+                                            {puzzle.ruleDescription}
+                                        </p>
+                                    </div>
+                                )}
                             </motion.div>
                         </motion.div>
                     )}
