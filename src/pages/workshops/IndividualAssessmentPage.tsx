@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes } from 'lucide-react';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './bireysel.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'konum-bulmaca',
+            title: "Konum Bulmaca",
+            desc: "Şekillerin kesişim bölgelerinde noktanın konumunu bul! Uzamsal ilişki ve mantıksal analiz.",
+            icon: <MapPin />,
+            color: "teal",
+            difficulty: "Orta",
+            link: "/games/konum-bulmaca",
+            isNew: true,
+            tuzo: "5.5.3 Uzamsal İlişki"
+        },
+        {
             id: 'patterniq-express',
             title: "PatternIQ Express",
             desc: "Vagon dizisindeki örüntüyü çöz! Şekillerin dönüşüm kuralını bul ve sıradaki vagonu seç.",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "cyan",
             difficulty: "Orta",
             link: "/games/patterniq-express",
-            isNew: true,
             tuzo: "5.5.1 Örüntü Analizi"
         },
         {

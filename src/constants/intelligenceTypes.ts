@@ -83,6 +83,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'desen-boyama': ZEKA_TURLERI.GORSEL_UZAMSAL,
     'gorsel-cebir-dengesi': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'patterniq-express': ZEKA_TURLERI.MANTIKSAL_ZEKA,
+    'konum-bulmaca': ZEKA_TURLERI.GORSEL_UZAMSAL,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -130,6 +131,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'matris-bulmaca': 'bireysel',
     'gorsel-cebir-dengesi': 'bireysel',
     'patterniq-express': 'bireysel',
+    'konum-bulmaca': 'bireysel',
 
     // Arcade Oyunları
     'arcade-dark-maze': 'arcade',

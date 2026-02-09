@@ -140,6 +140,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 120,
         active: true
     },
+    {
+        id: 'konum-bulmaca',
+        title: 'Konum Bulmaca',
+        link: '/games/konum-bulmaca',
+        tuzo: '5.5.3 Uzamsal İlişki',
+        category: 'perception',
+        timeLimit: 120,
+        active: true
+    },
 
     // DİKKAT
     {
