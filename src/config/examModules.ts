@@ -131,6 +131,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 120,
         active: true
     },
+    {
+        id: 'patterniq-express',
+        title: 'PatternIQ Express',
+        link: '/games/patterniq-express',
+        tuzo: '5.5.1 Örüntü Analizi',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
 
     // DİKKAT
     {
