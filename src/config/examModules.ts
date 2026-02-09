@@ -149,6 +149,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 120,
         active: true
     },
+    {
+        id: 'mindmatch-oruntu',
+        title: 'MindMatch Örüntü',
+        link: '/games/mindmatch-oruntu',
+        tuzo: '5.5.4 Kategori Analizi',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
 
     // DİKKAT
     {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin } from 'lucide-react';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin, Puzzle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './bireysel.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'mindmatch-oruntu',
+            title: "MindMatch Örüntü",
+            desc: "Kategoriye ait tüm öğeleri bul! Kalıbı çöz, eşleşmeyenleri ayır. Sınıflandırma ve analiz becerisi.",
+            icon: <Puzzle />,
+            color: "violet",
+            difficulty: "Orta",
+            link: "/games/mindmatch-oruntu",
+            isNew: true,
+            tuzo: "5.5.4 Kategori Analizi"
+        },
+        {
             id: 'konum-bulmaca',
             title: "Konum Bulmaca",
             desc: "Şekillerin kesişim bölgelerinde noktanın konumunu bul! Uzamsal ilişki ve mantıksal analiz.",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "teal",
             difficulty: "Orta",
             link: "/games/konum-bulmaca",
-            isNew: true,
             tuzo: "5.5.3 Uzamsal İlişki"
         },
         {
