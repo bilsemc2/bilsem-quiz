@@ -85,6 +85,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'patterniq-express': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'konum-bulmaca': ZEKA_TURLERI.GORSEL_UZAMSAL,
     'mindmatch-oruntu': ZEKA_TURLERI.MANTIKSAL_ZEKA,
+    'mantik-bulmacasi': ZEKA_TURLERI.MANTIKSAL_ZEKA,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -134,6 +135,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'patterniq-express': 'bireysel',
     'konum-bulmaca': 'bireysel',
     'mindmatch-oruntu': 'bireysel',
+    'mantik-bulmacasi': 'bireysel',
 
     // Arcade Oyunları
     'arcade-dark-maze': 'arcade',

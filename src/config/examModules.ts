@@ -158,6 +158,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 120,
         active: true
     },
+    {
+        id: 'mantik-bulmacasi',
+        title: 'Görsel Mantık Bulmacası',
+        link: '/games/mantik-bulmacasi',
+        tuzo: '5.5.1 Kural Çıkarsama',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
 
     // DİKKAT
     {
