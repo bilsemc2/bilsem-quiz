@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info } from 'lucide-react';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './bireysel.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'gorsel-cebir-dengesi',
+            title: "Görsel Cebir Dengesi",
+            desc: "Terazideki şekillerin ağırlık ilişkisini çöz ve dengeyi sağla! Görsel akıl yürütme ve kural çıkarsama.",
+            icon: <Scale />,
+            color: "indigo",
+            difficulty: "Zor",
+            link: "/games/gorsel-cebir-dengesi",
+            isNew: true,
+            tuzo: "5.5.2 Kural Çıkarsama"
+        },
+        {
             id: 'matris-bulmaca',
             title: "Matris Bulmaca",
             desc: "3×3 ızgarada deseni analiz et! Döndürme, aynalama ve renk değişimi kurallarıyla gizli hücreyi bul.",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "violet",
             difficulty: "Orta",
             link: "/games/matris-bulmaca",
-            isNew: true,
             tuzo: "5.5.2 Kural Çıkarsama"
         },
         {

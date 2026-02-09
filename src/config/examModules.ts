@@ -122,6 +122,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 150,
         active: true
     },
+    {
+        id: 'gorsel-cebir-dengesi',
+        title: 'Görsel Cebir Dengesi',
+        link: '/games/gorsel-cebir-dengesi',
+        tuzo: '5.5.2 Kural Çıkarsama',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
 
     // DİKKAT
     {
