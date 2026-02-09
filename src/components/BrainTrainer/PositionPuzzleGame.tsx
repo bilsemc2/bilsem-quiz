@@ -169,6 +169,25 @@ function getRegionSignature(p: Point, shapes: Shape[]): string {
     return shapes.map(s => isPointInShape(p, s) ? '1' : '0').join('');
 }
 
+// Compute visual position of a dot after the entire SVG is rotated
+function getVisualDotPosition(dot: Point, viewRotation: number): Point {
+    const center = { x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2 };
+    return rotatePoint(dot, center, viewRotation);
+}
+
+// Check if all options are visually distinct (dots don't overlap after rotation)
+function areOptionsVisuallyDistinct(options: PuzzleOption[], minDist = 25): boolean {
+    const visuals = options.map(o => getVisualDotPosition(o.point, o.rotation));
+    for (let i = 0; i < visuals.length; i++) {
+        for (let j = i + 1; j < visuals.length; j++) {
+            const dx = visuals[i].x - visuals[j].x;
+            const dy = visuals[i].y - visuals[j].y;
+            if (Math.sqrt(dx * dx + dy * dy) < minDist) return false;
+        }
+    }
+    return true;
+}
+
 function generatePuzzle(level: number): PuzzleState | null {
     let attempts = 0;
     const shapeCount = level <= 8 ? 2 : 3;
@@ -201,18 +220,30 @@ function generatePuzzle(level: number): PuzzleState | null {
         const distractorRegions = validRegions.filter(([sig]) => sig !== targetSig);
         if (distractorRegions.length === 0) continue;
 
-        const options: PuzzleOption[] = [];
+        // Try generating visually distinct options (up to 5 retries)
+        let optionsValid = false;
+        let options: PuzzleOption[] = [];
         const correctOptionId = getRandomInt(0, 3);
 
-        for (let i = 0; i < 4; i++) {
-            const viewRotation = [0, 90, 180, 270][getRandomInt(0, 3)];
-            if (i === correctOptionId) {
-                options.push({ id: i, rotation: viewRotation, point: correctPoint });
-            } else {
-                const [, dPoints] = distractorRegions[Math.floor(Math.random() * distractorRegions.length)];
-                options.push({ id: i, rotation: viewRotation, point: dPoints[Math.floor(Math.random() * dPoints.length)] });
+        for (let optAttempt = 0; optAttempt < 5; optAttempt++) {
+            options = [];
+            for (let i = 0; i < 4; i++) {
+                const viewRotation = [0, 90, 180, 270][getRandomInt(0, 3)];
+                if (i === correctOptionId) {
+                    options.push({ id: i, rotation: viewRotation, point: correctPoint });
+                } else {
+                    const [, dPoints] = distractorRegions[Math.floor(Math.random() * distractorRegions.length)];
+                    options.push({ id: i, rotation: viewRotation, point: dPoints[Math.floor(Math.random() * dPoints.length)] });
+                }
+            }
+
+            if (areOptionsVisuallyDistinct(options)) {
+                optionsValid = true;
+                break;
             }
         }
+
+        if (!optionsValid) continue;
 
         return { shapes, targetPoint, options, correctOptionId };
     }
