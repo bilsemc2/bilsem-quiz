@@ -73,7 +73,7 @@ const generateRound = (level: number) => {
     return { hours, minutes, offset };
 };
 
-// ─── Clock Face Component ────────────────────────────────
+// ─── Clock Face Component (Pure SVG) ─────────────────────
 interface ClockFaceProps {
     hourAngle: number;
     minuteAngle: number;
@@ -87,109 +87,111 @@ interface ClockFaceProps {
     size?: number;
 }
 
+// Convert clock angle (0=12, 90=3, 180=6, 270=9) to SVG line endpoint
+const angleToPoint = (cx: number, cy: number, angleDeg: number, length: number) => {
+    const rad = (angleDeg - 90) * (Math.PI / 180);
+    return { x: cx + Math.cos(rad) * length, y: cy + Math.sin(rad) * length };
+};
+
 const ClockFace: React.FC<ClockFaceProps> = ({
     hourAngle, minuteAngle, ghostHourAngle, ghostMinuteAngle,
     interactive, activeHand, onPointerDown, onPointerMove, onPointerUp, size = 260,
 }) => {
-    const faceStyle: React.CSSProperties = {
-        position: 'relative', width: size, height: size, borderRadius: '50%',
-        border: '5px solid rgba(255,255,255,0.2)',
-        background: 'radial-gradient(circle at 50% 50%, rgba(30,30,60,0.9) 0%, rgba(15,15,40,0.95) 100%)',
-        boxShadow: 'inset 0 0 30px rgba(99,102,241,0.15), 0 0 40px rgba(99,102,241,0.1)',
-        cursor: interactive ? 'crosshair' : 'default',
-        touchAction: 'none',
-    };
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = size / 2 - 5; // account for border
 
-    const numRadius = size * 0.35;
-    const centerX = size / 2;
-    const centerY = size / 2;
+    const hourLen = r * 0.5;
+    const minuteLen = r * 0.7;
+    const numR = r * 0.75;
 
-    const handBase: React.CSSProperties = {
-        position: 'absolute', left: '50%', top: '50%', transformOrigin: '50% 100%',
-        borderRadius: 999,
-    };
+    const hourTip = angleToPoint(cx, cy, hourAngle, hourLen);
+    const minuteTip = angleToPoint(cx, cy, minuteAngle, minuteLen);
 
     return (
-        <div
-            style={faceStyle}
+        <svg
+            width={size} height={size}
+            style={{ cursor: interactive ? 'crosshair' : 'default', touchAction: 'none' }}
             onPointerDown={interactive ? onPointerDown : undefined}
             onPointerMove={interactive ? onPointerMove : undefined}
             onPointerUp={interactive ? onPointerUp : undefined}
         >
+            {/* Clock face background */}
+            <circle cx={cx} cy={cy} r={r}
+                fill="url(#clockGrad)" stroke="rgba(255,255,255,0.2)" strokeWidth={5} />
+            <defs>
+                <radialGradient id="clockGrad">
+                    <stop offset="0%" stopColor="rgba(30,30,60,0.9)" />
+                    <stop offset="100%" stopColor="rgba(15,15,40,0.95)" />
+                </radialGradient>
+                <filter id="handGlow">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+            </defs>
+
             {/* Tick marks */}
             {Array.from({ length: 60 }).map((_, i) => {
                 const isMajor = i % 5 === 0;
-                const angle = (i * 6 - 90) * (Math.PI / 180);
-                const outerR = size * 0.46;
-                const innerR = isMajor ? size * 0.38 : size * 0.42;
-                const x1 = centerX + Math.cos(angle) * innerR;
-                const y1 = centerY + Math.sin(angle) * innerR;
-                const x2 = centerX + Math.cos(angle) * outerR;
-                const y2 = centerY + Math.sin(angle) * outerR;
+                const outerR = r * 0.95;
+                const innerR = isMajor ? r * 0.8 : r * 0.88;
+                const p1 = angleToPoint(cx, cy, i * 6, innerR);
+                const p2 = angleToPoint(cx, cy, i * 6, outerR);
                 return (
-                    <svg key={i} style={{ position: 'absolute', inset: 0, width: size, height: size, pointerEvents: 'none' }}>
-                        <line x1={x1} y1={y1} x2={x2} y2={y2}
-                            stroke={isMajor ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)'}
-                            strokeWidth={isMajor ? 2.5 : 1.2} strokeLinecap="round" />
-                    </svg>
+                    <line key={i} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                        stroke={isMajor ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)'}
+                        strokeWidth={isMajor ? 2.5 : 1.2} strokeLinecap="round" />
                 );
             })}
 
             {/* Numbers */}
             {Array.from({ length: 12 }).map((_, i) => {
                 const num = i === 0 ? 12 : i;
-                const angle = (i * 30 - 90) * (Math.PI / 180);
-                const x = centerX + Math.cos(angle) * numRadius;
-                const y = centerY + Math.sin(angle) * numRadius;
+                const p = angleToPoint(cx, cy, i * 30, numR);
                 return (
-                    <span key={`n${i}`} style={{
-                        position: 'absolute', left: x, top: y, transform: 'translate(-50%,-50%)',
-                        fontSize: size * 0.065, fontWeight: 700, color: 'rgba(255,255,255,0.75)',
-                        pointerEvents: 'none', zIndex: 3,
-                    }}>{num}</span>
+                    <text key={`n${i}`} x={p.x} y={p.y}
+                        textAnchor="middle" dominantBaseline="central"
+                        fill="rgba(255,255,255,0.75)" fontSize={size * 0.065} fontWeight={700}
+                        fontFamily="system-ui, sans-serif"
+                    >{num}</text>
                 );
             })}
 
             {/* Ghost hands (answer preview) */}
-            {ghostHourAngle !== null && (
-                <div style={{
-                    ...handBase, width: 5, height: size * 0.22,
-                    border: '2px dashed rgba(129,140,248,0.5)', background: 'transparent',
-                    transform: `translate(-50%, -100%) rotate(${ghostHourAngle}deg)`, zIndex: 1,
-                }} />
-            )}
-            {ghostMinuteAngle !== null && (
-                <div style={{
-                    ...handBase, width: 3, height: size * 0.32,
-                    border: '2px dashed rgba(129,140,248,0.5)', background: 'transparent',
-                    transform: `translate(-50%, -100%) rotate(${ghostMinuteAngle}deg)`, zIndex: 1,
-                }} />
-            )}
+            {ghostHourAngle !== null && (() => {
+                const tip = angleToPoint(cx, cy, ghostHourAngle, hourLen);
+                return <line x1={cx} y1={cy} x2={tip.x} y2={tip.y}
+                    stroke="rgba(129,140,248,0.5)" strokeWidth={5}
+                    strokeLinecap="round" strokeDasharray="6 4" />;
+            })()}
+            {ghostMinuteAngle !== null && (() => {
+                const tip = angleToPoint(cx, cy, ghostMinuteAngle, minuteLen);
+                return <line x1={cx} y1={cy} x2={tip.x} y2={tip.y}
+                    stroke="rgba(129,140,248,0.5)" strokeWidth={3}
+                    strokeLinecap="round" strokeDasharray="6 4" />;
+            })()}
 
             {/* Hour hand */}
-            <div style={{
-                ...handBase, width: 6, height: size * 0.22,
-                background: activeHand === 'hour' ? '#818cf8' : 'rgba(255,255,255,0.85)',
-                boxShadow: activeHand === 'hour' ? '0 0 12px rgba(129,140,248,0.6)' : '0 2px 6px rgba(0,0,0,0.3)',
-                transform: `translate(-50%, -100%) rotate(${hourAngle}deg)`, zIndex: 2,
-            }} />
+            <line x1={cx} y1={cy} x2={hourTip.x} y2={hourTip.y}
+                stroke={activeHand === 'hour' ? '#818cf8' : 'rgba(255,255,255,0.85)'}
+                strokeWidth={7} strokeLinecap="round"
+                filter={activeHand === 'hour' ? 'url(#handGlow)' : undefined} />
 
             {/* Minute hand */}
-            <div style={{
-                ...handBase, width: 4, height: size * 0.32,
-                background: activeHand === 'minute' ? '#a78bfa' : 'rgba(200,200,240,0.85)',
-                boxShadow: activeHand === 'minute' ? '0 0 12px rgba(167,139,250,0.6)' : '0 2px 6px rgba(0,0,0,0.3)',
-                transform: `translate(-50%, -100%) rotate(${minuteAngle}deg)`, zIndex: 2,
-            }} />
+            <line x1={cx} y1={cy} x2={minuteTip.x} y2={minuteTip.y}
+                stroke={activeHand === 'minute' ? '#a78bfa' : 'rgba(200,200,240,0.85)'}
+                strokeWidth={4} strokeLinecap="round"
+                filter={activeHand === 'minute' ? 'url(#handGlow)' : undefined} />
 
             {/* Center dot */}
-            <div style={{
-                position: 'absolute', width: 12, height: 12, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #a78bfa, #818cf8)', left: '50%', top: '50%',
-                transform: 'translate(-50%,-50%)', zIndex: 5,
-                boxShadow: '0 0 8px rgba(129,140,248,0.5)',
-            }} />
-        </div>
+            <circle cx={cx} cy={cy} r={7} fill="url(#dotGrad)" />
+            <defs>
+                <radialGradient id="dotGrad">
+                    <stop offset="0%" stopColor="#a78bfa" />
+                    <stop offset="100%" stopColor="#818cf8" />
+                </radialGradient>
+            </defs>
+        </svg>
     );
 };
 
