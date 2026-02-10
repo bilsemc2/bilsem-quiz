@@ -299,6 +299,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 120,
         active: true
     },
+    {
+        id: 'algisal-hiz',
+        title: 'Algısal Hız Testi',
+        link: '/games/algisal-hiz',
+        tuzo: '5.6.1 İşleme Hızı',
+        category: 'speed',
+        timeLimit: 120,
+        active: true
+    },
 
     // ALGI
     {

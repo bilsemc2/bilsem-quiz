@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'algisal-hiz',
+            title: "Algısal Hız Testi",
+            desc: "İki sayı dizisini karşılaştır — aynı mı farklı mı? Transpozisyon ve görsel benzerlik tuzaklarıyla işleme hızını test et!",
+            icon: <Eye />,
+            color: "cyan",
+            difficulty: "Orta",
+            link: "/games/algisal-hiz",
+            isNew: true,
+            tuzo: "5.6.1 İşleme Hızı"
+        },
+        {
             id: 'dikkat-ve-kodlama',
             title: "Dikkat ve Kodlama",
             desc: "Sayı-şekil eşleşmelerini ezberle, test maddelerini en hızlı şekilde doldur! İşleme hızı ve kodlama.",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "violet",
             difficulty: "Orta",
             link: "/games/dikkat-ve-kodlama",
-            isNew: true,
             tuzo: "5.6.1 İşleme Hızı"
         },
         {
