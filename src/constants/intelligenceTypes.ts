@@ -72,6 +72,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'pattern-pop': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'algisal-hiz': ZEKA_TURLERI.ISLEME_HIZI,
     'lazer-labirent': ZEKA_TURLERI.GORSEL_UZAMSAL,
+    'saat-problemi': ZEKA_TURLERI.SAYISAL_ZEKA,
 
     // Arcade Oyunları
     'arcade-dark-maze': ZEKA_TURLERI.GORSEL_UZAMSAL,
@@ -161,6 +162,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'sembol-arama': 'bireysel',
     'dikkat-ve-kodlama': 'bireysel',
     'lazer-labirent': 'bireysel',
+    'saat-problemi': 'bireysel',
 
     // Arcade Oyunları
     'arcade-dark-maze': 'arcade',
