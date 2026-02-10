@@ -302,3 +302,83 @@ const startGame = () => {
 - `src/components/Arcade/Games/DarkMaze/`
 - `src/components/Arcade/Games/RenkliBalon/`
 - `src/components/Arcade/README.md`
+
+---
+
+## Adım 7: YouTube İçerik Paketi
+
+Her yeni arcade oyunu için YouTube tanıtım içeriği oluştur.
+
+### Başlık Formülü
+
+```
+BİLSEM Zeka Arcade: [Oyun Adı] 🎮[emoji] [Kısa Kanca] | [TUZÖ Beceri Adı]
+```
+
+**Kurallar:**
+- Maks 70 karakter (mobil uyum)
+- İlk 40 karakterde ana kanca
+- En az 1 emoji
+- "BİLSEM Zeka" veya "Zeka Arcade" başta
+- TUZÖ beceri adı sonda
+
+**3 alternatif başlık üret**, farklı açılardan:
+1. Oyun mekaniği odaklı
+2. Zorluk/tuzak odaklı
+3. Eğlence/aksiyon odaklı
+
+### Açıklama Şablonu
+
+```
+🎮 BİLSEM Zeka Arcade: [Oyun Adı] — [Bir cümlelik oyun açıklaması]
+
+BİLSEM Zeka Arcade'in premium oyunlarından! [Oyuna özgü 1-2 cümle açıklama]
+
+⚡ Özellikler:
+• [Oyuna özgü özellik 1]
+• [Oyuna özgü özellik 2]
+• [Oyuna özgü özellik 3]
+• XP ile açılan premium içerik
+• TUZÖ [X.X.X Beceri Adı] müfredatına uygun
+
+🎯 TUZÖ Beceri: [X.X.X Beceri Adı]
+🎮 Kategori: Zeka Arcade — [Memory/Spatial/Logic/Flexibility]
+💰 XP Maliyeti: [30-50] XP
+
+🔗 Hemen Oyna: https://www.bilsemc2.com/bilsem-zeka
+🌐 Platform: https://www.bilsemc2.com
+
+#BİLSEM #ZekaArcade #BİLSEMZeka #[OyunaÖzgüHashtag] #[BeceriHashtag] #ZekaOyunları #TUZÖ #BİLSEMHazırlık #BilsemC2
+```
+
+### Küçük Resim (Thumbnail) AI İstemleri
+
+Her oyun için **3 farklı thumbnail istemi** üret:
+
+**İstem 1 — Oyun Mekaniği Odaklı:**
+```
+YouTube thumbnail, [renk paleti] gradient background, [oyunun ana görselini tanımla],
+bold Turkish text "[KISA BAŞLIK]" in [renk] with glow effect, arcade game style,
+clean modern design, 1280x720
+```
+
+**İstem 2 — Aksiyon/Eğlence Odaklı:**
+```
+YouTube thumbnail, vibrant [renk] gradient, [oyun karakterleri/elementleri aksiyon pozunda],
+bold Turkish text "[KANCA]" in white with neon glow, dynamic composition, game UI elements,
+1280x720
+```
+
+**İstem 3 — Premium/XP Odaklı:**
+```
+YouTube thumbnail, dark [renk] background with gold accents, [oyun elementleri],
+"PREMIUM" badge, XP coin icon, bold Turkish text "[OYUN ADI]", luxurious arcade feel,
+dramatic lighting, 1280x720
+```
+
+**Thumbnail Kuralları:**
+- Çözünürlük: 1280x720
+- Türkçe karakter desteği belirt
+- Çocuk dostu stil
+- Metin max 5 kelime (okunabilirlik)
+- Arcade/oyun atmosferi yansıt

@@ -765,6 +765,7 @@ transition={{ duration: 1.5, repeat: Infinity }}
 - [ ] Route eklendi ve test edildi
 - [ ] **examMode prop** eklendi (opsiyonel)
 - [ ] **examModules.ts**'e eklendi (opsiyonel)
+- [ ] **YouTube paketi** oluşturuldu (3 başlık, açıklama, 3 thumbnail istemi)
 
 ---
 
@@ -775,4 +776,83 @@ transition={{ duration: 1.5, repeat: Infinity }}
 - **Part-Whole**: `src/components/BrainTrainer/PartWholeGame.tsx`
 - **Visual Scanning**: `src/components/BrainTrainer/VisualScanningGame.tsx`
 - **Number Memory**: `src/components/BrainTrainer/NumberMemoryGame.tsx`
+- **Perceptual Speed**: `src/components/BrainTrainer/PerceptualSpeedGame.tsx`
 
+---
+
+## Adım 10: YouTube İçerik Paketi
+
+Her yeni simülatör için YouTube tanıtım içeriği oluştur.
+
+### Başlık Formülü
+
+```
+BİLSEM [Simülatör Adı] 🧠[emoji] [Kısa Kanca] | [TUZÖ Beceri Adı]
+```
+
+**Kurallar:**
+- Maks 70 karakter (mobil uyum)
+- İlk 40 karakterde ana kanca
+- En az 1 emoji
+- BİLSEM kelimesi başta
+- TUZÖ beceri adı sonda
+
+**3 alternatif başlık üret**, farklı açılardan:
+1. Oyun mekaniği odaklı
+2. Zorluk/tuzak odaklı
+3. Hız/beyin odaklı
+
+### Açıklama Şablonu
+
+```
+🧠 BİLSEM [Simülatör Adı] — [Bir cümlelik oyun açıklaması]
+
+Bu simülatör, BİLSEM 2. Aşama Bireysel Değerlendirme sınavına hazırlık için tasarlandı. [Oyuna özgü 1-2 cümle açıklama]
+
+⚡ Özellikler:
+• 20 seviye — [seviye ilerlemesi açıklaması]
+• [Oyuna özgü özellik 1]
+• [Oyuna özgü özellik 2]
+• [Oyuna özgü özellik 3]
+• 5 can, 180 saniye süre
+• TUZÖ [X.X.X Beceri Adı] müfredatına uygun
+
+🎯 TUZÖ Beceri: [X.X.X Beceri Adı]
+📊 Kategori: Bireysel Değerlendirme (2. Aşama)
+
+🔗 Hemen Oyna: https://www.bilsemc2.com/games/[slug]
+🌐 Platform: https://www.bilsemc2.com
+
+#BİLSEM #BİLSEM2Aşama #ZekaOyunları #[OyunaÖzgüHashtag] #[BeceriHashtag] #BireyselDeğerlendirme #TUZÖ #BİLSEMHazırlık #BilsemC2
+```
+
+### Küçük Resim (Thumbnail) AI İstemleri
+
+Her simülatör için **3 farklı thumbnail istemi** üret:
+
+**İstem 1 — Oyun Mekaniği Odaklı:**
+```
+YouTube thumbnail, [renk paleti] gradient background, [oyunun ana görselini tanımla],
+bold Turkish text "[KISA BAŞLIK]" in [renk] with glow effect, child-friendly cartoon style,
+clean modern design, 1280x720
+```
+
+**İstem 2 — Beyin/Hız Odaklı:**
+```
+YouTube thumbnail, vibrant [renk] gradient, brain icon with [efekt], [oyun elementleri
+arka planda bulanık], bold Turkish text "[KANCA]" in white, energetic dynamic composition,
+1280x720
+```
+
+**İstem 3 — Tuzak/Zorluk Odaklı:**
+```
+YouTube thumbnail, dark [renk] background with neon accents, [zorluk/tuzak elementleri],
+bold red Turkish text "[UYARI MESAJI]" at top, warning symbols, dramatic lighting, 1280x720
+```
+
+**Thumbnail Kuralları:**
+- Çözünürlük: 1280x720
+- Türkçe karakter desteği belirt
+- Çocuk dostu stil
+- Metin max 5 kelime (okunabilirlik)
+- Oyunun ana mekaniğini görsel olarak yansıt
