@@ -176,6 +176,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 120,
         active: true
     },
+    {
+        id: 'yaratik-mantigi',
+        title: 'Yaratık Mantığı',
+        link: '/games/yaratik-mantigi',
+        tuzo: '5.5.3 Yönerge Takibi',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
 
     // DİKKAT
     {

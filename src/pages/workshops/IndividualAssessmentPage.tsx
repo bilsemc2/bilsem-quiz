@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin, Puzzle, FlaskConical, Type, BrainCircuit } from 'lucide-react';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin, Puzzle, FlaskConical, Type, BrainCircuit, Bug } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './bireysel.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'yaratik-mantigi',
+            title: "Yaratık Mantığı",
+            desc: "Kuralları oku, koşulları değerlendir ve doğru yaratıkları seç! Yönerge takibi becerisi.",
+            icon: <Bug />,
+            color: "emerald",
+            difficulty: "Zor",
+            link: "/games/yaratik-mantigi",
+            isNew: true,
+            tuzo: "5.5.3 Yönerge Takibi"
+        },
+        {
             id: 'kosullu-yonerge',
             title: "Koşullu Yönerge Takibi",
             desc: "Mantık yönergesini oku, koşulu değerlendir ve doğru nesneyi seç! Koşullu çıkarım becerisi.",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "indigo",
             difficulty: "Zor",
             link: "/games/kosullu-yonerge",
-            isNew: true,
             tuzo: "5.5.2 Koşullu Çıkarım"
         },
         {
