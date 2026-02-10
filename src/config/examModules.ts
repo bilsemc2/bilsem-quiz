@@ -167,6 +167,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 120,
         active: true
     },
+    {
+        id: 'kosullu-yonerge',
+        title: 'Koşullu Yönerge Takibi',
+        link: '/games/kosullu-yonerge',
+        tuzo: '5.5.2 Koşullu Çıkarım',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
 
     // DİKKAT
     {
