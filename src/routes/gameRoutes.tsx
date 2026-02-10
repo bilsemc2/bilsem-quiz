@@ -49,6 +49,7 @@ const LastLetterGame = React.lazy(() => import('@/components/BrainTrainer/LastLe
 const ConditionalLogicGame = React.lazy(() => import('@/components/BrainTrainer/ConditionalLogicGame'));
 const CreatureLogicGame = React.lazy(() => import('@/components/BrainTrainer/CreatureLogicGame'));
 const SymbolSearchGame = React.lazy(() => import('@/components/BrainTrainer/SymbolSearchGame'));
+const AttentionCodingGame = React.lazy(() => import('@/components/BrainTrainer/AttentionCodingGame'));
 
 /**
  * Brain Trainer Game Routes
@@ -101,4 +102,5 @@ export const gameRoutes = [
     <Route key="kosullu-yonerge" path="/games/kosullu-yonerge" element={<RequireAuth><ConditionalLogicGame /></RequireAuth>} />,
     <Route key="yaratik-mantigi" path="/games/yaratik-mantigi" element={<RequireAuth><CreatureLogicGame /></RequireAuth>} />,
     <Route key="sembol-arama" path="/games/sembol-arama" element={<RequireAuth><SymbolSearchGame /></RequireAuth>} />,
+    <Route key="dikkat-ve-kodlama" path="/games/dikkat-ve-kodlama" element={<RequireAuth><AttentionCodingGame /></RequireAuth>} />,
 ];

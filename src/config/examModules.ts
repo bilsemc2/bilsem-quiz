@@ -290,6 +290,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 60,
         active: true
     },
+    {
+        id: 'dikkat-ve-kodlama',
+        title: 'Dikkat ve Kodlama',
+        link: '/games/dikkat-ve-kodlama',
+        tuzo: '5.6.1 İşleme Hızı',
+        category: 'speed',
+        timeLimit: 120,
+        active: true
+    },
 
     // ALGI
     {

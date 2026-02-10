@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin, Puzzle, FlaskConical, Type, BrainCircuit, Bug, ScanSearch } from 'lucide-react';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin, Puzzle, FlaskConical, Type, BrainCircuit, Bug, ScanSearch, Code2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './bireysel.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'dikkat-ve-kodlama',
+            title: "Dikkat ve Kodlama",
+            desc: "Sayı-şekil eşleşmelerini ezberle, test maddelerini en hızlı şekilde doldur! İşleme hızı ve kodlama.",
+            icon: <Code2 />,
+            color: "violet",
+            difficulty: "Orta",
+            link: "/games/dikkat-ve-kodlama",
+            isNew: true,
+            tuzo: "5.6.1 İşleme Hızı"
+        },
+        {
             id: 'sembol-arama',
             title: "Sembol Arama",
             desc: "Hedef sembolü incele, arama grubunda olup olmadığını en hızlı şekilde bul! Seçici dikkat ve görsel tarama.",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "cyan",
             difficulty: "Orta",
             link: "/games/sembol-arama",
-            isNew: true,
             tuzo: "5.7.1 Seçici Dikkat"
         },
         {

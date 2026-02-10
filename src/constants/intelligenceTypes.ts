@@ -91,6 +91,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'kosullu-yonerge': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'yaratik-mantigi': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'sembol-arama': ZEKA_TURLERI.SECICI_DIKKAT,
+    'dikkat-ve-kodlama': ZEKA_TURLERI.ISLEME_HIZI,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -145,6 +146,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'kosullu-yonerge': 'bireysel',
     'yaratik-mantigi': 'bireysel',
     'sembol-arama': 'bireysel',
+    'dikkat-ve-kodlama': 'bireysel',
 
     // Arcade Oyunları
     'arcade-dark-maze': 'arcade',
