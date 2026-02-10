@@ -432,10 +432,18 @@ const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false 
                                     return (
                                         <motion.button key={creature.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.04 }}
                                             disabled={phase !== 'playing'} onClick={() => handleCreatureClick(creature.id)}
-                                            className={`relative aspect-square rounded-2xl border-2 ${borderColor} ${bg} ${extra} transition-all duration-300 flex items-center justify-center p-2`}
+                                            className={`relative rounded-2xl border-2 ${borderColor} ${bg} ${extra} transition-all duration-300 flex flex-col items-center justify-center p-2 pb-1.5`}
                                             style={{ boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.05)' }}
                                             whileHover={phase === 'playing' ? { scale: 1.05, y: -4 } : {}} whileTap={phase === 'playing' ? { scale: 0.95 } : {}}>
-                                            <MonsterSVG creature={creature} size={round.creatures.length > 9 ? 56 : 72} />
+                                            <MonsterSVG creature={creature} size={round.creatures.length > 9 ? 48 : 64} />
+                                            {/* Property Labels */}
+                                            <div className="flex flex-wrap items-center justify-center gap-0.5 mt-1 w-full">
+                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 leading-none">{cap(TR.shapes[creature.shape])}</span>
+                                                {creature.accessory !== 'none' && (
+                                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 leading-none">{cap(TR.accessories[creature.accessory])}</span>
+                                                )}
+                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 leading-none">{cap(TR.emotions[creature.emotion])}</span>
+                                            </div>
                                             {isSelected && !showResults && (
                                                 <div className="absolute top-1.5 right-1.5 bg-emerald-500 text-white rounded-full p-0.5"><CheckCircle2 size={16} /></div>
                                             )}
