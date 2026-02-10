@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin, Puzzle, FlaskConical, Type, BrainCircuit, Bug, ScanSearch, Code2 } from 'lucide-react';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin, Puzzle, FlaskConical, Type, BrainCircuit, Bug, ScanSearch, Code2, Crosshair } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './bireysel.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'lazer-labirent',
+            title: "Lazer Labirent",
+            desc: "Görünmez lazerin aynalardan yansıyarak hangi çıkışa ulaştığını tahmin et! Uzamsal ilişki ve görsel takip becerisi.",
+            icon: <Crosshair />,
+            color: "indigo",
+            difficulty: "Zor",
+            link: "/games/lazer-labirent",
+            isNew: true,
+            tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
+        },
+        {
             id: 'algisal-hiz',
             title: "Algısal Hız Testi",
             desc: "İki sayı dizisini karşılaştır — aynı mı farklı mı? Transpozisyon ve görsel benzerlik tuzaklarıyla işleme hızını test et!",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "cyan",
             difficulty: "Orta",
             link: "/games/algisal-hiz",
-            isNew: true,
             tuzo: "5.6.1 İşleme Hızı"
         },
         {
