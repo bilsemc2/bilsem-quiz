@@ -58,8 +58,20 @@ Deno.serve(async (req) => {
 });
 
 async function generatePrompt(apiKey: string, mode: string): Promise<string> {
+    // Her istekte farklı kelimeler üretmek için rastgele bir seed oluştur
+    const randomCategories = [
+        'doğa ve bitkiler', 'uzay ve gezegenler', 'deniz canlıları', 'mutfak eşyaları',
+        'müzik aletleri', 'spor malzemeleri', 'gizemli yerler', 'eski uygarlıklar',
+        'hava durumu', 'mevsimler', 'ulaşım araçları', 'meslekler',
+        'duygular', 'geometrik şekiller', 'masal karakterleri', 'yiyecekler',
+        'hayvanlar', 'kıyafetler', 'oyuncaklar', 'binalar ve yapılar'
+    ];
+    const cat1 = randomCategories[Math.floor(Math.random() * randomCategories.length)];
+    const cat2 = randomCategories[Math.floor(Math.random() * randomCategories.length)];
+    const randomSeed = Math.floor(Math.random() * 99999);
+
     const prompt = mode === 'THREE_WORDS'
-        ? "Çocuklar için birbirinden bağımsız, alışılmadık, somut ve çizilmesi eğlenceli 3 adet rastgele kelime üret. 'Robot, Dinozor, Roket' gibi çok yaygın kelimelerden kaçın. Sadece kelimeleri virgülle ayırarak yaz (Örn: Denizaltı, Dev Mantar, Uçan Kaplumbağa)."
+        ? `Çocuklar için birbirinden bağımsız, alışılmadık, somut ve çizilmesi eğlenceli 3 adet rastgele kelime üret. Her seferinde TAMAMEN FARKLI ve SÜRPRİZ kelimeler seç. Şu kategorilerden ilham al: "${cat1}" ve "${cat2}". Şemsiye, ağaç, güneş, bulut, ev, çiçek gibi çok basit ve sık tekrarlanan kelimeleri ASLA kullanma. Sadece kelimeleri virgülle ayırarak yaz. (Rastgele tohum: ${randomSeed})`
         : "Sadece TEK BİR kısa hikaye başlangıcı yaz. Liste yapma, numara koyma, birden fazla hikaye yazma. Maksimum 3 cümle olsun. Çocuklar için benzersiz, yaratıcı, ucu açık ve görsel olarak devam ettirilebilecek bir senaryo kurgula. Hikaye heyecanlı bir yerde bitsin.";
 
     const response = await fetch(
@@ -69,6 +81,11 @@ async function generatePrompt(apiKey: string, mode: string): Promise<string> {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 1.5,
+                    topP: 0.95,
+                    topK: 64,
+                },
             }),
         }
     );
