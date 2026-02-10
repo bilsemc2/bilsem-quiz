@@ -45,6 +45,7 @@ const PatternIQGame = React.lazy(() => import('@/components/BrainTrainer/Pattern
 const PositionPuzzleGame = React.lazy(() => import('@/components/BrainTrainer/PositionPuzzleGame'));
 const MindMatchGame = React.lazy(() => import('@/components/BrainTrainer/MindMatchGame'));
 const LogicPuzzleGame = React.lazy(() => import('@/components/BrainTrainer/LogicPuzzleGame'));
+const LastLetterGame = React.lazy(() => import('@/components/BrainTrainer/LastLetterGame'));
 
 /**
  * Brain Trainer Game Routes
@@ -93,4 +94,5 @@ export const gameRoutes = [
     <Route key="konum" path="/games/konum-bulmaca" element={<RequireAuth><PositionPuzzleGame /></RequireAuth>} />,
     <Route key="mindmatch" path="/games/mindmatch-oruntu" element={<RequireAuth><MindMatchGame /></RequireAuth>} />,
     <Route key="mantik-bulmaca" path="/games/mantik-bulmacasi" element={<RequireAuth><LogicPuzzleGame /></RequireAuth>} />,
+    <Route key="son-harf" path="/games/son-harf-ustasi" element={<RequireAuth><LastLetterGame /></RequireAuth>} />,
 ];

@@ -199,6 +199,15 @@ export const EXAM_MODULES: ExamModule[] = [
 
     // SÖZEL
     {
+        id: 'son-harf-ustasi',
+        title: 'Son Harf Ustası',
+        link: '/games/son-harf-ustasi',
+        tuzo: '5.1.3 Sözel Analiz',
+        category: 'verbal',
+        timeLimit: 120,
+        active: true
+    },
+    {
         id: 'verbal-analogy',
         title: 'Sözel Analoji',
         link: '/games/sozel-analoji',

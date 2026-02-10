@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin, Puzzle, FlaskConical } from 'lucide-react';
+import { Brain, Star, ChevronLeft, Rocket, Zap, Trophy, Lightbulb, Radio, Search, Cpu, Hash, LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile, PenTool, Link2, BookOpen, BookText, MessageSquareText, Binary, ScanEye, Headphones, Activity, CircleUser, Calculator, Sparkles, Info, Scale, Shapes, MapPin, Puzzle, FlaskConical, Type } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './bireysel.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'son-harf-ustasi',
+            title: "Son Harf Ustası",
+            desc: "Kelimelerin son harflerini birleştirerek gizli şifreyi çöz! Sözel analiz ve dikkat becerisi.",
+            icon: <Type />,
+            color: "fuchsia",
+            difficulty: "Orta",
+            link: "/games/son-harf-ustasi",
+            isNew: true,
+            tuzo: "5.1.3 Sözel Analiz"
+        },
+        {
             id: 'mantik-bulmacasi',
             title: "Görsel Mantık Bulmacası",
             desc: "Şekil gruplarındaki gizli kuralı çöz! Renk, şekil, dolgu ve sayı kurallarını analiz et.",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "blue",
             difficulty: "Zor",
             link: "/games/mantik-bulmacasi",
-            isNew: true,
             tuzo: "5.5.1 Kural Çıkarsama"
         },
         {
