@@ -80,6 +80,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'yol-bulmaca': ZEKA_TURLERI.CALISMA_BELLEGI,
     'renkli-lambalar': ZEKA_TURLERI.GORSEL_HAFIZA,
     'arcade-chroma-hafiza': ZEKA_TURLERI.GORSEL_HAFIZA,
+    'arcade-sevimli-mantik': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'desen-boyama': ZEKA_TURLERI.GORSEL_UZAMSAL,
     'gorsel-cebir-dengesi': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'patterniq-express': ZEKA_TURLERI.MANTIKSAL_ZEKA,
@@ -157,6 +158,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'yol-bulmaca': 'arcade',
     'renkli-lambalar': 'arcade',
     'arcade-chroma-hafiza': 'arcade',
+    'arcade-sevimli-mantik': 'arcade',
 };
 
 // Workshop türü etiketleri

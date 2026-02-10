@@ -1,5 +1,5 @@
 import React from 'react';
-import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle, Zap, Route, Lightbulb } from 'lucide-react';
+import { Focus, Sparkles, Navigation2, FlipHorizontal2, Scissors, Compass, Search, Circle, Zap, Route, Lightbulb, Bug } from 'lucide-react';
 
 export type GameCategory = 'memory' | 'spatial' | 'flexibility';
 
@@ -166,6 +166,17 @@ export const ARCADE_GAMES: ArcadeGame[] = [
         icon: <Search size={48} className="text-white" />,
         link: "/bilsem-zeka/kart-dedektifi",
         tuzo: "5.5.2 Kural Çıkarsama",
+        category: 'flexibility'
+    },
+    {
+        id: 'sevimli-mantik',
+        title: "Sevimli Mantık",
+        description: "Robotların hareketlerini izle, koşulları değerlendir ve doğru renge tıkla!",
+        cost: 40,
+        color: "from-indigo-500 to-purple-600",
+        icon: <Bug size={48} className="text-white" />,
+        link: "/bilsem-zeka/sevimli-mantik",
+        tuzo: "5.5.2 Koşullu Çıkarım",
         category: 'flexibility'
     }
 ];

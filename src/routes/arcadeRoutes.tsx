@@ -17,6 +17,7 @@ const ChromaBreak = React.lazy(() => import('@/components/Arcade/Games/chromabre
 const YolBulmaca = React.lazy(() => import('@/components/Arcade/Games/YolBulmaca/YolBulmaca'));
 const RenkliLambalar = React.lazy(() => import('@/components/Arcade/Games/RenkliLambalar/RenkliLambalar'));
 const ChromaHafiza = React.lazy(() => import('@/components/Arcade/Games/ChromaHafiza/ChromaHafiza'));
+const SevimliMantik = React.lazy(() => import('@/components/Arcade/Games/SevimliMantik/SevimliMantik'));
 
 /**
  * Arcade (BİLSEM Zeka) Routes
@@ -37,4 +38,5 @@ export const arcadeRoutes = [
     <Route key="yol" path="/bilsem-zeka/yol-bulmaca" element={<RequireAuth><YolBulmaca /></RequireAuth>} />,
     <Route key="lambalar" path="/bilsem-zeka/renkli-lambalar" element={<RequireAuth><RenkliLambalar /></RequireAuth>} />,
     <Route key="hafiza" path="/bilsem-zeka/chroma-hafiza" element={<RequireAuth><ChromaHafiza /></RequireAuth>} />,
+    <Route key="sevimli" path="/bilsem-zeka/sevimli-mantik" element={<RequireAuth><SevimliMantik /></RequireAuth>} />,
 ];
