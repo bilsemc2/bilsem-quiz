@@ -214,6 +214,15 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 120,
         active: true
     },
+    {
+        id: 'sembol-arama',
+        title: 'Sembol Arama',
+        link: '/games/sembol-arama',
+        tuzo: '5.7.1 Seçici Dikkat',
+        category: 'attention',
+        timeLimit: 120,
+        active: true
+    },
 
     // SÖZEL
     {
