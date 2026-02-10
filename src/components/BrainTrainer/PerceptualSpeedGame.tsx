@@ -467,7 +467,7 @@ const PerceptualSpeedGame: React.FC<PerceptualSpeedGameProps> = ({ examMode = fa
                     )}
 
                     {/* ── Playing ── */}
-                    {phase === 'playing' && challenge && (
+                    {(phase === 'playing' || phase === 'feedback') && challenge && (
                         <motion.div
                             key="playing"
                             initial={{ opacity: 0 }}
@@ -536,42 +536,6 @@ const PerceptualSpeedGame: React.FC<PerceptualSpeedGameProps> = ({ examMode = fa
                                     <span className="text-[10px] text-slate-500 mt-1">Sağ Ok →</span>
                                 </motion.button>
                             </div>
-                        </motion.div>
-                    )}
-
-                    {/* ── Feedback ── */}
-                    {phase === 'feedback' && (
-                        <motion.div
-                            key="feedback"
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{
-                                        scale: [1, 1.2, 1],
-                                        rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0],
-                                    }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedbackCorrect ? (
-                                        <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                    ) : (
-                                        <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    )}
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
                         </motion.div>
                     )}
 
@@ -688,6 +652,44 @@ const PerceptualSpeedGame: React.FC<PerceptualSpeedGameProps> = ({ examMode = fa
                                     <span>Tekrar Oyna</span>
                                 </div>
                             </motion.button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* ── Feedback Overlay (arka planda soru görünsün) ── */}
+                <AnimatePresence>
+                    {phase === 'feedback' && (
+                        <motion.div
+                            key="feedback"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ y: 50, scale: 0.5 }}
+                                animate={{ y: 0, scale: 1 }}
+                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect
+                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                                    }`}
+                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                            >
+                                <motion.div
+                                    animate={{
+                                        scale: [1, 1.2, 1],
+                                        rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0],
+                                    }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {feedbackCorrect ? (
+                                        <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
+                                    ) : (
+                                        <XCircle size={64} className="mx-auto mb-4 text-white" />
+                                    )}
+                                </motion.div>
+                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
+                            </motion.div>
                         </motion.div>
                     )}
                 </AnimatePresence>
