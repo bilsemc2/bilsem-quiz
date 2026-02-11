@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'kelime-avi',
+            title: "Kelime Avı",
+            desc: "Hedef harfi içeren kelimeleri hızla bul! Ortografik algı ve işlem hızını test et.",
+            icon: <Search />,
+            color: "violet",
+            difficulty: "Orta",
+            link: "/games/kelime-avi",
+            isNew: true,
+            tuzo: "5.6.1 Algısal İşlem Hızı"
+        },
+        {
             id: 'matematik-grid',
             title: "Matematik Grid",
             desc: "3×3 sayı tablosundaki gizli sayıları bul! Satırlar arası matematiksel ilişkiyi keşfet.",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "teal",
             difficulty: "Orta",
             link: "/games/matematik-grid",
-            isNew: true,
             tuzo: "5.2.1 Sayısal Akıl Yürütme"
         },
         {
