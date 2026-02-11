@@ -53,6 +53,8 @@ const AttentionCodingGame = React.lazy(() => import('@/components/BrainTrainer/A
 const PerceptualSpeedGame = React.lazy(() => import('@/components/BrainTrainer/PerceptualSpeedGame'));
 const LaserMazeGame = React.lazy(() => import('@/components/BrainTrainer/LaserMazeGame'));
 const ClockGame = React.lazy(() => import('@/components/BrainTrainer/ClockGame'));
+const VisualMemoryGame = React.lazy(() => import('@/components/BrainTrainer/VisualMemoryGame'));
+const MathGridGame = React.lazy(() => import('@/components/BrainTrainer/MathGridGame'));
 
 /**
  * Brain Trainer Game Routes
@@ -109,4 +111,6 @@ export const gameRoutes = [
     <Route key="algisal-hiz" path="/games/algisal-hiz" element={<RequireAuth><PerceptualSpeedGame /></RequireAuth>} />,
     <Route key="lazer-labirent" path="/games/lazer-labirent" element={<RequireAuth><LaserMazeGame /></RequireAuth>} />,
     <Route key="saat-problemi" path="/games/saat-problemi" element={<RequireAuth><ClockGame /></RequireAuth>} />,
+    <Route key="gorsel-hafiza" path="/games/gorsel-hafiza" element={<RequireAuth><VisualMemoryGame /></RequireAuth>} />,
+    <Route key="matematik-grid" path="/games/matematik-grid" element={<RequireAuth><MathGridGame /></RequireAuth>} />,
 ];

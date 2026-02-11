@@ -320,10 +320,20 @@ const ClockGame: React.FC<ClockGameProps> = ({ examMode = false }) => {
         if (activeHand === 'minute') {
             setUserTotal(prev => {
                 const currentMinute = prev % 60;
-                let delta = Math.round(degrees / 6) % 60 - currentMinute;
-                if (delta > 30) delta -= 60;
-                if (delta < -30) delta += 60;
-                let next = prev + delta;
+                // Convert pointer angle to target minute (0-59)
+                let targetMinute = Math.round(degrees / 6);
+                if (targetMinute >= 60) targetMinute = 0;
+                // Compute shortest-path angular delta between current and target angles
+                const currentAngle = (currentMinute * 6) % 360;
+                const targetAngle = (targetMinute * 6) % 360;
+                let angleDelta = targetAngle - currentAngle;
+                // Normalize to [-180, 180] to find shortest path
+                if (angleDelta > 180) angleDelta -= 360;
+                if (angleDelta < -180) angleDelta += 360;
+                // Convert angular delta back to minute delta
+                const minuteDelta = Math.round(angleDelta / 6);
+                // Apply delta to total (this correctly advances/retreats the hour)
+                let next = prev + minuteDelta;
                 if (next < 0) next += 720;
                 if (next >= 720) next -= 720;
                 return next;

@@ -43,6 +43,27 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'matematik-grid',
+            title: "Matematik Grid",
+            desc: "3×3 sayı tablosundaki gizli sayıları bul! Satırlar arası matematiksel ilişkiyi keşfet.",
+            icon: <Grid3X3 />,
+            color: "teal",
+            difficulty: "Orta",
+            link: "/games/matematik-grid",
+            isNew: true,
+            tuzo: "5.2.1 Sayısal Akıl Yürütme"
+        },
+        {
+            id: 'gorsel-hafiza',
+            title: "Görsel Hafıza",
+            desc: "Ekranda beliren sembolleri hafızana kazı, sonra değişen sembolü bul! Bilişsel kodlama ve kısa süreli bellek.",
+            icon: <ScanEye />,
+            color: "sky",
+            difficulty: "Orta",
+            link: "/games/gorsel-hafiza",
+            tuzo: "5.4.2 Görsel Kısa Süreli Bellek"
+        },
+        {
             id: 'saat-problemi',
             title: "Saat Problemi",
             desc: "Başlangıç saatinden belirli süre sonraki zamanı ibreleri sürükleyerek ayarla! Zamansal ilişki ve sayısal akıl yürütme.",
@@ -50,7 +71,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "violet",
             difficulty: "Orta",
             link: "/games/saat-problemi",
-            isNew: true,
             tuzo: "5.2.3 Sayısal-Zamansal İlişki"
         },
         {
