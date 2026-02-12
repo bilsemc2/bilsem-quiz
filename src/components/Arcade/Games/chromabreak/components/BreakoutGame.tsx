@@ -390,6 +390,7 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
   }, [update]);
 
   const handleStart = () => {
+      window.scrollTo(0, 0);
     const canvas = canvasRef.current;
     if (!canvas) return;
 

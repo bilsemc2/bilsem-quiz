@@ -67,6 +67,7 @@ const AynaUstasi: React.FC = () => {
     }, [location.state]);
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setGameState('playing');
         setCurrentLevelIdx(0);
         setLevels(INITIAL_LEVELS.map(l => ({

@@ -107,6 +107,7 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
 
     // Oyunu başlat
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setScore(0);
         setCorrectCount(0);
         setWrongCount(0);

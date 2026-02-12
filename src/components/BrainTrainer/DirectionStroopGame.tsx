@@ -62,6 +62,7 @@ const DirectionStroopGame: React.FC = () => {
 
     // Start game
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setGameState('playing');
         setRoundNumber(1);
         setScore(0);

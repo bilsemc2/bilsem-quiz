@@ -134,6 +134,7 @@ const ColorPerception: React.FC = () => {
   };
 
   const startGame = useCallback(() => {
+      window.scrollTo(0, 0);
     setGameStarted(true);
     setScore(0);
     setLives(3);

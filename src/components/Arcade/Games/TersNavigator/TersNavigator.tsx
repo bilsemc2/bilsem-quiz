@@ -35,6 +35,7 @@ const TersNavigator: React.FC = () => {
     }, []);
 
     const startGame = () => {
+        window.scrollTo(0, 0);
         setGameState(GameState.PLAYING);
         setTimeLeft(GAME_DURATION);
         setStats({ score: 0, accuracy: 0, averageTime: 0, rounds: 0 });

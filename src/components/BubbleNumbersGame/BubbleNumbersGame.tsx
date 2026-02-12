@@ -450,6 +450,7 @@ const BubbleNumbersGame: React.FC = () => {
 
     // Animasyon döngüsünü başlat
     const startGame = () => {
+        window.scrollTo(0, 0);
       lastTimeRef.current = performance.now();
       animationFrameRef.current = requestAnimationFrame(gameLoop);
     };

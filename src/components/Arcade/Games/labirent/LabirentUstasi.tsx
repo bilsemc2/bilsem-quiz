@@ -64,6 +64,7 @@ const LabirentUstasi: React.FC = () => {
     }, [location.state]);
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setGameState('playing');
         setCurrentLevel(0);
         setScore(0);

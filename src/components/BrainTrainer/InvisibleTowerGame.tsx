@@ -96,6 +96,7 @@ const InvisibleTowerGame: React.FC = () => {
     }, [generateTower, playSound]);
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setLevel(1);
         setScore(0);
         setLives(3);

@@ -142,6 +142,7 @@ const SymbolMatchGame = () => {
 
     // Oyunu başlat
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setScore(0);
         setLives(3);
         setStreak(0);

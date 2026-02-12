@@ -79,6 +79,7 @@ const StreamSumGame: React.FC = () => {
     }, []);
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setStatus('playing');
         setLevel(1);
         setScore(0);

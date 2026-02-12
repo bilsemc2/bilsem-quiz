@@ -77,6 +77,7 @@ const KraftOrigami: React.FC = () => {
     }, [location.state]);
 
     const startGame = () => {
+        window.scrollTo(0, 0);
         setGameState('playing');
         setState({
             folds: [],

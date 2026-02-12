@@ -78,6 +78,7 @@ const ChromaBreak: React.FC = () => {
     }, [score, saveResult]);
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setGamePhase(GamePhase.PLAYING);
         setHistory([]);
         setScore(0);

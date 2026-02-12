@@ -129,6 +129,7 @@ const MagicCubeGame: React.FC = () => {
 
     // Start Game
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setGameState('playing');
         setLevel(1);
         setScore(0);

@@ -157,6 +157,7 @@ const DeyimlerPage = () => {
 
     // Oyunu başlat
     const startGame = () => {
+        window.scrollTo(0, 0);
         setScore(0);
         setQuestionNumber(1);
         setGameOver(false);

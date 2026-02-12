@@ -83,6 +83,7 @@ const StroopGame: React.FC<StroopGameProps> = ({ examMode: examModeProp = false 
 
     // Start game
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setGameState('playing');
         setRoundNumber(1);
         setScore(0);

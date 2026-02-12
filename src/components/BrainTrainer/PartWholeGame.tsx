@@ -261,6 +261,7 @@ const PartWholeGame: React.FC = () => {
     };
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setOptions([]);
         setGamePattern([]);
         setLevel(1);

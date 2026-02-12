@@ -130,6 +130,7 @@ const AuditoryMemoryGame: React.FC<AuditoryMemoryGameProps> = ({ examMode: examM
 
     // Oyunu başlat
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         const ctx = getAudioContext();
         if (ctx.state === 'suspended') {
             ctx.resume();

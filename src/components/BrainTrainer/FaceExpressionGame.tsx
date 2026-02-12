@@ -149,6 +149,7 @@ const FaceExpressionGame: React.FC<FaceExpressionGameProps> = ({ examMode: examM
 
     // Oyunu başlat
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setGameState('playing');
         setQuestionNumber(1);
         setScore(0);

@@ -57,6 +57,7 @@ const DigitSymbolGame: React.FC = () => {
 
     // Oyunu başlat
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         const newMap = createSymbolMap();
         setSymbolMap(newMap);
         setScore(0);

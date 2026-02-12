@@ -48,6 +48,7 @@ const DarkMaze: React.FC = () => {
     }, [gridSize]);
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setLevel(1);
         setGridSize(INITIAL_GRID_SIZE);
         const newMaze = generateMaze(INITIAL_GRID_SIZE, 1);

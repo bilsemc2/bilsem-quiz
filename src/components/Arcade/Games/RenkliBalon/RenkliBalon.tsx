@@ -54,6 +54,7 @@ const RenkliBalon: React.FC = () => {
     }, []);
 
     const startGame = () => {
+        window.scrollTo(0, 0);
         setGameState({ score: 0, level: 1, lives: 3, status: 'PLAYING' });
         gameStartTimeRef.current = Date.now();
         startNewPattern(1);

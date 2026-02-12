@@ -95,6 +95,7 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
 
     // Oyunu başlat
     const startGame = useCallback((mode: GameMode) => {
+        window.scrollTo(0, 0);
         setGameMode(mode);
         setGameState('playing');
         setCurrentRound(1);

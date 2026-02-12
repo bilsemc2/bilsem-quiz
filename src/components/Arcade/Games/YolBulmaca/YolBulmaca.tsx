@@ -95,6 +95,7 @@ const YolBulmaca: React.FC = () => {
     }, [level]);
 
     const handleStartGame = () => {
+        window.scrollTo(0, 0);
         gameStartTimeRef.current = Date.now();
         setScore(0);
         setLevel(1);

@@ -31,6 +31,7 @@ const ChromaHafiza: React.FC = () => {
     }, [location.state]);
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setGamePhase('preview');
         setLevel(0);
         setScore(0);

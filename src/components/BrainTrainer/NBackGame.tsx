@@ -85,6 +85,7 @@ const NBackGame: React.FC = () => {
     }, [history, nValue, playSound]);
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         setGameState('playing');
         setScore(0);
         setLevel(1);

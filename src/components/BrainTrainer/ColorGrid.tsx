@@ -62,6 +62,7 @@ const ColorGrid: React.FC = () => {
   const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
   const startGame = useCallback(() => {
+      window.scrollTo(0, 0);
     gameStartTimeRef.current = Date.now();
     setGameState({
       level: 1,

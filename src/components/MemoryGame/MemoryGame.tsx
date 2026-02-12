@@ -98,6 +98,7 @@ const MemoryGame: React.FC = () => {
 
   // Oyunu başlat
   const startGame = useCallback(() => {
+      window.scrollTo(0, 0);
     if (availableImages.length === 0) {
       toast.error('Oyun başlatılamıyor, resimler yüklenemedi!', {
         duration: 3000,
