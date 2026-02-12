@@ -73,6 +73,62 @@ describe('game-registry', () => {
     expect(item?.migrated).toBe(true);
   });
 
+  it('marks isitsel-hafiza as migrated', () => {
+    const item = getRegistryItem('isitsel-hafiza');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks auditory-memory as migrated', () => {
+    const item = getRegistryItem('auditory-memory');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks tepki-suresi as migrated', () => {
+    const item = getRegistryItem('tepki-suresi');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks reaction-time as migrated', () => {
+    const item = getRegistryItem('reaction-time');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks sozel-analoji as migrated', () => {
+    const item = getRegistryItem('sozel-analoji');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks verbal-analogy as migrated', () => {
+    const item = getRegistryItem('verbal-analogy');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks es-anlam as migrated', () => {
+    const item = getRegistryItem('es-anlam');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks synonym as migrated', () => {
+    const item = getRegistryItem('synonym');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
   it('marks sayi-sihirbazi as migrated', () => {
     const item = getRegistryItem('sayi-sihirbazi');
 

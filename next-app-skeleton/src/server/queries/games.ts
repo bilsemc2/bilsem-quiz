@@ -47,6 +47,26 @@ export const GAME_CATALOG: Record<string, GameCatalogItem> = {
     category: 'attention',
     durationSeconds: 180,
   },
+  'isitsel-hafiza': {
+    title: 'Isitsel Hafiza',
+    category: 'memory',
+    durationSeconds: 180,
+  },
+  'tepki-suresi': {
+    title: 'Tepki Suresi',
+    category: 'attention',
+    durationSeconds: 180,
+  },
+  'sozel-analoji': {
+    title: 'Sozel Analoji',
+    category: 'language',
+    durationSeconds: 180,
+  },
+  'es-anlam': {
+    title: 'Es Anlam',
+    category: 'language',
+    durationSeconds: 180,
+  },
   'sayi-sihirbazi': {
     title: 'Sayi Sihirbazi',
     category: 'logic',

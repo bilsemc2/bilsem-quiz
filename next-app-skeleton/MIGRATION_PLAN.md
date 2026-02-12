@@ -76,6 +76,10 @@ Oncelikli tablolar:
 - [x] sembol-arama migrate edildi (oynanabilir client component)
 - [x] sayisal-dizi migrate edildi (oynanabilir client component)
 - [x] sayisal-sifre migrate edildi (oynanabilir client component)
+- [x] sekil-hafizasi migrate edildi (oynanabilir client component)
+- [x] gorsel-tarama migrate edildi (oynanabilir client component)
+- [x] isitsel-hafiza migrate edildi (oynanabilir client component)
+- [x] tepki-suresi migrate edildi (oynanabilir client component)
 
 6. Faz 5 - Admin + Profile + Reporting
 - [x] Dashboard stats tabani (`profiles` + `game_plays`)

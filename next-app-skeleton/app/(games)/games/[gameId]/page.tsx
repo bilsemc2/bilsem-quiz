@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { AttentionCodingGameClient } from '@/features/games/attention-coding/components/AttentionCodingGameClient';
+import { AuditoryMemoryGameClient } from '@/features/games/auditory-memory/components/AuditoryMemoryGameClient';
 import { ClockProblemGameClient } from '@/features/games/clock-problem/components/ClockProblemGameClient';
 import { CosmicMemoryGameClient } from '@/features/games/cosmic-memory/components/CosmicMemoryGameClient';
 import { getRegistryItem } from '@/features/games/game-registry';
@@ -14,9 +15,12 @@ import { NumberCipherGameClient } from '@/features/games/number-cipher/component
 import { NumberMemoryGameClient } from '@/features/games/number-memory/components/NumberMemoryGameClient';
 import { NumberSequenceGameClient } from '@/features/games/number-sequence/components/NumberSequenceGameClient';
 import { PerceptualSpeedGameClient } from '@/features/games/perceptual-speed/components/PerceptualSpeedGameClient';
+import { ReactionTimeGameClient } from '@/features/games/reaction-time/components/ReactionTimeGameClient';
 import { SpotDifferenceGameClient } from '@/features/games/spot-difference/components/SpotDifferenceGameClient';
 import { SymbolMatchGameClient } from '@/features/games/symbol-match/components/SymbolMatchGameClient';
 import { SymbolSearchGameClient } from '@/features/games/symbol-search/components/SymbolSearchGameClient';
+import { SynonymGameClient } from '@/features/games/synonym/components/SynonymGameClient';
+import { VerbalAnalogyGameClient } from '@/features/games/verbal-analogy/components/VerbalAnalogyGameClient';
 import { VisualMemoryGameClient } from '@/features/games/visual-memory/components/VisualMemoryGameClient';
 import { VisualScanningGameClient } from '@/features/games/visual-scanning/components/VisualScanningGameClient';
 import { WordHuntGameClient } from '@/features/games/word-hunt/components/WordHuntGameClient';
@@ -103,6 +107,40 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
         durationSeconds={resolvedGame.durationSeconds}
       />
     );
+  }
+
+  if (resolvedGame.id === 'isitsel-hafiza' || resolvedGame.id === 'auditory-memory') {
+    return (
+      <AuditoryMemoryGameClient
+        gameId="isitsel-hafiza"
+        gameTitle={resolvedGame.title}
+        durationSeconds={resolvedGame.durationSeconds}
+      />
+    );
+  }
+
+  if (resolvedGame.id === 'tepki-suresi' || resolvedGame.id === 'reaction-time') {
+    return (
+      <ReactionTimeGameClient
+        gameId="tepki-suresi"
+        gameTitle={resolvedGame.title}
+        durationSeconds={resolvedGame.durationSeconds}
+      />
+    );
+  }
+
+  if (resolvedGame.id === 'sozel-analoji' || resolvedGame.id === 'verbal-analogy') {
+    return (
+      <VerbalAnalogyGameClient
+        gameId="sozel-analoji"
+        gameTitle={resolvedGame.title}
+        durationSeconds={resolvedGame.durationSeconds}
+      />
+    );
+  }
+
+  if (resolvedGame.id === 'es-anlam' || resolvedGame.id === 'synonym') {
+    return <SynonymGameClient gameId="es-anlam" gameTitle={resolvedGame.title} durationSeconds={resolvedGame.durationSeconds} />;
   }
 
   if (resolvedGame.id === 'sayi-sihirbazi' || resolvedGame.id === 'math-magic') {

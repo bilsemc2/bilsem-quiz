@@ -1,5 +1,5 @@
 {
-  "name": "zaman-gezgini:-i̇nteraktif-saat-oyunu",
+  "name": "mantık-ustası:-şekil-bulmacası",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,9 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.4",
     "react": "^19.2.4",
-    "@google/genai": "^1.41.0",
+    "react-dom": "^19.2.4",
     "lucide-react": "^0.563.0"
   },
   "devDependencies": {

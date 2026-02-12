@@ -16,7 +16,6 @@ const StreamSumGame = React.lazy(() => import('@/components/BrainTrainer/StreamS
 const InvisibleTowerGame = React.lazy(() => import('@/components/BrainTrainer/InvisibleTowerGame'));
 const MatrixEchoGame = React.lazy(() => import('@/components/BrainTrainer/MatrixEchoGame'));
 const ReflectionSumGame = React.lazy(() => import('@/components/BrainTrainer/ReflectionSumGame'));
-const MazeGame = React.lazy(() => import('@/components/BrainTrainer/MazeGame'));
 const StroopGame = React.lazy(() => import('@/components/BrainTrainer/StroopGame'));
 const DirectionStroopGame = React.lazy(() => import('@/components/BrainTrainer/DirectionStroopGame'));
 const EmojiStroopGame = React.lazy(() => import('@/components/BrainTrainer/EmojiStroopGame'));
@@ -79,7 +78,6 @@ export const gameRoutes = [
     <Route key="kule" path="/games/gorunmez-kule" element={<RequireAuth><InvisibleTowerGame /></RequireAuth>} />,
     <Route key="matris" path="/games/matris-yankisi" element={<RequireAuth><MatrixEchoGame /></RequireAuth>} />,
     <Route key="yansima" path="/games/yansima-toplami" element={<RequireAuth><ReflectionSumGame /></RequireAuth>} />,
-    <Route key="labirent" path="/games/labirent" element={<RequireAuth><MazeGame /></RequireAuth>} />,
     <Route key="stroop" path="/games/stroop" element={<RequireAuth><StroopGame /></RequireAuth>} />,
     <Route key="yon" path="/games/yon-stroop" element={<RequireAuth><DirectionStroopGame /></RequireAuth>} />,
     <Route key="sekil" path="/games/sekil-hafizasi" element={<RequireAuth><SymbolMatchGame /></RequireAuth>} />,

@@ -395,16 +395,6 @@ const IndividualAssessmentPage: React.FC = () => {
             tuzo: "5.1.3 Sözlü Anlama"
         },
         {
-            id: 'maze',
-            title: "Labirent Ustası",
-            desc: "Duvarlara değmeden çıkışı bul! Görsel-uzamsal zeka ve motor koordinasyon becerini test et.",
-            icon: <Grid3X3 />,
-            color: "teal",
-            difficulty: "Zor",
-            link: "/games/labirent",
-            tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
-        },
-        {
             id: 'stroop',
             title: "Stroop Etkisi",
             desc: "Yazının rengini seç, kelimeyi değil! Bilişsel esneklik ve dikkat kontrolü testi.",
