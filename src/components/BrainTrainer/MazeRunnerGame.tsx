@@ -435,6 +435,21 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef(0);
 
+    // Body scroll lock during gameplay
+    useEffect(() => {
+        const isActive = phase === 'playing' || phase === 'feedback';
+        if (isActive) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none';
+            document.documentElement.style.overflow = 'hidden';
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+            document.documentElement.style.overflow = '';
+        };
+    }, [phase]);
+
     // Timer
     useEffect(() => {
         if (phase === 'playing' && timeLeft > 0) {
@@ -568,8 +583,13 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
         showFeedback(true, ['Harika geçiş! 🎯', 'Labirenti aştın! 🌟', 'Muhteşem! 🧠', 'Ustasın! ⭐'][Math.floor(Math.random() * 4)]);
     }, [showFeedback]);
 
+    const isActive = phase === 'playing' || phase === 'feedback';
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white">
+        <div
+            className={`min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white ${isActive ? 'overflow-hidden h-screen' : ''}`}
+            style={isActive ? { touchAction: 'none', overscrollBehavior: 'none' } : {}}
+        >
             {/* Background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
