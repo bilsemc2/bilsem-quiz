@@ -31,6 +31,9 @@ Tüm BrainTrainer simülatörleri şu standartları takip etmelidir:
 | **Feedback Süresi** | 2 saniye (yanlış cevapta doğruyu göstermek için) |
 | **Feedback Konumu** | Grid üzerinde absolute — layout shift olmamalı |
 | **Doğru Cevap Gösterimi** | Yanlış/süre bitiminde doğru cevap yeşil kenarlık + pulsing animasyon ile gösterilir |
+| **Canvas Max Genişlik** | `Math.min(window.innerWidth - 32, 480)` px |
+| **Body Scroll Lock** | Oyun sırasında `overflow: hidden` + `touch-action: none` |
+| **Responsive Yeniden Boyutlama** | `window.addEventListener('resize', ...)` zorunlu |
 
 ---
 
@@ -745,13 +748,104 @@ bg-emerald-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-emerald-50
 
 ---
 
-### ✋ Touch-First Hedefler
+### ✋ Touch-First & Responsive Standartlar
+
+#### Minimum Dokunma Alanları
 ```css
 /* Minimum tıklama alanları */
 min-h-[80px] min-w-[80px]  /* Kartlar */
 px-8 py-4                   /* Butonlar */
 gap-4                       /* Grid spacing */
 rounded-2xl                 /* Yumuşak köşeler */
+```
+
+#### 📐 Responsive Canvas Boyutlandırma (Canvas Oyunları İçin Zorunlu)
+
+Canvas kullanan oyunlarda boyut `window.innerWidth` bazlı hesaplanmalı ve `resize` listener ile dinamik güncellenmeli:
+
+```tsx
+// Responsive canvas size state
+const [canvasSize, setCanvasSize] = useState(0);
+
+useEffect(() => {
+    const updateSize = () => {
+        const maxWidth = Math.min(window.innerWidth - 32, 480);
+        setCanvasSize(maxWidth);
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+}, []);
+
+// Container'da explicit boyut kullan (aspect-square DEĞİL)
+<div style={{ maxWidth: canvasSize, height: canvasSize }}>
+    <canvas ref={canvasRef} />
+</div>
+```
+
+> **ÖNEMLİ:** `aspect-square` class'ı canvas parent'larında kullanmayın — canvas boyutu state ile yönetilmeli.
+
+#### 🔒 Body Scroll Lock (Oyun Sırasında Zorunlu)
+
+Dokunmatik ekranlarda çizim/sürükleme sırasında sayfa kaymasını önlemek için `playing` ve `feedback` fazlarında body scroll kilitleyin:
+
+```tsx
+// Body scroll lock during gameplay
+useEffect(() => {
+    const isActive = phase === 'playing' || phase === 'feedback';
+    if (isActive) {
+        document.body.style.overflow = 'hidden';
+        document.body.style.touchAction = 'none';
+        document.documentElement.style.overflow = 'hidden';
+    }
+    return () => {
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
+        document.documentElement.style.overflow = '';
+    };
+}, [phase]);
+
+// Root container'da:
+<div
+    className={`min-h-screen ... ${isActive ? 'overflow-hidden h-screen' : ''}`}
+    style={isActive ? { touchAction: 'none', overscrollBehavior: 'none' } : {}}
+>
+```
+
+#### 🕹️ Canvas Oyunlarında Çift Kontrol Modu
+
+Canvas tabanlı oyunlarda (labirent, vb.) hem dokunmatik hem masaüstü kullanıcılar için çift kontrol sunulmalı:
+
+| Kontrol | Platform | Uygulama |
+|---------|----------|----------|
+| **Sanal Joystick** | Mobil + Masaüstü | `touchStart/Move/End` + `mouseDown/Move/Up` |
+| **Ok Tuşları** | Masaüstü | `window.addEventListener('keydown', ...)` |
+| **Parmakla Çizim** | Mobil (opsiyonel) | `canvas.onTouchStart/Move/End` + `e.preventDefault()` |
+
+Joystick pattern referansı: `src/components/Arcade/Games/DarkMaze/DarkMaze.tsx` (satır 275-465)
+
+```tsx
+// Joystick sabitleri
+const JOYSTICK_RADIUS = 50;
+const MOVE_THRESHOLD = 25;
+const MOVE_COOLDOWN = 150; // ms — ardışık hareket arası bekleme
+```
+
+#### Canvas Touch Event Handling
+
+Canvas üzerinde dokunmatik input varsa **mutlaka** `e.preventDefault()` çağrılı:
+
+```tsx
+onTouchStart={(e) => { e.preventDefault(); handleStart(e.touches[0]); }}
+onTouchMove={(e) => { e.preventDefault(); handleMove(e.touches[0]); }}
+onTouchEnd={handleEnd}
+```
+
+Canvas container'da `touch-none` class'ı zorunlu:
+```tsx
+<div className="... touch-none">
+    <canvas ... />
+</div>
 ```
 
 ### 🎭 Animasyonlar
@@ -777,6 +871,10 @@ transition={{ duration: 1.5, repeat: Infinity }}
 - [ ] `useGamePersistence` entegre edildi
 - [ ] `hasSavedRef` ile çift kayıt engellendi
 - [ ] Touch-first hedefler (80px min)
+- [ ] **Responsive canvas boyutlandırma** (`window.innerWidth` bazlı, `resize` listener)
+- [ ] **Body scroll lock** (playing/feedback fazında `overflow: hidden` + `touch-action: none`)
+- [ ] **Canvas touch events** (`e.preventDefault()` + container `touch-none`)
+- [ ] **Çift kontrol** (canvas oyunlarında joystick + ok tuşları, opsiyonel çizim)
 - [ ] Glassmorphism tasarım
 - [ ] Responsive layout
 - [ ] Welcome/Playing/GameOver/Victory ekranları
