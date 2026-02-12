@@ -794,6 +794,7 @@ Dokunmatik ekranlarda çizim/sürükleme sırasında sayfa kaymasını önlemek 
 useEffect(() => {
     const isActive = phase === 'playing' || phase === 'feedback';
     if (isActive) {
+        window.scrollTo(0, 0); // Sayfa en üste git, sonra kilitle
         document.body.style.overflow = 'hidden';
         document.body.style.touchAction = 'none';
         document.documentElement.style.overflow = 'hidden';

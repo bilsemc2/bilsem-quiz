@@ -531,6 +531,7 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
     useEffect(() => {
         const isActive = phase === 'playing' || phase === 'feedback';
         if (isActive) {
+            window.scrollTo(0, 0);
             document.body.style.overflow = 'hidden';
             document.body.style.touchAction = 'none';
             document.documentElement.style.overflow = 'hidden';
