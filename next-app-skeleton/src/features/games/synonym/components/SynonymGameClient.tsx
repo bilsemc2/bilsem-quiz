@@ -36,10 +36,10 @@ const QUESTION_BANK: SynonymQuestion[] = [
   { id: 's12', word: 'Maksat', answer: 'Amac', options: ['Amac', 'Sonuc', 'Neden', 'Teklif'], hint: 'Hedeflenen sey.' },
   { id: 's13', word: 'Misafir', answer: 'Konuk', options: ['Konuk', 'Ev sahibi', 'Yolcu', 'Komsu'], hint: 'Agirlanan kisi.' },
   { id: 's14', word: 'Sene', answer: 'Yil', options: ['Gun', 'Ay', 'Yil', 'Saat'], hint: 'Zaman birimi.' },
-  { id: 's15', word: 'Acele', answer: 'Telaş', options: ['Durak', 'Telas', 'Sabir', 'Bekleyis'], hint: 'Hizli olma hali.' },
+  { id: 's15', word: 'Acele', answer: 'Telas', options: ['Durak', 'Telas', 'Sabir', 'Bekleyis'], hint: 'Hizli olma hali.' },
   { id: 's16', word: 'Yoksul', answer: 'Fakir', options: ['Fakir', 'Zengin', 'Tembel', 'Tok'], hint: 'Maddi durum.' },
   { id: 's17', word: 'Cesur', answer: 'Yigit', options: ['Yigit', 'Korkak', 'Sessiz', 'Inatci'], hint: 'Korkmayan kisi.' },
-  { id: 's18', word: 'Armağan', answer: 'Hediye', options: ['Odul', 'Hediye', 'Mektup', 'Parca'], hint: 'Verilen nesne.' },
+  { id: 's18', word: 'Armagan', answer: 'Hediye', options: ['Odul', 'Hediye', 'Mektup', 'Parca'], hint: 'Verilen nesne.' },
   { id: 's19', word: 'Evvel', answer: 'Once', options: ['Sonra', 'Hemen', 'Once', 'Siklik'], hint: 'Zamansal konum.' },
   { id: 's20', word: 'Lisan', answer: 'Dil', options: ['Dil', 'Lehce', 'Aksan', 'Yazi'], hint: 'Iletisim sistemi.' },
 ];

@@ -39,7 +39,7 @@ const QUESTION_BANK: AnalogyQuestion[] = [
     stemRight: 'Kitap',
     promptLeft: 'Ressam',
     answer: 'Tablo',
-    options: ['Firça', 'Muze', 'Tablo', 'Cerceve'],
+    options: ['Firca', 'Muze', 'Tablo', 'Cerceve'],
     explanation: 'Ureten-eser iliskisi.',
   },
   {
@@ -165,7 +165,7 @@ const QUESTION_BANK: AnalogyQuestion[] = [
     stemRight: 'Yanma',
     promptLeft: 'Kar',
     answer: 'Donma',
-    options: ['Eri̇me', 'Buhar', 'Donma', 'Isinma'],
+    options: ['Erime', 'Buhar', 'Donma', 'Isinma'],
     explanation: 'Gozlenen durum-olay iliskisi.',
   },
   {

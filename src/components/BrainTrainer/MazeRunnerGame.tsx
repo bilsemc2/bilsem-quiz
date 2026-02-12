@@ -156,11 +156,13 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
     // Responsive canvas size
     const [canvasSize, setCanvasSize] = useState(0);
 
-    // Responsive sizing
+    // Responsive sizing — leave room for header (~60px) + joystick (~160px)
     useEffect(() => {
         const updateSize = () => {
             const maxWidth = Math.min(window.innerWidth - 32, 480);
-            setCanvasSize(maxWidth);
+            const maxHeight = window.innerHeight - 280; // header + joystick + padding
+            const size = Math.min(maxWidth, maxHeight);
+            setCanvasSize(Math.max(size, 200)); // minimum 200px
         };
         updateSize();
         window.addEventListener('resize', updateSize);
@@ -731,7 +733,7 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
 
     return (
         <div
-            className={`min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white ${isActive ? 'overflow-hidden h-screen' : ''}`}
+            className={`min-h-screen flex flex-col bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white ${isActive ? 'overflow-hidden h-screen' : ''}`}
             style={isActive ? { touchAction: 'none', overscrollBehavior: 'none' } : {}}
         >
             {/* Background */}
@@ -782,7 +784,7 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
             </div>
 
             {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
+            <div className="relative z-10 flex flex-col items-center flex-1 p-4">
                 {/* Warning Popup */}
                 <AnimatePresence>
                     {warning && (
