@@ -105,6 +105,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'sembol-arama': ZEKA_TURLERI.SECICI_DIKKAT,
     'dikkat-ve-kodlama': ZEKA_TURLERI.ISLEME_HIZI,
     'zaman-gezgini': ZEKA_TURLERI.MANTIKSAL_ZEKA,
+    'sekil-cebiri': ZEKA_TURLERI.MANTIKSAL_ZEKA,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -189,6 +190,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'arcade-chroma-hafiza': 'arcade',
     'arcade-sevimli-mantik': 'arcade',
     'zaman-gezgini': 'bireysel',
+    'sekil-cebiri': 'bireysel',
 };
 
 // Workshop türü etiketleri

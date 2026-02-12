@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'sekil-cebiri',
+            title: "Şekil Cebiri",
+            desc: "Her şeklin bir değeri var! Görsel denklemleri çözerek şekillerin değerlerini bul ve soruyu cevapla.",
+            icon: <Brain />,
+            color: "indigo",
+            difficulty: "Zor",
+            link: "/games/sekil-cebiri",
+            isNew: true,
+            tuzo: "5.5.2 Kural Çıkarsama"
+        },
+        {
             id: 'zaman-gezgini',
             title: "Zaman Gezgini",
             desc: "Saati oku, yelkovanı sürükle ve doğru zamanı göster! Dakika hesaplama ve sayısal akıl yürütme becerisi.",
@@ -50,7 +61,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "indigo",
             difficulty: "Orta",
             link: "/games/zaman-gezgini",
-            isNew: true,
             tuzo: "5.2.1 Sayısal Akıl Yürütme"
         },
         {
