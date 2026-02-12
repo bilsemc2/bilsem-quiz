@@ -27,6 +27,7 @@ interface GameVariable {
     shape: ShapeType;
     color: ColorType;
     value: number;
+    dotted?: boolean;
 }
 
 interface EquationItem {
@@ -66,6 +67,11 @@ const generateLevel = (level: number): LevelData => {
     if (level >= 6) numVariables = 4;
     if (level >= 10) numVariables = 5;
 
+    // Level 5+: noktalı şekiller devreye girer
+    const allowDotted = level >= 5;
+    // Level 8+: noktalı şekil olma ihtimali artar
+    const dottedChance = level >= 12 ? 0.5 : level >= 8 ? 0.35 : 0.25;
+
     const maxVarValue = 5 + Math.floor(level / 2);
 
     const usedCombos = new Set<string>();
@@ -74,7 +80,8 @@ const generateLevel = (level: number): LevelData => {
     while (variables.length < numVariables) {
         const shape = getRandom(SHAPES);
         const color = getRandom(COLORS);
-        const key = `${shape}-${color}`;
+        const dotted = allowDotted && Math.random() < dottedChance;
+        const key = `${shape}-${color}-${dotted ? 'd' : 'n'}`;
 
         if (!usedCombos.has(key)) {
             usedCombos.add(key);
@@ -83,6 +90,7 @@ const generateLevel = (level: number): LevelData => {
                 shape,
                 color,
                 value: Math.floor(Math.random() * maxVarValue) + 1,
+                dotted,
             });
         }
     }
@@ -139,8 +147,8 @@ const getColorHex = (color: ColorType) => {
     return map[color] || '#9ca3af';
 };
 
-const ShapeIcon: React.FC<{ shape: ShapeType; color: ColorType; size?: number; className?: string }> = ({
-    shape, color, size = 40, className = '',
+const ShapeIcon: React.FC<{ shape: ShapeType; color: ColorType; size?: number; className?: string; dotted?: boolean }> = ({
+    shape, color, size = 40, className = '', dotted = false,
 }) => {
     const fill = getColorHex(color);
     const props = {
@@ -160,7 +168,24 @@ const ShapeIcon: React.FC<{ shape: ShapeType; color: ColorType; size?: number; c
         star: <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />,
     };
 
-    return <svg {...props}>{paths[shape]}</svg>;
+    // Noktalı şekiller: şeklin ortasında beyaz nokta
+    const dotCenter = shape === 'triangle' ? { cx: 12, cy: 13 } : { cx: 12, cy: 12 };
+
+    return (
+        <svg {...props}>
+            {paths[shape]}
+            {dotted && (
+                <circle
+                    cx={dotCenter.cx}
+                    cy={dotCenter.cy}
+                    r={2.5}
+                    fill="white"
+                    stroke="none"
+                    opacity={0.9}
+                />
+            )}
+        </svg>
+    );
 };
 
 // ─── Sub-Components ──────────────────────────────────────────
@@ -184,7 +209,7 @@ const VisualExpressionComp: React.FC<{
                         animate={animate ? { y: [0, -4, 0] } : {}}
                         transition={{ duration: 1.5, repeat: Infinity, delay: idx * 0.2 }}
                     >
-                        <ShapeIcon shape={v.shape} color={v.color} size={iconSize} />
+                        <ShapeIcon shape={v.shape} color={v.color} size={iconSize} dotted={v.dotted} />
                     </motion.div>
                 </React.Fragment>
             ))}
@@ -490,6 +515,7 @@ const ShapeAlgebraGame: React.FC<ShapeAlgebraGameProps> = ({ examMode = false })
                             <p className="text-slate-400 mb-8 leading-relaxed">
                                 Her şeklin bir sayısal değeri var! Görsel denklemleri çözerek
                                 şekillerin değerlerini bul ve soruların cevabını yaz.
+                                <br /><span className="text-indigo-400 text-sm">💡 İçinde nokta olan şekillerin değeri farklıdır!</span>
                             </p>
 
                             <div className="flex flex-wrap justify-center gap-4 mb-8">
