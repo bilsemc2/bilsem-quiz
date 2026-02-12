@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Play, Star, Timer, Target,
-    XCircle, ChevronLeft, Zap, Heart, Compass
+    XCircle, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
+    Zap, Heart, Compass
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
@@ -132,9 +133,10 @@ interface MazeCanvasProps {
     onWin: () => void;
     isPlaying: boolean;
     wrongTurnsLeft: number;
+    onMoveReady?: (moveFn: (dr: number, dc: number) => void) => void;
 }
 
-const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongPath, onWin, isPlaying }) => {
+const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongPath, onWin, isPlaying, onMoveReady }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const wallCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -147,6 +149,9 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
     const [cols, setCols] = useState(5);
     const [rows, setRows] = useState(5);
     const [lastLogicalCell, setLastLogicalCell] = useState<string>('0,0');
+    // Joystick-mode player position (cell-based)
+    const [playerPos, setPlayerPos] = useState<{ r: number; c: number }>({ r: 0, c: 0 });
+    const [hasMovedWithJoystick, setHasMovedWithJoystick] = useState(false);
     const [wallSeeds, setWallSeeds] = useState<{ top: WallSeed; right: WallSeed; bottom: WallSeed; left: WallSeed }[]>([]);
 
     // Initialize Maze
@@ -178,8 +183,67 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
         setPath([]);
         setIsDrawing(false);
         setLastLogicalCell('0,0');
+        setPlayerPos({ r: 0, c: 0 });
+        setHasMovedWithJoystick(false);
         wallCanvasRef.current = null;
     }, [level]);
+
+    // Cell-based movement (for joystick / arrow keys)
+    const movePlayer = useCallback((dr: number, dc: number) => {
+        if (!maze || !isPlaying) return;
+        setPlayerPos(prev => {
+            const cell = maze[prev.r]?.[prev.c];
+            if (!cell) return prev;
+
+            const nr = prev.r + dr;
+            const nc = prev.c + dc;
+            if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) return prev;
+
+            // Wall check
+            if (dr === -1 && cell.walls.top) return prev;
+            if (dr === 1 && cell.walls.bottom) return prev;
+            if (dc === -1 && cell.walls.left) return prev;
+            if (dc === 1 && cell.walls.right) return prev;
+
+            setHasMovedWithJoystick(true);
+
+            // Wrong path check
+            const key = `${nc},${nr}`;
+            if (!solutionSet.has(key)) {
+                onWrongPath();
+            }
+
+            // Win check
+            if (nr === rows - 1 && nc === cols - 1) {
+                setTimeout(() => onWin(), 100);
+            }
+
+            return { r: nr, c: nc };
+        });
+    }, [maze, isPlaying, rows, cols, solutionSet, onWrongPath, onWin]);
+
+    // Expose move function to parent for joystick
+    useEffect(() => {
+        if (onMoveReady) onMoveReady(movePlayer);
+    }, [onMoveReady, movePlayer]);
+
+    // Arrow key controls
+    useEffect(() => {
+        if (!isPlaying) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+            }
+            switch (e.key) {
+                case 'ArrowUp': movePlayer(-1, 0); break;
+                case 'ArrowDown': movePlayer(1, 0); break;
+                case 'ArrowLeft': movePlayer(0, -1); break;
+                case 'ArrowRight': movePlayer(0, 1); break;
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isPlaying, movePlayer]);
 
     const drawWobblyLine = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, seed: WallSeed) => {
         ctx.beginPath();
@@ -309,7 +373,20 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
             ctx.arc(head.x, head.y, PLAYER_RADIUS, 0, Math.PI * 2);
             ctx.fill();
         }
-    }, [maze, wallSeeds, path, lives, updateWallCanvas, drawMazeToContext, cols, rows]);
+
+        // Joystick-mode player dot (cell-based)
+        if (hasMovedWithJoystick || path.length === 0) {
+            const px = playerPos.c * cs + cs / 2;
+            const py = playerPos.r * cs + cs / 2;
+            ctx.beginPath();
+            ctx.fillStyle = '#818cf8';
+            ctx.shadowColor = '#818cf8';
+            ctx.shadowBlur = 12;
+            ctx.arc(px, py, cs * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    }, [maze, wallSeeds, path, lives, updateWallCanvas, drawMazeToContext, cols, rows, playerPos, hasMovedWithJoystick]);
 
     const checkPixelCollision = (x: number, y: number) => {
         if (!wallCanvasRef.current) return false;
@@ -583,6 +660,60 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
         showFeedback(true, ['Harika geçiş! 🎯', 'Labirenti aştın! 🌟', 'Muhteşem! 🧠', 'Ustasın! ⭐'][Math.floor(Math.random() * 4)]);
     }, [showFeedback]);
 
+    // ─── Virtual Joystick ────────────────────────────────────
+    const joystickRef = useRef<HTMLDivElement>(null);
+    const moveFnRef = useRef<((dr: number, dc: number) => void) | null>(null);
+    const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
+    const [joystickDragging, setJoystickDragging] = useState(false);
+    const lastJoystickMoveRef = useRef(0);
+    const JOYSTICK_RADIUS = 50;
+    const MOVE_THRESHOLD = 25;
+    const MOVE_COOLDOWN = 150;
+
+    const handleJoystickStart = useCallback(() => {
+        setJoystickDragging(true);
+    }, []);
+
+    const handleJoystickMove = useCallback((clientX: number, clientY: number) => {
+        if (!joystickRef.current || !joystickDragging) return;
+        const rect = joystickRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        let dx = clientX - centerX;
+        let dy = clientY - centerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > JOYSTICK_RADIUS) {
+            dx = (dx / distance) * JOYSTICK_RADIUS;
+            dy = (dy / distance) * JOYSTICK_RADIUS;
+        }
+        setJoystickPos({ x: dx, y: dy });
+
+        const now = Date.now();
+        if (now - lastJoystickMoveRef.current > MOVE_COOLDOWN && distance > MOVE_THRESHOLD && moveFnRef.current) {
+            lastJoystickMoveRef.current = now;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                moveFnRef.current(0, dx > 0 ? 1 : -1);
+            } else {
+                moveFnRef.current(dy > 0 ? 1 : -1, 0);
+            }
+        }
+    }, [joystickDragging]);
+
+    const handleJoystickEnd = useCallback(() => {
+        setJoystickDragging(false);
+        setJoystickPos({ x: 0, y: 0 });
+    }, []);
+
+    const getActiveDirection = () => {
+        const { x, y } = joystickPos;
+        const distance = Math.sqrt(x * x + y * y);
+        if (distance < MOVE_THRESHOLD) return null;
+        if (Math.abs(x) > Math.abs(y)) return x > 0 ? 'right' : 'left';
+        return y > 0 ? 'down' : 'up';
+    };
+    const activeDirection = getActiveDirection();
+
     const isActive = phase === 'playing' || phase === 'feedback';
 
     return (
@@ -735,9 +866,61 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
                                     onWin={handleWin}
                                     isPlaying={phase === 'playing' && !isFeedbackActive}
                                     wrongTurnsLeft={wrongTurnsLeft}
+                                    onMoveReady={(fn) => { moveFnRef.current = fn; }}
                                 />
                                 <GameFeedbackBanner feedback={feedbackState} />
                             </div>
+
+                            {/* Virtual Joystick */}
+                            {phase === 'playing' && (
+                                <div className="flex flex-col items-center gap-2 mt-4">
+                                    <div
+                                        ref={joystickRef}
+                                        className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-slate-800/60 backdrop-blur-md border-2 border-slate-700/50 shadow-2xl touch-none cursor-pointer"
+                                        style={{ WebkitTapHighlightColor: 'transparent' }}
+                                        onTouchStart={(e) => { e.preventDefault(); handleJoystickStart(); }}
+                                        onTouchMove={(e) => { e.preventDefault(); handleJoystickMove(e.touches[0].clientX, e.touches[0].clientY); }}
+                                        onTouchEnd={handleJoystickEnd}
+                                        onMouseDown={() => handleJoystickStart()}
+                                        onMouseMove={(e) => joystickDragging && handleJoystickMove(e.clientX, e.clientY)}
+                                        onMouseUp={handleJoystickEnd}
+                                        onMouseLeave={handleJoystickEnd}
+                                    >
+                                        {/* Direction indicators */}
+                                        <div className={`absolute top-2 left-1/2 -translate-x-1/2 transition-all duration-150 ${activeDirection === 'up' ? 'text-teal-400 scale-125' : 'text-slate-600'}`}>
+                                            <ChevronUp size={20} strokeWidth={3} />
+                                        </div>
+                                        <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 transition-all duration-150 ${activeDirection === 'down' ? 'text-teal-400 scale-125' : 'text-slate-600'}`}>
+                                            <ChevronDown size={20} strokeWidth={3} />
+                                        </div>
+                                        <div className={`absolute left-2 top-1/2 -translate-y-1/2 transition-all duration-150 ${activeDirection === 'left' ? 'text-teal-400 scale-125' : 'text-slate-600'}`}>
+                                            <ChevronLeft size={20} strokeWidth={3} />
+                                        </div>
+                                        <div className={`absolute right-2 top-1/2 -translate-y-1/2 transition-all duration-150 ${activeDirection === 'right' ? 'text-teal-400 scale-125' : 'text-slate-600'}`}>
+                                            <ChevronRight size={20} strokeWidth={3} />
+                                        </div>
+
+                                        {/* Joystick knob */}
+                                        <motion.div
+                                            className="absolute top-1/2 left-1/2 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg border-2 border-white/20"
+                                            style={{
+                                                x: joystickPos.x - 24,
+                                                y: joystickPos.y - 24,
+                                            }}
+                                            animate={{
+                                                scale: joystickDragging ? 1.1 : 1,
+                                                boxShadow: joystickDragging
+                                                    ? '0 0 20px rgba(20, 184, 166, 0.6), 0 4px 12px rgba(0,0,0,0.3)'
+                                                    : '0 4px 12px rgba(0,0,0,0.3)'
+                                            }}
+                                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                        />
+                                    </div>
+                                    <p className="text-slate-500 text-xs font-medium text-center">
+                                        Joystick ile veya parmağınla çiz
+                                    </p>
+                                </div>
+                            )}
                         </motion.div>
                     )}
 
