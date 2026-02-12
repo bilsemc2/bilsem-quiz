@@ -5,7 +5,7 @@ import EditProfileModal from '../components/EditProfileModal';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import {
-    Gift, Zap, Sparkles, ChevronRight, Ticket, Mail, BarChart3
+    Gift, Zap, Sparkles, Ticket, Mail, BarChart3
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { UserProfile, QuizStats, ClassStudent } from '@/types/profile';
@@ -21,6 +21,7 @@ import QuickAccessSection from '@/components/profile/QuickAccessSection';
 import TalentWorkshopsSection from '@/components/profile/TalentWorkshopsSection';
 import ExamResultSection from '@/components/profile/ExamResultSection';
 import AchievementsSection from '@/components/profile/AchievementsSection';
+import LiveLessonBooking from '@/components/profile/LiveLessonBooking';
 
 export const ProfilePage: React.FC = () => {
     const { user, profile, refreshProfile } = useAuth();
@@ -362,35 +363,8 @@ export const ProfilePage: React.FC = () => {
                     <UserMessages userId={user?.id} />
                 </motion.div>
 
-                {/* DersimVar.com Reklamı */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="mb-8"
-                >
-                    <a
-                        href="https://dersimvar.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 hover:shadow-xl hover:shadow-indigo-500/20 transition-all group overflow-hidden relative"
-                    >
-                        <div className="absolute inset-0 bg-[url('/images/logoDv.webp')] bg-right bg-no-repeat bg-contain opacity-20 group-hover:opacity-30 transition-opacity" />
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full">REKLAM</span>
-                            </div>
-                            <h3 className="text-2xl font-bold text-white mb-2">Özel Ders mi Arıyorsunuz?</h3>
-                            <p className="text-white/80 mb-4">
-                                Türkiye'nin en iyi öğretmenleriyle birebir online ders imkanı!
-                            </p>
-                            <div className="flex items-center gap-2 text-white font-semibold">
-                                <span>dersimvar.com'u ziyaret et</span>
-                                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </div>
-                        </div>
-                    </a>
-                </motion.div>
+                {/* Canlı Ders Al */}
+                <LiveLessonBooking />
 
                 {/* XP Kazanma Bölümü */}
                 <motion.div

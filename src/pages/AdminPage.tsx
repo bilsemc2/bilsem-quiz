@@ -29,6 +29,7 @@ import {
   Psychology as BrainIcon,
   Inventory as PackageIcon,
   NotificationsActive as NotifIcon,
+  CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -45,6 +46,7 @@ import StudentStatistics from '../components/admin/StudentStatistics';
 import StoryGeneratorPage from './Story/StoryGeneratorPage';
 import PackageManagement from '../components/admin/PackageManagement';
 import PushNotificationAdmin from '../components/admin/PushNotificationAdmin';
+import DersPlanla from '../components/admin/DersPlanla';
 import { toast } from 'sonner';
 
 interface Notification {
@@ -150,6 +152,13 @@ const AdminPage: React.FC = () => {
       icon: <NotifIcon />,
       component: <PushNotificationAdmin />,
       path: '/admin/push-notifications',
+    },
+    {
+      id: 'ders-planla',
+      title: 'Ders Planlayıcı',
+      icon: <CalendarIcon />,
+      component: <DersPlanla />,
+      path: '/admin/ders-planla',
     },
   ]);
 
