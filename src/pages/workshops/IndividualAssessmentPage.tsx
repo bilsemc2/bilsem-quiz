@@ -43,6 +43,17 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'lazer-hafiza',
+            title: "Lazer Hafıza",
+            desc: "Lazer yolunu dikkatlice izle, sonra aynı sırayla düğümlere tıkla! Kısa süreli görsel bellek.",
+            icon: <Crosshair />,
+            color: "cyan",
+            difficulty: "Orta",
+            link: "/games/lazer-hafiza",
+            isNew: true,
+            tuzo: "5.4.1 Kısa Süreli Görsel Bellek"
+        },
+        {
             id: 'sekil-cebiri',
             title: "Şekil Cebiri",
             desc: "Her şeklin bir değeri var! Görsel denklemleri çözerek şekillerin değerlerini bul ve soruyu cevapla.",
@@ -60,7 +71,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "teal",
             difficulty: "Zor",
             link: "/games/labirent",
-            isNew: true,
             tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
         },
         {

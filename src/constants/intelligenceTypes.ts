@@ -106,6 +106,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'zaman-gezgini': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'sekil-cebiri': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'labirent': ZEKA_TURLERI.GORSEL_UZAMSAL,
+    'lazer-hafiza': ZEKA_TURLERI.GORSEL_HAFIZA,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -191,6 +192,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'zaman-gezgini': 'bireysel',
     'sekil-cebiri': 'bireysel',
     'labirent': 'bireysel',
+    'lazer-hafiza': 'bireysel',
 };
 
 // Workshop türü etiketleri
