@@ -241,6 +241,7 @@ const VisualMemoryGame: React.FC<VisualMemoryGameProps> = ({ examMode = false })
 
     // ──────────── Start Game ────────────
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         setPhase('memorize');
         setScore(0);
         setLives(INITIAL_LIVES);

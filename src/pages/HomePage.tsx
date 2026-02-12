@@ -6,7 +6,7 @@ import { Rocket, Star, Users, Palette, Music, Lightbulb, Brain, Sparkles, Target
 const HomePage: React.FC = () => {
   const stats = [
     { label: "Aktif Öğrenci", value: "1000+", color: "text-purple-600", icon: <Users size={20} /> },
-    { label: "Eğlenceli Aktivite", value: "Gelecekte 50+", color: "text-purple-600", icon: <Star size={20} /> },
+    { label: "Eğlenceli Aktivite", value: "50+", color: "text-purple-600", icon: <Star size={20} /> },
     { label: "Kullanıcı Puanı", value: "4.9", color: "text-purple-600", icon: <Rocket size={20} /> },
   ];
 

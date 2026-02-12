@@ -339,6 +339,7 @@ const SpotDifferenceGame: React.FC<SpotDifferenceGameProps> = ({ examMode: examM
 
     // Start Game
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         setPhase('playing');
         setScore(0);
         setLives(INITIAL_LIVES);

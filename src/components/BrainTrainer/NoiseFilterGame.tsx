@@ -119,6 +119,7 @@ const NoiseFilterGame: React.FC<NoiseFilterGameProps> = ({ examMode: examModePro
 
     // Start Game
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         setPhase('playing');
         setScore(0);
         setAttempts(0);

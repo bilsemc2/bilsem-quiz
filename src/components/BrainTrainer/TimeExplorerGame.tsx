@@ -324,6 +324,7 @@ const TimeExplorerGame: React.FC<TimeExplorerGameProps> = ({ examMode = false })
 
     // Start Game
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         setPhase('playing');
         setScore(0);
         setLives(INITIAL_LIVES);

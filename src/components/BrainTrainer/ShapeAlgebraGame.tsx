@@ -323,6 +323,7 @@ const ShapeAlgebraGame: React.FC<ShapeAlgebraGameProps> = ({ examMode = false })
     const handleStart = useCallback(() => {
         const data = generateLevel(1);
         setLevelData(data);
+        window.scrollTo(0, 0);
         setPhase('playing');
         setScore(0);
         setLives(INITIAL_LIVES);

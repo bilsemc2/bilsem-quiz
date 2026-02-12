@@ -231,6 +231,7 @@ const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
     }, []);
 
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         setPhase('playing');
         setScore(0);
         setLives(INITIAL_LIVES);

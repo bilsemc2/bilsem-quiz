@@ -295,6 +295,7 @@ const MathMagicGame: React.FC = () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
 
+        window.scrollTo(0, 0);
         setPhase('game_over');
 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);

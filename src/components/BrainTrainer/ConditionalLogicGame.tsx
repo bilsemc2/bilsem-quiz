@@ -231,6 +231,7 @@ const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = 
 
     // Start
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         setPhase('playing');
         setScore(0);
         setLives(INITIAL_LIVES);

@@ -198,6 +198,7 @@ const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
         setLives(INITIAL_LIVES);
         setLevel(1);
         setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        window.scrollTo(0, 0);
         setPhase('playing');
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;

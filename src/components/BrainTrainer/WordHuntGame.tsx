@@ -290,6 +290,7 @@ const WordHuntGame: React.FC<WordHuntGameProps> = ({ examMode = false }) => {
 
     // ──────────── Start Game ────────────
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevel(1);

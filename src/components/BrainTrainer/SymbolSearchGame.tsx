@@ -216,6 +216,7 @@ const SymbolSearchGame: React.FC<SymbolSearchGameProps> = ({ examMode = false })
 
     // Start
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         setPhase('playing');
         setScore(0);
         setLives(INITIAL_LIVES);

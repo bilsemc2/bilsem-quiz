@@ -38,7 +38,7 @@ const GenelYetenekPage: React.FC = () => {
 
     const stats = [
         { value: "2.5k+", label: "Aktif Öğrenci" },
-        { value: "Gelecekte 50+", label: "Simülasyon" },
+        { value: "50+", label: "Simülasyon" },
         { value: "4.9", label: "Kullanıcı Puanı" }
     ];
 

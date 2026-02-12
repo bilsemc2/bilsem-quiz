@@ -286,6 +286,7 @@ const NumberCipherGame: React.FC = () => {
     }, [phase, currentQuestion, generateQuestion]);
 
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         setPhase('playing');
         setScore(0);
         setLives(INITIAL_LIVES);

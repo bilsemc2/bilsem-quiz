@@ -220,7 +220,7 @@ export default function LoginPage() {
         >
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Gelecekte 150+ Oyun</span>
+            <span>150+ Oyun</span>
           </div>
           <div className="flex items-center gap-2">
             <Brain className="w-4 h-4 text-purple-400" />
