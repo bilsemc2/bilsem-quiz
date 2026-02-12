@@ -153,6 +153,19 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
     const [playerPos, setPlayerPos] = useState<{ r: number; c: number }>({ r: 0, c: 0 });
     const [hasMovedWithJoystick, setHasMovedWithJoystick] = useState(false);
     const [wallSeeds, setWallSeeds] = useState<{ top: WallSeed; right: WallSeed; bottom: WallSeed; left: WallSeed }[]>([]);
+    // Responsive canvas size
+    const [canvasSize, setCanvasSize] = useState(0);
+
+    // Responsive sizing
+    useEffect(() => {
+        const updateSize = () => {
+            const maxWidth = Math.min(window.innerWidth - 32, 480);
+            setCanvasSize(maxWidth);
+        };
+        updateSize();
+        window.addEventListener('resize', updateSize);
+        return () => window.removeEventListener('resize', updateSize);
+    }, []);
 
     // Initialize Maze
     useEffect(() => {
@@ -292,8 +305,8 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
     }, [maze, wallSeeds, cols, rows]);
 
     const updateWallCanvas = useCallback(() => {
-        if (!maze || !containerRef.current) return;
-        const size = Math.min(containerRef.current.clientWidth, containerRef.current.clientHeight);
+        if (!maze || canvasSize === 0) return;
+        const size = canvasSize;
 
         if (!wallCanvasRef.current) wallCanvasRef.current = document.createElement('canvas');
         const wCanvas = wallCanvasRef.current;
@@ -304,7 +317,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
         const wCtx = wCanvas.getContext('2d', { willReadFrequently: true });
         if (wCtx) drawMazeToContext(wCtx, size, size, true);
         return size;
-    }, [drawMazeToContext, maze]);
+    }, [drawMazeToContext, maze, canvasSize]);
 
     // Main Draw Loop
     useEffect(() => {
@@ -386,7 +399,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
             ctx.fill();
             ctx.shadowBlur = 0;
         }
-    }, [maze, wallSeeds, path, lives, updateWallCanvas, drawMazeToContext, cols, rows, playerPos, hasMovedWithJoystick]);
+    }, [maze, wallSeeds, path, lives, updateWallCanvas, drawMazeToContext, cols, rows, playerPos, hasMovedWithJoystick, canvasSize]);
 
     const checkPixelCollision = (x: number, y: number) => {
         if (!wallCanvasRef.current) return false;
@@ -463,7 +476,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
     };
 
     return (
-        <div ref={containerRef} className="w-full aspect-square max-w-md mx-auto flex items-center justify-center relative touch-none">
+        <div ref={containerRef} className="w-full mx-auto flex items-center justify-center relative touch-none" style={{ maxWidth: canvasSize, height: canvasSize }}>
             {!isDrawing && path.length === 0 && isPlaying && (
                 <div className="absolute top-2 left-2 pointer-events-none text-emerald-400 text-xs animate-pulse font-bold z-10">
                     ← Buradan başla
