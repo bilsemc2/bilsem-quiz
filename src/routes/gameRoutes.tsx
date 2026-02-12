@@ -58,6 +58,7 @@ const WordHuntGame = React.lazy(() => import('@/components/BrainTrainer/WordHunt
 const SpotDifferenceGame = React.lazy(() => import('@/components/BrainTrainer/SpotDifferenceGame'));
 const TimeExplorerGame = React.lazy(() => import('@/components/BrainTrainer/TimeExplorerGame'));
 const ShapeAlgebraGame = React.lazy(() => import('@/components/BrainTrainer/ShapeAlgebraGame'));
+const MazeRunnerGame = React.lazy(() => import('@/components/BrainTrainer/MazeRunnerGame'));
 
 /**
  * Brain Trainer Game Routes
@@ -119,4 +120,5 @@ export const gameRoutes = [
     <Route key="farki-bul" path="/games/farki-bul" element={<RequireAuth><SpotDifferenceGame /></RequireAuth>} />,
     <Route key="zaman-gezgini" path="/games/zaman-gezgini" element={<RequireAuth><TimeExplorerGame /></RequireAuth>} />,
     <Route key="sekil-cebiri" path="/games/sekil-cebiri" element={<RequireAuth><ShapeAlgebraGame /></RequireAuth>} />,
+    <Route key="labirent" path="/games/labirent" element={<RequireAuth><MazeRunnerGame /></RequireAuth>} />,
 ];

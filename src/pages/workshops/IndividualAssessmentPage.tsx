@@ -50,8 +50,18 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "indigo",
             difficulty: "Zor",
             link: "/games/sekil-cebiri",
-            isNew: true,
             tuzo: "5.5.2 Kural Çıkarsama"
+        },
+        {
+            id: 'labirent',
+            title: "Labirent Koşusu",
+            desc: "Parmağınla yolu çiz, duvarlara değme! Uzamsal ilişki çözümleme ve görsel-motor koordinasyon.",
+            icon: <Compass />,
+            color: "teal",
+            difficulty: "Zor",
+            link: "/games/labirent",
+            isNew: true,
+            tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
         },
         {
             id: 'zaman-gezgini',
