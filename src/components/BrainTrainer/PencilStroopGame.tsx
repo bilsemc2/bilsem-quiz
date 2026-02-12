@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Pencil, Heart, Sparkles, Eye } from 'lucide-react';
+import { Trophy, RotateCcw, Play, Star, Target, ChevronLeft, Zap, Pencil, Heart, Sparkles, Eye } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 interface Round {
     textColorName: string;
@@ -21,18 +23,7 @@ const COLORS = [
 ];
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! ✏️",
-    "Süper! ⭐",
-    "Müthiş! 🎯",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Neredeyse! ✨",
-    "Dikkatli bak! 👀",
-];
 
 // Gummy Pencil SVG Component
 const ColoredPencil: React.FC<{ color: string; isSelected?: boolean; isCorrect?: boolean; isWrong?: boolean }> = ({
@@ -70,6 +61,7 @@ const ColoredPencil: React.FC<{ color: string; isSelected?: boolean; isCorrect?:
 
 const PencilStroopGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const location = useLocation();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [currentRound, setCurrentRound] = useState<Round | null>(null);
@@ -79,8 +71,6 @@ const PencilStroopGame: React.FC = () => {
     const [correctCount, setCorrectCount] = useState(0);
     const [wrongCount, setWrongCount] = useState(0);
     const [reactionTimes, setReactionTimes] = useState<number[]>([]);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [selectedColor, setSelectedColor] = useState<string | null>(null);
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
@@ -122,7 +112,6 @@ const PencilStroopGame: React.FC = () => {
         setStreak(0);
         setBestStreak(0);
         setSelectedColor(null);
-        setFeedback(null);
         gameStartTimeRef.current = Date.now();
         hasSavedRef.current = false;
         const round = generateRound();
@@ -164,7 +153,7 @@ const PencilStroopGame: React.FC = () => {
 
     // Handle pencil click
     const handlePencilClick = useCallback((pencilColor: string) => {
-        if (!currentRound || feedback) return;
+        if (!currentRound || feedbackState) return;
 
         const reactionTime = Date.now() - roundStartTime;
         setReactionTimes(prev => [...prev, reactionTime]);
@@ -173,8 +162,7 @@ const PencilStroopGame: React.FC = () => {
         const isCorrect = pencilColor === currentRound.correctPencilColor;
 
         if (isCorrect) {
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             setCorrectCount(prev => prev + 1);
             setStreak(prev => {
                 const newStreak = prev + 1;
@@ -186,15 +174,13 @@ const PencilStroopGame: React.FC = () => {
             const streakBonus = streak * 5;
             setScore(prev => prev + 100 + timeBonus + streakBonus);
         } else {
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             setWrongCount(prev => prev + 1);
             setStreak(0);
             setLives(prev => prev - 1);
         }
 
         setTimeout(() => {
-            setFeedback(null);
             setSelectedColor(null);
 
             if (lives <= 1 && !isCorrect) {
@@ -208,7 +194,7 @@ const PencilStroopGame: React.FC = () => {
                 setRoundStartTime(Date.now());
             }
         }, 1200);
-    }, [currentRound, roundStartTime, roundNumber, totalRounds, streak, bestStreak, generateRound, feedback, lives]);
+    }, [currentRound, roundStartTime, roundNumber, totalRounds, streak, bestStreak, generateRound, feedbackState, lives]);
 
     const averageReactionTime = reactionTimes.length > 0
         ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
@@ -439,16 +425,16 @@ const PencilStroopGame: React.FC = () => {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.1 }}
                                         onClick={() => handlePencilClick(color.pencilColor)}
-                                        disabled={feedback !== null}
-                                        whileHover={!feedback ? { scale: 1.1, y: -8 } : {}}
-                                        whileTap={!feedback ? { scale: 0.95 } : {}}
+                                        disabled={feedbackState !== null}
+                                        whileHover={!feedbackState ? { scale: 1.1, y: -8 } : {}}
+                                        whileTap={!feedbackState ? { scale: 0.95 } : {}}
                                         className="focus:outline-none"
                                     >
                                         <ColoredPencil
                                             color={color.pencilColor}
                                             isSelected={selectedColor === color.pencilColor}
-                                            isCorrect={feedback === 'correct' && color.pencilColor === currentRound.correctPencilColor}
-                                            isWrong={feedback ? color.pencilColor !== currentRound.correctPencilColor : undefined}
+                                            isCorrect={feedbackState?.correct === true && color.pencilColor === currentRound.correctPencilColor}
+                                            isWrong={feedbackState ? color.pencilColor !== currentRound.correctPencilColor : undefined}
                                         />
                                         <p className="text-center text-xs font-bold text-slate-400 mt-1">
                                             {color.name}
@@ -542,46 +528,11 @@ const PencilStroopGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`
-                                    px-12 py-8 rounded-3xl text-center
-                                    ${feedback === 'correct'
-                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }
-                                `}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                                {feedback === 'wrong' && currentRound && (
-                                    <p className="text-white/80 mt-2">Doğru renk: {currentRound.textColorName}</p>
-                                )}
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default PencilStroopGame;
+

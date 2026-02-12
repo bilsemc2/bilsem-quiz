@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Heart, Volume2, ChevronLeft, Music, Sparkles, CheckCircle2, XCircle, Headphones, Eye } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
 import { useExam } from '../../contexts/ExamContext';
 // Ses notaları - Web Audio API ile oluşturulacak
 const NOTES = [
@@ -17,17 +18,7 @@ const NOTES = [
 ];
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 🎵",
-    "Süper! ⭐",
-    "Mükemmel! 🎉",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Dikkatli dinle! 👂",
-    "Tekrar dene! 💪",
-];
 
 interface AuditoryMemoryGameProps {
     examMode?: boolean;
@@ -40,6 +31,7 @@ const AuditoryMemoryGame: React.FC<AuditoryMemoryGameProps> = ({ examMode: examM
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState } = useGameFeedback();
 
     // examMode can come from props OR location.state (when navigating from ExamContinuePage)
     const examMode = examModeProp || location.state?.examMode === true;
@@ -55,7 +47,6 @@ const AuditoryMemoryGame: React.FC<AuditoryMemoryGameProps> = ({ examMode: examM
     const [bestLevel, setBestLevel] = useState(0);
     const [activeNote, setActiveNote] = useState<number | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -175,7 +166,6 @@ const AuditoryMemoryGame: React.FC<AuditoryMemoryGameProps> = ({ examMode: examM
         if (newPlayerSequence[currentIndex] !== sequence[currentIndex]) {
             // Yanlış!
             setIsCorrect(false);
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
             setWrongCount(prev => prev + 1);
             setLives(prev => prev - 1);
             setGameState('feedback');
@@ -190,7 +180,6 @@ const AuditoryMemoryGame: React.FC<AuditoryMemoryGameProps> = ({ examMode: examM
         } else if (newPlayerSequence.length === sequence.length) {
             // Tamamladı!
             setIsCorrect(true);
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
             setCorrectCount(prev => prev + 1);
             const levelBonus = level * 50;
             setScore(prev => prev + 100 + levelBonus);
@@ -450,13 +439,13 @@ const AuditoryMemoryGame: React.FC<AuditoryMemoryGameProps> = ({ examMode: examM
                                 {gameState === 'feedback' && isCorrect && (
                                     <div className="flex items-center justify-center gap-3 text-emerald-400">
                                         <CheckCircle2 className="w-6 h-6" />
-                                        <span className="text-lg font-bold">{feedbackMsg}</span>
+                                        <span className="text-lg font-bold">{feedbackState?.message}</span>
                                     </div>
                                 )}
                                 {gameState === 'feedback' && isCorrect === false && (
                                     <div className="flex items-center justify-center gap-3 text-red-400">
                                         <XCircle className="w-6 h-6" />
-                                        <span className="text-lg font-bold">{feedbackMsg}</span>
+                                        <span className="text-lg font-bold">{feedbackState?.message}</span>
                                     </div>
                                 )}
                             </div>
@@ -600,3 +589,4 @@ const AuditoryMemoryGame: React.FC<AuditoryMemoryGameProps> = ({ examMode: examM
 };
 
 export default AuditoryMemoryGame;
+

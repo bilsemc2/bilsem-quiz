@@ -4,9 +4,11 @@ import { Link, useLocation } from 'react-router-dom';
 import {
     ChevronLeft, RotateCcw, Play, Trophy, Sparkles,
     Square, Circle, Triangle, Star, Heart, Diamond,
-    Box, Layers, Timer, Eye, CheckCircle2, XCircle
+    Box, Layers, Timer, Eye
 } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // ------------------ Types ------------------
@@ -48,17 +50,7 @@ const ICONS = [
 ];
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 🧊",
-    "Süper 3D Görüş! 👁️",
-    "Müthiş! ⭐",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Dikkatli hayal et! 🧠",
-];
 
 // 11 Standard Cube Nets
 const NET_LAYOUTS: CubeNet[] = [
@@ -77,13 +69,12 @@ const NET_LAYOUTS: CubeNet[] = [
 
 const MagicCubeGame: React.FC = () => {
     const { playSound } = useSound();
+    const { feedbackState, showFeedback: triggerFeedback } = useGameFeedback();
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
-    const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [isFolding, setIsFolding] = useState(false);
     const [timeLeft, setTimeLeft] = useState(45);
     const [lives, setLives] = useState(3);
@@ -134,7 +125,6 @@ const MagicCubeGame: React.FC = () => {
 
         setOptions([...distractorOptions, correctOption].sort(() => Math.random() - 0.5));
         setTimeLeft(45);
-        setShowFeedback(null);
     }, []);
 
     // Start Game
@@ -158,14 +148,13 @@ const MagicCubeGame: React.FC = () => {
     // Timer
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (gameState === 'playing' && timeLeft > 0 && !showFeedback) {
+        if (gameState === 'playing' && timeLeft > 0 && !feedbackState) {
             interval = setInterval(() => {
                 setTimeLeft(prev => {
                     if (prev <= 1) {
                         // Time's up - count as wrong
                         playSound('incorrect');
-                        setShowFeedback('wrong');
-                        setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+                        triggerFeedback(false);
                         setLives(l => l - 1);
                         return 0;
                     }
@@ -174,14 +163,13 @@ const MagicCubeGame: React.FC = () => {
             }, 1000);
         }
         return () => clearInterval(interval);
-    }, [gameState, timeLeft, showFeedback, playSound]);
+    }, [gameState, timeLeft, feedbackState, playSound]);
 
     // Handle feedback timeout
     useEffect(() => {
-        if (showFeedback) {
+        if (feedbackState) {
             const timeout = setTimeout(() => {
-                setShowFeedback(null);
-                if (lives <= 0 && showFeedback === 'wrong') {
+                if (lives <= 0 && feedbackState?.correct === false) {
                     setGameState('finished');
                 } else if (level >= totalQuestions) {
                     setGameState('finished');
@@ -192,20 +180,18 @@ const MagicCubeGame: React.FC = () => {
             }, 2000);
             return () => clearTimeout(timeout);
         }
-    }, [showFeedback, lives, level, generateLevel]);
+    }, [feedbackState, lives, level, generateLevel]);
 
     const handleSelect = (option: GameOption) => {
-        if (showFeedback) return;
+        if (feedbackState) return;
 
         if (option.isCorrect) {
             playSound('correct');
-            setShowFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            triggerFeedback(true);
             setScore(s => s + timeLeft * 15);
         } else {
             playSound('incorrect');
-            setShowFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            triggerFeedback(false);
             setIsFolding(true);
             setLives(l => l - 1);
         }
@@ -605,20 +591,20 @@ const MagicCubeGame: React.FC = () => {
                                         {options.map((option) => (
                                             <motion.button
                                                 key={option.id}
-                                                whileHover={!showFeedback ? { scale: 1.05, y: -4 } : {}}
-                                                whileTap={!showFeedback ? { scale: 0.95 } : {}}
+                                                whileHover={!feedbackState ? { scale: 1.05, y: -4 } : {}}
+                                                whileTap={!feedbackState ? { scale: 0.95 } : {}}
                                                 onClick={() => handleSelect(option)}
-                                                disabled={showFeedback !== null}
+                                                disabled={feedbackState !== null}
                                                 className="p-6 rounded-[30%] transition-all"
                                                 style={{
-                                                    background: showFeedback && option.isCorrect
+                                                    background: feedbackState && option.isCorrect
                                                         ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.2) 100%)'
                                                         : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
                                                     boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
-                                                    border: showFeedback && option.isCorrect
+                                                    border: feedbackState && option.isCorrect
                                                         ? '2px solid #10B981'
                                                         : '1px solid rgba(255,255,255,0.1)',
-                                                    cursor: showFeedback ? 'default' : 'pointer'
+                                                    cursor: feedbackState ? 'default' : 'pointer'
                                                 }}
                                             >
                                                 <Cube3D rotation={option.rotation} size={80} data={facesData} />
@@ -705,40 +691,11 @@ const MagicCubeGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {showFeedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${showFeedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: showFeedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {showFeedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default MagicCubeGame;
+

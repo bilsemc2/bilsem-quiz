@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, RotateCcw, Trophy, Timer, Play,
     Circle, Square, Triangle, Hexagon, Star, Pentagon,
-    Cross, Moon, Heart, Zap, Eye, Sparkles, CheckCircle2, XCircle, Grid3X3
+    Cross, Moon, Heart, Zap, Eye, Sparkles, Grid3X3
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
 
@@ -23,18 +25,7 @@ const COLORS = [
 ];
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! ⭐",
-    "Süper Eşleşme! 🎯",
-    "Muhteşem! 🌟",
-    "Tam İsabet! 🎉",
-];
 
-const FAILURE_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Neredeyse! ✨",
-    "Dikkatli bak! 👀",
-];
 
 interface Card {
     id: string;
@@ -51,6 +42,7 @@ const CrossMatchGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const location = useLocation();
     const navigate = useNavigate();
     const [status, setStatus] = useState<GameStatus>('waiting');
@@ -60,8 +52,6 @@ const CrossMatchGame: React.FC = () => {
     const [cards, setCards] = useState<Card[]>([]);
     const [flippedIndices, setFlippedIndices] = useState<number[]>([]);
     const [timeLeft, setTimeLeft] = useState(60);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const shuffleIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
@@ -121,7 +111,6 @@ const CrossMatchGame: React.FC = () => {
         const newCards = generateCards(lvl);
         setCards(newCards);
         setFlippedIndices([]);
-        setFeedback(null);
         setStatus('preview');
         setTimeLeft(60);
 
@@ -221,17 +210,13 @@ const CrossMatchGame: React.FC = () => {
                 // Match!
                 setTimeout(() => {
                     playSound('memory_match');
-                    setFeedback('correct');
-                    setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+                    showFeedback(true);
                     setCards(prev => prev.map((c, i) =>
                         (i === firstIdx || i === secondIdx) ? { ...c, isMatched: true } : c
                     ));
                     setFlippedIndices([]);
                     setScore(prev => prev + (level * 50));
 
-                    setTimeout(() => {
-                        setFeedback(null);
-                    }, 1200);
 
                     // Check level complete
                     setCards(currentCards => {
@@ -251,8 +236,7 @@ const CrossMatchGame: React.FC = () => {
                 // Wrong match
                 setTimeout(() => {
                     playSound('memory_fail');
-                    setFeedback('wrong');
-                    setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+                    showFeedback(false);
 
                     const newLives = lives - 1;
                     setLives(newLives);
@@ -263,7 +247,6 @@ const CrossMatchGame: React.FC = () => {
                     setFlippedIndices([]);
 
                     setTimeout(() => {
-                        setFeedback(null);
                         if (newLives <= 0) {
                             setStatus('gameover');
                         }
@@ -572,43 +555,11 @@ const CrossMatchGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`
-                                    px-12 py-8 rounded-3xl text-center
-                                    ${feedback === 'correct'
-                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }
-                                `}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default CrossMatchGame;
+

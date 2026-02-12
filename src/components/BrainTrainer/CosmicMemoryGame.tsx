@@ -4,11 +4,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, RotateCcw, Trophy,
     Star, Zap, Brain, Eye, Heart, Clock, Play, Home,
-    CheckCircle2, XCircle, Sparkles
+    Sparkles
 } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // ------------------ Tip Tanımları ------------------
 type GameMode = 'NORMAL' | 'REVERSE';
@@ -24,23 +26,13 @@ interface GameState {
     mode: GameMode;
 }
 
-// Child-friendly feedback messages
-const SUCCESS_MESSAGES = [
-    "Süper hafıza! ⭐",
-    "Uzay dahisi! 🚀",
-    "Harikasın! 🌟",
-    "Mükemmel! 💫",
-    "Kozmik zeka! 🧠",
-];
-
-const FAIL_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Diziye odaklan! 👀",
-    "Biraz daha dikkat! 🎯",
-];
-
+// Child-friendly feedbackState messages
 const CosmicMemoryGame: React.FC = () => {
     const { playSound } = useSound();
+
+    // Shared Feedback System
+    const { feedbackState, showFeedback } = useGameFeedback();
+
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
     const location = useLocation();
@@ -48,9 +40,6 @@ const CosmicMemoryGame: React.FC = () => {
     const [gameStarted, setGameStarted] = useState(false);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [showFeedback, setShowFeedback] = useState(false);
-    const [isCorrectFeedback, setIsCorrectFeedback] = useState(true);
 
     // Exam Mode Props
     const examMode = location.state?.examMode || false;
@@ -138,12 +127,9 @@ const CosmicMemoryGame: React.FC = () => {
             setState(prev => ({ ...prev, userSequence: nextUserSequence }));
 
             if (nextUserSequence.length === state.sequence.length) {
-                setIsCorrectFeedback(true);
-                setFeedbackMessage(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
-                setShowFeedback(true);
+                showFeedback(true);
 
                 setTimeout(() => {
-                    setShowFeedback(false);
                     if (state.level === 10) {
                         setState(prev => ({ ...prev, status: 'GAMEOVER', score: prev.score + 500 }));
                     } else {
@@ -160,14 +146,10 @@ const CosmicMemoryGame: React.FC = () => {
             }
         } else {
             playSound('cosmic_fail');
-            setIsCorrectFeedback(false);
-            setFeedbackMessage(FAIL_MESSAGES[Math.floor(Math.random() * FAIL_MESSAGES.length)]);
-            setShowFeedback(true);
-
+            showFeedback(false);
             setLives(l => {
                 const newLives = l - 1;
                 setTimeout(() => {
-                    setShowFeedback(false);
                     if (newLives <= 0) {
                         setState(prev => ({ ...prev, status: 'FAILURE' }));
                         setTimeout(() => {
@@ -246,7 +228,8 @@ const CosmicMemoryGame: React.FC = () => {
             // Exam mode: submit result and redirect
             if (examMode) {
                 submitResult(state.score > 500, state.score, 3000, durationSeconds).then(() => {
-                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                    navigate("/atolyeler/sinav-simulasyonu/devam");
+                });
                 return;
             }
 
@@ -383,38 +366,18 @@ const CosmicMemoryGame: React.FC = () => {
                 <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl" />
             </div>
 
-            {/* Feedback Overlay */}
+            {/* Shared Feedback Banner */}
             <AnimatePresence>
-                {showFeedback && (
+                {feedbackState && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-end justify-center pb-24 pointer-events-none"
                     >
-                        <motion.div
-                            initial={{ y: 50 }}
-                            animate={{ y: 0 }}
-                            className={`
-                                px-12 py-8 rounded-3xl text-center
-                                ${isCorrectFeedback
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                }
-                            `}
-                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                        >
-                            <motion.div
-                                animate={{ scale: [1, 1.2, 1], rotate: isCorrectFeedback ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                transition={{ duration: 0.5 }}
-                            >
-                                {isCorrectFeedback
-                                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                }
-                            </motion.div>
-                            <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                        </motion.div>
+                        <div className="pointer-events-auto">
+                            <GameFeedbackBanner feedback={feedbackState} />
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

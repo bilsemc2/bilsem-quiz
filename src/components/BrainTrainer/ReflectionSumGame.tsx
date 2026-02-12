@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, RotateCcw, Trophy, Play, Timer,
-    Star, Heart, Zap, CheckCircle2, XCircle, Calculator, FlipHorizontal, Sparkles, Eye
+    Star, Heart, Zap, CheckCircle2, Calculator, FlipHorizontal, Sparkles, Eye
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
 
@@ -13,17 +15,7 @@ import { useExam } from '../../contexts/ExamContext';
 type GameStatus = 'waiting' | 'display' | 'input_sequence' | 'input_sum' | 'result' | 'gameover';
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 🔄",
-    "Süper! ⭐",
-    "Doğru! 🎉",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Dikkatli bak! 👀",
-    "Tekrar dene! 💪",
-];
 
 const ReflectionSumGame: React.FC = () => {
     const { playSound } = useSound();
@@ -31,6 +23,7 @@ const ReflectionSumGame: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     // Exam Mode Props
     const examMode = location.state?.examMode || false;
@@ -43,8 +36,6 @@ const ReflectionSumGame: React.FC = () => {
     const [userSum, setUserSum] = useState<string>('');
     const [currentIndex, setCurrentIndex] = useState(-1);
     const [timeLeft, setTimeLeft] = useState(30);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [isMirrored, setIsMirrored] = useState(false);
     const [streak, setStreak] = useState(0);
     const gameStartTimeRef = useRef<number>(0);
@@ -62,7 +53,6 @@ const ReflectionSumGame: React.FC = () => {
         setUserSequence([]);
         setUserSum('');
         setCurrentIndex(-1);
-        setFeedback(null);
         setIsMirrored(lvl > 2 && Math.random() < 0.4);
         setStatus('display');
     }, []);
@@ -148,7 +138,7 @@ const ReflectionSumGame: React.FC = () => {
     }, [status, score, level, lives, streak, saveGamePlay, examMode, submitResult, navigate]);
 
     const handleDigitClick = (digit: number) => {
-        if (status !== 'input_sequence' || feedback) return;
+        if (status !== 'input_sequence' || feedbackState) return;
 
         const newSequence = [...userSequence, digit];
         setUserSequence(newSequence);
@@ -157,12 +147,11 @@ const ReflectionSumGame: React.FC = () => {
         const reversedDigits = [...digits].reverse();
         if (digit !== reversedDigits[newSequence.length - 1]) {
             playSound('incorrect');
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             setStreak(0);
             setLives(l => {
                 if (l <= 1) {
-                    setTimeout(() => { setFeedback(null); setStatus('gameover'); }, 1500);
+                    setTimeout(() => { setStatus('gameover'); }, 1500);
                     return 0;
                 }
                 return l - 1;
@@ -183,12 +172,11 @@ const ReflectionSumGame: React.FC = () => {
     };
 
     const handleSumSubmit = () => {
-        if (feedback) return;
+        if (feedbackState) return;
         const total = digits.reduce((a, b) => a + b, 0);
         if (parseInt(userSum) === total) {
             playSound('correct');
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             setStreak(prev => prev + 1);
             setScore(prev => prev + (level * 300) + (timeLeft * 15) + (streak * 20));
             setTimeout(() => {
@@ -198,12 +186,11 @@ const ReflectionSumGame: React.FC = () => {
             }, 2000);
         } else {
             playSound('incorrect');
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             setStreak(0);
             setLives(l => {
                 if (l <= 1) {
-                    setTimeout(() => { setFeedback(null); setStatus('gameover'); }, 1500);
+                    setTimeout(() => { setStatus('gameover'); }, 1500);
                     return 0;
                 }
                 return l - 1;
@@ -626,37 +613,7 @@ const ReflectionSumGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
 
             <style>{`
@@ -668,3 +625,4 @@ const ReflectionSumGame: React.FC = () => {
 };
 
 export default ReflectionSumGame;
+

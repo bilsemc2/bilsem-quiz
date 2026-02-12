@@ -2,13 +2,16 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Play, Star, Timer, Target,
-    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, Eye,
+    XCircle, ChevronLeft, Zap, Heart, Eye,
     Circle, Square, Triangle, Hexagon, Diamond,
     Cloud, Sun, Moon, Anchor, Music, Ghost, Flower, Crown
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
+
 
 // ──────────── Game Constants ────────────
 const INITIAL_LIVES = 5;
@@ -82,22 +85,6 @@ const LEVEL_CONFIG: Record<number, LevelConfig> = {
 };
 
 // ──────────── Feedback Messages ────────────
-const CORRECT_MESSAGES = [
-    "Harikasın! 🎨",
-    "Süpersin! ⭐",
-    "Muhteşem! 🌟",
-    "Bravo! 🎉",
-    "Tam isabet! 🎯",
-];
-
-const WRONG_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Düşün ve bul! 🧐",
-    "Biraz daha dikkat! 🎯",
-];
-
-const randomMessage = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-
 // ──────────── Game Logic Helpers ────────────
 const getRandomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
@@ -167,8 +154,13 @@ const createModifiedGrid = (originalGrid: GridCell[]): { grid: GridCell[]; targe
 const VisualMemoryGame: React.FC<VisualMemoryGameProps> = ({ examMode = false }) => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
     const navigate = useNavigate();
     const { submitResult } = useExam();
+
+    // Shared Feedback System
+    const { feedbackState, showFeedback } = useGameFeedback();
+
     const hasSavedRef = useRef(false);
 
     // Core State
@@ -183,8 +175,6 @@ const VisualMemoryGame: React.FC<VisualMemoryGameProps> = ({ examMode = false })
     const [gridAfter, setGridAfter] = useState<GridCell[]>([]);
     const [targetCellId, setTargetCellId] = useState<string | null>(null);
     const [userSelectedId, setUserSelectedId] = useState<string | null>(null);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
     const [memorizeTimeLeft, setMemorizeTimeLeft] = useState(0);
     const [memorizeTimeMax, setMemorizeTimeMax] = useState(0);
     const [currentGridSize, setCurrentGridSize] = useState(3);
@@ -255,7 +245,7 @@ const VisualMemoryGame: React.FC<VisualMemoryGameProps> = ({ examMode = false })
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevel(1);
-        setTimeLeft(TIME_LIMIT);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
 
@@ -338,9 +328,8 @@ const VisualMemoryGame: React.FC<VisualMemoryGameProps> = ({ examMode = false })
         const isCorrect = cellId === targetCellId;
 
         if (isCorrect) {
-            setFeedbackCorrect(true);
-            setFeedbackMessage(randomMessage(CORRECT_MESSAGES));
             setScore(prev => prev + 10 * level);
+            showFeedback(true);
             setPhase('feedback');
 
             setTimeout(() => {
@@ -353,10 +342,9 @@ const VisualMemoryGame: React.FC<VisualMemoryGameProps> = ({ examMode = false })
                 }
             }, 1200);
         } else {
-            setFeedbackCorrect(false);
-            setFeedbackMessage(randomMessage(WRONG_MESSAGES));
             const newLives = lives - 1;
             setLives(newLives);
+            showFeedback(false);
             setPhase('feedback');
 
             setTimeout(() => {
@@ -718,37 +706,7 @@ const VisualMemoryGame: React.FC<VisualMemoryGameProps> = ({ examMode = false })
                 </AnimatePresence>
 
                 {/* ──── Feedback Overlay ──── */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedbackCorrect
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, RotateCcw, Trophy, Play, Star, Timer, Zap, CheckCircle2, XCircle, Search, Move, Eye, Sparkles, Heart, Grid3X3, EyeOff } from 'lucide-react';
+import { ChevronLeft, RotateCcw, Trophy, Play, Star, Timer, Zap, CheckCircle2, Search, Move, Eye, Sparkles, Heart, Grid3X3, EyeOff } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
 
@@ -17,22 +19,13 @@ interface CellData {
 type GameStatus = 'waiting' | 'display' | 'shuffle' | 'reveal' | 'hide' | 'question' | 'gameover';
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 🧩",
-    "Süper Hafıza! 🧠",
-    "Müthiş! ⭐",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Dikkatli takip et! 👀",
-];
 
 const MatrixEchoGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const location = useLocation();
     const navigate = useNavigate();
     const [status, setStatus] = useState<GameStatus>('waiting');
@@ -43,8 +36,6 @@ const MatrixEchoGame: React.FC = () => {
     const [question, setQuestion] = useState<{ text: string; answer: number } | null>(null);
     const [options, setOptions] = useState<number[]>([]);
     const [timeLeft, setTimeLeft] = useState(30);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [showNumbers, setShowNumbers] = useState(true);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
@@ -72,7 +63,6 @@ const MatrixEchoGame: React.FC = () => {
         setCells(newCells);
         setShowNumbers(true);
         setStatus('display');
-        setFeedback(null);
         playSound('detective_click');
     }, [playSound]);
 
@@ -223,22 +213,20 @@ const MatrixEchoGame: React.FC = () => {
     // Timer
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (status === 'question' && timeLeft > 0 && !feedback) {
+        if (status === 'question' && timeLeft > 0 && !feedbackState) {
             interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-        } else if (timeLeft === 0 && status === 'question' && !feedback) {
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+        } else if (timeLeft === 0 && status === 'question' && !feedbackState) {
+            showFeedback(false);
             setLives(prev => prev - 1);
         }
         return () => clearInterval(interval);
-    }, [status, timeLeft, feedback]);
+    }, [status, timeLeft, feedbackState]);
 
-    // Handle feedback timeout
+    // Handle feedbackState timeout
     useEffect(() => {
-        if (feedback) {
+        if (feedbackState) {
             const timeout = setTimeout(() => {
-                setFeedback(null);
-                if (lives <= 0 && feedback === 'wrong') {
+                if (lives <= 0 && feedbackState?.correct === false) {
                     setStatus('gameover');
                 } else {
                     setLevel(prev => prev + 1);
@@ -248,20 +236,18 @@ const MatrixEchoGame: React.FC = () => {
             }, 2000);
             return () => clearTimeout(timeout);
         }
-    }, [feedback, lives, level, startLevel]);
+    }, [feedbackState, lives, level, startLevel]);
 
     const handleSelect = (val: number) => {
-        if (status !== 'question' || feedback) return;
+        if (status !== 'question' || feedbackState) return;
 
         if (val === question?.answer) {
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             playSound('detective_correct');
             setScore(prev => prev + (level * 250) + (timeLeft * 10));
             setShowNumbers(true); // Show correct answer
         } else {
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             playSound('detective_incorrect');
             setLives(prev => prev - 1);
             setShowNumbers(true); // Show correct positions
@@ -590,7 +576,7 @@ const MatrixEchoGame: React.FC = () => {
                             >
                                 {Array.from({ length: 9 }).map((_, idx) => {
                                     const cell = cells.find(c => c.currentIndex === idx);
-                                    const shouldShowNumber = showNumbers || (feedback !== null);
+                                    const shouldShowNumber = showNumbers || (feedbackState !== null);
 
                                     return (
                                         <motion.div
@@ -657,15 +643,15 @@ const MatrixEchoGame: React.FC = () => {
                                     <div className="grid grid-cols-2 gap-4">
                                         {options.map((opt, i) => {
                                             const isCorrect = opt === question.answer;
-                                            const showResult = feedback !== null;
+                                            const showResult = feedbackState !== null;
 
                                             return (
                                                 <motion.button
                                                     key={i}
-                                                    whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
-                                                    whileTap={!feedback ? { scale: 0.95 } : {}}
+                                                    whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
+                                                    whileTap={!feedbackState ? { scale: 0.95 } : {}}
                                                     onClick={() => handleSelect(opt)}
-                                                    disabled={feedback !== null}
+                                                    disabled={feedbackState !== null}
                                                     className="py-6 text-2xl font-bold rounded-[25%] transition-all"
                                                     style={{
                                                         background: showResult && isCorrect
@@ -675,7 +661,7 @@ const MatrixEchoGame: React.FC = () => {
                                                         border: showResult && isCorrect
                                                             ? '2px solid #10B981'
                                                             : '1px solid rgba(255,255,255,0.1)',
-                                                        cursor: feedback ? 'default' : 'pointer',
+                                                        cursor: feedbackState ? 'default' : 'pointer',
                                                         opacity: showResult && !isCorrect ? 0.5 : 1
                                                     }}
                                                 >
@@ -767,40 +753,11 @@ const MatrixEchoGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default MatrixEchoGame;
+

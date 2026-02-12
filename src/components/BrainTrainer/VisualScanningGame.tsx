@@ -5,6 +5,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useSound } from '../../hooks/useSound';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // Sembol seti - hedef ve dikkat dağıtıcılar
 const ALL_SYMBOLS = ['★', '●', '■', '▲', '◆', '♦', '♣', '♠', '♥', '○', '□', '△', '◇', '✕', '✓', '⬟'];
@@ -18,17 +20,7 @@ interface CellData {
 }
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 👁️",
-    "Keskin Göz! 🎯",
-    "Müthiş! ⭐",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Dikkatli bak! 👀",
-    "Tekrar dene! 💪",
-];
 
 interface VisualScanningGameProps {
     examMode?: boolean;
@@ -42,6 +34,7 @@ const VisualScanningGame: React.FC<VisualScanningGameProps> = ({ examMode: examM
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     // examMode can come from props OR location.state (when navigating from ExamContinuePage)
     const examMode = examModeProp || location.state?.examMode === true;
@@ -56,10 +49,7 @@ const VisualScanningGame: React.FC<VisualScanningGameProps> = ({ examMode: examM
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
     const [level, setLevel] = useState(1);
-    const [lives, setLives] = useState(3);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
-    const gameStartTimeRef = useRef<number>(0);
+    const [lives, setLives] = useState(3);    const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -137,7 +127,6 @@ const VisualScanningGame: React.FC<VisualScanningGameProps> = ({ examMode: examM
         setBestStreak(0);
         setLevel(1);
         setLives(3);
-        setFeedback(null);
         gameStartTimeRef.current = Date.now();
         hasSavedRef.current = false;
         setGameState('playing');
@@ -217,12 +206,10 @@ const VisualScanningGame: React.FC<VisualScanningGameProps> = ({ examMode: examM
             const newLevel = Math.min(level + 1, 5);
             setLevel(newLevel);
 
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             playSound('correct');
 
             setTimeout(() => {
-                setFeedback(null);
                 startNewRound(newLevel);
             }, 1000);
         }
@@ -260,10 +247,8 @@ const VisualScanningGame: React.FC<VisualScanningGameProps> = ({ examMode: examM
                 }
                 return newLives;
             });
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             playSound('incorrect');
-            setTimeout(() => setFeedback(null), 1000);
         }
 
         setGrid(newGrid);
@@ -677,37 +662,7 @@ const VisualScanningGame: React.FC<VisualScanningGameProps> = ({ examMode: examM
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

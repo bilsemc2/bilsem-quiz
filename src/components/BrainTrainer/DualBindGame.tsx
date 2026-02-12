@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useSound } from '../../hooks/useSound';
 import { useExam } from '../../contexts/ExamContext';
 
@@ -24,17 +26,7 @@ interface Question {
 }
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 🔗",
-    "Süper! ⭐",
-    "Doğru! 🎉",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Dikkatli bak! 👀",
-    "Tekrar dene! 💪",
-];
 
 const SYMBOLS = ['⭐', '▲', '●', '◆', '⬟', '⬢', '♠', '♥'];
 
@@ -55,6 +47,7 @@ const DualBindGame = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback: triggerFeedback } = useGameFeedback();
 
     // Exam Mode Props
     const examMode = location.state?.examMode || false;
@@ -68,8 +61,6 @@ const DualBindGame = () => {
     const [round, setRound] = useState(1);
     const [memorizeTime, setMemorizeTime] = useState(6);
     const [countdown, setCountdown] = useState(6);
-    const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [streak, setStreak] = useState(0);
     const gameStartTimeRef = useRef<number>(0);
@@ -153,7 +144,6 @@ const DualBindGame = () => {
         setCountdown(time);
         setGameState('memorize');
         setSelectedAnswer(null);
-        setShowFeedback(null);
     }, [generateSymbolColors, generateDualQuestions, level]);
 
     // Oyunu başlat
@@ -221,7 +211,7 @@ const DualBindGame = () => {
 
     // Cevap kontrolü
     const handleAnswer = (answer: string) => {
-        if (showFeedback || questions.length === 0) return;
+        if (feedbackState || questions.length === 0) return;
 
         const currentQ = questions[currentQuestionIndex];
         setSelectedAnswer(answer);
@@ -229,15 +219,13 @@ const DualBindGame = () => {
 
         if (isCorrect) {
             playSound('correct');
-            setShowFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            triggerFeedback(true);
             setStreak(prev => prev + 1);
             const levelBonus = level * 15;
             setScore(prev => prev + 100 + levelBonus + (streak * 10));
         } else {
             playSound('incorrect');
-            setShowFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            triggerFeedback(false);
             setStreak(0);
             setLives(l => {
                 if (l <= 1) {
@@ -249,7 +237,6 @@ const DualBindGame = () => {
         }
 
         setTimeout(() => {
-            setShowFeedback(null);
             setSelectedAnswer(null);
 
             if (lives <= 1 && !isCorrect) return;
@@ -560,16 +547,16 @@ const DualBindGame = () => {
                                 {currentQuestion.options.map((option, idx) => {
                                     const isSelected = selectedAnswer === option;
                                     const isCorrect = option === currentQuestion.correctAnswer;
-                                    const showResult = showFeedback !== null;
+                                    const showResult = feedbackState !== null;
                                     const colorHex = COLORS.find(c => c.name === option)?.hex;
 
                                     return (
                                         <motion.button
                                             key={idx}
                                             onClick={() => handleAnswer(option)}
-                                            disabled={showFeedback !== null}
-                                            whileHover={{ scale: showFeedback ? 1 : 0.98 }}
-                                            whileTap={{ scale: showFeedback ? 1 : 0.95 }}
+                                            disabled={feedbackState !== null}
+                                            whileHover={{ scale: feedbackState ? 1 : 0.98 }}
+                                            whileTap={{ scale: feedbackState ? 1 : 0.95 }}
                                             style={currentQuestion.type === 'symbol-to-color' && colorHex ? { backgroundColor: colorHex } : {}}
                                             className={`p-5 rounded-2xl font-bold text-xl transition-all ${showResult
                                                 ? isCorrect
@@ -673,40 +660,11 @@ const DualBindGame = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {showFeedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${showFeedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: showFeedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {showFeedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default DualBindGame;
+

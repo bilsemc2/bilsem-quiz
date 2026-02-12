@@ -43,6 +43,27 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'zaman-gezgini',
+            title: "Zaman Gezgini",
+            desc: "Saati oku, yelkovanı sürükle ve doğru zamanı göster! Dakika hesaplama ve sayısal akıl yürütme becerisi.",
+            icon: <Clock />,
+            color: "indigo",
+            difficulty: "Orta",
+            link: "/games/zaman-gezgini",
+            isNew: true,
+            tuzo: "5.2.1 Sayısal Akıl Yürütme"
+        },
+        {
+            id: 'farki-bul',
+            title: "Farkı Bul",
+            desc: "Renk, şekil, boyut ve açı farkını yakala! Seçici dikkat ve görsel algı becerini test et.",
+            icon: <Eye />,
+            color: "fuchsia",
+            difficulty: "Orta",
+            link: "/games/farki-bul",
+            tuzo: "5.7.1 Seçici Dikkat"
+        },
+        {
             id: 'kelime-avi',
             title: "Kelime Avı",
             desc: "Hedef harfi içeren kelimeleri hızla bul! Ortografik algı ve işlem hızını test et.",
@@ -50,7 +71,6 @@ const IndividualAssessmentPage: React.FC = () => {
             color: "violet",
             difficulty: "Orta",
             link: "/games/kelime-avi",
-            isNew: true,
             tuzo: "5.6.1 Algısal İşlem Hızı"
         },
         {
@@ -73,16 +93,7 @@ const IndividualAssessmentPage: React.FC = () => {
             link: "/games/gorsel-hafiza",
             tuzo: "5.4.2 Görsel Kısa Süreli Bellek"
         },
-        {
-            id: 'saat-problemi',
-            title: "Saat Problemi",
-            desc: "Başlangıç saatinden belirli süre sonraki zamanı ibreleri sürükleyerek ayarla! Zamansal ilişki ve sayısal akıl yürütme.",
-            icon: <Clock />,
-            color: "violet",
-            difficulty: "Orta",
-            link: "/games/saat-problemi",
-            tuzo: "5.2.3 Sayısal-Zamansal İlişki"
-        },
+
         {
             id: 'lazer-labirent',
             title: "Lazer Labirent",

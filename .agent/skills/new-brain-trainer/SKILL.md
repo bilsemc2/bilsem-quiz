@@ -28,6 +28,9 @@ Tüm BrainTrainer simülatörleri şu standartları takip etmelidir:
 | **Global Timer** | 180 saniye (3 dakika) |
 | **Maksimum Level** | 20 |
 | **Touch Target** | Minimum 80px |
+| **Feedback Süresi** | 2 saniye (yanlış cevapta doğruyu göstermek için) |
+| **Feedback Konumu** | Grid üzerinde absolute — layout shift olmamalı |
+| **Doğru Cevap Gösterimi** | Yanlış/süre bitiminde doğru cevap yeşil kenarlık + pulsing animasyon ile gösterilir |
 
 ---
 
@@ -40,11 +43,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, RotateCcw, Play, Star, Timer, Target, 
-  CheckCircle2, XCircle, ChevronLeft, Zap, Brain, Heart 
+  XCircle, ChevronLeft, Zap, Brain, Heart 
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // Game Constants
 const INITIAL_LIVES = 5;
@@ -65,6 +70,9 @@ const [SimulatorName]Game: React.FC<[SimulatorName]GameProps> = ({ examMode = fa
   const location = useLocation();
   const navigate = useNavigate();
   const { submitResult } = useExam();
+
+  // Exam Mode: read adaptive time limit from navigation state
+  const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
   // Core State
   const [phase, setPhase] = useState<Phase>('welcome');
@@ -116,10 +124,10 @@ const [SimulatorName]Game: React.FC<[SimulatorName]GameProps> = ({ examMode = fa
     setScore(0);
     setLives(INITIAL_LIVES);
     setLevel(1);
-    setTimeLeft(TIME_LIMIT);
+    setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT); // Sınav modunda adaptif süre
     startTimeRef.current = Date.now();
     hasSavedRef.current = false;
-  }, [hasSavedRef]);
+  }, [hasSavedRef, examMode, examTimeLimit]);
 
   // Handle Auto Start from HUB or Exam Mode
   useEffect(() => {
@@ -183,25 +191,34 @@ const [SimulatorName]Game: React.FC<[SimulatorName]GameProps> = ({ examMode = fa
     });
   }, [saveGamePlay, score, hasSavedRef, examMode, submitResult, navigate]);
 
-  // Answer Handlers
-  const handleCorrect = useCallback(() => {
-    setScore(prev => prev + 10 * level);
-    
-    if (level >= MAX_LEVEL) {
-      handleVictory();
-    } else {
-      setLevel(prev => prev + 1);
-    }
-  }, [level, handleVictory]);
+  // Shared Feedback Hook
+  // useGameFeedback: state yönetimi, 2s zamanlama, ses efekti otomatik
+  // GameFeedbackBanner: absolute positioned UI, layout shift yok
+  const { feedbackState, showFeedback, isFeedbackActive } = useGameFeedback({
+    onFeedbackEnd: (correct) => {
+      if (correct) {
+        setScore(prev => prev + 10 * level);
+        if (level >= MAX_LEVEL) {
+          handleVictory();
+        } else {
+          setLevel(prev => prev + 1);
+          setPhase('playing');
+        }
+      } else {
+        const newLives = lives - 1;
+        setLives(newLives);
+        if (newLives <= 0) {
+          handleGameOver();
+        } else {
+          setPhase('playing');
+        }
+      }
+    },
+  });
 
-  const handleIncorrect = useCallback(() => {
-    const newLives = lives - 1;
-    setLives(newLives);
-    
-    if (newLives <= 0) {
-      handleGameOver();
-    }
-  }, [lives, handleGameOver]);
+  // Cevap Verilince:
+  // showFeedback(isCorrect); // Otomatik: ses çalar, 2s gösterir, onFeedbackEnd çağırır
+  // setPhase('feedback');    // Grid görünür kalır + doğru cevap vurgulanır
 
   // Format Time
   const formatTime = (seconds: number) => {
@@ -314,8 +331,8 @@ const [SimulatorName]Game: React.FC<[SimulatorName]GameProps> = ({ examMode = fa
             </motion.div>
           )}
 
-          {/* Game Board */}
-          {phase === 'playing' && (
+          {/* Game Board — feedback sırasında da görünür kalır */}
+          {(phase === 'playing' || phase === 'feedback') && (
             <motion.div
               key="playing"
               initial={{ opacity: 0 }}
@@ -323,9 +340,15 @@ const [SimulatorName]Game: React.FC<[SimulatorName]GameProps> = ({ examMode = fa
               exit={{ opacity: 0 }}
               className="w-full max-w-4xl"
             >
-              {/* Oyun içeriği buraya */}
-              <div className="bg-slate-800/50 backdrop-blur-xl rounded-3xl p-8">
+              {/* Oyun alanı — relative wrapper (feedback için) */}
+              <div className="relative bg-slate-800/50 backdrop-blur-xl rounded-3xl p-8">
                 {/* Grid, kartlar, sorular vb. */}
+                {/* Doğru cevap elementi: isFeedbackActive && isCorrect → yeşil kenarlık + pulsing */}
+
+                {/* Shared Feedback Banner */}
+                <GameFeedbackBanner feedback={feedbackState}>
+                  {/* Oyuna özel ek bilgi (opsiyonel) */}
+                </GameFeedbackBanner>
               </div>
             </motion.div>
           )}

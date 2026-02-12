@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Zap, Timer, Trophy, Play, RotateCcw, ChevronLeft,
-    Brain, Target, Star, Heart, Home, CheckCircle2, XCircle,
+    Brain, Target, Star, Heart, Home, XCircle,
     Square, Circle, Triangle, Pentagon, Hexagon, Sparkles
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 interface Shape {
     id: string;
@@ -27,25 +29,15 @@ const SHAPES: Shape[] = [
     { id: 'pentagon', icon: <Pentagon />, color: '#60A5FA', bgGradient: 'from-blue-400 to-cyan-500' }
 ];
 
-// Child-friendly feedback messages
-const CORRECT_MESSAGES = [
-    "Harika hafıza! 🧠",
-    "Süpersin! ⭐",
-    "Tam isabet! 🎯",
-    "Muhteşem! 🌟",
-    "Hafıza şampiyonu! 🏆",
-];
-
-const WRONG_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Dikkatini topla! 👀",
-    "Şekilleri takip et! 🔍",
-];
-
+// Child-friendly feedbackState messages
 type GameState = 'waiting' | 'playing' | 'feedback' | 'gameover';
 
 const NBackGame: React.FC = () => {
     const { playSound } = useSound();
+
+    // Shared Feedback System
+    const { feedbackState, showFeedback, isFeedbackActive } = useGameFeedback();
+
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
     const location = useLocation();
@@ -60,9 +52,6 @@ const NBackGame: React.FC = () => {
     const [lives, setLives] = useState(5);
     const [trials, setTrials] = useState(0);
     const [correctCount, setCorrectCount] = useState(0);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [isCorrectFeedback, setIsCorrectFeedback] = useState(true);
-    const [showFeedback, setShowFeedback] = useState(false);
 
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef(false);
@@ -105,7 +94,6 @@ const NBackGame: React.FC = () => {
         setCorrectCount(0);
         setTimeLeft(examMode ? examTimeLimit : 45);
         setLives(5);
-        setShowFeedback(false);
         hasSavedRef.current = false;
         gameStartTimeRef.current = Date.now();
         generateNewShape();
@@ -142,7 +130,8 @@ const NBackGame: React.FC = () => {
         // Exam mode: submit result and redirect
         if (examMode) {
             submitResult(score > 200, score, 1000, durationSeconds).then(() => {
-            navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                navigate("/atolyeler/sinav-simulasyonu/devam");
+            });
             return;
         }
 
@@ -163,12 +152,10 @@ const NBackGame: React.FC = () => {
     useEffect(() => {
         if (gameState === 'playing') {
             shapeIntervalRef.current = setInterval(() => {
-                if (!showFeedback && trials > nValue) {
+                if (!isFeedbackActive && trials > nValue) {
                     const isActuallyMatch = history[history.length - 1]?.id === history[history.length - (nValue + 1)]?.id;
                     if (isActuallyMatch) {
-                        setIsCorrectFeedback(false);
-                        setFeedbackMessage(WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)]);
-                        setShowFeedback(true);
+                        showFeedback(false);
                         playSound('radar_incorrect');
 
                         const newLives = lives - 1;
@@ -176,13 +163,10 @@ const NBackGame: React.FC = () => {
 
                         if (newLives <= 0) {
                             setTimeout(() => {
-                                setShowFeedback(false);
                                 handleGameOver();
                             }, 1200);
                             return;
                         }
-
-                        setTimeout(() => setShowFeedback(false), 1200);
                     }
                 }
                 generateNewShape();
@@ -191,17 +175,15 @@ const NBackGame: React.FC = () => {
         return () => {
             if (shapeIntervalRef.current) clearInterval(shapeIntervalRef.current);
         };
-    }, [gameState, level, generateNewShape, history, nValue, trials, showFeedback, playSound, lives, handleGameOver]);
+    }, [gameState, level, generateNewShape, history, nValue, trials, isFeedbackActive, playSound, lives, handleGameOver]);
 
     const handleDecision = (isMatch: boolean) => {
-        if (gameState !== 'playing' || showFeedback || history.length <= nValue) return;
+        if (gameState !== 'playing' || isFeedbackActive || history.length <= nValue) return;
 
         const actualMatch = history[history.length - 1].id === history[history.length - (nValue + 1)].id;
 
         if (isMatch === actualMatch) {
-            setIsCorrectFeedback(true);
-            setFeedbackMessage(CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]);
-            setShowFeedback(true);
+
             setScore(prev => prev + (10 * nValue * level));
             setCorrectCount(prev => prev + 1);
             playSound('radar_correct');
@@ -214,9 +196,7 @@ const NBackGame: React.FC = () => {
                 }
             }
         } else {
-            setIsCorrectFeedback(false);
-            setFeedbackMessage(WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)]);
-            setShowFeedback(true);
+
             playSound('radar_incorrect');
 
             const newLives = lives - 1;
@@ -224,7 +204,6 @@ const NBackGame: React.FC = () => {
 
             if (newLives <= 0) {
                 setTimeout(() => {
-                    setShowFeedback(false);
                     handleGameOver();
                 }, 1200);
                 return;
@@ -233,7 +212,6 @@ const NBackGame: React.FC = () => {
 
         if (shapeIntervalRef.current) clearInterval(shapeIntervalRef.current);
         setTimeout(() => {
-            setShowFeedback(false);
             generateNewShape();
         }, 1200);
     };
@@ -353,35 +331,18 @@ const NBackGame: React.FC = () => {
                 <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl" />
             </div>
 
-            {/* Feedback Overlay */}
+            {/* Shared Feedback Banner */}
             <AnimatePresence>
-                {showFeedback && (
+                {feedbackState && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-end justify-center pb-24 pointer-events-none"
                     >
-                        <motion.div
-                            initial={{ y: 50 }}
-                            animate={{ y: 0 }}
-                            className={`px-12 py-8 rounded-3xl text-center ${isCorrectFeedback
-                                ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                }`}
-                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                        >
-                            <motion.div
-                                animate={{ scale: [1, 1.2, 1], rotate: isCorrectFeedback ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                transition={{ duration: 0.5 }}
-                            >
-                                {isCorrectFeedback
-                                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                }
-                            </motion.div>
-                            <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                        </motion.div>
+                        <div className="pointer-events-auto">
+                            <GameFeedbackBanner feedback={feedbackState} />
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

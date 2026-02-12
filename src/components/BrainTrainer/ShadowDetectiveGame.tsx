@@ -4,10 +4,12 @@ import {
     Search, Eye, Timer, Trophy,
     RotateCcw, ChevronLeft, Play,
     Circle, Square, Triangle, Hexagon, Star, Pentagon,
-    Cross, Moon, Heart, CheckCircle2, XCircle, Sparkles, Zap
+    Cross, Moon, Heart, Sparkles, Zap
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
 
@@ -18,20 +20,7 @@ const SHAPE_ICONS = [Circle, Square, Triangle, Hexagon, Star, Pentagon, Cross, M
 const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96F97B', '#FFEAA7', '#DDA0DD', '#FF9FF3', '#FFFFFF'];
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Süper Gözlem! 👀",
-    "Harika Dedektif! 🔍",
-    "süper! Buldun! 🎯",
-    "Muhteşem! ⭐",
-    "Tam İsabet! 🎉",
-];
 
-const FAILURE_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Dikkatli bak! 👀",
-    "Neredeyse! 🌟",
-    "Bir daha dene! ✨",
-];
 
 interface PatternItem {
     id: string;
@@ -49,6 +38,7 @@ const ShadowDetectiveGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const location = useLocation();
     const navigate = useNavigate();
     const [status, setStatus] = useState<GameStatus>('waiting');
@@ -60,8 +50,7 @@ const ShadowDetectiveGame: React.FC = () => {
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState(60);
     const [previewTimer, setPreviewTimer] = useState(3);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState("");
+
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
 
@@ -204,24 +193,20 @@ const ShadowDetectiveGame: React.FC = () => {
         const isCorrect = getPatternSignature(options[idx]) === getPatternSignature(correctPattern);
 
         if (isCorrect) {
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             setScore(prev => prev + (level * 100));
             playSound('detective_correct');
             setStatus('result');
             setTimeout(() => {
                 setLevel(prev => prev + 1);
-                setFeedback(null);
                 startNewLevel();
             }, 1500);
         } else {
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             playSound('detective_incorrect');
             const newLives = lives - 1;
             setLives(newLives);
             setTimeout(() => {
-                setFeedback(null);
                 if (newLives <= 0) {
                     setStatus('gameover');
                 } else {
@@ -236,7 +221,6 @@ const ShadowDetectiveGame: React.FC = () => {
         setScore(0);
         setLives(3);
         setTimeLeft(examMode ? examTimeLimit : 60);
-        setFeedback(null);
         hasSavedRef.current = false;
         startNewLevel();
     }, [startNewLevel, examMode, examTimeLimit]);
@@ -264,7 +248,8 @@ const ShadowDetectiveGame: React.FC = () => {
             // Exam mode: submit result and redirect
             if (examMode) {
                 submitResult(score > 200, score, 600, durationSeconds).then(() => {
-                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                    navigate("/atolyeler/sinav-simulasyonu/devam");
+                });
                 return;
             }
 
@@ -557,7 +542,7 @@ const ShadowDetectiveGame: React.FC = () => {
                                                 boxShadow: '0 0 40px rgba(239, 68, 68, 0.4), inset 0 -4px 8px rgba(0,0,0,0.2)',
                                                 border: '2px solid rgba(239, 68, 68, 0.6)'
                                             };
-                                        } else if (isItemCorrect && feedback === 'wrong') {
+                                        } else if (isItemCorrect && feedbackState?.correct === false) {
                                             cardStyle = {
                                                 background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%)',
                                                 boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2)',
@@ -667,43 +652,11 @@ const ShadowDetectiveGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`
-                                    px-12 py-8 rounded-3xl text-center
-                                    ${feedback === 'correct'
-                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                        : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }
-                                `}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default ShadowDetectiveGame;
+

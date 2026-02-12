@@ -7,6 +7,8 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // ============== CONSTANTS ==============
 const INITIAL_LIVES = 5;
@@ -23,9 +25,6 @@ type Phase = 'welcome' | 'playing' | 'checking' | 'feedback' | 'game_over' | 'vi
 interface MindMatchGameProps { examMode?: boolean; }
 
 // ============== FEEDBACK ==============
-const CORRECT_MESSAGES = ["Harikasın! 🧩", "Süpersin! ⭐", "Muhteşem! 🌟", "Bravo! 🎉", "Kalıbı buldun! 🎯", "Tam isabet! 🧠"];
-const WRONG_MESSAGES = ["Tekrar dene! 💪", "Kategoriye dikkat! 🧐", "Biraz daha dikkat! 🎯"];
-
 // ============== CATEGORIES (Türkçe) ==============
 const CATEGORIES: Record<string, { description: string; items: EmojiDef[] }> = {
     "Meyveler": {
@@ -192,8 +191,13 @@ function generatePuzzle(level: number): PuzzleData {
 const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
     const navigate = useNavigate();
     const { submitResult } = useExam();
+
+    // Shared Feedback System
+    const { feedbackState, showFeedback } = useGameFeedback();
+
     const hasSavedRef = useRef(false);
 
     // Core State
@@ -206,8 +210,6 @@ const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
     // Game State
     const [puzzle, setPuzzle] = useState<PuzzleData | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
@@ -233,7 +235,7 @@ const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevel(1);
-        setTimeLeft(TIME_LIMIT);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
         initLevel(1);
@@ -305,10 +307,9 @@ const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
         const isCorrect = missed.length === 0 && wrong.length === 0;
 
         if (isCorrect) {
-            const msg = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
-            setFeedbackCorrect(true);
-            setFeedbackMessage(msg);
+            // feedbackState managed by useGameFeedback
             setScore(prev => prev + 10 * level);
+            showFeedback(true);
             setPhase('feedback');
 
             setTimeout(() => {
@@ -322,9 +323,8 @@ const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
                 }
             }, 1200);
         } else {
-            const msg = WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)];
-            setFeedbackCorrect(false);
-            setFeedbackMessage(msg);
+            // feedbackState managed by useGameFeedback
+            showFeedback(isCorrect);
             setPhase('feedback');
             const newLives = lives - 1;
             setLives(newLives);
@@ -548,8 +548,8 @@ const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
                                     onClick={checkAnswer}
                                     disabled={selectedIds.size === 0}
                                     className={`w-full py-4 rounded-2xl font-bold text-lg transition-all ${selectedIds.size > 0
-                                            ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white'
-                                            : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/10'
+                                        ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white'
+                                        : 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/10'
                                         }`}
                                     style={selectedIds.size > 0 ? { boxShadow: '0 8px 32px rgba(139, 92, 246, 0.4)' } : {}}
                                 >
@@ -607,22 +607,10 @@ const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
                     )}
                 </AnimatePresence>
 
-                {/* FEEDBACK OVERLAY */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-                            <motion.div initial={{ y: 50 }} animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                                <motion.div animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }} transition={{ duration: 0.5 }}>
-                                    {feedbackCorrect ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" /> : <XCircle size={64} className="mx-auto mb-4 text-white" />}
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Feedback Overlay */}
+
+
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

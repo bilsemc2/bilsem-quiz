@@ -244,9 +244,6 @@ const NumberMemoryGame: React.FC = () => {
         setPhase('question');
     }, [playNumber, createQuestion]);
 
-
-
-
     // Level başlat
     const startLevel = useCallback((lvl: number) => {
         const seq = generateSequence(lvl);

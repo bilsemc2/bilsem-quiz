@@ -8,6 +8,8 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // Game Constants - Rule of Three
 const INITIAL_LIVES = 5;
@@ -24,23 +26,6 @@ const COLORS = [
     '#FF6B35', // Orange Red
     '#00CED1', // Dark Turquoise
     '#E91E63', // Pink
-];
-
-// Child-friendly feedback messages
-const CORRECT_MESSAGES = [
-    "Harikasın! 🎨",
-    "Süpersin! ⭐",
-    "Muhteşem! 🌟",
-    "Bravo! 🎉",
-    "Çok güzel! 💫",
-    "Tam isabet! 🎯",
-];
-
-const WRONG_MESSAGES = [
-    "Neredeyse! Tekrar dene 💪",
-    "Yaklaştın! Bir daha bak 👀",
-    "Desenin sırrını bul! 🔍",
-    "Biraz daha dikkat! 🧐",
 ];
 
 const PATTERN_TYPES = ['checkered', 'stripes', 'diagonal', 'center-out', 'random-repeating'] as const;
@@ -111,6 +96,10 @@ const createLevel = (levelIdx: number): GameLevel => {
 const PatternPainterGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
+
+    // Shared Feedback System
+    const { feedbackState, showFeedback } = useGameFeedback();
+
     const location = useLocation();
     const navigate = useNavigate();
     const hasSavedRef = useRef(false);
@@ -132,10 +121,7 @@ const PatternPainterGame: React.FC = () => {
     const [userPainting, setUserPainting] = useState<(string | null)[][]>([]);
     const [activeColor, setActiveColor] = useState<string | null>(null);
 
-    // Feedback State
-    const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [feedbackType, setFeedbackType] = useState<'correct' | 'wrong'>('correct');
-    const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+
 
     // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -200,7 +186,8 @@ const PatternPainterGame: React.FC = () => {
         // Exam mode: submit result and redirect
         if (examMode) {
             submitResult(score > 0, score, MAX_LEVEL * 10 * MAX_LEVEL, duration).then(() => {
-            navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                navigate("/atolyeler/sinav-simulasyonu/devam");
+            });
             return;
         }
 
@@ -224,7 +211,8 @@ const PatternPainterGame: React.FC = () => {
         // Exam mode: submit result and redirect
         if (examMode) {
             submitResult(true, score, MAX_LEVEL * 10 * MAX_LEVEL, duration).then(() => {
-            navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                navigate("/atolyeler/sinav-simulasyonu/devam");
+            });
             return;
         }
 
@@ -244,19 +232,17 @@ const PatternPainterGame: React.FC = () => {
         setUserPainting(newPainting);
     };
 
-    // Show feedback
-    const showFeedback = useCallback((isCorrect: boolean) => {
-        const messages = isCorrect ? CORRECT_MESSAGES : WRONG_MESSAGES;
-        setFeedbackMessage(messages[Math.floor(Math.random() * messages.length)]);
-        setFeedbackType(isCorrect ? 'correct' : 'wrong');
-        setShowCorrectAnswer(!isCorrect); // Show correct answer when wrong
+    // Handle feedbackState and progression
+    const handleFeedbackAndProgress = useCallback((isCorrect: boolean) => {
+        showFeedback(isCorrect);
+
         setPhase('feedback');
 
         // Longer timeout for wrong answers to show correct solution
         const timeout = isCorrect ? 1500 : 3000;
 
         setTimeout(() => {
-            setShowCorrectAnswer(false);
+
             if (isCorrect) {
                 if (level >= MAX_LEVEL) {
                     handleVictory();
@@ -278,7 +264,7 @@ const PatternPainterGame: React.FC = () => {
                 }
             }
         }, timeout);
-    }, [level, lives, handleVictory, handleGameOver, setupLevel]);
+    }, [level, lives, handleVictory, handleGameOver, setupLevel, showFeedback]);
 
     // Check Answer
     const handleCheck = useCallback(() => {
@@ -293,8 +279,8 @@ const PatternPainterGame: React.FC = () => {
             setScore(prev => prev + 10 * level);
         }
 
-        showFeedback(isCorrect);
-    }, [currentLevel, userPainting, level, phase, showFeedback]);
+        handleFeedbackAndProgress(isCorrect);
+    }, [currentLevel, userPainting, level, phase, handleFeedbackAndProgress]);
 
     // Reset Painting
     const handleReset = () => {
@@ -441,62 +427,16 @@ const PatternPainterGame: React.FC = () => {
                             exit={{ opacity: 0 }}
                             className="w-full max-w-lg flex flex-col items-center"
                         >
-                            {/* Feedback Overlay */}
+                            {/* Shared Feedback Banner */}
                             <AnimatePresence>
-                                {phase === 'feedback' && (
+                                {feedbackState && (
                                     <motion.div
-                                        initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.5 }}
-                                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="w-full flex justify-center mb-4"
                                     >
-                                        <motion.div
-                                            initial={{ y: 50 }}
-                                            animate={{ y: 0 }}
-                                            className={`
-                                                px-12 py-8 rounded-3xl text-center max-w-sm
-                                                ${feedbackType === 'correct'
-                                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                                }
-                                            `}
-                                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                                        >
-                                            <motion.div
-                                                animate={{ scale: [1, 1.2, 1], rotate: feedbackType === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                                transition={{ duration: 0.5 }}
-                                            >
-                                                {feedbackType === 'correct'
-                                                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                                }
-                                            </motion.div>
-                                            <p className="text-3xl font-black text-white mb-4">{feedbackMessage}</p>
-
-                                            {/* Show Correct Answer When Wrong */}
-                                            {showCorrectAnswer && currentLevel && (
-                                                <div className="mt-4">
-                                                    <p className="text-white/80 text-sm mb-3">Doğrusu bu olmalıydı:</p>
-                                                    <div className="grid grid-cols-2 gap-2 w-24 h-24 mx-auto p-2 bg-white/20 rounded-xl">
-                                                        {currentLevel.correctOption.map((row, r) =>
-                                                            row.map((color, c) => (
-                                                                <motion.div
-                                                                    key={`correct-${r}-${c}`}
-                                                                    initial={{ scale: 0 }}
-                                                                    animate={{ scale: 1 }}
-                                                                    transition={{ delay: 0.3 + (r * 2 + c) * 0.1 }}
-                                                                    style={{
-                                                                        backgroundColor: color,
-                                                                        borderRadius: '30%',
-                                                                        boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.3)'
-                                                                    }}
-                                                                />
-                                                            ))
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </motion.div>
+                                        <GameFeedbackBanner feedback={feedbackState} />
                                     </motion.div>
                                 )}
                             </AnimatePresence>

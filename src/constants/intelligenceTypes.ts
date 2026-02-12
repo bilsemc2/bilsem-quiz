@@ -72,10 +72,11 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'pattern-pop': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'algisal-hiz': ZEKA_TURLERI.ISLEME_HIZI,
     'lazer-labirent': ZEKA_TURLERI.GORSEL_UZAMSAL,
-    'saat-problemi': ZEKA_TURLERI.SAYISAL_ZEKA,
+
     'gorsel-hafiza': ZEKA_TURLERI.GORSEL_HAFIZA,
     'matematik-grid': ZEKA_TURLERI.SAYISAL_ZEKA,
     'kelime-avi': ZEKA_TURLERI.SOZEL_ZEKA,
+    'farki-bul': ZEKA_TURLERI.SECICI_DIKKAT,
 
     // Arcade Oyunları
     'arcade-dark-maze': ZEKA_TURLERI.GORSEL_UZAMSAL,
@@ -103,6 +104,7 @@ export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
     'yaratik-mantigi': ZEKA_TURLERI.MANTIKSAL_ZEKA,
     'sembol-arama': ZEKA_TURLERI.SECICI_DIKKAT,
     'dikkat-ve-kodlama': ZEKA_TURLERI.ISLEME_HIZI,
+    'zaman-gezgini': ZEKA_TURLERI.MANTIKSAL_ZEKA,
 };
 
 // Oyun ID'si -> Workshop Türü eşleştirmesi
@@ -165,10 +167,11 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'sembol-arama': 'bireysel',
     'dikkat-ve-kodlama': 'bireysel',
     'lazer-labirent': 'bireysel',
-    'saat-problemi': 'bireysel',
+
     'gorsel-hafiza': 'bireysel',
     'matematik-grid': 'bireysel',
     'kelime-avi': 'bireysel',
+    'farki-bul': 'bireysel',
 
     // Arcade Oyunları
     'arcade-dark-maze': 'arcade',
@@ -185,6 +188,7 @@ export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
     'renkli-lambalar': 'arcade',
     'arcade-chroma-hafiza': 'arcade',
     'arcade-sevimli-mantik': 'arcade',
+    'zaman-gezgini': 'bireysel',
 };
 
 // Workshop türü etiketleri

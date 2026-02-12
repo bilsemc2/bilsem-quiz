@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { Grid3X3, Star, Trophy, RotateCcw, ChevronLeft, Play, Eye, Zap, Heart, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
+import { Grid3X3, Star, Trophy, RotateCcw, ChevronLeft, Play, Eye, Zap, Heart, Sparkles } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // High Contrast Candy Colors
 const COLORS = [
@@ -19,19 +21,7 @@ const LEVEL_COLORS = {
 };
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-  "Harika Hafıza! 🧠",
-  "Süper! ⭐",
-  "Renk ustası! 🎨",
-  "Muhteşem! 🌟",
-  "Tam isabet! 🎯",
-];
 
-const FAILURE_MESSAGES = [
-  "Tekrar dene! 💪",
-  "Neredeyse! ✨",
-  "Dikkatli bak! 👀",
-];
 
 interface GameState {
   level: number;
@@ -46,6 +36,7 @@ interface GameState {
 const ColorGrid: React.FC = () => {
   const { playSound } = useSound();
   const { saveGamePlay } = useGamePersistence();
+    const { feedbackState, showFeedback } = useGameFeedback();
   const location = useLocation();
   const gameStartTimeRef = useRef<number>(0);
 
@@ -66,9 +57,6 @@ const ColorGrid: React.FC = () => {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [showLevelComplete, setShowLevelComplete] = useState(false);
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [feedbackMsg, setFeedbackMsg] = useState('');
-
   // Back link
   const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/beyin-antrenoru-merkezi";
   const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
@@ -88,7 +76,6 @@ const ColorGrid: React.FC = () => {
     setScore(0);
     setLives(3);
     setShowLevelComplete(false);
-    setFeedback(null);
     setTimeout(() => generateSequence(1), 1000);
   }, []);
 
@@ -145,14 +132,12 @@ const ColorGrid: React.FC = () => {
 
     if (cellId !== expected.cellId) {
       playSound('incorrect');
-      setFeedback('wrong');
-      setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+      showFeedback(false);
 
       const newLives = lives - 1;
       setLives(newLives);
 
       setTimeout(() => {
-        setFeedback(null);
         if (newLives <= 0) {
           setGameState(prev => ({ ...prev, gameOver: true, isUserTurn: false }));
         } else {
@@ -174,19 +159,16 @@ const ColorGrid: React.FC = () => {
 
       if (newUserSequence.length === gameState.sequence.length) {
         setScore(prev => prev + gameState.level * 10);
-        setFeedback('correct');
-        setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+        showFeedback(true);
 
         if (gameState.level === 5) {
           playSound('complete');
           setTimeout(() => {
-            setFeedback(null);
             setGameState(prev => ({ ...prev, gameOver: true, isUserTurn: false }));
           }, 1500);
         } else {
           playSound('correct');
           setTimeout(() => {
-            setFeedback(null);
             setShowLevelComplete(true);
           }, 1500);
         }
@@ -533,40 +515,7 @@ const ColorGrid: React.FC = () => {
         </AnimatePresence>
 
         {/* Feedback Overlay */}
-        <AnimatePresence>
-          {feedback && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-            >
-              <motion.div
-                initial={{ y: 50 }}
-                animate={{ y: 0 }}
-                className={`
-                                    px-12 py-8 rounded-3xl text-center
-                                    ${feedback === 'correct'
-                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                  }
-                                `}
-                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-              >
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                  transition={{ duration: 0.5 }}
-                >
-                  {feedback === 'correct'
-                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                  }
-                </motion.div>
-                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <GameFeedbackBanner feedback={feedbackState} />
       </div>
     </div>
   );

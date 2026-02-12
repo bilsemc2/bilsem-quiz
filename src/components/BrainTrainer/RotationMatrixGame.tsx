@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Play, Trophy, Sparkles, Compass, Heart, Star, Timer, CheckCircle2, XCircle, Eye, RotateCw } from 'lucide-react';
+import { ChevronLeft, RotateCcw, Play, Trophy, Sparkles, Compass, Heart, Star, Timer, Eye, RotateCw } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // ------------------ Tip Tanımları ------------------
@@ -29,20 +31,11 @@ interface GameOption {
 const COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#A29BFE', '#55E6C1', '#FD79A8', '#FAB1A0', '#00D2D3', '#54A0FF'];
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 🚀",
-    "Süper Pilot! 🌟",
-    "Müthiş! ⭐",
-    "Bravo! 🎯",
-];
 
-const FAILURE_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Dikkatli bak! 👀",
-];
 
 const RotationMatrixGame: React.FC = () => {
     const { playSound } = useSound();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [level, setLevel] = useState(1);
@@ -52,8 +45,6 @@ const RotationMatrixGame: React.FC = () => {
     const [options, setOptions] = useState<GameOption[]>([]);
     const [gameStarted, setGameStarted] = useState(false);
     const [gameOver, setGameOver] = useState(false);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [isLevelLoading, setIsLevelLoading] = useState(false);
     const [timeLeft, setTimeLeft] = useState(30);
     const [lives, setLives] = useState(3);
@@ -148,26 +139,24 @@ const RotationMatrixGame: React.FC = () => {
         const allOptions = [...distractors, { shape: correctShape, isCorrect: true }];
         setOptions(allOptions.sort(() => Math.random() - 0.5));
 
-        setFeedback(null);
         setIsLevelLoading(false);
         setTimeLeft(30);
     }, [generateShape]);
 
     useEffect(() => {
-        if (gameStarted && !gameOver && !feedback && !isLevelLoading) {
+        if (gameStarted && !gameOver && !feedbackState && !isLevelLoading) {
             generateLevel();
         }
-    }, [gameStarted, gameOver, level, generateLevel, feedback, isLevelLoading]);
+    }, [gameStarted, gameOver, level, generateLevel, feedbackState, isLevelLoading]);
 
     // Timer
     useEffect(() => {
-        if (!gameStarted || gameOver || feedback || isLevelLoading) return;
+        if (!gameStarted || gameOver || feedbackState || isLevelLoading) return;
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    setFeedback('wrong');
-                    setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+                    showFeedback(false);
                     setLives(l => l - 1);
                     return 0;
                 }
@@ -175,14 +164,13 @@ const RotationMatrixGame: React.FC = () => {
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [gameStarted, gameOver, feedback, isLevelLoading]);
+    }, [gameStarted, gameOver, feedbackState, isLevelLoading]);
 
-    // Handle feedback timeout
+    // Handle feedbackState timeout
     useEffect(() => {
-        if (feedback) {
+        if (feedbackState) {
             const timeout = setTimeout(() => {
-                setFeedback(null);
-                if (lives <= 0 && feedback === 'wrong') {
+                if (lives <= 0 && feedbackState?.correct === false) {
                     setGameOver(true);
                 } else if (level >= totalQuestions) {
                     setGameOver(true);
@@ -192,20 +180,18 @@ const RotationMatrixGame: React.FC = () => {
             }, 2000);
             return () => clearTimeout(timeout);
         }
-    }, [feedback, lives, level]);
+    }, [feedbackState, lives, level]);
 
     const handleOptionSelect = (option: GameOption) => {
-        if (feedback || isLevelLoading) return;
+        if (feedbackState || isLevelLoading) return;
 
         if (option.isCorrect) {
             playSound('correct');
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             setScore(s => s + (level * 100) + (timeLeft * 5));
         } else {
             playSound('incorrect');
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             setLives(l => l - 1);
         }
     };
@@ -547,16 +533,16 @@ const RotationMatrixGame: React.FC = () => {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         {options.map((option) => {
-                                            const showResult = feedback !== null;
+                                            const showResult = feedbackState !== null;
                                             const isCorrect = option.isCorrect;
 
                                             return (
                                                 <motion.button
                                                     key={option.shape.id}
-                                                    whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
-                                                    whileTap={!feedback ? { scale: 0.95 } : {}}
+                                                    whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
+                                                    whileTap={!feedbackState ? { scale: 0.95 } : {}}
                                                     onClick={() => handleOptionSelect(option)}
-                                                    disabled={feedback !== null}
+                                                    disabled={feedbackState !== null}
                                                     className="aspect-square rounded-[25%] flex items-center justify-center transition-all"
                                                     style={{
                                                         background: showResult && isCorrect
@@ -568,7 +554,7 @@ const RotationMatrixGame: React.FC = () => {
                                                         border: showResult && isCorrect
                                                             ? '2px solid #10B981'
                                                             : '1px solid rgba(255,255,255,0.1)',
-                                                        cursor: feedback ? 'default' : 'pointer',
+                                                        cursor: feedbackState ? 'default' : 'pointer',
                                                         opacity: showResult && !isCorrect ? 0.5 : 1
                                                     }}
                                                 >
@@ -657,40 +643,11 @@ const RotationMatrixGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default RotationMatrixGame;
+

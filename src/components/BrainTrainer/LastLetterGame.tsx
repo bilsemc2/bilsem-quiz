@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Trophy, RotateCcw, Play, Star, Timer, Target,
-    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, Type
+    Trophy, RotateCcw, Play, Star, Timer, Target, XCircle, ChevronLeft, Zap, Heart, Type
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 
 // ─── Constants ──────────────────────────────────────
@@ -13,13 +14,6 @@ const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 
-const CORRECT_MESSAGES = [
-    "Harikasın! 🎨", "Süpersin! ⭐", "Muhteşem! 🌟",
-    "Bravo! 🎉", "Tam isabet! 🎯",
-];
-const WRONG_MESSAGES = [
-    "Tekrar dene! 💪", "Düşün ve bul! 🧐", "Biraz daha dikkat! 🎯",
-];
 
 // ─── Word Pool ──────────────────────────────────────
 interface WordItem { text: string; emoji: string; }
@@ -127,6 +121,7 @@ const LastLetterGame: React.FC<LastLetterGameProps> = ({ examMode = false }) => 
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     // Core State
     const [phase, setPhase] = useState<Phase>('welcome');
@@ -135,8 +130,6 @@ const LastLetterGame: React.FC<LastLetterGameProps> = ({ examMode = false }) => 
     const [level, setLevel] = useState(1);
     const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
     const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
     const [revealWords, setRevealWords] = useState(false);
 
     // Refs
@@ -219,12 +212,9 @@ const LastLetterGame: React.FC<LastLetterGameProps> = ({ examMode = false }) => 
     const handleOptionClick = useCallback((option: string) => {
         if (!puzzle || phase !== 'playing') return;
         const correct = option === puzzle.correctAnswer;
-        setFeedbackCorrect(correct);
-        setFeedbackMessage(correct
-            ? CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
-            : WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)]
-        );
         setRevealWords(true);
+        showFeedback(correct);
+
         setPhase('feedback');
 
         const newScore = correct ? score + 10 * level : score;
@@ -463,33 +453,12 @@ const LastLetterGame: React.FC<LastLetterGameProps> = ({ examMode = false }) => 
                     )}
                 </AnimatePresence>
 
-                {/* ── Feedback Overlay ── */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-                            <motion.div initial={{ y: 50 }} animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                                <motion.div animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }} transition={{ duration: 0.5 }}>
-                                    {feedbackCorrect ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" /> : <XCircle size={64} className="mx-auto mb-4 text-white" />}
-                                </motion.div>
-                                <p className="text-3xl font-black text-white mb-3">{feedbackMessage}</p>
-                                {puzzle && (
-                                    <div className="mt-2 bg-white/15 rounded-xl px-5 py-3">
-                                        <p className="text-sm text-white/90">
-                                            <span className="font-bold">Şifre: </span>
-                                            <span className="tracking-widest font-mono">{puzzle.correctAnswer}</span>
-                                        </p>
-                                    </div>
-                                )}
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Feedback Overlay */}
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default LastLetterGame;
+

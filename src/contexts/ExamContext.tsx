@@ -120,7 +120,7 @@ export const ExamProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (passed) {
                 newLevel = Math.min(5, session.currentLevel + 1);
             } else {
-                newLevel = 1; // Başarısız olursa seviye 1'e dön
+                newLevel = Math.max(1, session.currentLevel - 1); // Başarısız olursa kademeli düşüş
             }
 
             const updatedSession: ExamSession = {

@@ -52,10 +52,12 @@ const SymbolSearchGame = React.lazy(() => import('@/components/BrainTrainer/Symb
 const AttentionCodingGame = React.lazy(() => import('@/components/BrainTrainer/AttentionCodingGame'));
 const PerceptualSpeedGame = React.lazy(() => import('@/components/BrainTrainer/PerceptualSpeedGame'));
 const LaserMazeGame = React.lazy(() => import('@/components/BrainTrainer/LaserMazeGame'));
-const ClockGame = React.lazy(() => import('@/components/BrainTrainer/ClockGame'));
+
 const VisualMemoryGame = React.lazy(() => import('@/components/BrainTrainer/VisualMemoryGame'));
 const MathGridGame = React.lazy(() => import('@/components/BrainTrainer/MathGridGame'));
 const WordHuntGame = React.lazy(() => import('@/components/BrainTrainer/WordHuntGame'));
+const SpotDifferenceGame = React.lazy(() => import('@/components/BrainTrainer/SpotDifferenceGame'));
+const TimeExplorerGame = React.lazy(() => import('@/components/BrainTrainer/TimeExplorerGame'));
 
 /**
  * Brain Trainer Game Routes
@@ -111,8 +113,10 @@ export const gameRoutes = [
     <Route key="dikkat-ve-kodlama" path="/games/dikkat-ve-kodlama" element={<RequireAuth><AttentionCodingGame /></RequireAuth>} />,
     <Route key="algisal-hiz" path="/games/algisal-hiz" element={<RequireAuth><PerceptualSpeedGame /></RequireAuth>} />,
     <Route key="lazer-labirent" path="/games/lazer-labirent" element={<RequireAuth><LaserMazeGame /></RequireAuth>} />,
-    <Route key="saat-problemi" path="/games/saat-problemi" element={<RequireAuth><ClockGame /></RequireAuth>} />,
+
     <Route key="gorsel-hafiza" path="/games/gorsel-hafiza" element={<RequireAuth><VisualMemoryGame /></RequireAuth>} />,
     <Route key="matematik-grid" path="/games/matematik-grid" element={<RequireAuth><MathGridGame /></RequireAuth>} />,
     <Route key="kelime-avi" path="/games/kelime-avi" element={<RequireAuth><WordHuntGame /></RequireAuth>} />,
+    <Route key="farki-bul" path="/games/farki-bul" element={<RequireAuth><SpotDifferenceGame /></RequireAuth>} />,
+    <Route key="zaman-gezgini" path="/games/zaman-gezgini" element={<RequireAuth><TimeExplorerGame /></RequireAuth>} />,
 ];

@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Trophy, RotateCcw, Play, Star, Timer, Target,
-    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, Grid3X3,
+    Trophy, RotateCcw, Play, Star, Timer, Target, XCircle, ChevronLeft, Zap, Heart, Grid3X3,
     Delete, Check,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // ──────────── Constants ────────────
 const INITIAL_LIVES = 5;
@@ -46,22 +47,6 @@ const CELL_GRADIENTS = [
 ];
 
 // ──────────── Feedback Messages ────────────
-const CORRECT_MESSAGES = [
-    "Matematik dahisi! 🧮",
-    "Süpersin! ⭐",
-    "Mükemmel! 🎯",
-    "Harika çözüm! 🌟",
-    "Tam isabet! 💫",
-];
-
-const WRONG_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Sayıları kontrol et! 🧐",
-    "Biraz daha dikkat! 🎯",
-];
-
-const randomMsg = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-
 // ──────────── Puzzle Generator ────────────
 const getRandomInt = (min: number, max: number) =>
     Math.floor(Math.random() * (max - min + 1)) + min;
@@ -154,8 +139,13 @@ const generatePuzzle = (level: number): { grid: GridMatrix; ruleDescription: str
 const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
     const navigate = useNavigate();
     const { submitResult } = useExam();
+
+    // Shared Feedback System
+    const { feedbackState, showFeedback } = useGameFeedback();
+
     const hasSavedRef = useRef(false);
 
     // Core State
@@ -170,9 +160,6 @@ const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
     const [ruleDesc, setRuleDesc] = useState('');
     const [activeCell, setActiveCell] = useState<{ r: number; c: number } | null>(null);
     const [showErrors, setShowErrors] = useState(false);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [showFeedback, setShowFeedback] = useState(false);
 
     // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -196,7 +183,6 @@ const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
         setGrid(puzzle.grid);
         setRuleDesc(puzzle.ruleDescription);
         setShowErrors(false);
-        setShowFeedback(false);
 
         const firstMissing = puzzle.grid.flat().find(c => c.isMissing);
         if (firstMissing) {
@@ -211,7 +197,7 @@ const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevel(1);
-        setTimeLeft(TIME_LIMIT);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
         setPhase('playing');
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
@@ -334,13 +320,10 @@ const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
 
         if (allCorrect) {
             // Correct!
-            setFeedbackCorrect(true);
-            setFeedbackMessage(randomMsg(CORRECT_MESSAGES));
+            showFeedback(true);
             setScore(prev => prev + 10 * level);
-            setShowFeedback(true);
 
             setTimeout(() => {
-                setShowFeedback(false);
                 if (level >= MAX_LEVEL) {
                     handleVictory();
                 } else {
@@ -351,15 +334,12 @@ const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
             }, 1200);
         } else if (anyWrong) {
             // Wrong answer
-            setFeedbackCorrect(false);
-            setFeedbackMessage(randomMsg(WRONG_MESSAGES));
+            showFeedback(false);
             setShowErrors(true);
             const newLives = lives - 1;
             setLives(newLives);
-            setShowFeedback(true);
 
             setTimeout(() => {
-                setShowFeedback(false);
                 if (newLives <= 0) {
                     handleGameOver();
                 }
@@ -694,33 +674,16 @@ const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
 
                 {/* ──── Feedback Overlay ──── */}
                 <AnimatePresence>
-                    {showFeedback && (
+                    {feedbackState && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-end justify-center pb-24 pointer-events-none"
                         >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedbackCorrect
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
+                            <div className="pointer-events-auto">
+                                <GameFeedbackBanner feedback={feedbackState} />
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>

@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Play, Star, Timer, Target,
-    ChevronLeft, Zap, Heart, Search, Home,
-    CheckCircle2, XCircle, Sparkles
+    ChevronLeft, Zap, Heart, Search, Home, XCircle, Sparkles
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // --- Puzzle Generator Utility ---
 class PuzzleGenerator {
@@ -94,20 +95,6 @@ const MAX_LEVEL = 20;
 const SELECTION_SIZE = 100;
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Mükemmel göz! 👁️",
-    "Harikasın! ⭐",
-    "Tam isabet! 🎯",
-    "Süpersin! 🌟",
-    "Keskin dikkat! 🔍",
-];
-
-const FAIL_MESSAGES = [
-    "Tekrar bak! 👀",
-    "Biraz daha dikkat! 🎯",
-    "Yaklaştın! 💪",
-];
-
 type Phase = 'welcome' | 'playing' | 'game_over' | 'victory';
 
 interface GameLevel {
@@ -122,8 +109,12 @@ const PuzzleMasterGame: React.FC = () => {
     const navigate = useNavigate();
     const { submitResult } = useExam();
 
+    // Shared Feedback System
+    const { feedbackState, showFeedback } = useGameFeedback();
+
     // Exam Mode Props
     const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
@@ -133,10 +124,8 @@ const PuzzleMasterGame: React.FC = () => {
     const [gameLevel, setGameLevel] = useState<GameLevel | null>(null);
     const [selection, setSelection] = useState({ x: 206, y: 206 });
     const [isDragging, setIsDragging] = useState(false);
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [showFeedback, setShowFeedback] = useState(false);
+    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
@@ -145,7 +134,6 @@ const PuzzleMasterGame: React.FC = () => {
     const generateLevel = useCallback(() => {
         setIsLoading(true);
         setIsCorrect(null);
-        setShowFeedback(false);
 
         const seed = `puzzle-${Date.now()}-${Math.random()}`;
         const imageUrl = PuzzleGenerator.generate(seed);
@@ -202,7 +190,7 @@ const PuzzleMasterGame: React.FC = () => {
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevelNumber(1);
-        setTimeLeft(TIME_LIMIT);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
         generateLevel();
@@ -276,37 +264,33 @@ const PuzzleMasterGame: React.FC = () => {
 
         if (dx < 20 && dy < 20) {
             setIsCorrect(true);
-            setFeedbackMessage(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
-            setShowFeedback(true);
+            showFeedback(true);
+
             setScore(prev => prev + 10 * levelNumber);
 
             if (levelNumber >= MAX_LEVEL) {
                 setTimeout(() => {
-                    setShowFeedback(false);
                     handleVictory();
                 }, 1500);
             } else {
                 setTimeout(() => {
-                    setShowFeedback(false);
                     setLevelNumber(prev => prev + 1);
                     generateLevel();
                 }, 1500);
             }
         } else {
             setIsCorrect(false);
-            setFeedbackMessage(FAIL_MESSAGES[Math.floor(Math.random() * FAIL_MESSAGES.length)]);
-            setShowFeedback(true);
+            showFeedback(false);
+
             const newLives = lives - 1;
             setLives(newLives);
 
             if (newLives <= 0) {
                 setTimeout(() => {
-                    setShowFeedback(false);
                     handleGameOver();
                 }, 1500);
             } else {
                 setTimeout(() => {
-                    setShowFeedback(false);
                     setIsCorrect(null);
                 }, 1500);
             }
@@ -430,33 +414,16 @@ const PuzzleMasterGame: React.FC = () => {
 
             {/* Feedback Overlay */}
             <AnimatePresence>
-                {showFeedback && (
+                {feedbackState && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-end justify-center pb-24 pointer-events-none"
                     >
-                        <motion.div
-                            initial={{ y: 50 }}
-                            animate={{ y: 0 }}
-                            className={`px-12 py-8 rounded-3xl text-center ${isCorrect
-                                ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                }`}
-                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                        >
-                            <motion.div
-                                animate={{ scale: [1, 1.2, 1], rotate: isCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                transition={{ duration: 0.5 }}
-                            >
-                                {isCorrect
-                                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                }
-                            </motion.div>
-                            <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                        </motion.div>
+                        <div className="pointer-events-auto">
+                            <GameFeedbackBanner feedback={feedbackState} />
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

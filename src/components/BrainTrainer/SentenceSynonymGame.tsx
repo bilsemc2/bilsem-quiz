@@ -6,6 +6,8 @@ import { supabase } from '../../lib/supabase';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 interface Option {
     id: string;
@@ -21,17 +23,7 @@ interface Question {
 }
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 💬",
-    "Süper! ⭐",
-    "Doğru! 🎉",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Dikkatli bak! 👀",
-    "Tekrar dene! 💪",
-];
 
 interface SentenceSynonymGameProps {
     examMode?: boolean;
@@ -45,6 +37,7 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     // examMode can come from props OR location.state (when navigating from ExamContinuePage)
     const examMode = examModeProp || location.state?.examMode === true;
@@ -53,10 +46,7 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [score, setScore] = useState(0);
     const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
-    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const [wrongCount, setWrongCount] = useState(0);    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
     const [lives, setLives] = useState(3);
@@ -125,7 +115,6 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
         setBestStreak(0);
         setLives(3);
         setSelectedAnswer(null);
-        setFeedback(null);
         hasSavedRef.current = false;
         fetchQuestions();
     }, [fetchQuestions]);
@@ -171,7 +160,7 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
 
     // Cevap kontrolü
     const handleAnswer = (answerId: string) => {
-        if (feedback || !questions[currentQuestionIndex]) return;
+        if (feedbackState || !questions[currentQuestionIndex]) return;
 
         setSelectedAnswer(answerId);
         const currentQuestion = questions[currentQuestionIndex];
@@ -179,8 +168,7 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
 
         if (isCorrect) {
             playSound('correct');
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             setCorrectCount(prev => prev + 1);
             setStreak(prev => {
                 const newStreak = prev + 1;
@@ -191,15 +179,13 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
             setScore(prev => prev + 100 + streakBonus);
         } else {
             playSound('incorrect');
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             setWrongCount(prev => prev + 1);
             setStreak(0);
             setLives(l => l - 1);
         }
 
         setTimeout(() => {
-            setFeedback(null);
             setSelectedAnswer(null);
 
             if (lives <= 1 && !isCorrect) {
@@ -485,7 +471,7 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
                                 {currentQuestion.options.map((option, idx) => {
                                     const isSelected = selectedAnswer === option.id;
                                     const isCorrect = option.id === currentQuestion.correct_option_id;
-                                    const showResult = feedback !== null;
+                                    const showResult = feedbackState !== null;
 
                                     return (
                                         <motion.button
@@ -494,9 +480,9 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.1 }}
                                             onClick={() => handleAnswer(option.id)}
-                                            disabled={feedback !== null}
-                                            whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
-                                            whileTap={!feedback ? { scale: 0.95 } : {}}
+                                            disabled={feedbackState !== null}
+                                            whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
+                                            whileTap={!feedbackState ? { scale: 0.95 } : {}}
                                             className="py-5 px-4 rounded-2xl font-bold text-lg transition-all"
                                             style={{
                                                 background: showResult && isCorrect
@@ -513,7 +499,7 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
                                                         ? '2px solid #EF4444'
                                                         : '1px solid rgba(255,255,255,0.1)',
                                                 color: '#fff',
-                                                cursor: feedback ? 'default' : 'pointer',
+                                                cursor: feedbackState ? 'default' : 'pointer',
                                                 opacity: showResult && !isCorrect && !isSelected ? 0.5 : 1
                                             }}
                                         >
@@ -617,42 +603,7 @@ const SentenceSynonymGame: React.FC<SentenceSynonymGameProps> = ({ examMode: exa
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                                {feedback === 'wrong' && currentQuestion && (
-                                    <p className="text-white/80 mt-2">
-                                        Doğrusu: <span className="font-bold">{currentQuestion.dogru_kelime}</span>
-                                    </p>
-                                )}
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

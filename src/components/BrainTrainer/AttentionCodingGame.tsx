@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 
 // ─── Constants ──────────────────────────────────────
@@ -15,8 +17,6 @@ const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 const FEEDBACK_DURATION = 1200;
 
-const CORRECT_MESSAGES = ["Harikasın! 🎉", "Süpersin! ⭐", "Muhteşem! 🌟", "Bravo! 🎯", "Tam isabet! 🎨"];
-const WRONG_MESSAGES = ["Tekrar dene! 💪", "Dikkatli bak! 🧐", "Biraz daha dikkat! 🎯"];
 
 // ─── Types ──────────────────────────────────────────
 type ShapeType = 'circle' | 'square' | 'triangle' | 'plus' | 'star' | 'diamond' | 'hexagon';
@@ -69,7 +69,6 @@ const shuffle = <T,>(arr: T[]): T[] => {
     }
     return a;
 };
-const pick = (arr: string[]): string => arr[Math.floor(Math.random() * arr.length)];
 
 const generateKeyMappings = (level: number): KeyMapping[] => {
     // Levels 1-5: 5 shapes, 6-10: 6 shapes, 11+: 7 shapes
@@ -100,14 +99,13 @@ const AttentionCodingGame: React.FC<AttentionCodingGameProps> = ({ examMode = fa
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
     const [lives, setLives] = useState(INITIAL_LIVES);
     const [level, setLevel] = useState(1);
     const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
     const [totalReactions, setTotalReactions] = useState<number[]>([]);
     const [avgReaction, setAvgReaction] = useState(0);
 
@@ -233,8 +231,8 @@ const AttentionCodingGame: React.FC<AttentionCodingGameProps> = ({ examMode = fa
             return item.userShape === correctShape;
         });
 
-        setFeedbackCorrect(allCorrect);
-        setFeedbackMessage(allCorrect ? pick(CORRECT_MESSAGES) : pick(WRONG_MESSAGES));
+        showFeedback(allCorrect);
+
         setPhase('feedback');
         setTotalReactions(prev => [...prev, reaction]);
 
@@ -545,25 +543,12 @@ const AttentionCodingGame: React.FC<AttentionCodingGameProps> = ({ examMode = fa
                     )}
                 </AnimatePresence>
 
-                {/* ── Feedback Overlay ── */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-                            <motion.div initial={{ y: 50 }} animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                                <motion.div animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }} transition={{ duration: 0.5 }}>
-                                    {feedbackCorrect ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" /> : <XCircle size={64} className="mx-auto mb-4 text-white" />}
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Feedback Overlay */}
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default AttentionCodingGame;
+

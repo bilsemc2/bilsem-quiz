@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Trophy, RotateCcw, Play, Star, Timer, Target,
-    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, Search,
+    Trophy, RotateCcw, Play, Star, Timer, Target, XCircle, ChevronLeft, Zap, Heart, Search,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // ──────────── Constants ────────────
 const INITIAL_LIVES = 5;
@@ -49,21 +50,6 @@ const CARD_COLORS = [
 ];
 
 // ──────────── Feedback Messages ────────────
-const CORRECT_MESSAGES = [
-    'Keskin bakış! 🔍',
-    'Süpersin! ⭐',
-    'Mükemmel algı! 🎯',
-    'Harikasın! 🌟',
-    'Tam isabet! 💫',
-];
-
-const WRONG_MESSAGES = [
-    'Daha dikkatli bak! 👀',
-    'Harflere odaklan! 🧐',
-    'Tekrar dene! 💪',
-];
-
-const randomMsg = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 // ──────────── Level Configuration ────────────
@@ -210,8 +196,13 @@ const generateItems = (target: string, length: number, count: number): WordItem[
 const WordHuntGame: React.FC<WordHuntGameProps> = ({ examMode = false }) => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
     const navigate = useNavigate();
     const { submitResult } = useExam();
+
+    // Shared Feedback System
+    const { feedbackState, showFeedback } = useGameFeedback();
+
     const hasSavedRef = useRef(false);
 
     // Core State
@@ -227,10 +218,7 @@ const WordHuntGame: React.FC<WordHuntGameProps> = ({ examMode = false }) => {
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [roundTimeLeft, setRoundTimeLeft] = useState(0);
     const [isExposure, setIsExposure] = useState(false);
-    const [showFeedback, setShowFeedback] = useState(false);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [roundResults, setRoundResults] = useState<{
+    const [_roundResults, setRoundResults] = useState<{
         correct: number; missed: number; falsePositives: number; accuracy: number;
     } | null>(null);
 
@@ -305,8 +293,7 @@ const WordHuntGame: React.FC<WordHuntGameProps> = ({ examMode = false }) => {
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevel(1);
-        setTimeLeft(TIME_LIMIT);
-        setShowFeedback(false);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
         startLevel(1);
@@ -367,12 +354,20 @@ const WordHuntGame: React.FC<WordHuntGameProps> = ({ examMode = false }) => {
     }, [saveGamePlay, score, examMode, submitResult, navigate]);
 
     // ──────────── Toggle Selection ────────────
+    // Max selections = number of target words (invisible limit)
+    const maxSelections = useMemo(() => items.filter(item => item.hasTarget).length, [items]);
+
     const toggleSelect = (id: string) => {
         if (phase !== 'playing') return;
         setSelected(prev => {
             const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                // Silently block if already at max selections
+                if (next.size >= maxSelections) return prev;
+                next.add(id);
+            }
             return next;
         });
     };
@@ -387,19 +382,17 @@ const WordHuntGame: React.FC<WordHuntGameProps> = ({ examMode = false }) => {
             const correct = items.filter(item => item.hasTarget && selectedSet.has(item.id)).length;
             const missed = Math.max(0, totalTargets - correct);
             const falsePositives = Math.max(0, selectedSet.size - correct);
+
             const accuracy = totalTargets ? correct / totalTargets : 0;
 
             setRoundResults({ correct, missed, falsePositives, accuracy });
 
             if (accuracy >= 0.5) {
                 // Good round
-                setFeedbackCorrect(true);
-                setFeedbackMessage(randomMsg(CORRECT_MESSAGES));
+                showFeedback(true);
                 setScore(s => s + 10 * level);
-                setShowFeedback(true);
 
                 setTimeout(() => {
-                    setShowFeedback(false);
                     if (level >= MAX_LEVEL) {
                         handleVictory();
                     } else {
@@ -410,14 +403,11 @@ const WordHuntGame: React.FC<WordHuntGameProps> = ({ examMode = false }) => {
                 }, 1500);
             } else {
                 // Poor round
-                setFeedbackCorrect(false);
-                setFeedbackMessage(randomMsg(WRONG_MESSAGES));
+                showFeedback(false);
                 const newLives = lives - 1;
                 setLives(newLives);
-                setShowFeedback(true);
 
                 setTimeout(() => {
-                    setShowFeedback(false);
                     if (newLives <= 0) {
                         handleGameOver();
                     } else {
@@ -737,40 +727,16 @@ const WordHuntGame: React.FC<WordHuntGameProps> = ({ examMode = false }) => {
 
                 {/* ──── Feedback Overlay ──── */}
                 <AnimatePresence>
-                    {showFeedback && (
+                    {feedbackState && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-end justify-center pb-24 pointer-events-none"
                         >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedbackCorrect
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                                {roundResults && (
-                                    <div className="mt-3 flex items-center justify-center gap-4 text-white/80 text-sm">
-                                        <span>✅ {roundResults.correct}</span>
-                                        <span>❌ {roundResults.missed}</span>
-                                        <span>🎯 {Math.round(roundResults.accuracy * 100)}%</span>
-                                    </div>
-                                )}
-                            </motion.div>
+                            <div className="pointer-events-auto">
+                                <GameFeedbackBanner feedback={feedbackState} />
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>

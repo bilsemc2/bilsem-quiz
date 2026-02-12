@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Play, Star, Timer, Target,
-    XCircle, ChevronLeft, Zap, Heart, Calculator,
-    CheckCircle2, Home, Sparkles
+    XCircle, ChevronLeft, Zap, Heart, Calculator, Home, Sparkles
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 
 // Game Constants
@@ -15,19 +16,7 @@ const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 
 // Child-friendly feedback messages
-const CORRECT_MESSAGES = [
-    "Matematik dahisi! 🧮",
-    "Süpersin! ⭐",
-    "Harika mantık! 🧠",
-    "Mükemmel! 🌟",
-    "Tam isabet! 🎯",
-];
 
-const WRONG_MESSAGES = [
-    "Desenin sırrına yaklaş! 🔍",
-    "Tekrar dene! 💪",
-    "Düşün ve bul! 🧐",
-];
 
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 type QuestionType = 'hidden_operator' | 'pair_relation' | 'conditional' | 'multi_rule';
@@ -49,6 +38,7 @@ const NumberCipherGame: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const hasSavedRef = useRef(false);
 
     // Exam Mode Props
@@ -64,8 +54,7 @@ const NumberCipherGame: React.FC = () => {
     // Game-Specific State
     const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
     const [selectedAnswer, setSelectedAnswer] = useState<number | string | null>(null);
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
+
 
     // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -288,7 +277,6 @@ const NumberCipherGame: React.FC = () => {
 
         setCurrentQuestion(question);
         setSelectedAnswer(null);
-        setIsCorrect(null);
     }, [level, generateHiddenOperator, generatePairRelation, generateConditional, generateMultiRule]);
 
     useEffect(() => {
@@ -369,12 +357,8 @@ const NumberCipherGame: React.FC = () => {
 
         setSelectedAnswer(answer);
         const correct = answer === currentQuestion.answer;
-        setIsCorrect(correct);
-        setFeedbackMessage(
-            correct
-                ? CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
-                : WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)]
-        );
+        showFeedback(correct);
+
         setPhase('feedback');
 
         setTimeout(() => {
@@ -600,41 +584,7 @@ const NumberCipherGame: React.FC = () => {
                             className="w-full max-w-2xl"
                         >
                             {/* Feedback Overlay */}
-                            <AnimatePresence>
-                                {phase === 'feedback' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.5 }}
-                                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                                    >
-                                        <motion.div
-                                            initial={{ y: 50 }}
-                                            animate={{ y: 0 }}
-                                            className={`
-                                                px-12 py-8 rounded-3xl text-center
-                                                ${isCorrect
-                                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                                }
-                                            `}
-                                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                                        >
-                                            <motion.div
-                                                animate={{ scale: [1, 1.2, 1], rotate: isCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                                transition={{ duration: 0.5 }}
-                                            >
-                                                {isCorrect
-                                                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                                }
-                                            </motion.div>
-                                            <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                                            <p className="text-white/80 text-sm mt-2">{currentQuestion.explanation}</p>
-                                        </motion.div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            <GameFeedbackBanner feedback={feedbackState} />
 
                             {/* Level Type Badge */}
                             <div className="text-center mb-4">
@@ -818,3 +768,4 @@ const NumberCipherGame: React.FC = () => {
 };
 
 export default NumberCipherGame;
+

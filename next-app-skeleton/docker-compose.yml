@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: bilsem-quiz-next-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bilsem_quiz
+    ports:
+      - '5433:5432'
+    volumes:
+      - bilsem_next_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d bilsem_quiz']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  bilsem_next_db_data:

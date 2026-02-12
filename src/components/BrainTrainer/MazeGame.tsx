@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useSound } from '../../hooks/useSound';
 
 interface Cell {
@@ -21,21 +23,12 @@ interface Point {
 }
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! ✏️",
-    "Süper! ⭐",
-    "Çıkışı buldun! 🎉",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Dikkatli bak! 👀",
-    "Tekrar dene! 💪",
-];
 
 const MazeGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const location = useLocation();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'won' | 'lost'>('idle');
     const [maze, setMaze] = useState<Cell[][]>([]);
@@ -48,10 +41,7 @@ const MazeGame: React.FC = () => {
     const [drawPath, setDrawPath] = useState<Point[]>([]);
     const [showCollision, setShowCollision] = useState(false);
     const [collisionPoint, setCollisionPoint] = useState<Point | null>(null);
-    const [streak, setStreak] = useState(0);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [streak, setStreak] = useState(0);    const canvasRef = useRef<HTMLCanvasElement>(null);
     const startImageRef = useRef<HTMLImageElement | null>(null);
     const exitImageRef = useRef<HTMLImageElement | null>(null);
     const gameStartTimeRef = useRef<number>(0);
@@ -396,8 +386,7 @@ const MazeGame: React.FC = () => {
             setDrawPath([]);
 
             playSound('incorrect');
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             setStreak(0);
             setLives(l => {
                 if (l <= 1) {
@@ -410,7 +399,6 @@ const MazeGame: React.FC = () => {
             setTimeout(() => {
                 setShowCollision(false);
                 setCollisionPoint(null);
-                setFeedback(null);
             }, 1500);
             return;
         }
@@ -419,8 +407,7 @@ const MazeGame: React.FC = () => {
         if (checkWin(point.x, point.y)) {
             setDrawPath(prev => [...prev, point]);
             playSound('correct');
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             setStreak(prev => prev + 1);
             const timeBonus = timeLeft * 10;
             setScore(prev => prev + 100 + timeBonus + (streak * 20));
@@ -917,37 +904,7 @@ const MazeGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
 
             <style>{`

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Hash, TrendingUp, Eye, Sparkles, Heart } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 
 type PatternType = 'arithmetic' | 'geometric' | 'fibonacci' | 'square' | 'cube' | 'prime' | 'alternating' | 'doubleStep';
@@ -19,21 +21,12 @@ interface Question {
 const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 🔢",
-    "Süper Mantık! 🧠",
-    "Müthiş! ⭐",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Deseni bul! 🔍",
-];
 
 const NumberSequenceGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback: triggerFeedback } = useGameFeedback();
     const location = useLocation();
     const navigate = useNavigate();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
@@ -44,8 +37,6 @@ const NumberSequenceGame: React.FC = () => {
     const [correctCount, setCorrectCount] = useState(0);
     const [wrongCount, setWrongCount] = useState(0);
     const [level, setLevel] = useState(1);
-    const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
@@ -185,7 +176,6 @@ const NumberSequenceGame: React.FC = () => {
         const question = generateQuestion();
         setCurrentQuestion(question);
         setSelectedAnswer(null);
-        setShowFeedback(null);
     }, [generateQuestion]);
 
     // Auto start from HUB or examMode
@@ -229,14 +219,13 @@ const NumberSequenceGame: React.FC = () => {
 
     // Cevap kontrolü
     const handleAnswer = (answer: number) => {
-        if (showFeedback || !currentQuestion) return;
+        if (feedbackState || !currentQuestion) return;
 
         setSelectedAnswer(answer);
         const isCorrect = answer === currentQuestion.answer;
 
         if (isCorrect) {
-            setShowFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            triggerFeedback(true);
             setCorrectCount(prev => prev + 1);
             setStreak(prev => {
                 const newStreak = prev + 1;
@@ -247,15 +236,13 @@ const NumberSequenceGame: React.FC = () => {
             const streakBonus = streak * 5;
             setScore(prev => prev + 100 + levelBonus + streakBonus);
         } else {
-            setShowFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            triggerFeedback(false);
             setWrongCount(prev => prev + 1);
             setStreak(0);
             setLives(prev => prev - 1);
         }
 
         setTimeout(() => {
-            setShowFeedback(null);
             setSelectedAnswer(null);
 
             if (lives <= 1 && !isCorrect) {
@@ -526,8 +513,8 @@ const NumberSequenceGame: React.FC = () => {
                                     style={{
                                         background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
                                         boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                        border: showFeedback === 'correct' ? '2px solid #10B981' :
-                                            showFeedback === 'wrong' ? '2px solid #EF4444' :
+                                        border: feedbackState?.correct === true ? '2px solid #10B981' :
+                                            feedbackState?.correct === false ? '2px solid #EF4444' :
                                                 '1px solid rgba(255,255,255,0.1)'
                                     }}
                                 >
@@ -556,27 +543,27 @@ const NumberSequenceGame: React.FC = () => {
                                             transition={{ delay: currentQuestion.sequence.length * 0.1 }}
                                             className="w-14 h-14 lg:w-16 lg:h-16 rounded-[30%] flex items-center justify-center"
                                             style={{
-                                                background: showFeedback === 'correct'
+                                                background: feedbackState?.correct === true
                                                     ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                                                    : showFeedback === 'wrong'
+                                                    : feedbackState?.correct === false
                                                         ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
                                                         : 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)',
                                                 boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)',
-                                                border: showFeedback === 'correct' ? '2px solid #10B981' :
-                                                    showFeedback === 'wrong' ? '2px solid #EF4444' :
+                                                border: feedbackState?.correct === true ? '2px solid #10B981' :
+                                                    feedbackState?.correct === false ? '2px solid #EF4444' :
                                                         '2px solid rgba(251, 191, 36, 0.5)'
                                             }}
                                         >
-                                            <span className={`font-bold text-xl lg:text-2xl ${showFeedback ? 'text-white' : 'text-amber-400'
+                                            <span className={`font-bold text-xl lg:text-2xl ${feedbackState ? 'text-white' : 'text-amber-400'
                                                 }`}>
-                                                {showFeedback ? currentQuestion.answer : '?'}
+                                                {feedbackState ? currentQuestion.answer : '?'}
                                             </span>
                                         </motion.div>
                                     </div>
 
                                     {/* Pattern Description */}
                                     <AnimatePresence>
-                                        {showFeedback && (
+                                        {feedbackState && (
                                             <motion.p
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
@@ -594,7 +581,7 @@ const NumberSequenceGame: React.FC = () => {
                                 {currentQuestion.options.map((option, idx) => {
                                     const isSelected = selectedAnswer === option;
                                     const isCorrect = option === currentQuestion.answer;
-                                    const showResult = showFeedback !== null;
+                                    const showResult = feedbackState !== null;
 
                                     return (
                                         <motion.button
@@ -603,9 +590,9 @@ const NumberSequenceGame: React.FC = () => {
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.1 }}
                                             onClick={() => handleAnswer(option)}
-                                            disabled={showFeedback !== null}
-                                            whileHover={!showFeedback ? { scale: 0.98, y: -2 } : {}}
-                                            whileTap={!showFeedback ? { scale: 0.95 } : {}}
+                                            disabled={feedbackState !== null}
+                                            whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
+                                            whileTap={!feedbackState ? { scale: 0.95 } : {}}
                                             className="py-6 px-4 text-2xl font-bold rounded-[25%] transition-all"
                                             style={{
                                                 background: showResult && isCorrect
@@ -617,7 +604,7 @@ const NumberSequenceGame: React.FC = () => {
                                                 border: showResult && isCorrect ? '2px solid #10B981' :
                                                     showResult && isSelected ? '2px solid #EF4444' :
                                                         '1px solid rgba(255,255,255,0.1)',
-                                                cursor: showFeedback ? 'default' : 'pointer',
+                                                cursor: feedbackState ? 'default' : 'pointer',
                                                 opacity: showResult && !isCorrect && !isSelected ? 0.5 : 1
                                             }}
                                         >
@@ -728,40 +715,11 @@ const NumberSequenceGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {showFeedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${showFeedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: showFeedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {showFeedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default NumberSequenceGame;
+

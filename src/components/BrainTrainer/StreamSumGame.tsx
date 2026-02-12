@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
 
@@ -16,17 +17,7 @@ import { useExam } from '../../contexts/ExamContext';
 /* ------------------------------------------------------------------ */
 type GameStatus = 'waiting' | 'playing' | 'gameover';
 
-const SUCCESS_MESSAGES = [
-    'Harika! ➕',
-    'Süper! ⭐',
-    'Doğru! 🎉',
-    'Bravo! 🌟'
-];
 
-const FAILURE_MESSAGES = [
-    'Dikkatli bak! 👀',
-    'Tekrar dene! 💪'
-];
 
 const MAX_LIVES = 3;
 const BASE_TIME = 60;
@@ -35,7 +26,6 @@ const BASE_TIME = 60;
 /* Helper Functions */
 /* ------------------------------------------------------------------ */
 const randomDigit = () => Math.floor(Math.random() * 9) + 1;
-const randomFrom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
 /* ------------------------------------------------------------------ */
 /* Component */
@@ -44,6 +34,7 @@ const StreamSumGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -57,8 +48,6 @@ const StreamSumGame: React.FC = () => {
     const [previous, setPrevious] = useState<number | null>(null);
     const [input, setInput] = useState('');
     const [timeLeft, setTimeLeft] = useState(BASE_TIME);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [streak, setStreak] = useState(0);
 
     /* -------------------- Refs -------------------- */
@@ -87,7 +76,6 @@ const StreamSumGame: React.FC = () => {
             return randomDigit();
         });
         setInput('');
-        setFeedback(null);
     }, []);
 
     const startGame = useCallback(() => {
@@ -100,7 +88,6 @@ const StreamSumGame: React.FC = () => {
         setPrevious(null);
         setCurrent(null);
         setInput('');
-        setFeedback(null);
 
         savedRef.current = false;
         gameStartRef.current = Date.now();
@@ -109,11 +96,10 @@ const StreamSumGame: React.FC = () => {
     }, [examMode, examTimeLimit]);
 
     /* ------------------------------------------------------------------ */
-    /* Closing Rule: Clear feedback on gameover */
+    /* Closing Rule: Clear feedbackState on gameover */
     /* ------------------------------------------------------------------ */
     useEffect(() => {
         if (status === 'gameover') {
-            setFeedback(null);
         }
     }, [status]);
 
@@ -157,18 +143,16 @@ const StreamSumGame: React.FC = () => {
                 return;
             }
 
-            if (feedback === null) {
+            if (feedbackState === null) {
                 playSound('incorrect');
-                setFeedback('wrong');
-                setFeedbackMsg(randomFrom(FAILURE_MESSAGES));
+                showFeedback(false);
                 setStreak(0);
 
                 setLives(l => {
                     if (l <= 1) {
                         if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
-                        // Clear feedback BEFORE gameover to prevent overlay sticking
+                        // Clear feedbackState BEFORE gameover to prevent overlay sticking
                         setTimeout(() => {
-                            setFeedback(null);
                             setStatus('gameover');
                         }, 1200);
                         return 0;
@@ -184,13 +168,13 @@ const StreamSumGame: React.FC = () => {
         return () => {
             if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
         };
-    }, [status, current, previous, feedback, flowSpeed, nextNumber, playSound]);
+    }, [status, current, previous, feedbackState, flowSpeed, nextNumber, playSound]);
 
     /* ------------------------------------------------------------------ */
     /* Input Handling */
     /* ------------------------------------------------------------------ */
     const handleInput = (digit: string) => {
-        if (status !== 'playing' || feedback || previous === null) return;
+        if (status !== 'playing' || feedbackState || previous === null) return;
 
         const expected = previous + (current ?? 0);
         const nextInput = input + digit;
@@ -198,8 +182,7 @@ const StreamSumGame: React.FC = () => {
 
         if (Number(nextInput) === expected) {
             playSound('correct');
-            setFeedback('correct');
-            setFeedbackMsg(randomFrom(SUCCESS_MESSAGES));
+            showFeedback(true);
             setStreak(s => s + 1);
             setScore(s => s + level * 50 + streak * 10);
 
@@ -212,17 +195,15 @@ const StreamSumGame: React.FC = () => {
 
         if (nextInput.length >= expected.toString().length) {
             playSound('incorrect');
-            setFeedback('wrong');
-            setFeedbackMsg(randomFrom(FAILURE_MESSAGES));
+            showFeedback(false);
             setStreak(0);
 
             if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
 
             setLives(l => {
                 if (l <= 1) {
-                    // Clear feedback BEFORE gameover to prevent overlay sticking
+                    // Clear feedbackState BEFORE gameover to prevent overlay sticking
                     setTimeout(() => {
-                        setFeedback(null);
                         setStatus('gameover');
                     }, 1200);
                     return 0;
@@ -411,7 +392,7 @@ const StreamSumGame: React.FC = () => {
                                 <span>=</span>
                                 <motion.div
                                     className="w-20 h-20 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center text-4xl text-white font-black"
-                                    animate={feedback ? { scale: [1, 1.1, 1] } : {}}
+                                    animate={feedbackState ? { scale: [1, 1.1, 1] } : {}}
                                 >
                                     {input || '?'}
                                 </motion.div>
@@ -439,7 +420,7 @@ const StreamSumGame: React.FC = () => {
 
             {/* Feedback Mask - Security Rule: Only show when playing */}
             <AnimatePresence>
-                {status === 'playing' && feedback && (
+                {status === 'playing' && feedbackState && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -449,16 +430,16 @@ const StreamSumGame: React.FC = () => {
                         <motion.div
                             initial={{ scale: 0.8, y: 30 }}
                             animate={{ scale: 1, y: 0 }}
-                            className={`p-10 rounded-[3rem] text-center shadow-2xl ${feedback === 'correct'
+                            className={`p-10 rounded-[3rem] text-center shadow-2xl ${feedbackState?.correct === true
                                 ? 'bg-emerald-500 text-white'
                                 : 'bg-orange-500 text-white'
                                 }`}
                         >
                             <div className="flex justify-center mb-4">
-                                {feedback === 'correct' ? <CheckCircle2 size={72} /> : <XCircle size={72} />}
+                                {feedbackState?.correct === true ? <CheckCircle2 size={72} /> : <XCircle size={72} />}
                             </div>
-                            <h2 className="text-4xl font-black mb-2">{feedbackMsg}</h2>
-                            {feedback === 'wrong' && previous !== null && (
+                            <h2 className="text-4xl font-black mb-2">{feedbackState?.message}</h2>
+                            {feedbackState?.correct === false && previous !== null && (
                                 <p className="text-xl font-bold opacity-80">
                                     Doğrusu: {previous + (current ?? 0)}
                                 </p>

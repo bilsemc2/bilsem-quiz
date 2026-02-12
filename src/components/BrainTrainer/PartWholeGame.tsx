@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Play, Trophy, Sparkles, Heart, Star, Timer, CheckCircle2, XCircle, Puzzle, Eye, RefreshCw } from 'lucide-react';
+import { ChevronLeft, RotateCcw, Play, Trophy, Sparkles, Heart, Star, Timer, Puzzle, Eye, RefreshCw } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // ------------------ Tip Tanımları ------------------
@@ -35,20 +37,11 @@ const COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#A29BFE', '#55E6C1'
 const PATTERN_TYPES = ['dots', 'stripes', 'zigzag', 'waves', 'checkerboard', 'crosshatch', 'star', 'polygon', 'scribble', 'burst'];
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 🧩",
-    "Süper Göz! 👁️",
-    "Müthiş! ⭐",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Dikkatli bak! 👀",
-    "Tekrar dene! 💪",
-];
 
 const PartWholeGame: React.FC = () => {
     const { playSound } = useSound();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [level, setLevel] = useState(1);
@@ -58,8 +51,6 @@ const PartWholeGame: React.FC = () => {
     const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
     const [gameStarted, setGameStarted] = useState(false);
     const [gameOver, setGameOver] = useState(false);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const [timeLeft, setTimeLeft] = useState(30);
     const [lives, setLives] = useState(3);
     const gameStartTimeRef = useRef<number>(0);
@@ -213,25 +204,23 @@ const PartWholeGame: React.FC = () => {
         });
 
         setOptions([...distractors, correctOption].sort(() => Math.random() - 0.5));
-        setFeedback(null);
         setTimeLeft(30);
     }, [level, generatePattern, getPatternDefs]);
 
     useEffect(() => {
-        if (gameStarted && !gameOver && !feedback) {
+        if (gameStarted && !gameOver && !feedbackState) {
             generateLevel();
         }
-    }, [gameStarted, gameOver, level, generateLevel, feedback]);
+    }, [gameStarted, gameOver, level, generateLevel, feedbackState]);
 
     // Timer
     useEffect(() => {
-        if (!gameStarted || gameOver || feedback) return;
+        if (!gameStarted || gameOver || feedbackState) return;
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    setFeedback('wrong');
-                    setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+                    showFeedback(false);
                     setLives(l => l - 1);
                     return 0;
                 }
@@ -239,14 +228,13 @@ const PartWholeGame: React.FC = () => {
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [gameStarted, gameOver, feedback]);
+    }, [gameStarted, gameOver, feedbackState]);
 
-    // Handle feedback timeout
+    // Handle feedbackState timeout
     useEffect(() => {
-        if (feedback) {
+        if (feedbackState) {
             const timeout = setTimeout(() => {
-                setFeedback(null);
-                if (lives <= 0 && feedback === 'wrong') {
+                if (lives <= 0 && feedbackState?.correct === false) {
                     setGameOver(true);
                 } else if (level >= totalQuestions) {
                     setGameOver(true);
@@ -256,20 +244,18 @@ const PartWholeGame: React.FC = () => {
             }, 2000);
             return () => clearTimeout(timeout);
         }
-    }, [feedback, lives, level]);
+    }, [feedbackState, lives, level]);
 
     const handleOptionSelect = (option: GameOption) => {
-        if (feedback || gameOver) return;
+        if (feedbackState || gameOver) return;
 
         if (option.isCorrect) {
             playSound('correct');
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             setScore(s => s + (level * 100) + (timeLeft * 5));
         } else {
             playSound('incorrect');
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             setLives(l => l - 1);
         }
     };
@@ -282,7 +268,6 @@ const PartWholeGame: React.FC = () => {
         setLives(3);
         setGameOver(false);
         setGameStarted(true);
-        setFeedback(null);
         gameStartTimeRef.current = Date.now();
         hasSavedRef.current = false;
     }, []);
@@ -314,10 +299,10 @@ const PartWholeGame: React.FC = () => {
 
     // Skip question with penalty
     const skipQuestion = useCallback(() => {
-        if (feedback || gameOver) return;
+        if (feedbackState || gameOver) return;
         setScore(s => Math.max(0, s - 50));
         generateLevel();
-    }, [feedback, gameOver, generateLevel]);
+    }, [feedbackState, gameOver, generateLevel]);
 
     // ------------------ Render Component ------------------
     const PatternSVG = ({ pattern, size, viewBox, isMain = false }: { pattern: Pattern[], size: number, viewBox?: string, isMain?: boolean }) => (
@@ -555,13 +540,13 @@ const PartWholeGame: React.FC = () => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={skipQuestion}
-                            disabled={feedback !== null}
+                            disabled={feedbackState !== null}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl"
                             style={{
                                 background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
                                 boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
                                 border: '1px solid rgba(251, 191, 36, 0.3)',
-                                opacity: feedback ? 0.5 : 1
+                                opacity: feedbackState ? 0.5 : 1
                             }}
                         >
                             <RefreshCw size={16} className="text-amber-400" />
@@ -616,16 +601,16 @@ const PartWholeGame: React.FC = () => {
 
                                     <div className="grid grid-cols-2 gap-4 w-full">
                                         {options.length > 0 && options.map((option, idx) => {
-                                            const showResult = feedback !== null;
+                                            const showResult = feedbackState !== null;
                                             const isCorrect = option.isCorrect;
 
                                             return (
                                                 <motion.button
                                                     key={idx}
-                                                    whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
-                                                    whileTap={!feedback ? { scale: 0.95 } : {}}
+                                                    whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
+                                                    whileTap={!feedbackState ? { scale: 0.95 } : {}}
                                                     onClick={() => handleOptionSelect(option)}
-                                                    disabled={feedback !== null}
+                                                    disabled={feedbackState !== null}
                                                     className="p-4 rounded-2xl transition-all flex items-center justify-center"
                                                     style={{
                                                         background: showResult && isCorrect
@@ -637,7 +622,7 @@ const PartWholeGame: React.FC = () => {
                                                         border: showResult && isCorrect
                                                             ? '2px solid #10B981'
                                                             : '1px solid rgba(255,255,255,0.1)',
-                                                        cursor: feedback ? 'default' : 'pointer',
+                                                        cursor: feedbackState ? 'default' : 'pointer',
                                                         opacity: showResult && !isCorrect ? 0.5 : 1
                                                     }}
                                                 >
@@ -730,40 +715,11 @@ const PartWholeGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default PartWholeGame;
+

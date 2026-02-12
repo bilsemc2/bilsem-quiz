@@ -8,6 +8,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useSound } from '../../hooks/useSound';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 interface SymbolColor {
     symbol: string;
@@ -25,17 +27,7 @@ interface Question {
 }
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Hafızan harika! 🧠",
-    "Süper! ⭐",
-    "Doğru hatırladın! 🎉",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Dikkatli bak! 👀",
-    "Tekrar dene! 💪",
-];
 
 const SYMBOLS = ['⭐', '▲', '●', '◆', '⬟', '⬢'];
 
@@ -52,6 +44,7 @@ const SymbolMatchGame = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const location = useLocation();
     const navigate = useNavigate();
     const [gameState, setGameState] = useState<'idle' | 'memorize' | 'question' | 'finished'>('idle');
@@ -63,10 +56,7 @@ const SymbolMatchGame = () => {
     const [level, setLevel] = useState(1);
     const [memorizeTime, setMemorizeTime] = useState(5);
     const [countdown, setCountdown] = useState(5);
-    const [streak, setStreak] = useState(0);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
-    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const [streak, setStreak] = useState(0);    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
 
@@ -148,7 +138,6 @@ const SymbolMatchGame = () => {
         setCountdown(time);
         setGameState('memorize');
         setSelectedAnswer(null);
-        setFeedback(null);
     }, [generateSymbolColors, level]);
 
     // Oyunu başlat
@@ -220,28 +209,25 @@ const SymbolMatchGame = () => {
 
     // Cevap kontrolü
     const handleAnswer = (answer: string) => {
-        if (feedback || !currentQuestion) return;
+        if (feedbackState || !currentQuestion) return;
 
         setSelectedAnswer(answer);
         const isCorrect = answer === currentQuestion.correctAnswer;
 
         if (isCorrect) {
             playSound('correct');
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             setStreak(prev => prev + 1);
             const levelBonus = level * 10;
             setScore(prev => prev + 100 + levelBonus + (streak * 15));
         } else {
             playSound('incorrect');
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             setStreak(0);
             setLives(prev => prev - 1);
         }
 
         setTimeout(() => {
-            setFeedback(null);
             if (lives <= 1 && !isCorrect) {
                 setGameState('finished');
             } else if (roundNumber >= totalRounds) {
@@ -534,7 +520,7 @@ const SymbolMatchGame = () => {
                                 {currentQuestion.options.map((option, idx) => {
                                     const isSelected = selectedAnswer === option;
                                     const isCorrect = option === currentQuestion.correctAnswer;
-                                    const showResult = feedback !== null;
+                                    const showResult = feedbackState !== null;
 
                                     const optionColor = currentQuestion.type === 'symbol'
                                         ? COLORS.find(c => c.name === option)?.hex || '#64748b'
@@ -544,9 +530,9 @@ const SymbolMatchGame = () => {
                                         <motion.button
                                             key={idx}
                                             onClick={() => handleAnswer(option)}
-                                            disabled={feedback !== null}
-                                            whileHover={{ scale: feedback ? 1 : 1.02, y: feedback ? 0 : -2 }}
-                                            whileTap={{ scale: feedback ? 1 : 0.98 }}
+                                            disabled={feedbackState !== null}
+                                            whileHover={{ scale: feedbackState ? 1 : 1.02, y: feedbackState ? 0 : -2 }}
+                                            whileTap={{ scale: feedbackState ? 1 : 0.98 }}
                                             className="p-5 rounded-2xl font-bold text-xl transition-all"
                                             style={{
                                                 background: showResult
@@ -671,37 +657,7 @@ const SymbolMatchGame = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

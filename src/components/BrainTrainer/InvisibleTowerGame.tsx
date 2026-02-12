@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, RotateCcw, Trophy, TrendingUp, Timer,
-    Activity, Zap, CheckCircle2, XCircle, Heart, Star,
+    Activity, Zap, Heart, Star,
     Play, Eye, Sparkles, Layers
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 
 // --- Types ---
@@ -22,20 +24,11 @@ interface TowerSegment {
 type GameStatus = 'waiting' | 'building' | 'flashing' | 'question' | 'result' | 'gameover';
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Harika! 🏗️",
-    "Süper Hafıza! 🧠",
-    "Müthiş! ⭐",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Dikkatli say! 🔢",
-];
 
 const InvisibleTowerGame: React.FC = () => {
     const { playSound } = useSound();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const [status, setStatus] = useState<GameStatus>('waiting');
@@ -47,8 +40,6 @@ const InvisibleTowerGame: React.FC = () => {
     const [correctAnswer, setCorrectAnswer] = useState(0);
     const [options, setOptions] = useState<number[]>([]);
     const [timeLeft, setTimeLeft] = useState(45);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
     const totalQuestions = 10;
@@ -100,7 +91,6 @@ const InvisibleTowerGame: React.FC = () => {
         generateTower(lvl);
         setCurrentIndex(-1);
         setStatus('building');
-        setFeedback(null);
         setTimeLeft(45);
         playSound('detective_mystery');
     }, [generateTower, playSound]);
@@ -148,22 +138,20 @@ const InvisibleTowerGame: React.FC = () => {
     // Timer
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (status === 'question' && timeLeft > 0 && !feedback) {
+        if (status === 'question' && timeLeft > 0 && !feedbackState) {
             interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-        } else if (timeLeft === 0 && status === 'question' && !feedback) {
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+        } else if (timeLeft === 0 && status === 'question' && !feedbackState) {
+            showFeedback(false);
             setLives(l => l - 1);
         }
         return () => clearInterval(interval);
-    }, [status, timeLeft, feedback]);
+    }, [status, timeLeft, feedbackState]);
 
-    // Handle feedback timeout
+    // Handle feedbackState timeout
     useEffect(() => {
-        if (feedback) {
+        if (feedbackState) {
             const timeout = setTimeout(() => {
-                setFeedback(null);
-                if (lives <= 0 && feedback === 'wrong') {
+                if (lives <= 0 && feedbackState?.correct === false) {
                     setStatus('gameover');
                 } else if (level >= totalQuestions) {
                     setStatus('gameover');
@@ -174,7 +162,7 @@ const InvisibleTowerGame: React.FC = () => {
             }, 2000);
             return () => clearTimeout(timeout);
         }
-    }, [feedback, lives, level, startLevel]);
+    }, [feedbackState, lives, level, startLevel]);
 
     // Save game data on finish
     useEffect(() => {
@@ -195,16 +183,14 @@ const InvisibleTowerGame: React.FC = () => {
     }, [status, score, lives, level, saveGamePlay]);
 
     const handleSelect = (val: number) => {
-        if (status !== 'question' || feedback) return;
+        if (status !== 'question' || feedbackState) return;
 
         if (val === correctAnswer) {
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             playSound('detective_correct');
             setScore(prev => prev + (level * 200) + (timeLeft * 5));
         } else {
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             playSound('detective_incorrect');
             setLives(l => l - 1);
         }
@@ -525,16 +511,16 @@ const InvisibleTowerGame: React.FC = () => {
                                         {options.map((opt, i) => (
                                             <motion.button
                                                 key={i}
-                                                whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
-                                                whileTap={!feedback ? { scale: 0.95 } : {}}
+                                                whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
+                                                whileTap={!feedbackState ? { scale: 0.95 } : {}}
                                                 onClick={() => handleSelect(opt)}
-                                                disabled={feedback !== null}
+                                                disabled={feedbackState !== null}
                                                 className="py-6 text-2xl font-bold rounded-[25%] transition-all"
                                                 style={{
                                                     background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
                                                     boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
                                                     border: '1px solid rgba(255,255,255,0.1)',
-                                                    cursor: feedback ? 'default' : 'pointer'
+                                                    cursor: feedbackState ? 'default' : 'pointer'
                                                 }}
                                             >
                                                 {opt}
@@ -621,40 +607,11 @@ const InvisibleTowerGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default InvisibleTowerGame;
+

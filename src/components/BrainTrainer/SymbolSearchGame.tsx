@@ -41,6 +41,8 @@ import {
 } from 'lucide-react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 import type { LucideIcon } from 'lucide-react';
 
@@ -50,8 +52,6 @@ const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 const FEEDBACK_DURATION = 1200;
 
-const CORRECT_MESSAGES = ["Harikasın! 🎉", "Süpersin! ⭐", "Muhteşem! 🌟", "Bravo! 🎯", "Tam isabet! 🎨"];
-const WRONG_MESSAGES = ["Tekrar dene! 💪", "Dikkatli bak! 🧐", "Biraz daha dikkat! 🎯"];
 
 // ─── Icon Pool ──────────────────────────────────────
 interface GameIcon {
@@ -137,8 +137,6 @@ const shuffle = <T,>(arr: T[]): T[] => {
     return a;
 };
 
-const pick = (arr: string[]): string => arr[Math.floor(Math.random() * arr.length)];
-
 interface RoundData {
     target: GameIcon;
     group: GameIcon[];
@@ -185,6 +183,7 @@ const SymbolSearchGame: React.FC<SymbolSearchGameProps> = ({ examMode = false })
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
@@ -192,8 +191,6 @@ const SymbolSearchGame: React.FC<SymbolSearchGameProps> = ({ examMode = false })
     const [level, setLevel] = useState(1);
     const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
     const [round, setRound] = useState<RoundData | null>(null);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
     const [avgReaction, setAvgReaction] = useState(0);
     const [totalReactions, setTotalReactions] = useState<number[]>([]);
 
@@ -291,11 +288,8 @@ const SymbolSearchGame: React.FC<SymbolSearchGameProps> = ({ examMode = false })
         const reaction = Date.now() - round.startTime;
         const correct = userAnswer === round.hasTarget;
 
-        setFeedbackCorrect(correct);
-        setFeedbackMessage(correct
-            ? pick(CORRECT_MESSAGES)
-            : pick(WRONG_MESSAGES)
-        );
+        showFeedback(correct);
+
         setPhase('feedback');
         setTotalReactions(prev => [...prev, reaction]);
 
@@ -547,25 +541,12 @@ const SymbolSearchGame: React.FC<SymbolSearchGameProps> = ({ examMode = false })
                     )}
                 </AnimatePresence>
 
-                {/* ── Feedback Overlay ── */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-                            <motion.div initial={{ y: 50 }} animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                                <motion.div animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }} transition={{ duration: 0.5 }}>
-                                    {feedbackCorrect ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" /> : <XCircle size={64} className="mx-auto mb-4 text-white" />}
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Feedback Overlay */}
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default SymbolSearchGame;
+

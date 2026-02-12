@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 
 // ─── Constants ──────────────────────────────────────
@@ -13,13 +15,6 @@ const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 
-const CORRECT_MESSAGES = [
-    "Harikasın! 🎨", "Süpersin! ⭐", "Muhteşem! 🌟",
-    "Bravo! 🎉", "Tam isabet! 🎯",
-];
-const WRONG_MESSAGES = [
-    "Tekrar dene! 💪", "Düşün ve bul! 🧐", "Biraz daha dikkat! 🎯",
-];
 
 // ─── Shape / Color Types ────────────────────────────
 type ShapeType = 'Circle' | 'Square' | 'Triangle' | 'Star' | 'Diamond';
@@ -203,6 +198,7 @@ const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = 
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
@@ -211,8 +207,6 @@ const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = 
     const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
     const [round, setRound] = useState<RoundData | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
@@ -294,11 +288,8 @@ const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = 
         if (!round || phase !== 'playing' || selectedId) return;
         const correct = id === round.targetId;
         setSelectedId(id);
-        setFeedbackCorrect(correct);
-        setFeedbackMessage(correct
-            ? CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
-            : WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)]
-        );
+        showFeedback(correct);
+
         setPhase('feedback');
 
         const newScore = correct ? score + 10 * level : score;
@@ -451,15 +442,15 @@ const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = 
                                     let extraClass = 'hover:bg-white/10 hover:border-white/20 cursor-pointer';
 
                                     if (showResults) {
-                                        if (isSelected && feedbackCorrect) {
+                                        if (isSelected && feedbackState?.correct) {
                                             borderColor = 'border-emerald-400';
                                             bg = 'bg-emerald-500/20';
                                             extraClass = 'ring-2 ring-emerald-400/50';
-                                        } else if (isSelected && !feedbackCorrect) {
+                                        } else if (isSelected && !feedbackState?.correct) {
                                             borderColor = 'border-red-400';
                                             bg = 'bg-red-500/20';
                                             extraClass = 'ring-2 ring-red-400/50';
-                                        } else if (isTarget && !feedbackCorrect) {
+                                        } else if (isTarget && !feedbackState?.correct) {
                                             borderColor = 'border-emerald-400/50';
                                             bg = 'bg-emerald-500/10';
                                             extraClass = 'opacity-60';
@@ -484,13 +475,13 @@ const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = 
                                             <ShapeIcon shape={obj.shape} color={obj.color} size={round.objects.length > 6 ? 48 : 64} />
                                             {showResults && isSelected && (
                                                 <div className="absolute top-2 right-2">
-                                                    {feedbackCorrect
+                                                    {feedbackState?.correct
                                                         ? <CheckCircle2 size={20} className="text-emerald-400" />
                                                         : <XCircle size={20} className="text-red-400" />
                                                     }
                                                 </div>
                                             )}
-                                            {showResults && isTarget && !feedbackCorrect && !isSelected && (
+                                            {showResults && isTarget && !feedbackState?.correct && !isSelected && (
                                                 <div className="absolute top-2 right-2">
                                                     <CheckCircle2 size={20} className="text-emerald-400/60" />
                                                 </div>
@@ -546,25 +537,12 @@ const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = 
                     )}
                 </AnimatePresence>
 
-                {/* ── Feedback Overlay ── */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-                            <motion.div initial={{ y: 50 }} animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                                <motion.div animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }} transition={{ duration: 0.5 }}>
-                                    {feedbackCorrect ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" /> : <XCircle size={64} className="mx-auto mb-4 text-white" />}
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Feedback Overlay */}
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default ConditionalLogicGame;
+

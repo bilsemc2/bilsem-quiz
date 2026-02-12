@@ -8,22 +8,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useSound } from '../../hooks/useSound';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 type GameMode = 'simple' | 'selective';
 type RoundState = 'waiting' | 'ready' | 'go' | 'early' | 'result';
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Şimşek hızı! ⚡",
-    "Harika! 🚀",
-    "Süper hız! ✨",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Sabırlı ol! 👀",
-    "Bekle, sonra tıkla! 💪",
-];
 
 interface ReactionTimeGameProps {
     examMode?: boolean;
@@ -37,6 +29,7 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     // examMode can come from props OR location.state (when navigating from ExamContinuePage)
     const examMode = examModeProp || location.state?.examMode === true;
@@ -50,10 +43,7 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
     const [streak, setStreak] = useState(0);
     const [targetColor, setTargetColor] = useState<string>('green');
     const [currentColor, setCurrentColor] = useState<string>('red');
-    const [score, setScore] = useState(0);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
-    const gameStartTimeRef = useRef<number>(0);
+    const [score, setScore] = useState(0);    const gameStartTimeRef = useRef<number>(0);
     const roundStartTimeRef = useRef<number>(0);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const hasSavedRef = useRef<boolean>(false);
@@ -137,8 +127,7 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
             // Erken tıklama!
             setRoundState('early');
             playSound('incorrect');
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             setStreak(0);
             setLives(l => {
                 if (l <= 1) {
@@ -153,7 +142,6 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
             }
 
             timeoutRef.current = setTimeout(() => {
-                setFeedback(null);
                 if (lives > 1 && currentRound < totalRounds) {
                     setCurrentRound(prev => prev + 1);
                     startRound();
@@ -169,8 +157,7 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
                 // Yanlış renge tıkladı!
                 setRoundState('result');
                 playSound('incorrect');
-                setFeedback('wrong');
-                setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+                showFeedback(false);
                 setStreak(0);
                 setLives(l => {
                     if (l <= 1) {
@@ -183,8 +170,7 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
                 // Doğru tepki!
                 setRoundState('result');
                 playSound('correct');
-                setFeedback('correct');
-                setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+                showFeedback(true);
                 setStreak(prev => prev + 1);
                 setReactionTimes(prev => [...prev, Math.round(reactionTime)]);
 
@@ -194,7 +180,6 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
             }
 
             timeoutRef.current = setTimeout(() => {
-                setFeedback(null);
                 if (lives > 0 && currentRound < totalRounds) {
                     setCurrentRound(prev => prev + 1);
                     startRound();
@@ -215,13 +200,11 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
             setRoundState('result');
             setCurrentReactionTime(null);
             playSound('correct');
-            setFeedback('correct');
-            setFeedbackMsg('Doğru bekleme! 👏');
+            showFeedback(true);
             setStreak(prev => prev + 1);
             setScore(prev => prev + 75 + (streak * 5));
 
             timeoutRef.current = setTimeout(() => {
-                setFeedback(null);
                 if (currentRound < totalRounds) {
                     setCurrentRound(prev => prev + 1);
                     startRound();
@@ -707,37 +690,7 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

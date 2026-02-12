@@ -339,6 +339,17 @@ export const EXAM_MODULES: ExamModule[] = [
         timeLimit: 90,
         active: true
     },
+
+    // ALGI
+    {
+        id: 'farki-bul',
+        title: 'Farkı Bul',
+        link: '/games/farki-bul',
+        tuzo: '5.7.1 Seçici Dikkat',
+        category: 'attention',
+        timeLimit: 120,
+        active: true
+    },
 ];
 
 // Aktif modülleri getir

@@ -2,11 +2,14 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Play, Star, Timer, Target,
-    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, Scale, Eye, EyeOff, ArrowRight, HelpCircle
+    XCircle, ChevronLeft, Zap, Heart, Scale, Eye, EyeOff, ArrowRight, HelpCircle
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
+
 
 // ============== CONSTANTS ==============
 const INITIAL_LIVES = 5;
@@ -48,21 +51,6 @@ interface VisualAlgebraGameProps {
 }
 
 // ============== FEEDBACK MESSAGES ==============
-const CORRECT_MESSAGES = [
-    "Harikasın! ⚖️",
-    "Süpersin! ⭐",
-    "Muhteşem! 🌟",
-    "Bravo! 🎉",
-    "Denge sağlandı! 🎯",
-    "Tam isabet! 🧠",
-];
-
-const WRONG_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Düşün ve bul! 🧐",
-    "Biraz daha dikkat! 🎯",
-];
-
 // ============== GAME ENGINE ==============
 const AVAILABLE_SHAPES = [ShapeType.SQUARE, ShapeType.TRIANGLE, ShapeType.CIRCLE, ShapeType.STAR];
 
@@ -361,8 +349,12 @@ const BalanceScaleView: React.FC<{
 const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false }) => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
     const navigate = useNavigate();
     const { submitResult } = useExam();
+
+    // Shared Feedback System
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     // Refs
     const hasSavedRef = useRef(false);
@@ -379,8 +371,6 @@ const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false 
     const [userRightPan, setUserRightPan] = useState<PanContent>({});
     const [showWeights, setShowWeights] = useState(false);
     const [showExplanation, setShowExplanation] = useState(false);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
 
     // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -415,7 +405,7 @@ const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false 
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevel(1);
-        setTimeLeft(TIME_LIMIT);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
         initLevel(1);
@@ -512,9 +502,9 @@ const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false 
         const balanced = isBalanced(levelData.question.left, userRightPan, levelData.weights);
 
         if (balanced) {
-            const msg = CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)];
-            setFeedbackCorrect(true);
-            setFeedbackMessage(msg);
+            // feedbackState message handled by useGameFeedback hook
+            // feedbackState managed by useGameFeedback
+            showFeedback(true);
             setScore(prev => prev + 10 * level);
             setPhase('feedback');
 
@@ -529,9 +519,9 @@ const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false 
                 }
             }, 1200);
         } else {
-            const msg = WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)];
-            setFeedbackCorrect(false);
-            setFeedbackMessage(msg);
+            // feedbackState message handled by useGameFeedback hook
+            // feedbackState managed by useGameFeedback
+            showFeedback(false);
             setPhase('feedback');
 
             const newLives = lives - 1;
@@ -715,8 +705,8 @@ const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false 
                             </div>
 
                             {/* Question Scale */}
-                            <div className={`bg-white/5 backdrop-blur-xl rounded-3xl p-5 sm:p-6 border-2 transition-colors duration-500 ${phase === 'feedback' && feedbackCorrect ? 'border-emerald-500/50' :
-                                phase === 'feedback' && !feedbackCorrect ? 'border-red-500/50' : 'border-indigo-500/40'
+                            <div className={`bg-white/5 backdrop-blur-xl rounded-3xl p-5 sm:p-6 border-2 transition-colors duration-500 ${phase === 'feedback' && feedbackState?.correct ? 'border-emerald-500/50' :
+                                phase === 'feedback' && feedbackState && !feedbackState.correct ? 'border-red-500/50' : 'border-indigo-500/40'
                                 }`}>
                                 <div className="flex justify-between items-center mb-2">
                                     <div className="bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
@@ -784,7 +774,7 @@ const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false 
                                     </motion.button>
                                 </div>
 
-                                {/* Explanation (after feedback) */}
+                                {/* Explanation (after feedbackState) */}
                                 {phase === 'feedback' && levelData.detailedExplanation && (
                                     <div className="mt-4">
                                         <button
@@ -889,38 +879,10 @@ const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false 
                     )}
                 </AnimatePresence>
 
-                {/* ==================== FEEDBACK OVERLAY ==================== */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedbackCorrect
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Feedback Overlay */}
+
+
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

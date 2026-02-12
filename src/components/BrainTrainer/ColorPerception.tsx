@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { Star, Trophy, Timer, RotateCcw, ChevronLeft, Play, Target, Sparkles, Heart, CheckCircle2, XCircle, Eye, Palette } from 'lucide-react';
+import { Star, Trophy, Timer, RotateCcw, ChevronLeft, Play, Target, Sparkles, Heart, Eye, Palette } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // Renk sabitleri
 const COLORS: Record<string, string> = {
@@ -23,17 +25,7 @@ const LEVEL_DURATIONS: Record<number, number> = {
 };
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-  "Harika! 🎨",
-  "Keskin Göz! 👁️",
-  "Süper! ⭐",
-  "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-  "Dikkatli bak! 👀",
-  "Tekrar dene! 💪",
-];
 
 interface GameState {
   level: number;
@@ -47,6 +39,7 @@ interface GameState {
 const ColorPerception: React.FC = () => {
   const { playSound } = useSound();
   const { saveGamePlay } = useGamePersistence();
+    const { feedbackState, showFeedback } = useGameFeedback();
   const location = useLocation();
   const [gameState, setGameState] = useState<GameState>({
     level: 1,
@@ -58,10 +51,7 @@ const ColorPerception: React.FC = () => {
   });
 
   const [score, setScore] = useState<number>(0);
-  const [lives, setLives] = useState<number>(3);
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [feedbackMsg, setFeedbackMsg] = useState('');
-  const [gameStarted, setGameStarted] = useState<boolean>(false);
+  const [lives, setLives] = useState<number>(3);  const [gameStarted, setGameStarted] = useState<boolean>(false);
   const gameStartTimeRef = useRef<number>(0);
   const hasSavedRef = useRef<boolean>(false);
 
@@ -98,7 +88,7 @@ const ColorPerception: React.FC = () => {
 
   // Renk seçimini işle
   const handleColorSelect = (colorName: string) => {
-    if (!gameState.isUserTurn || gameState.gameOver || feedback) return;
+    if (!gameState.isUserTurn || gameState.gameOver || feedbackState) return;
 
     setGameState(prev => {
       const newUserSelections = [...prev.userSelections, colorName];
@@ -110,11 +100,9 @@ const ColorPerception: React.FC = () => {
         if (isCorrect) {
           playSound('correct');
           setScore(prevScore => prevScore + prev.level * 100);
-          setFeedback('correct');
-          setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+          showFeedback(true);
 
           setTimeout(() => {
-            setFeedback(null);
             if (prev.level === 5) {
               setGameState(s => ({ ...s, userSelections: newUserSelections, isUserTurn: false, gameOver: true }));
             } else {
@@ -125,15 +113,13 @@ const ColorPerception: React.FC = () => {
           return { ...prev, userSelections: newUserSelections, isUserTurn: false };
         } else {
           playSound('incorrect');
-          setFeedback('wrong');
-          setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+          showFeedback(false);
           setLives(l => {
             const newLives = l - 1;
             if (newLives <= 0) {
               setTimeout(() => setGameState(s => ({ ...s, gameOver: true })), 1500);
             } else {
               setTimeout(() => {
-                setFeedback(null);
                 generateColors(prev.level);
               }, 1500);
             }
@@ -151,7 +137,6 @@ const ColorPerception: React.FC = () => {
     setGameStarted(true);
     setScore(0);
     setLives(3);
-    setFeedback(null);
     gameStartTimeRef.current = Date.now();
     hasSavedRef.current = false;
     setGameState({
@@ -472,7 +457,7 @@ const ColorPerception: React.FC = () => {
                     whileHover={gameState.isUserTurn ? { scale: 0.98, y: -2 } : {}}
                     whileTap={gameState.isUserTurn ? { scale: 0.95 } : {}}
                     onClick={() => handleColorSelect(name)}
-                    disabled={!gameState.isUserTurn || gameState.gameOver || feedback !== null}
+                    disabled={!gameState.isUserTurn || gameState.gameOver || feedbackState !== null}
                     className="p-6 rounded-2xl font-bold text-lg text-white uppercase transition-all"
                     style={{
                       background: code,
@@ -564,37 +549,7 @@ const ColorPerception: React.FC = () => {
         </AnimatePresence>
 
         {/* Feedback Overlay */}
-        <AnimatePresence>
-          {feedback && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-            >
-              <motion.div
-                initial={{ y: 50 }}
-                animate={{ y: 0 }}
-                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                  : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                  }`}
-                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-              >
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                  transition={{ duration: 0.5 }}
-                >
-                  {feedback === 'correct'
-                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                  }
-                </motion.div>
-                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <GameFeedbackBanner feedback={feedbackState} />
       </div>
     </div>
   );

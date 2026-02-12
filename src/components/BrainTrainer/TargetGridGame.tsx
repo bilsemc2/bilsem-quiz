@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, RotateCcw, Trophy, Timer, Play, Star, Heart, Grid3X3, Eye, EyeOff, Plus, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
+import { ChevronLeft, RotateCcw, Trophy, Timer, Play, Star, Heart, Grid3X3, Eye, EyeOff, Plus, Sparkles } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
 // --- Types ---
 interface Card {
@@ -17,17 +19,7 @@ interface Card {
 type GameStatus = 'waiting' | 'preview' | 'playing' | 'gameover';
 
 // Child-friendly messages
-const SUCCESS_MESSAGES = [
-    "Süper! 🎯",
-    "Doğru Toplam! 🏆",
-    "Harika! ⭐",
-    "Bravo! 🌟",
-];
 
-const FAILURE_MESSAGES = [
-    "Dikkatli bak! 👀",
-    "Tekrar dene! 💪",
-];
 
 const TargetGridGame: React.FC = () => {
     const { playSound } = useSound();
@@ -35,6 +27,7 @@ const TargetGridGame: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     // Exam Mode Props
     const examMode = location.state?.examMode || false;
@@ -45,10 +38,7 @@ const TargetGridGame: React.FC = () => {
     const [targetSum, setTargetSum] = useState(0);
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
     const [currentSum, setCurrentSum] = useState(0);
-    const [previewTimer, setPreviewTimer] = useState(3);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-    const [feedbackMsg, setFeedbackMsg] = useState('');
-    const [lives, setLives] = useState(3);
+    const [previewTimer, setPreviewTimer] = useState(3);    const [lives, setLives] = useState(3);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
     const totalRounds = 10;
@@ -87,7 +77,6 @@ const TargetGridGame: React.FC = () => {
         setSelectedIndices([]);
         setCurrentSum(0);
         setPreviewTimer(Math.max(2, 4 - Math.floor(lvl / 3)));
-        setFeedback(null);
     }, []);
 
     const startLevel = useCallback((lvl: number) => {
@@ -155,7 +144,7 @@ const TargetGridGame: React.FC = () => {
 
     // --- Interaction ---
     const handleCardClick = (idx: number) => {
-        if (status !== 'playing' || cards[idx].isRevealed || cards[idx].isSolved || feedback) return;
+        if (status !== 'playing' || cards[idx].isRevealed || cards[idx].isSolved || feedbackState) return;
 
         const card = cards[idx];
         const newSelected = [...selectedIndices, idx];
@@ -168,13 +157,11 @@ const TargetGridGame: React.FC = () => {
         playSound('grid_flip');
 
         if (newSum === targetSum) {
-            setFeedback('correct');
-            setFeedbackMsg(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
+            showFeedback(true);
             playSound('correct');
             setScore(prev => prev + (level * 100));
 
             setTimeout(() => {
-                setFeedback(null);
                 if (level >= totalRounds) {
                     setStatus('gameover');
                 } else {
@@ -183,13 +170,11 @@ const TargetGridGame: React.FC = () => {
                 }
             }, 1500);
         } else if (newSum > targetSum) {
-            setFeedback('wrong');
-            setFeedbackMsg(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
+            showFeedback(false);
             playSound('incorrect');
             setLives(l => l - 1);
 
             setTimeout(() => {
-                setFeedback(null);
                 if (lives <= 1) {
                     setStatus('gameover');
                 } else {
@@ -450,7 +435,7 @@ const TargetGridGame: React.FC = () => {
                                         animate={{ scale: 1, opacity: 1 }}
                                         transition={{ delay: i * 0.03 }}
                                         onClick={() => handleCardClick(i)}
-                                        disabled={status === 'preview' || card.isRevealed || feedback !== null}
+                                        disabled={status === 'preview' || card.isRevealed || feedbackState !== null}
                                         className="aspect-square rounded-2xl flex items-center justify-center font-bold text-2xl transition-all"
                                         style={{
                                             background: card.isRevealed
@@ -548,37 +533,7 @@ const TargetGridGame: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {feedback && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ y: 50 }}
-                                animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedback === 'correct'
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: feedback === 'correct' ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {feedback === 'correct'
-                                        ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                        : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    }
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMsg}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

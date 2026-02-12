@@ -9,6 +9,8 @@ import {
     Heart, Star, Timer, CheckCircle2, XCircle, Zap
 } from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
 import { ShapeRenderer } from './matrix/ShapeRenderer';
@@ -45,19 +47,7 @@ interface QuestionHistory {
 }
 
 // Çocuk dostu mesajlar
-const SUCCESS_MESSAGES = [
-    'Harikasın! 🎨',
-    'Süpersin! ⭐',
-    'Muhteşem! 🌟',
-    'Bravo! 🎉',
-    'Tam isabet! 🎯',
-];
 
-const FAILURE_MESSAGES = [
-    'Tekrar dene! 💪',
-    'Düşün ve bul! 🧐',
-    'Biraz daha dikkat! 🎯',
-];
 
 // ============================================
 // ANA BİLEŞEN
@@ -75,6 +65,7 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const { playSound } = useSound();
 
     // Core State
@@ -89,7 +80,6 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
     const [options, setOptions] = useState<GameOption[]>([]);
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
     const [currentRuleName, setCurrentRuleName] = useState('');
     const [currentRuleDescription, setCurrentRuleDescription] = useState('');
 
@@ -280,6 +270,8 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
 
         setSelectedOption(option.id);
         setIsCorrect(option.isCorrect);
+        showFeedback(isCorrect ?? false);
+
         setPhase('feedback');
 
         // Doğru cevabı bul
@@ -298,14 +290,12 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
 
         if (option.isCorrect) {
             playSound?.('correct');
-            setFeedbackMessage(SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
             setScore(prev => prev + 10 * level);
 
             setTimeout(() => {
                 setPhase('playing');
                 setSelectedOption(null);
                 setIsCorrect(null);
-                setFeedbackMessage('');
                 if (level >= MAX_LEVEL) {
                     handleVictory();
                 } else {
@@ -314,7 +304,6 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
             }, 1200);
         } else {
             playSound?.('incorrect');
-            setFeedbackMessage(FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)]);
             const newLives = lives - 1;
             setLives(newLives);
 
@@ -322,7 +311,6 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
                 setPhase('playing');
                 setSelectedOption(null);
                 setIsCorrect(null);
-                setFeedbackMessage('');
                 if (newLives <= 0) {
                     handleGameOver();
                 } else {
@@ -747,42 +735,11 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
                 </AnimatePresence>
 
                 {/* Feedback Overlay */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        >
-                            <motion.div
-                                initial={{ scale: 0.5, y: 50 }}
-                                animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.5, opacity: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${isCorrect
-                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                    }`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                            >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], rotate: isCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    {isCorrect ? (
-                                        <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                    ) : (
-                                        <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                    )}
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default MatrixPuzzleGame;
+

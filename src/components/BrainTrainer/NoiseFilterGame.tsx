@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 import {
     sounds, SoundItem, shuffleArray, getRandomElement,
@@ -19,19 +21,7 @@ const TIME_LIMIT = 180;
 const FEEDBACK_DELAY = 1500;
 
 // Child-friendly feedback messages
-const CORRECT_MESSAGES = [
-    "Harika kulaklar! 🎧",
-    "Mükemmel! ⭐",
-    "Süper dinleme! 🌟",
-    "Aferin! 🎉",
-    "Tam isabet! 💫",
-];
 
-const WRONG_MESSAGES = [
-    "Dikkatli dinle! 👂",
-    "Tekrar deneyelim! 💪",
-    "Odaklan ve dinle! 🎯",
-];
 
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
@@ -46,6 +36,7 @@ const NoiseFilterGame: React.FC<NoiseFilterGameProps> = ({ examMode: examModePro
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const hasSavedRef = useRef(false);
 
     // examMode can come from props OR location.state (when navigating from ExamContinuePage)
@@ -62,8 +53,6 @@ const NoiseFilterGame: React.FC<NoiseFilterGameProps> = ({ examMode: examModePro
     const [options, setOptions] = useState<SoundItem[]>([]);
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [backgroundVolume, setBackgroundVolume] = useState(0.4);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [isCorrect, setIsCorrect] = useState(false);
 
     // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -223,12 +212,8 @@ const NoiseFilterGame: React.FC<NoiseFilterGameProps> = ({ examMode: examModePro
 
         setSelectedOption(sound.name);
         const correct = sound.name === targetSound.name;
-        setIsCorrect(correct);
-        setFeedbackMessage(
-            correct
-                ? CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
-                : WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)]
-        );
+        showFeedback(correct);
+
         setPhase('feedback');
         setAttempts(prev => prev + 1);
 
@@ -461,40 +446,7 @@ const NoiseFilterGame: React.FC<NoiseFilterGameProps> = ({ examMode: examModePro
                             className="w-full max-w-4xl"
                         >
                             {/* Feedback Overlay */}
-                            <AnimatePresence>
-                                {phase === 'feedback' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.5 }}
-                                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                                    >
-                                        <motion.div
-                                            initial={{ y: 50 }}
-                                            animate={{ y: 0 }}
-                                            className={`
-                                                px-12 py-8 rounded-3xl text-center
-                                                ${isCorrect
-                                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                                    : 'bg-gradient-to-br from-orange-500 to-amber-600'
-                                                }
-                                            `}
-                                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                                        >
-                                            <motion.div
-                                                animate={{ scale: [1, 1.2, 1], rotate: isCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                                transition={{ duration: 0.5 }}
-                                            >
-                                                {isCorrect
-                                                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                                }
-                                            </motion.div>
-                                            <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                                        </motion.div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            <GameFeedbackBanner feedback={feedbackState} />
 
                             {/* Instructions */}
                             <div className="text-center mb-6">
@@ -688,3 +640,4 @@ const NoiseFilterGame: React.FC<NoiseFilterGameProps> = ({ examMode: examModePro
 };
 
 export default NoiseFilterGame;
+

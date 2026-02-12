@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Play, Star, Timer, Target,
-    ChevronLeft, Zap, Heart, Sparkles, CheckCircle2, XCircle
+    ChevronLeft, Zap, Heart, Sparkles, XCircle
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 import { useSound } from '../../hooks/useSound';
 
@@ -54,19 +56,7 @@ const COLORS: ColorInfo[] = [
 const CARD_DISPLAY_TIME = 2000;
 const CARD_SEQUENCE_DELAY = 1000;
 
-const CORRECT_MESSAGES = [
-    "Harikasın! 🧮",
-    "Süper hafıza! ⭐",
-    "Muhteşem! 🌟",
-    "Çok zekice! 🧠",
-    "Tam isabet! 🎯",
-];
 
-const WRONG_MESSAGES = [
-    "Tekrar dene! 💪",
-    "Biraz daha dikkat! 🎯",
-    "Düşün ve bul! 🧐",
-];
 
 type Phase = 'welcome' | 'showing' | 'questioning' | 'feedback' | 'game_over' | 'victory';
 
@@ -133,6 +123,7 @@ const MathMagicGame: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const { playSound } = useSound();
     const hasSavedRef = useRef(false);
 
@@ -152,8 +143,7 @@ const MathMagicGame: React.FC = () => {
     const [visibleIndices, setVisibleIndices] = useState<number[]>([]);
     const [question, setQuestion] = useState<QuestionData | null>(null);
     const [numberInput, setNumberInput] = useState('');
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
+
 
     // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -253,7 +243,6 @@ const MathMagicGame: React.FC = () => {
         setPhase('showing');
         setQuestion(null);
         setNumberInput('');
-        setIsCorrect(null);
 
         // Sequential card reveal with proper timing
         let cumulativeDelay = 0;
@@ -353,13 +342,8 @@ const MathMagicGame: React.FC = () => {
     // Handle Answer
     const handleAnswer = useCallback((userAnswer: string | number) => {
         const correct = String(userAnswer).toLowerCase() === String(question?.answer).toLowerCase();
+        showFeedback(correct);
 
-        setIsCorrect(correct);
-        setFeedbackMessage(
-            correct
-                ? CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
-                : WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)]
-        );
         setPhase('feedback');
         playSound(correct ? 'correct' : 'incorrect');
 
@@ -582,34 +566,7 @@ const MathMagicGame: React.FC = () => {
                             )}
 
                             {/* Feedback Overlay */}
-                            <AnimatePresence>
-                                {phase === 'feedback' && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                                    >
-                                        <motion.div
-                                            initial={{ scale: 0.5, y: 50 }}
-                                            animate={{ scale: 1, y: 0 }}
-                                            className={`px-12 py-8 rounded-3xl text-center ${isCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}
-                                            style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
-                                        >
-                                            <motion.div
-                                                animate={{ scale: [1, 1.2, 1], rotate: isCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }}
-                                                transition={{ duration: 0.5 }}
-                                            >
-                                                {isCorrect
-                                                    ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" />
-                                                    : <XCircle size={64} className="mx-auto mb-4 text-white" />
-                                                }
-                                            </motion.div>
-                                            <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                                        </motion.div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            <GameFeedbackBanner feedback={feedbackState} />
                         </motion.div>
                     )}
 
@@ -699,3 +656,4 @@ const MathMagicGame: React.FC = () => {
 };
 
 export default MathMagicGame;
+

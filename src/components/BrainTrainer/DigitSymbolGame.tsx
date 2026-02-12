@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, RotateCcw, Play, Star, Timer, CheckCircle2, ChevronLeft, Zap, Hash, Eye, Sparkles } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
 import { useExam } from '../../contexts/ExamContext';
 
 // Sembol seti - her biri benzersiz ve kolay ayırt edilebilir
@@ -21,6 +22,7 @@ const createSymbolMap = () => {
 const DigitSymbolGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
     const location = useLocation();
     const navigate = useNavigate();
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
@@ -32,7 +34,6 @@ const DigitSymbolGame: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState(60);
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
-    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [lastAnswer, setLastAnswer] = useState<string | null>(null);
     const gameStartTimeRef = useRef<number>(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -64,7 +65,6 @@ const DigitSymbolGame: React.FC = () => {
         setTimeLeft(examMode ? examTimeLimit : gameDuration);
         setStreak(0);
         setBestStreak(0);
-        setFeedback(null);
         setLastAnswer(null);
         generateNewNumber();
         setGameState('playing');
@@ -129,14 +129,14 @@ const DigitSymbolGame: React.FC = () => {
 
     // Cevap kontrolü
     const handleAnswer = (selectedSymbol: string) => {
-        if (feedback || gameState !== 'playing') return;
+        if (feedbackState || gameState !== 'playing') return;
 
         const correctSymbol = symbolMap[currentNumber];
         const isCorrect = selectedSymbol === correctSymbol;
         setLastAnswer(selectedSymbol);
 
         if (isCorrect) {
-            setFeedback('correct');
+            showFeedback(true);
             setCorrectCount(prev => prev + 1);
             setStreak(prev => {
                 const newStreak = prev + 1;
@@ -146,14 +146,13 @@ const DigitSymbolGame: React.FC = () => {
             const streakBonus = Math.min(streak * 5, 50);
             setScore(prev => prev + 50 + streakBonus);
         } else {
-            setFeedback('wrong');
+            showFeedback(false);
             setWrongCount(prev => prev + 1);
             setStreak(0);
         }
 
         // Hızlı geçiş - işlem hızı testi
         setTimeout(() => {
-            setFeedback(null);
             setLastAnswer(null);
             generateNewNumber();
         }, 300);
@@ -410,7 +409,7 @@ const DigitSymbolGame: React.FC = () => {
                                 {SYMBOLS.map((symbol, idx) => {
                                     const isSelected = lastAnswer === symbol;
                                     const isCorrect = symbol === symbolMap[currentNumber];
-                                    const showResult = feedback !== null;
+                                    const showResult = feedbackState !== null;
 
                                     return (
                                         <motion.button
@@ -419,9 +418,9 @@ const DigitSymbolGame: React.FC = () => {
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.03 }}
                                             onClick={() => handleAnswer(symbol)}
-                                            disabled={feedback !== null}
-                                            whileHover={!feedback ? { scale: 0.98, y: -2 } : {}}
-                                            whileTap={!feedback ? { scale: 0.95 } : {}}
+                                            disabled={feedbackState !== null}
+                                            whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
+                                            whileTap={!feedbackState ? { scale: 0.95 } : {}}
                                             className="py-6 text-4xl font-bold rounded-[25%] transition-all"
                                             style={{
                                                 background: showResult && isCorrect
@@ -433,7 +432,7 @@ const DigitSymbolGame: React.FC = () => {
                                                 border: showResult && isCorrect
                                                     ? '2px solid #10B981'
                                                     : '1px solid rgba(255,255,255,0.1)',
-                                                cursor: feedback ? 'default' : 'pointer',
+                                                cursor: feedbackState ? 'default' : 'pointer',
                                                 opacity: showResult && !isCorrect && !isSelected ? 0.5 : 1
                                             }}
                                         >
@@ -532,3 +531,4 @@ const DigitSymbolGame: React.FC = () => {
 };
 
 export default DigitSymbolGame;
+

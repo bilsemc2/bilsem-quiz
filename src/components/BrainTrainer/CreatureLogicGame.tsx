@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 
 // ─── Constants ──────────────────────────────────────
@@ -13,13 +15,6 @@ const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 
-const CORRECT_MESSAGES = [
-    "Harikasın! 🎨", "Süpersin! ⭐", "Muhteşem! 🌟",
-    "Bravo! 🎉", "Tam isabet! 🎯",
-];
-const WRONG_MESSAGES = [
-    "Tekrar dene! 💪", "Düşün ve bul! 🧐", "Biraz daha dikkat! 🎯",
-];
 
 // ─── Creature Types ─────────────────────────────────
 type CreatureColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple';
@@ -196,6 +191,7 @@ const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false 
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
+    const { feedbackState, showFeedback } = useGameFeedback();
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
@@ -204,8 +200,6 @@ const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false 
     const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
     const [round, setRound] = useState<RoundData | null>(null);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
@@ -277,11 +271,8 @@ const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false 
             selectedIds.every(id => round.targetIds.includes(id)) &&
             round.targetIds.every(id => selectedIds.includes(id));
 
-        setFeedbackCorrect(correct);
-        setFeedbackMessage(correct
-            ? CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
-            : WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)]
-        );
+        showFeedback(correct);
+
         setPhase('feedback');
 
         const newScore = correct ? score + 10 * level : score;
@@ -514,25 +505,12 @@ const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false 
                     )}
                 </AnimatePresence>
 
-                {/* ── Feedback Overlay ── */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-                            <motion.div initial={{ y: 50 }} animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                                <motion.div animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }} transition={{ duration: 0.5 }}>
-                                    {feedbackCorrect ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" /> : <XCircle size={64} className="mx-auto mb-4 text-white" />}
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Feedback Overlay */}
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default CreatureLogicGame;
+
