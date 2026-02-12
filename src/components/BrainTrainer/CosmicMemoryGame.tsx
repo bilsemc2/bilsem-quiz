@@ -190,6 +190,7 @@ const CosmicMemoryGame: React.FC = () => {
         });
         setLives(5);
         setTotalTime(180);
+        window.scrollTo(0, 0);
         setGameStarted(true);
     }, []);
 
@@ -342,7 +343,7 @@ const CosmicMemoryGame: React.FC = () => {
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setGameStarted(true)}
+                        onClick={() => { window.scrollTo(0, 0); setGameStarted(true); }}
                         className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl"
                         style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
                     >
