@@ -84,6 +84,7 @@ const NeseliBalonlar: React.FC = () => {
     }, []);
 
     const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
         hasSavedRef.current = false;
         gameStartTimeRef.current = Date.now();
         setLevel(1);

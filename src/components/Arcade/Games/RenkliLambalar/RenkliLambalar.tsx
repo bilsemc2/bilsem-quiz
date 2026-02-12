@@ -69,6 +69,7 @@ const RenkliLambalar: React.FC = () => {
 
     // Start Game
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         const levelConfig = LEVEL_CONFIG[1];
         const newGrid = generateGrid(levelConfig.gridSize);
         setGrid(newGrid);

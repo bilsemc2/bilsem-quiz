@@ -65,6 +65,7 @@ const OruntuluTop: React.FC = () => {
   }, [location.state, phase]);
 
   const startGame = () => {
+    window.scrollTo(0, 0);
     setScore(0);
     scoreRef.current = 0;
     setLevel(1);

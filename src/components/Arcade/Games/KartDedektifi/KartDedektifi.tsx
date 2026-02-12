@@ -37,6 +37,7 @@ const KartDedektifi: React.FC = () => {
   }, [location.state, phase]);
 
   const startGame = () => {
+    window.scrollTo(0, 0);
     setGameState({
       currentRule: RuleType.Color,
       score: 0,

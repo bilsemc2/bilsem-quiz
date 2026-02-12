@@ -71,6 +71,7 @@ export default function StoryQuizGame() {
     }, [stories]);
 
     const startGame = () => {
+        window.scrollTo(0, 0);
         selectRandomStory();
         setPhase('reading');
         setReadingTime(0);

@@ -207,6 +207,7 @@ const SevimliMantik: React.FC = () => {
 
     // Start
     const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
         const newRound = generateRound(1);
         setRound(newRound);
         setPhase('animating');
