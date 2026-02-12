@@ -275,10 +275,11 @@ const LazerHafizaGame: React.FC<LazerHafizaGameProps> = ({ examMode = false }) =
     // Format time
     const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
-    // Body scroll lock
+    // Body scroll lock + scroll to top
     const isActive = phase === 'playing' || phase === 'feedback';
     useEffect(() => {
         if (isActive) {
+            window.scrollTo(0, 0);
             document.body.style.overflow = 'hidden';
             document.body.style.touchAction = 'none';
         }
