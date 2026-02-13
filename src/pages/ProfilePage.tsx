@@ -340,6 +340,7 @@ export const ProfilePage: React.FC = () => {
                 </motion.div>
 
                 {/* Extracted Sections */}
+                <LiveLessonBooking />
                 <QuickAccessSection />
                 <TalentWorkshopsSection userData={userData} />
                 <ExamResultSection lastExamSession={lastExamSession} />
@@ -364,7 +365,7 @@ export const ProfilePage: React.FC = () => {
                 </motion.div>
 
                 {/* Canlı Ders Al */}
-                <LiveLessonBooking />
+
 
                 {/* XP Kazanma Bölümü */}
                 <motion.div
