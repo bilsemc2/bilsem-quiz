@@ -5,6 +5,7 @@ import { AttentionCodingGameClient } from '@/features/games/attention-coding/com
 import { AuditoryMemoryGameClient } from '@/features/games/auditory-memory/components/AuditoryMemoryGameClient';
 import { ClockProblemGameClient } from '@/features/games/clock-problem/components/ClockProblemGameClient';
 import { CosmicMemoryGameClient } from '@/features/games/cosmic-memory/components/CosmicMemoryGameClient';
+import { DigitSymbolGameClient } from '@/features/games/digit-symbol/components/DigitSymbolGameClient';
 import { getRegistryItem } from '@/features/games/game-registry';
 import { LaserMazeGameClient } from '@/features/games/laser-maze/components/LaserMazeGameClient';
 import { MathMagicGameClient } from '@/features/games/math-magic/components/MathMagicGameClient';
@@ -16,6 +17,7 @@ import { NumberMemoryGameClient } from '@/features/games/number-memory/component
 import { NumberSequenceGameClient } from '@/features/games/number-sequence/components/NumberSequenceGameClient';
 import { PerceptualSpeedGameClient } from '@/features/games/perceptual-speed/components/PerceptualSpeedGameClient';
 import { ReactionTimeGameClient } from '@/features/games/reaction-time/components/ReactionTimeGameClient';
+import { SentenceSynonymGameClient } from '@/features/games/sentence-synonym/components/SentenceSynonymGameClient';
 import { SpotDifferenceGameClient } from '@/features/games/spot-difference/components/SpotDifferenceGameClient';
 import { SymbolMatchGameClient } from '@/features/games/symbol-match/components/SymbolMatchGameClient';
 import { SymbolSearchGameClient } from '@/features/games/symbol-search/components/SymbolSearchGameClient';
@@ -140,7 +142,33 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
   }
 
   if (resolvedGame.id === 'es-anlam' || resolvedGame.id === 'synonym') {
-    return <SynonymGameClient gameId="es-anlam" gameTitle={resolvedGame.title} durationSeconds={resolvedGame.durationSeconds} />;
+    return (
+      <SynonymGameClient
+        gameId="es-anlam"
+        gameTitle={resolvedGame.title}
+        durationSeconds={resolvedGame.durationSeconds}
+      />
+    );
+  }
+
+  if (resolvedGame.id === 'cumle-ici-es-anlam' || resolvedGame.id === 'sentence-synonym') {
+    return (
+      <SentenceSynonymGameClient
+        gameId="cumle-ici-es-anlam"
+        gameTitle={resolvedGame.title}
+        durationSeconds={resolvedGame.durationSeconds}
+      />
+    );
+  }
+
+  if (resolvedGame.id === 'simge-kodlama' || resolvedGame.id === 'digit-symbol') {
+    return (
+      <DigitSymbolGameClient
+        gameId="simge-kodlama"
+        gameTitle={resolvedGame.title}
+        durationSeconds={resolvedGame.durationSeconds}
+      />
+    );
   }
 
   if (resolvedGame.id === 'sayi-sihirbazi' || resolvedGame.id === 'math-magic') {
