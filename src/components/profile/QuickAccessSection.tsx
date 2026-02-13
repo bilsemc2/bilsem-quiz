@@ -90,12 +90,6 @@ const QuickAccessSection: React.FC = () => {
         });
     }, [userTalents]);
 
-    // Build a user-friendly talent label for the header
-    const sectionTitle = useMemo(() => {
-        if (userTalents.length === 0) return 'Hızlı Erişim';
-        return 'Yetkili Olduklarım';
-    }, [userTalents]);
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -104,33 +98,13 @@ const QuickAccessSection: React.FC = () => {
             className="mb-8"
         >
             {/* Section Header */}
-            <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 bg-gradient-to-r from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-lg">
                     <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <h2 className="text-lg font-bold bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent">
-                    {sectionTitle}
+                    Yetkili Olduklarım
                 </h2>
-                {userTalents.length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {userTalents.map(t => {
-                            const isGenel = t.includes('genel yetenek');
-                            const isResim = t === 'resim';
-                            const isMuzik = t === 'müzik';
-                            const label = isGenel ? (t.includes('tablet') ? 'Tablet Değ.' : t.includes('bireysel') ? 'Bireysel Değ.' : 'Genel Yetenek')
-                                : isResim ? 'Resim' : isMuzik ? 'Müzik' : t;
-                            const colors = isGenel ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
-                                : isResim ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
-                                    : isMuzik ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                                        : 'bg-white/10 border-white/20 text-white/70';
-                            return (
-                                <span key={t} className={`px-2.5 py-1 rounded-full text-xs font-bold border ${colors}`}>
-                                    {label}
-                                </span>
-                            );
-                        })}
-                    </div>
-                )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
