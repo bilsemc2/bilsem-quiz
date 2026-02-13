@@ -1,551 +1,184 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Target, ChevronLeft, Zap, Compass, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Heart, Sparkles, Eye } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import {
+    Trophy, RotateCcw, Play, Star,
+    ChevronLeft, Zap, Compass, ArrowUp, ArrowDown,
+    ArrowLeft, ArrowRight, Heart, Sparkles, Timer as TimerIcon
+} from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
 import GameFeedbackBanner from './shared/GameFeedbackBanner';
+import { useExam } from '../../contexts/ExamContext';
+import { useSound } from '../../hooks/useSound';
 
-interface Round {
-    word: string;
-    position: 'left' | 'right' | 'top' | 'bottom';
-    correctAnswer: string;
-}
+// ─── Constants ───────────────────────────────────────────────
+const INITIAL_LIVES = 5;
+const TIME_LIMIT = 180;
+const MAX_LEVEL = 20;
+const GAME_ID = 'yon-stroop';
 
+interface Round { word: string; position: 'left' | 'right' | 'top' | 'bottom'; correctAnswer: string; }
 const DIRECTIONS = [
-    { word: 'SOL', position: 'left' as const, turkishName: 'Sol' },
-    { word: 'SAĞ', position: 'right' as const, turkishName: 'Sağ' },
-    { word: 'YUKARI', position: 'top' as const, turkishName: 'Yukarı' },
-    { word: 'AŞAĞI', position: 'bottom' as const, turkishName: 'Aşağı' },
+    { word: 'SOL', position: 'left' as const, turkishName: 'Sol', icon: ArrowLeft },
+    { word: 'SAĞ', position: 'right' as const, turkishName: 'Sağ', icon: ArrowRight },
+    { word: 'YUKARI', position: 'top' as const, turkishName: 'Yukarı', icon: ArrowUp },
+    { word: 'AŞAĞI', position: 'bottom' as const, turkishName: 'Aşağı', icon: ArrowDown },
 ];
 
-// Child-friendly messages
-
+type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
 const DirectionStroopGame: React.FC = () => {
+    const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
-    const { feedbackState, showFeedback } = useGameFeedback();
+    const { submitResult } = useExam();
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
     const location = useLocation();
-    const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
-    const [currentRound, setCurrentRound] = useState<Round | null>(null);
-    const [roundNumber, setRoundNumber] = useState(0);
+    const navigate = useNavigate();
+
+    const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(3);
-    const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0);
-    const [reactionTimes, setReactionTimes] = useState<number[]>([]);    const [streak, setStreak] = useState(0);
-    const [bestStreak, setBestStreak] = useState(0);
-    const [roundStartTime, setRoundStartTime] = useState(0);
-    const gameStartTimeRef = useRef<number>(0);
-    const hasSavedRef = useRef<boolean>(false);
-    const totalRounds = 20;
+    const [lives, setLives] = useState(INITIAL_LIVES);
+    const [level, setLevel] = useState(1);
+    const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+    const [currentRound, setCurrentRound] = useState<Round | null>(null);
 
-    // Back link
-    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
-    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const startTimeRef = useRef(0);
+    const hasSavedRef = useRef(false);
 
-    // Generate a new round
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+
     const generateRound = useCallback((): Round => {
-        const wordIndex = Math.floor(Math.random() * DIRECTIONS.length);
-        const word = DIRECTIONS[wordIndex].word;
-
-        let positionIndex;
-        do {
-            positionIndex = Math.floor(Math.random() * DIRECTIONS.length);
-        } while (positionIndex === wordIndex);
-
-        const position = DIRECTIONS[positionIndex].position;
-        const correctAnswer = DIRECTIONS[positionIndex].turkishName;
-
-        return { word, position, correctAnswer };
+        const wordIdx = Math.floor(Math.random() * DIRECTIONS.length);
+        let posIdx; do { posIdx = Math.floor(Math.random() * DIRECTIONS.length); } while (posIdx === wordIdx);
+        return { word: DIRECTIONS[wordIdx].word, position: DIRECTIONS[posIdx].position, correctAnswer: DIRECTIONS[posIdx].turkishName };
     }, []);
 
-    // Start game
-    const startGame = useCallback(() => {
-        window.scrollTo(0, 0);
-        setGameState('playing');
-        setRoundNumber(1);
-        setScore(0);
-        setLives(3);
-        setCorrectCount(0);
-        setWrongCount(0);
-        setReactionTimes([]);
-        setStreak(0);
-        setBestStreak(0);
-        gameStartTimeRef.current = Date.now();
-        hasSavedRef.current = false;
-        const round = generateRound();
-        setCurrentRound(round);
-        setRoundStartTime(Date.now());
-    }, [generateRound]);
+    const startLevel = useCallback((_lvl: number) => {
+        setCurrentRound(generateRound()); playSound('slide');
+    }, [generateRound, playSound]);
 
-    // Auto start from HUB
+    const handleStart = useCallback(() => {
+        window.scrollTo(0, 0); setPhase('playing'); setScore(0); setLives(INITIAL_LIVES); setLevel(1); setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        startTimeRef.current = Date.now(); hasSavedRef.current = false; startLevel(1);
+    }, [startLevel, examMode, examTimeLimit]);
+
+    useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, examMode, phase, handleStart]);
+
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
-            startGame();
+        if (phase === 'playing' && timeLeft > 0) {
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
         }
-    }, [location.state, gameState, startGame]);
+    }, [phase, timeLeft]);
 
-    // Save game data on finish
-    useEffect(() => {
-        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
-            hasSavedRef.current = true;
-            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-            const avgReaction = reactionTimes.length > 0
-                ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
-                : 0;
-            saveGamePlay({
-                game_id: 'stroop-yon',
-                score_achieved: score,
-                duration_seconds: durationSeconds,
-                metadata: {
-                    correct_count: correctCount,
-                    wrong_count: wrongCount,
-                    best_streak: bestStreak,
-                    average_reaction_ms: avgReaction,
-                    total_rounds: totalRounds,
-                    accuracy: correctCount + wrongCount > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0,
-                    game_name: 'Yön Stroop',
-                }
-            });
-        }
-    }, [gameState, score, correctCount, wrongCount, bestStreak, reactionTimes, saveGamePlay]);
-
-    // Handle answer
-    const handleAnswer = useCallback((position: string) => {
-        if (!currentRound || feedbackState) return;
-
-        const reactionTime = Date.now() - roundStartTime;
-        setReactionTimes(prev => [...prev, reactionTime]);
-
-        const isCorrect = position === currentRound.position;
-
-        if (isCorrect) {
-            showFeedback(true);
-            setCorrectCount(prev => prev + 1);
-            setStreak(prev => {
-                const newStreak = prev + 1;
-                if (newStreak > bestStreak) setBestStreak(newStreak);
-                return newStreak;
-            });
-
-            const timeBonus = Math.max(0, Math.floor((2500 - reactionTime) / 100));
-            const streakBonus = streak * 5;
-            setScore(prev => prev + 100 + timeBonus + streakBonus);
+    const handleAnswer = (answer: string) => {
+        if (phase !== 'playing' || !!feedbackState) return;
+        const correct = answer === currentRound?.correctAnswer;
+        if (correct) {
+            playSound('correct'); showFeedback(true); setScore(s => s + 20 + level * 5);
+            setTimeout(() => {
+                dismissFeedback();
+                if (level >= MAX_LEVEL) setPhase('victory');
+                else { const nl = level + 1; setLevel(nl); setTimeLeft(p => Math.min(p + 10, TIME_LIMIT)); startLevel(nl); }
+            }, 1000);
         } else {
-            showFeedback(false);
-            setWrongCount(prev => prev + 1);
-            setStreak(0);
-            setLives(prev => prev - 1);
-        }
-
-        // Next round after feedbackState
-        setTimeout(() => {
-
-            if (lives <= 1 && !isCorrect) {
-                setGameState('finished');
-            } else if (roundNumber >= totalRounds) {
-                setGameState('finished');
-            } else {
-                setRoundNumber(prev => prev + 1);
-                const round = generateRound();
-                setCurrentRound(round);
-                setRoundStartTime(Date.now());
-            }
-        }, 1200);
-    }, [currentRound, roundStartTime, roundNumber, totalRounds, streak, bestStreak, generateRound, feedbackState, lives]);
-
-    const averageReactionTime = reactionTimes.length > 0
-        ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
-        : 0;
-
-    const accuracy = correctCount + wrongCount > 0
-        ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
-        : 0;
-
-    // Get position style for word placement
-    const getPositionStyle = (position: string) => {
-        switch (position) {
-            case 'left': return 'justify-start items-center pl-8';
-            case 'right': return 'justify-end items-center pr-8';
-            case 'top': return 'justify-center items-start pt-8';
-            case 'bottom': return 'justify-center items-end pb-8';
-            default: return 'justify-center items-center';
+            playSound('incorrect'); showFeedback(false); setLives(l => { const nl = l - 1; if (nl <= 0) setPhase('game_over'); return nl; });
+            setTimeout(dismissFeedback, 1000);
         }
     };
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-950 text-white">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
+    const handleFinish = useCallback(async (v: boolean) => {
+        if (hasSavedRef.current) return; hasSavedRef.current = true;
+        const dur = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        if (examMode) { await submitResult(v || level >= 5, score, MAX_LEVEL * 100, dur); navigate('/atolyeler/sinav-simulasyonu/devam'); return; }
+        await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: dur, metadata: { level: level, victory: v } });
+    }, [score, level, examMode, submitResult, navigate, saveGamePlay]);
+
+    useEffect(() => { if (phase === 'game_over' || phase === 'victory') handleFinish(phase === 'victory'); }, [phase, handleFinish]);
+
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
+    if (phase === 'welcome') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-sky-950 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl" /></div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-cyan-400 to-sky-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Compass size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-cyan-300 via-sky-300 to-blue-300 bg-clip-text text-transparent">Yön Stroop</h1>
+                    <p className="text-slate-300 mb-8 text-lg">Kelimelerin ne dediğine değil, nerede olduklarına odaklan! Zihnini yönlendir ve karmaşayı çöz.</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-cyan-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Ekrandaki kelimenin <strong>anlamına ALDANMA</strong>, bulunduğu konuma bak</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-cyan-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Kelimenin bulunduğu yönü aşağıdaki butonlardan seç</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-cyan-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Örneğin "SAĞ" kelimesi ekranın üstündeyse, cevabın <strong>"YUKARI"</strong> olmalı</span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-cyan-500/10 text-cyan-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-cyan-500/30 font-bold uppercase tracking-widest">TUZÖ 5.1.2 Uzamsal Stroop & İnhibisyon</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-sky-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
             </div>
+        );
+    }
 
-            {/* Header */}
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-sky-950 text-white relative overflow-hidden flex flex-col">
             <div className="relative z-10 p-4 pt-20">
-                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
-                    <Link
-                        to={backLink}
-                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft size={20} />
-                        <span>{backLabel}</span>
-                    </Link>
-
-                    {gameState === 'playing' && (
-                        <div className="flex items-center gap-4 flex-wrap">
-                            {/* Score */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(251, 191, 36, 0.3)'
-                                }}
-                            >
-                                <Star className="text-amber-400 fill-amber-400" size={18} />
-                                <span className="font-bold text-amber-400">{score}</span>
-                            </div>
-
-                            {/* Lives */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)'
-                                }}
-                            >
-                                {[...Array(3)].map((_, i) => (
-                                    <Heart
-                                        key={i}
-                                        size={18}
-                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Progress */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(20, 184, 166, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(6, 182, 212, 0.3)'
-                                }}
-                            >
-                                <Target className="text-cyan-400" size={18} />
-                                <span className="font-bold text-cyan-400">{roundNumber}/{totalRounds}</span>
-                            </div>
-
-                            {/* Streak */}
-                            {streak > 1 && (
-                                <div
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%)',
-                                        boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(20, 184, 166, 0.3)'
-                                    }}
-                                >
-                                    <Zap className="text-teal-400" size={18} />
-                                    <span className="font-bold text-teal-400">x{streak}</span>
-                                </div>
-                            )}
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+                    {(phase === 'playing' || phase === 'feedback') && (
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20"><Star className="text-amber-400 fill-amber-400" size={16} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={16} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-950'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20"><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={16} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20"><Zap className="text-emerald-400" size={16} /><span className="font-bold text-emerald-400">Puan x{level}</span></div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
                 <AnimatePresence mode="wait">
-                    {/* Welcome Screen */}
-                    {gameState === 'idle' && (
-                        <motion.div
-                            key="welcome"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            {/* 3D Gummy Icon */}
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #06B6D4 0%, #14B8A6 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ y: [0, -8, 0] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                            >
-                                <Compass size={52} className="text-white drop-shadow-lg" />
+                    {(phase === 'playing' || phase === 'feedback') && !feedbackState && (
+                        <motion.div key="game" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="w-full max-w-2xl aspect-square relative border border-white/5 rounded-[4rem] bg-white/5 backdrop-blur-sm shadow-inner flex items-center justify-center p-12">
+                            <motion.div key={currentRound?.word} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="absolute bg-white/10 backdrop-blur-xl px-10 py-5 rounded-[2rem] border border-white/20 shadow-3xl select-none" style={{ top: currentRound?.position === 'top' ? '15%' : currentRound?.position === 'bottom' ? 'auto' : '50%', bottom: currentRound?.position === 'bottom' ? '15%' : 'auto', left: currentRound?.position === 'left' ? '15%' : currentRound?.position === 'right' ? 'auto' : '50%', right: currentRound?.position === 'right' ? '15%' : 'auto', transform: currentRound?.position === 'left' || currentRound?.position === 'right' ? 'translateY(-50%)' : currentRound?.position === 'top' || currentRound?.position === 'bottom' ? 'translateX(-50%)' : 'translate(-50%, -50%)' }}>
+                                <span className="text-4xl font-black text-white tracking-widest drop-shadow-xl italic">{currentRound?.word}</span>
                             </motion.div>
 
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">
-                                🧭 Yön Stroop
-                            </h1>
-
-                            {/* Example */}
-                            <div
-                                className="rounded-2xl p-5 mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <p className="text-slate-400 text-sm mb-3">Örnek:</p>
-                                <div className="bg-slate-800/50 rounded-lg p-4 h-20 flex justify-end items-center mb-2">
-                                    <p className="text-3xl font-black text-cyan-400">SOL</p>
-                                </div>
-                                <p className="text-slate-400 text-sm">Doğru cevap: <span className="text-teal-400 font-bold">Sağ</span> (yazının konumu)</p>
-                            </div>
-
-                            {/* Instructions */}
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
-                                <h3 className="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2">
-                                    <Eye size={20} /> Nasıl Oynanır?
-                                </h3>
-                                <ul className="space-y-2 text-slate-300 text-sm">
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-teal-400" />
-                                        <span>Kelimeyi değil, <strong>konumunu</strong> seç!</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-teal-400" />
-                                        <span>Hızlı ol, daha çok puan kazan</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-teal-400" />
-                                        <span>{totalRounds} soru, uzamsal dikkatini test et!</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* TUZÖ Badge */}
-                            <div className="bg-cyan-500/10 text-cyan-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-cyan-500/30">
-                                TUZÖ 5.2.2 Uzamsal Dikkat
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05, y: -4 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="px-8 py-4 rounded-2xl font-bold text-lg"
-                                style={{
-                                    background: 'linear-gradient(135deg, #06B6D4 0%, #14B8A6 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(6, 182, 212, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Play size={24} fill="currentColor" />
-                                    <span>Teste Başla</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* Playing */}
-                    {gameState === 'playing' && currentRound && (
-                        <motion.div
-                            key="game"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-lg"
-                        >
-                            {/* Word Display */}
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={roundNumber}
-                                    initial={{ opacity: 0, scale: 0.8 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.8 }}
-                                    className={`w-full h-64 rounded-3xl flex ${getPositionStyle(currentRound.position)} mb-6`}
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                        border: '1px solid rgba(255,255,255,0.1)'
-                                    }}
-                                >
-                                    <motion.h2
-                                        className="text-5xl lg:text-7xl font-black text-cyan-400"
-                                        animate={{ scale: [1, 1.02, 1] }}
-                                        transition={{ duration: 0.5, repeat: Infinity }}
-                                    >
-                                        {currentRound.word}
-                                    </motion.h2>
-                                </motion.div>
-                            </AnimatePresence>
-
-                            <p className="text-slate-400 text-sm text-center mb-6">Yazı ekranın neresinde?</p>
-
-                            {/* Direction Buttons */}
-                            <div className="grid grid-cols-3 gap-3">
-                                {/* Top */}
-                                <div />
-                                <motion.button
-                                    whileHover={{ scale: 0.98, y: -2 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleAnswer('top')}
-                                    disabled={feedbackState !== null}
-                                    className="py-4 px-4 text-lg font-bold rounded-[25%] flex items-center justify-center gap-2"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        cursor: feedbackState ? 'default' : 'pointer'
-                                    }}
-                                >
-                                    <ArrowUp size={24} />
-                                    Yukarı
-                                </motion.button>
-                                <div />
-
-                                {/* Left & Right */}
-                                <motion.button
-                                    whileHover={{ scale: 0.98, x: -2 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleAnswer('left')}
-                                    disabled={feedbackState !== null}
-                                    className="py-4 px-4 text-lg font-bold rounded-[25%] flex items-center justify-center gap-2"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        cursor: feedbackState ? 'default' : 'pointer'
-                                    }}
-                                >
-                                    <ArrowLeft size={24} />
-                                    Sol
-                                </motion.button>
-                                <div />
-                                <motion.button
-                                    whileHover={{ scale: 0.98, x: 2 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleAnswer('right')}
-                                    disabled={feedbackState !== null}
-                                    className="py-4 px-4 text-lg font-bold rounded-[25%] flex items-center justify-center gap-2"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        cursor: feedbackState ? 'default' : 'pointer'
-                                    }}
-                                >
-                                    Sağ
-                                    <ArrowRight size={24} />
-                                </motion.button>
-
-                                {/* Bottom */}
-                                <div />
-                                <motion.button
-                                    whileHover={{ scale: 0.98, y: 2 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleAnswer('bottom')}
-                                    disabled={feedbackState !== null}
-                                    className="py-4 px-4 text-lg font-bold rounded-[25%] flex items-center justify-center gap-2"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        cursor: feedbackState ? 'default' : 'pointer'
-                                    }}
-                                >
-                                    <ArrowDown size={24} />
-                                    Aşağı
-                                </motion.button>
-                                <div />
+                            <div className="grid grid-cols-2 gap-4 w-full max-w-sm mt-[60%] sm:mt-0 z-20">
+                                {DIRECTIONS.map(dir => (
+                                    <motion.button key={dir.turkishName} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={() => handleAnswer(dir.turkishName)} className="p-6 bg-white/10 border border-white/10 rounded-3xl flex flex-col items-center justify-center gap-3 hover:bg-white/20 hover:border-cyan-500/50 shadow-xl transition-all group">
+                                        <dir.icon className="text-white group-hover:scale-110 transition-transform" size={32} />
+                                        <span className="text-sm font-black text-white/60 tracking-widest uppercase">{dir.turkishName}</span>
+                                    </motion.button>
+                                ))}
                             </div>
                         </motion.div>
                     )}
 
-                    {/* Game Over */}
-                    {gameState === 'finished' && (
-                        <motion.div
-                            key="gameover"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                            >
-                                <Trophy size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
+                    {feedbackState && (
+                        <motion.div key="feed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center"><h2 className={`text-5xl font-black ${feedbackState.correct ? 'text-emerald-400' : 'text-red-400'} drop-shadow-2xl italic tracking-tighter`}>{feedbackState.correct ? 'KESKİN YÖNLER! 🧭' : 'DİKKAT!'}</h2><GameFeedbackBanner feedback={feedbackState} /></motion.div>
+                    )}
 
-                            <h2 className="text-3xl font-black text-amber-300 mb-2">
-                                {accuracy >= 80 ? '🎉 Harika!' : 'Test Tamamlandı!'}
-                            </h2>
-                            <p className="text-slate-400 mb-6">
-                                {accuracy >= 80 ? 'Muhteşem uzamsal dikkat!' : 'Biraz daha pratik yap!'}
-                            </p>
-
-                            <div
-                                className="rounded-2xl p-6 mb-8"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-3xl font-bold text-emerald-400">%{accuracy}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Ort. Tepki</p>
-                                        <p className="text-3xl font-bold text-blue-400">{averageReactionTime}ms</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">En İyi Seri</p>
-                                        <p className="text-3xl font-bold text-cyan-400">x{bestStreak}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
-                                style={{
-                                    background: 'linear-gradient(135deg, #06B6D4 0%, #14B8A6 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(6, 182, 212, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center justify-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Oyna</span>
-                                </div>
-                            </motion.button>
-
-                            <Link
-                                to={backLink}
-                                className="block text-slate-500 hover:text-white transition-colors"
-                            >
-                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
-                            </Link>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-cyan-500 to-sky-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-black text-cyan-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Yönlerin Efendisi!' : 'Harika!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'Uzamsal zeka ve bilişsel kontrol becerin tek kelimeyle mükemmel!' : 'Kelimelerin anlamı ile konumlarını ayırmak için biraz daha pratik yapmalısın!'}</p>
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-sky-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Feedback Overlay */}
-                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

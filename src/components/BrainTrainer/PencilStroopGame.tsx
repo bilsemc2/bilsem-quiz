@@ -1,539 +1,191 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Target, ChevronLeft, Zap, Pencil, Heart, Sparkles, Eye } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Trophy, RotateCcw, Play, Star, ChevronLeft, Zap, Pencil, Heart, Sparkles, Timer as TimerIcon } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
 import GameFeedbackBanner from './shared/GameFeedbackBanner';
-
-interface Round {
-    textColorName: string;
-    textColor: string;
-    wrongColorName: string;
-    correctPencilColor: string;
-}
+import { useSound } from '../../hooks/useSound';
 
 const COLORS = [
-    { name: 'KIRMIZI', color: '#FF6B6B', pencilColor: '#dc2626' },
-    { name: 'MAVİ', color: '#4ECDC4', pencilColor: '#2563eb' },
-    { name: 'YEŞİL', color: '#6BCB77', pencilColor: '#16a34a' },
-    { name: 'SARI', color: '#FFD93D', pencilColor: '#ca8a04' },
-    { name: 'TURUNCU', color: '#FFA07A', pencilColor: '#ea580c' },
-    { name: 'MOR', color: '#9B59B6', pencilColor: '#9333ea' },
+    { name: 'Kırmızı', hex: '#FF5252' }, { name: 'Mavi', hex: '#4285F4' }, { name: 'Yeşil', hex: '#0F9D58' }, { name: 'Sarı', hex: '#FFC107' },
+    { name: 'Mor', hex: '#9C27B0' }, { name: 'Turuncu', hex: '#FF9800' }, { name: 'Pembe', hex: '#E91E63' }
 ];
 
-// Child-friendly messages
+const INITIAL_LIVES = 5;
+const TIME_LIMIT = 180;
+const MAX_LEVEL = 20;
+const GAME_ID = 'kalem-stroop';
 
-
-// Gummy Pencil SVG Component
-const ColoredPencil: React.FC<{ color: string; isSelected?: boolean; isCorrect?: boolean; isWrong?: boolean }> = ({
-    color,
-    isSelected,
-    isCorrect,
-    isWrong
-}) => (
-    <svg
-        viewBox="0 0 100 300"
-        className={`w-14 h-40 transition-all duration-200 ${isSelected ? 'scale-110' : 'hover:scale-105'
-            } ${isCorrect ? 'drop-shadow-[0_0_20px_rgba(34,197,94,0.8)]' : ''} ${isWrong ? 'opacity-40' : ''}`}
-    >
-        {/* Pencil body with gummy gradient */}
-        <defs>
-            <linearGradient id={`pencil-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor={color} />
-                <stop offset="50%" stopColor={color} stopOpacity="0.9" />
-                <stop offset="100%" stopColor={color} stopOpacity="0.7" />
-            </linearGradient>
-        </defs>
-        <rect x="25" y="60" width="50" height="180" fill={`url(#pencil-${color})`} rx="8" />
-        {/* Wood part */}
-        <polygon points="25,60 50,10 75,60" fill="#d4a574" />
-        {/* Lead tip */}
-        <polygon points="45,30 50,10 55,30" fill="#374151" />
-        {/* Metal band - glassmorphism */}
-        <rect x="23" y="230" width="54" height="20" fill="rgba(156, 163, 175, 0.6)" rx="4" />
-        {/* Eraser - gummy style */}
-        <rect x="23" y="250" width="54" height="30" fill="#F472B6" rx="8" />
-        {/* Shine effect */}
-        <rect x="30" y="70" width="10" height="150" fill="rgba(255,255,255,0.3)" rx="4" />
-    </svg>
-);
+type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
+interface Round { pencilColor: string; word: string; correctAnswer: string; options: string[]; }
 
 const PencilStroopGame: React.FC = () => {
+    const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
-    const { feedbackState, showFeedback } = useGameFeedback();
+    const { submitResult } = useExam();
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
     const location = useLocation();
-    const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
-    const [currentRound, setCurrentRound] = useState<Round | null>(null);
-    const [roundNumber, setRoundNumber] = useState(0);
-    const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(3);
-    const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0);
-    const [reactionTimes, setReactionTimes] = useState<number[]>([]);
-    const [selectedColor, setSelectedColor] = useState<string | null>(null);
-    const [streak, setStreak] = useState(0);
-    const [bestStreak, setBestStreak] = useState(0);
-    const [roundStartTime, setRoundStartTime] = useState(0);
-    const gameStartTimeRef = useRef<number>(0);
-    const hasSavedRef = useRef<boolean>(false);
-    const totalRounds = 20;
+    const navigate = useNavigate();
 
-    // Back link
+    const [phase, setPhase] = useState<Phase>('welcome');
+    const [currentRound, setCurrentRound] = useState<Round | null>(null);
+    const [level, setLevel] = useState(1);
+    const [score, setScore] = useState(0);
+    const [lives, setLives] = useState(INITIAL_LIVES);
+    const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const startTimeRef = useRef(0);
+    const hasSavedRef = useRef(false);
+
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+
+    const generateRound = useCallback((): Round => {
+        const colorIdx = Math.floor(Math.random() * COLORS.length);
+        const pencilColor = COLORS[colorIdx].hex;
+        const correctAnswer = COLORS[colorIdx].name;
+        let wordIdx; do { wordIdx = Math.floor(Math.random() * COLORS.length); } while (wordIdx === colorIdx);
+        const word = COLORS[wordIdx].name;
+        const opts = new Set<string>([correctAnswer]); while (opts.size < 4) opts.add(COLORS[Math.floor(Math.random() * COLORS.length)].name);
+        return { pencilColor, word, correctAnswer, options: Array.from(opts).sort(() => Math.random() - 0.5) };
+    }, []);
+
+    const startLevel = useCallback((_lvl: number) => {
+        setCurrentRound(generateRound()); playSound('slide');
+    }, [generateRound, playSound]);
+
+    const handleStart = useCallback(() => {
+        window.scrollTo(0, 0); setPhase('playing'); setScore(0); setLives(INITIAL_LIVES); setLevel(1); setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        startTimeRef.current = Date.now(); hasSavedRef.current = false; startLevel(1);
+    }, [startLevel, examMode, examTimeLimit]);
+
+    useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, examMode, phase, handleStart]);
+
+    useEffect(() => {
+        if (phase === 'playing' && timeLeft > 0) {
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
+        }
+    }, [phase, timeLeft]);
+
+    const handleAnswer = (answer: string) => {
+        if (phase !== 'playing' || !!feedbackState) return;
+        const correct = answer === currentRound?.correctAnswer;
+        if (correct) {
+            playSound('correct'); showFeedback(true); setScore(s => s + 20 + level * 5);
+            setTimeout(() => {
+                dismissFeedback();
+                if (level >= MAX_LEVEL) setPhase('victory');
+                else { const nl = level + 1; setLevel(nl); setTimeLeft(p => Math.min(p + 10, TIME_LIMIT)); startLevel(nl); }
+            }, 1000);
+        } else {
+            playSound('incorrect'); showFeedback(false); setLives(l => { const nl = l - 1; if (nl <= 0) setPhase('game_over'); return nl; });
+            setTimeout(dismissFeedback, 1000);
+        }
+    };
+
+    const handleFinish = useCallback(async (v: boolean) => {
+        if (hasSavedRef.current) return; hasSavedRef.current = true;
+        const dur = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        if (examMode) { await submitResult(v || level >= 5, score, MAX_LEVEL * 100, dur); navigate('/atolyeler/sinav-simulasyonu/devam'); return; }
+        await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: dur, metadata: { level: level, victory: v } });
+    }, [score, level, examMode, submitResult, navigate, saveGamePlay]);
+
+    useEffect(() => { if (phase === 'game_over' || phase === 'victory') handleFinish(phase === 'victory'); }, [phase, handleFinish]);
+
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
     const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
-    // Generate a new round
-    const generateRound = useCallback((): Round => {
-        const textColorIndex = Math.floor(Math.random() * COLORS.length);
-        const textColor = COLORS[textColorIndex].color;
-        const textColorName = COLORS[textColorIndex].name;
-        const correctPencilColor = COLORS[textColorIndex].pencilColor;
-
-        let wrongColorIndex;
-        do {
-            wrongColorIndex = Math.floor(Math.random() * COLORS.length);
-        } while (wrongColorIndex === textColorIndex);
-
-        const wrongColorName = COLORS[wrongColorIndex].name;
-
-        return { textColorName, textColor, wrongColorName, correctPencilColor };
-    }, []);
-
-    // Start game
-    const startGame = useCallback(() => {
-        window.scrollTo(0, 0);
-        setGameState('playing');
-        setRoundNumber(1);
-        setScore(0);
-        setLives(3);
-        setCorrectCount(0);
-        setWrongCount(0);
-        setReactionTimes([]);
-        setStreak(0);
-        setBestStreak(0);
-        setSelectedColor(null);
-        gameStartTimeRef.current = Date.now();
-        hasSavedRef.current = false;
-        const round = generateRound();
-        setCurrentRound(round);
-        setRoundStartTime(Date.now());
-    }, [generateRound]);
-
-    // Auto start from HUB
-    useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
-            startGame();
-        }
-    }, [location.state, gameState, startGame]);
-
-    // Save game data on finish
-    useEffect(() => {
-        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
-            hasSavedRef.current = true;
-            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-            const avgReaction = reactionTimes.length > 0
-                ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
-                : 0;
-            saveGamePlay({
-                game_id: 'stroop-kalem',
-                score_achieved: score,
-                duration_seconds: durationSeconds,
-                metadata: {
-                    correct_count: correctCount,
-                    wrong_count: wrongCount,
-                    best_streak: bestStreak,
-                    average_reaction_ms: avgReaction,
-                    total_rounds: totalRounds,
-                    accuracy: correctCount + wrongCount > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0,
-                    game_name: 'Renkli Kalemler',
-                }
-            });
-        }
-    }, [gameState, score, correctCount, wrongCount, bestStreak, reactionTimes, saveGamePlay]);
-
-    // Handle pencil click
-    const handlePencilClick = useCallback((pencilColor: string) => {
-        if (!currentRound || feedbackState) return;
-
-        const reactionTime = Date.now() - roundStartTime;
-        setReactionTimes(prev => [...prev, reactionTime]);
-        setSelectedColor(pencilColor);
-
-        const isCorrect = pencilColor === currentRound.correctPencilColor;
-
-        if (isCorrect) {
-            showFeedback(true);
-            setCorrectCount(prev => prev + 1);
-            setStreak(prev => {
-                const newStreak = prev + 1;
-                if (newStreak > bestStreak) setBestStreak(newStreak);
-                return newStreak;
-            });
-
-            const timeBonus = Math.max(0, Math.floor((2500 - reactionTime) / 100));
-            const streakBonus = streak * 5;
-            setScore(prev => prev + 100 + timeBonus + streakBonus);
-        } else {
-            showFeedback(false);
-            setWrongCount(prev => prev + 1);
-            setStreak(0);
-            setLives(prev => prev - 1);
-        }
-
-        setTimeout(() => {
-            setSelectedColor(null);
-
-            if (lives <= 1 && !isCorrect) {
-                setGameState('finished');
-            } else if (roundNumber >= totalRounds) {
-                setGameState('finished');
-            } else {
-                setRoundNumber(prev => prev + 1);
-                const round = generateRound();
-                setCurrentRound(round);
-                setRoundStartTime(Date.now());
-            }
-        }, 1200);
-    }, [currentRound, roundStartTime, roundNumber, totalRounds, streak, bestStreak, generateRound, feedbackState, lives]);
-
-    const averageReactionTime = reactionTimes.length > 0
-        ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
-        : 0;
-
-    const accuracy = correctCount + wrongCount > 0
-        ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
-        : 0;
+    if (phase === 'welcome') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-violet-950 to-purple-950 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" /></div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-violet-400 to-purple-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Pencil size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-violet-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">Kalem Stroop</h1>
+                    <p className="text-slate-300 mb-8 text-lg">Kalemin rengine odaklan, üzerindeki yazıya ALDANMA! Zihinsel hızını ve dikkatini kanıtla.</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-violet-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-violet-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Ekrandaki <strong>kalemin rengine</strong> bak, içindeki yazıya aldanma</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-violet-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Kalemin gerçek rengini aşağıdaki seçeneklerden bul</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-violet-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Zihinsel çelişkiyi yen ve <strong>en doğru kararı</strong> en hızlı şekilde ver</span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-violet-500/10 text-violet-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-violet-500/30 font-bold uppercase tracking-widest">TUZÖ 5.1.1 Renk-Kelime Stroop & Bilişsel Esneklik</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-violet-500 to-purple-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-amber-950 to-orange-950 text-white">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
-            </div>
-
-            {/* Header */}
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-violet-950 to-purple-950 text-white relative overflow-hidden flex flex-col">
             <div className="relative z-10 p-4 pt-20">
-                <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-4">
-                    <Link
-                        to={backLink}
-                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft size={20} />
-                        <span>{backLabel}</span>
-                    </Link>
-
-                    {gameState === 'playing' && (
-                        <div className="flex items-center gap-4 flex-wrap">
-                            {/* Score */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(251, 191, 36, 0.3)'
-                                }}
-                            >
-                                <Star className="text-amber-400 fill-amber-400" size={18} />
-                                <span className="font-bold text-amber-400">{score}</span>
-                            </div>
-
-                            {/* Lives */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)'
-                                }}
-                            >
-                                {[...Array(3)].map((_, i) => (
-                                    <Heart
-                                        key={i}
-                                        size={18}
-                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Progress */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(234, 88, 12, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(249, 115, 22, 0.3)'
-                                }}
-                            >
-                                <Target className="text-orange-400" size={18} />
-                                <span className="font-bold text-orange-400">{roundNumber}/{totalRounds}</span>
-                            </div>
-
-                            {/* Streak */}
-                            {streak > 1 && (
-                                <div
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%)',
-                                        boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(245, 158, 11, 0.3)'
-                                    }}
-                                >
-                                    <Zap className="text-amber-400" size={18} />
-                                    <span className="font-bold text-amber-400">x{streak}</span>
-                                </div>
-                            )}
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+                    {(phase === 'playing' || phase === 'feedback') && (
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20"><Star className="text-amber-400 fill-amber-400" size={16} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={16} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-950'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20"><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={16} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20"><Zap className="text-emerald-400" size={16} /><span className="font-bold text-emerald-400">Puan x{level}</span></div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
                 <AnimatePresence mode="wait">
-                    {/* Welcome Screen */}
-                    {gameState === 'idle' && (
-                        <motion.div
-                            key="welcome"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            {/* 3D Gummy Icon */}
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ y: [0, -8, 0] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                            >
-                                <Pencil size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
-                                ✏️ Renkli Kalemler
-                            </h1>
-
-                            {/* Example */}
-                            <div
-                                className="rounded-2xl p-5 mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <p className="text-slate-400 text-sm mb-3">Örnek:</p>
-                                <p className="text-3xl font-black mb-2" style={{ color: '#FF6B6B' }}>
-                                    SARI KALEMİ AL
-                                </p>
-                                <p className="text-slate-400 text-sm">Doğru cevap: <span className="text-red-400 font-bold">Kırmızı kalem</span> (yazının rengi)</p>
-                            </div>
-
-                            {/* Instructions */}
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
-                                <h3 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2">
-                                    <Eye size={20} /> Nasıl Oynanır?
-                                </h3>
-                                <ul className="space-y-2 text-slate-300 text-sm">
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-orange-400" />
-                                        <span>Yazıda ne dediğine değil, <strong>rengine</strong> bak!</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-orange-400" />
-                                        <span>Doğru renkteki kaleme tıkla</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-orange-400" />
-                                        <span>{totalRounds} soru, dikkatini topla!</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* TUZÖ Badge */}
-                            <div className="bg-amber-500/10 text-amber-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-amber-500/30">
-                                TUZÖ 5.2.1 Seçici Dikkat
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05, y: -4 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="px-8 py-4 rounded-2xl font-bold text-lg"
-                                style={{
-                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(245, 158, 11, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Play size={24} fill="currentColor" />
-                                    <span>Oyuna Başla</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* Playing */}
-                    {gameState === 'playing' && currentRound && (
-                        <motion.div
-                            key="game"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-3xl"
-                        >
-                            {/* Instruction */}
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={roundNumber}
-                                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.8, y: -20 }}
-                                    className="text-center mb-8"
-                                >
-                                    <p className="text-slate-400 text-sm mb-4">Hangi kalemi almalısın?</p>
-                                    <div
-                                        className="rounded-3xl p-8"
-                                        style={{
-                                            background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                            boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                            border: '1px solid rgba(255,255,255,0.1)'
-                                        }}
-                                    >
-                                        <motion.h2
-                                            className="text-4xl lg:text-5xl font-black"
-                                            style={{ color: currentRound.textColor }}
-                                            animate={{ scale: [1, 1.02, 1] }}
-                                            transition={{ duration: 0.5, repeat: Infinity }}
-                                        >
-                                            {currentRound.wrongColorName} KALEMİ AL
-                                        </motion.h2>
+                    {(phase === 'playing' || phase === 'feedback') && !feedbackState && (
+                        <motion.div key="game" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="w-full max-w-xl space-y-12">
+                            <div className="flex flex-col items-center gap-8">
+                                <motion.div key={currentRound?.pencilColor} initial={{ rotate: -15, y: 20 }} animate={{ rotate: 0, y: 0 }} className="relative">
+                                    <Pencil size={180} style={{ color: currentRound?.pencilColor }} className="drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] filter" />
+                                    <div className="absolute inset-x-0 top-[40%] text-center pointer-events-none origin-center transform -rotate-45">
+                                        <span className="text-2xl font-black text-slate-900 mix-blend-overlay uppercase tracking-[0.2em]">{currentRound?.word}</span>
                                     </div>
                                 </motion.div>
-                            </AnimatePresence>
+                                <div className="bg-white/5 backdrop-blur-xl px-12 py-4 rounded-[2.5rem] border border-white/10 shadow-3xl">
+                                    <span className="text-sm font-black text-white/40 tracking-widest uppercase">KALEMİN RENGİ NE?</span>
+                                </div>
+                            </div>
 
-                            {/* Pencils */}
-                            <div className="flex justify-center gap-3 flex-wrap mb-8">
-                                {COLORS.map((color, index) => (
-                                    <motion.button
-                                        key={color.name}
-                                        initial={{ opacity: 0, y: 30 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        onClick={() => handlePencilClick(color.pencilColor)}
-                                        disabled={feedbackState !== null}
-                                        whileHover={!feedbackState ? { scale: 1.1, y: -8 } : {}}
-                                        whileTap={!feedbackState ? { scale: 0.95 } : {}}
-                                        className="focus:outline-none"
-                                    >
-                                        <ColoredPencil
-                                            color={color.pencilColor}
-                                            isSelected={selectedColor === color.pencilColor}
-                                            isCorrect={feedbackState?.correct === true && color.pencilColor === currentRound.correctPencilColor}
-                                            isWrong={feedbackState ? color.pencilColor !== currentRound.correctPencilColor : undefined}
-                                        />
-                                        <p className="text-center text-xs font-bold text-slate-400 mt-1">
-                                            {color.name}
-                                        </p>
+                            <div className="grid grid-cols-2 gap-4 w-full">
+                                {currentRound?.options.map(opt => (
+                                    <motion.button key={opt} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={() => handleAnswer(opt)} className="p-6 bg-white/10 border border-white/10 rounded-3xl font-black text-xl hover:bg-white/20 hover:border-violet-500/50 shadow-xl transition-all group">
+                                        <span className="text-white group-hover:text-violet-300">{opt}</span>
                                     </motion.button>
                                 ))}
                             </div>
                         </motion.div>
                     )}
 
-                    {/* Game Over */}
-                    {gameState === 'finished' && (
-                        <motion.div
-                            key="gameover"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                            >
-                                <Trophy size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
+                    {feedbackState && (
+                        <motion.div key="feed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center"><h2 className={`text-5xl font-black ${feedbackState.correct ? 'text-emerald-400' : 'text-red-400'} drop-shadow-2xl italic tracking-tighter`}>{feedbackState.correct ? 'KESKİN DİKKAT! ✏️' : 'DİKKAT!'}</h2><GameFeedbackBanner feedback={feedbackState} /></motion.div>
+                    )}
 
-                            <h2 className="text-3xl font-black text-amber-300 mb-2">
-                                {accuracy >= 80 ? '🎉 Tebrikler!' : 'Oyun Bitti!'}
-                            </h2>
-                            <p className="text-slate-400 mb-6">
-                                {accuracy >= 80 ? 'Muhteşem renk dikkatı!' : 'Biraz daha pratik yap!'}
-                            </p>
-
-                            <div
-                                className="rounded-2xl p-6 mb-8"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-3xl font-bold text-emerald-400">%{accuracy}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Ort. Tepki</p>
-                                        <p className="text-3xl font-bold text-blue-400">{averageReactionTime}ms</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">En İyi Seri</p>
-                                        <p className="text-3xl font-bold text-orange-400">x{bestStreak}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
-                                style={{
-                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(245, 158, 11, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center justify-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Oyna</span>
-                                </div>
-                            </motion.button>
-
-                            <Link
-                                to={backLink}
-                                className="block text-slate-500 hover:text-white transition-colors"
-                            >
-                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
-                            </Link>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-violet-500 to-purple-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-black text-violet-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Renklerin Ustası!' : 'Harika!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'Kelime-renk çatışmasını yönetme ve bilişsel hızın tek kelimeyle mükemmel!' : 'Kalemlerin rengi ile üzerindeki yazıları ayırmak için biraz daha odaklanmalısın!'}</p>
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-violet-500 to-purple-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Feedback Overlay */}
-                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default PencilStroopGame;
-

@@ -1,79 +1,32 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Trophy, RotateCcw, Play, Star, Timer, Target,
-    XCircle, ChevronLeft, Zap, Heart, Eye
+    Trophy, RotateCcw, Play, Star, Timer as TimerIcon,
+    ChevronLeft, Zap, Heart, Eye, Sparkles
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
 import GameFeedbackBanner from './shared/GameFeedbackBanner';
+import { useSound } from '../../hooks/useSound';
 
-// ============== CONSTANTS ==============
+// ─── Constants ───────────────────────────────────────────────
 const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
-
-// ============== TYPES ==============
-type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
+const GAME_ID = 'farki-bul';
 
 type DiffType = 'lightness' | 'hue' | 'radius' | 'scale' | 'rotation' | 'shape';
+type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-interface ShapeData {
-    id: string;
-    path: string;
-}
+interface ShapeData { id: string; path: string; }
+interface TileStyle { hue: number; sat: number; light: number; radius: number; rotate: number; scale: number; }
+interface TileDecor { d1x: number; d1y: number; d1s: number; d2x: number; d2y: number; d2s: number; }
+interface TileData { index: number; style: TileStyle; shape: ShapeData; decor: TileDecor; }
+interface RoundData { size: number; total: number; oddIndex: number; diffType: DiffType; baseShape: ShapeData; oddShape: ShapeData; base: TileStyle; odd: TileStyle; perRoundTime: number; }
 
-interface TileStyle {
-    hue: number;
-    sat: number;
-    light: number;
-    radius: number;
-    rotate: number;
-    scale: number;
-}
-
-interface TileDecor {
-    d1x: number; d1y: number; d1s: number;
-    d2x: number; d2y: number; d2s: number;
-}
-
-interface TileData {
-    index: number;
-    style: TileStyle;
-    shape: ShapeData;
-    decor: TileDecor;
-}
-
-interface RoundData {
-    size: number;
-    total: number;
-    oddIndex: number;
-    diffType: DiffType;
-    baseShape: ShapeData;
-    oddShape: ShapeData;
-    base: TileStyle;
-    odd: TileStyle;
-    perRoundTime: number;
-}
-
-interface SpotDifferenceGameProps {
-    examMode?: boolean;
-    examLevel?: number;
-    examTimeLimit?: number;
-}
-
-// ============== GAME DATA ==============
-const DIFF_LABELS: Record<DiffType, string> = {
-    lightness: 'Açıklık',
-    hue: 'Renk Tonu',
-    radius: 'Köşe',
-    scale: 'Boyut',
-    rotation: 'Açı',
-    shape: 'Şekil',
-};
-
+const DIFF_LABELS: Record<DiffType, string> = { lightness: 'Açıklık', hue: 'Renk Tonu', radius: 'Köşe', scale: 'Boyut', rotation: 'Açı', shape: 'Şekil' };
 const SHAPES: ShapeData[] = [
     { id: 'triangle', path: 'M50 8 L92 88 L8 88 Z' },
     { id: 'star', path: 'M50 6 L62 34 L92 38 L68 56 L76 88 L50 70 L24 88 L32 56 L8 38 L38 34 Z' },
@@ -88,619 +41,219 @@ const SHAPES: ShapeData[] = [
     { id: 'leaf', path: 'M14 68 C24 38 48 16 72 14 C90 12 94 28 88 46 C80 74 52 92 28 88 C16 86 10 80 14 68 Z' },
     { id: 'wave', path: 'M8 60 C22 40 40 40 52 54 C64 68 82 68 92 50 C86 78 66 92 44 90 C24 88 10 78 8 60 Z' },
 ];
-
 const GHOST_PATH = 'M60 12 C78 14 92 30 90 48 C88 66 72 82 54 88 C36 94 16 88 10 70 C4 52 10 30 26 20 C40 10 46 10 60 12 Z';
 
-// Feedback mesajları artık useGameFeedback hook'unda yönetiliyor
-
-// ============== HELPERS ==============
 const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const createDecor = (): TileDecor => ({ d1x: randInt(8, 58), d1y: randInt(6, 56), d1s: randInt(18, 32), d2x: randInt(32, 72), d2y: randInt(30, 70), d2s: randInt(12, 24) });
 
-const createDecor = (): TileDecor => ({
-    d1x: randInt(8, 58), d1y: randInt(6, 56), d1s: randInt(18, 32),
-    d2x: randInt(32, 72), d2y: randInt(30, 70), d2s: randInt(12, 24),
-});
-
-// Adaptive difficulty based on BrainTrainer level (1-20)
-const getLevelConfig = (level: number) => {
-    // Grid size: 3×3 → 6×6
-    const gridMin = Math.min(3 + Math.floor(level / 5), 5);
-    const gridMax = Math.min(gridMin + 1, 6);
-
-    // Per-round time decreases as level increases
-    const perRoundTime = Math.max(5, 15 - Math.floor(level / 3));
-
-    // Deltas get smaller (harder to spot) as level increases
-    const difficultyFactor = Math.max(0.3, 1 - (level - 1) * 0.035);
-
-    const allTypes: DiffType[] = ['lightness', 'hue', 'radius', 'scale', 'rotation', 'shape'];
-    // Fewer types at lower levels
-    const typeCount = Math.min(allTypes.length, 3 + Math.floor(level / 4));
-    const types = allTypes.slice(0, typeCount);
-
-    return {
-        gridMin, gridMax, perRoundTime, types,
-        deltas: {
-            lightness: Math.round(24 * difficultyFactor),
-            hue: Math.round(22 * difficultyFactor),
-            radius: Math.round(28 * difficultyFactor),
-            scale: +(0.16 * difficultyFactor).toFixed(3),
-            rotation: Math.round(14 * difficultyFactor),
-        },
-    };
+const getLevelConfig = (lvl: number) => {
+    const gridMin = Math.min(3 + Math.floor(lvl / 5), 5); const gridMax = Math.min(gridMin + 1, 6);
+    const perRoundTime = Math.max(5, 15 - Math.floor(lvl / 3)); const diffFactor = Math.max(0.3, 1 - (lvl - 1) * 0.035);
+    const all: DiffType[] = ['lightness', 'hue', 'radius', 'scale', 'rotation', 'shape'];
+    const types = all.slice(0, Math.min(all.length, 3 + Math.floor(lvl / 4)));
+    return { gridMin, gridMax, perRoundTime, types, deltas: { lightness: Math.round(24 * diffFactor), hue: Math.round(22 * diffFactor), radius: Math.round(28 * diffFactor), scale: +(0.16 * diffFactor).toFixed(3), rotation: Math.round(14 * diffFactor) } };
 };
 
-const createRound = (level: number): RoundData => {
-    const config = getLevelConfig(level);
-    const size = randInt(config.gridMin, config.gridMax);
-    const total = size * size;
-    const oddIndex = randInt(0, total - 1);
-    const diffType = pick(config.types);
-    const baseShape = pick(SHAPES);
-
-    const base: TileStyle = {
-        hue: randInt(0, 360),
-        sat: randInt(62, 88),
-        light: randInt(50, 72),
-        radius: randInt(10, 48),
-        rotate: randInt(-10, 10),
-        scale: 1,
-    };
-
-    const odd: TileStyle = { ...base };
-    let oddShape = baseShape;
-    const sign = Math.random() > 0.5 ? 1 : -1;
-
-    if (diffType === 'shape') {
-        const choices = SHAPES.filter(s => s.id !== baseShape.id);
-        oddShape = pick(choices);
-    } else if (diffType === 'lightness') {
-        odd.light = clamp(base.light + sign * config.deltas.lightness, 18, 82);
-    } else if (diffType === 'hue') {
-        odd.hue = (base.hue + sign * config.deltas.hue + 360) % 360;
-    } else if (diffType === 'radius') {
-        odd.radius = clamp(base.radius + sign * config.deltas.radius, 4, 70);
-    } else if (diffType === 'scale') {
-        odd.scale = clamp(base.scale + sign * config.deltas.scale, 0.74, 1.22);
-    } else if (diffType === 'rotation') {
-        odd.rotate = base.rotate + sign * config.deltas.rotation;
-    }
-
-    return { size, total, oddIndex, diffType, baseShape, oddShape, base, odd, perRoundTime: config.perRoundTime };
+const createRound = (lvl: number): RoundData => {
+    const cfg = getLevelConfig(lvl); const size = randInt(cfg.gridMin, cfg.gridMax); const total = size * size;
+    const oddIdx = randInt(0, total - 1); const diffType = pick(cfg.types); const baseShape = pick(SHAPES);
+    const base: TileStyle = { hue: randInt(0, 360), sat: randInt(62, 88), light: randInt(50, 72), radius: randInt(10, 48), rotate: randInt(-10, 10), scale: 1 };
+    const odd: TileStyle = { ...base }; let oddShape = baseShape; const sign = Math.random() > 0.5 ? 1 : -1;
+    if (diffType === 'shape') oddShape = pick(SHAPES.filter(s => s.id !== baseShape.id));
+    else if (diffType === 'lightness') odd.light = clamp(base.light + sign * cfg.deltas.lightness, 18, 82);
+    else if (diffType === 'hue') odd.hue = (base.hue + sign * cfg.deltas.hue + 360) % 360;
+    else if (diffType === 'radius') odd.radius = clamp(base.radius + sign * cfg.deltas.radius, 4, 70);
+    else if (diffType === 'scale') odd.scale = clamp(base.scale + sign * cfg.deltas.scale, 0.74, 1.22);
+    else if (diffType === 'rotation') odd.rotate = base.rotate + sign * cfg.deltas.rotation;
+    return { size, total, oddIndex: oddIdx, diffType, baseShape, oddShape, base, odd, perRoundTime: cfg.perRoundTime };
 };
 
-// ============== TILE COMPONENT ==============
-const Tile: React.FC<{
-    tile: TileData;
-    isOdd: boolean;
-    isSelected: boolean;
-    isRevealed: boolean;
-    onClick: () => void;
-    disabled: boolean;
-}> = ({ tile, isOdd, isSelected, isRevealed, onClick, disabled }) => {
-    const s = tile.style;
-    const d = tile.decor;
-
+const Tile: React.FC<{ tile: TileData; isOdd: boolean; isSelected: boolean; isRevealed: boolean; onClick: () => void; disabled: boolean; }> = ({ tile, isOdd, isSelected, isRevealed, onClick, disabled }) => {
+    const s = tile.style; const d = tile.decor;
     return (
-        <motion.button
-            whileHover={disabled ? {} : { scale: 1.05 }}
-            whileTap={disabled ? {} : { scale: 0.95 }}
-            animate={isRevealed && isOdd ? { scale: [1, 1.08, 1], boxShadow: ['0 0 0 4px rgba(52,211,153,0.3)', '0 0 0 8px rgba(52,211,153,0.5)', '0 0 0 4px rgba(52,211,153,0.3)'] } : {}}
-            transition={isRevealed && isOdd ? { duration: 1, repeat: Infinity } : {}}
-            onClick={onClick}
-            disabled={disabled}
-            className="aspect-square relative overflow-hidden grid place-items-center"
-            style={{
-                background: `radial-gradient(circle at 25% 20%, hsl(${s.hue} ${s.sat}% ${s.light + 14}%), hsl(${s.hue} ${s.sat}% ${s.light}%))`,
-                borderRadius: `${s.radius}%`,
-                transform: `rotate(${s.rotate}deg) scale(${s.scale})`,
-                border: isRevealed && isOdd
-                    ? '3px solid rgba(52, 211, 153, 0.9)'
-                    : isSelected
-                        ? '3px solid rgba(251, 191, 36, 0.9)'
-                        : '2px solid rgba(255, 255, 255, 0.15)',
-                boxShadow: isRevealed && isOdd
-                    ? '0 0 0 4px rgba(52, 211, 153, 0.3), inset 0 -6px 12px rgba(0,0,0,0.15)'
-                    : isSelected
-                        ? '0 0 0 4px rgba(251, 191, 36, 0.3), inset 0 -6px 12px rgba(0,0,0,0.15)'
-                        : 'inset 0 -6px 12px rgba(0,0,0,0.15), inset 0 4px 8px rgba(255,255,255,0.2)',
-                cursor: disabled ? 'default' : 'pointer',
-                isolation: 'isolate',
-                transition: 'border 0.2s, box-shadow 0.2s',
-            }}
-        >
-            {/* Decorative circles */}
-            <span
-                className="absolute rounded-full pointer-events-none"
-                style={{
-                    width: `${d.d1s}%`, height: `${d.d1s}%`,
-                    top: `${d.d1y}%`, left: `${d.d1x}%`,
-                    opacity: 0.45,
-                    background: `radial-gradient(circle at 30% 30%, hsla(${s.hue + 28}, ${s.sat}%, ${s.light + 26}%, 0.7), transparent 70%)`,
-                    filter: 'blur(0.4px)',
-                }}
-            />
-            <span
-                className="absolute rounded-full pointer-events-none"
-                style={{
-                    width: `${d.d2s}%`, height: `${d.d2s}%`,
-                    top: `${d.d2y}%`, left: `${d.d2x}%`,
-                    opacity: 0.35,
-                    background: `radial-gradient(circle at 70% 30%, hsla(${s.hue - 22}, ${s.sat}%, ${s.light + 22}%, 0.6), transparent 70%)`,
-                    filter: 'blur(0.4px)',
-                }}
-            />
-
-            {/* Ghost shape */}
-            <svg
-                className="absolute pointer-events-none"
-                style={{ inset: '8%', fill: `hsl(${s.hue + 36} ${s.sat}% ${s.light + 22}%)`, opacity: 0.22 }}
-                viewBox="0 0 100 100"
-                aria-hidden="true"
-            >
-                <path d={GHOST_PATH} />
-            </svg>
-
-            {/* Main shape */}
-            <svg
-                className="absolute pointer-events-none"
-                style={{ inset: '18%', fill: `hsl(${s.hue} ${s.sat}% ${s.light + 6}%)`, opacity: 0.92 }}
-                viewBox="0 0 100 100"
-                aria-hidden="true"
-            >
-                <path d={tile.shape.path} />
-            </svg>
+        <motion.button whileHover={disabled ? {} : { scale: 1.05 }} whileTap={disabled ? {} : { scale: 0.95 }} animate={isRevealed && isOdd ? { scale: [1, 1.08, 1], boxShadow: ['0 0 0 4px rgba(52,211,153,0.3)', '0 0 0 8px rgba(52,211,153,0.5)', '0 0 0 4px rgba(52,211,153,0.3)'] } : {}} transition={isRevealed && isOdd ? { duration: 1, repeat: Infinity } : {}} onClick={onClick} disabled={disabled} className="aspect-square relative overflow-hidden grid place-items-center rounded-2xl" style={{ background: `radial-gradient(circle at 25% 20%, hsl(${s.hue} ${s.sat}% ${s.light + 14}%), hsl(${s.hue} ${s.sat}% ${s.light}%))`, borderRadius: `${s.radius}%`, transform: `rotate(${s.rotate}deg) scale(${s.scale})`, border: isRevealed && isOdd ? '3px solid rgba(52, 211, 153, 0.9)' : isSelected ? '3px solid rgba(251, 191, 36, 0.9)' : '2px solid rgba(255, 255, 255, 0.15)', boxShadow: isRevealed && isOdd ? '0 0 0 4px rgba(52, 211, 153, 0.3), inset 0 -6px 12px rgba(0,0,0,0.15)' : isSelected ? '0 0 0 4px rgba(251, 191, 36, 0.3), inset 0 -6px 12px rgba(0,0,0,0.15)' : 'inset 0 -6px 12px rgba(0,0,0,0.15), inset 0 4px 8px rgba(255,255,255,0.2)', cursor: disabled ? 'default' : 'pointer' }}>
+            <span className="absolute rounded-full pointer-events-none" style={{ width: `${d.d1s}%`, height: `${d.d1s}%`, top: `${d.d1y}%`, left: `${d.d1x}%`, opacity: 0.45, background: `radial-gradient(circle at 30% 30%, hsla(${s.hue + 28}, ${s.sat}%, ${s.light + 26}%, 0.7), transparent 70%)`, filter: 'blur(0.4px)' }} />
+            <span className="absolute rounded-full pointer-events-none" style={{ width: `${d.d2s}%`, height: `${d.d2s}%`, top: `${d.d2y}%`, left: `${d.d2x}%`, opacity: 0.35, background: `radial-gradient(circle at 70% 30%, hsla(${s.hue - 22}, ${s.sat}%, ${s.light + 22}%, 0.6), transparent 70%)`, filter: 'blur(0.4px)' }} />
+            <svg className="absolute pointer-events-none" style={{ inset: '8%', fill: `hsl(${s.hue + 36} ${s.sat}% ${s.light + 22}%)`, opacity: 0.22 }} viewBox="0 0 100 100"><path d={GHOST_PATH} /></svg>
+            <svg className="absolute pointer-events-none" style={{ inset: '18%', fill: `hsl(${s.hue} ${s.sat}% ${s.light + 6}%)`, opacity: 0.92 }} viewBox="0 0 100 100"><path d={tile.shape.path} /></svg>
         </motion.button>
     );
 };
 
-// ============== MAIN COMPONENT ==============
-const SpotDifferenceGame: React.FC<SpotDifferenceGameProps> = ({ examMode: examModeProp = false }) => {
+const SpotDifferenceGame: React.FC = () => {
+    const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
     const location = useLocation();
     const navigate = useNavigate();
-    const { submitResult } = useExam();
-    const hasSavedRef = useRef(false);
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
 
-    // Exam Mode
-    const examMode = examModeProp || location.state?.examMode === true;
-    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
-
-    // Core State
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(INITIAL_LIVES);
     const [level, setLevel] = useState(1);
+    const [lives, setLives] = useState(INITIAL_LIVES);
     const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
-
-    // Game State
     const [roundData, setRoundData] = useState<RoundData | null>(null);
     const [roundTimeLeft, setRoundTimeLeft] = useState(0);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-    // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const roundTimerRef = useRef<number>(0);
-    const startTimeRef = useRef<number>(0);
+    const startTimeRef = useRef(0);
+    const hasSavedRef = useRef(false);
 
-    // Back link
-    const backLink = examMode ? '/atolyeler/sinav-simulasyonu' : '/atolyeler/bireysel-degerlendirme';
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
-    // Global Timer
+    const startNewRound = useCallback((lvl: number) => {
+        const data = createRound(lvl); setRoundData(data); setRoundTimeLeft(data.perRoundTime); setSelectedIndex(null);
+    }, []);
+
+    const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
+        setPhase('playing'); setScore(0); setLevel(1); setLives(INITIAL_LIVES); setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        startTimeRef.current = Date.now(); hasSavedRef.current = false;
+        startNewRound(1); playSound('slide');
+    }, [startNewRound, playSound, examMode, examTimeLimit]);
+
+    useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, phase, handleStart, examMode]);
+
     useEffect(() => {
         if (phase === 'playing' && timeLeft > 0) {
-            timerRef.current = setTimeout(() => setTimeLeft(t => t - 1), 1000);
-        } else if (timeLeft === 0 && phase === 'playing') {
-            handleGameOver();
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
         }
-        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     }, [phase, timeLeft]);
 
-    // Per-round timer (using rAF for precision)
     useEffect(() => {
         if (phase !== 'playing' || !roundData || selectedIndex !== null) return;
-
         const start = performance.now();
         const tick = (now: number) => {
-            const elapsed = (now - start) / 1000;
-            const remaining = Math.max(0, roundData.perRoundTime - elapsed);
-            setRoundTimeLeft(remaining);
-            if (remaining <= 0) {
-                // Time ran out for this round — wrong answer
-                handlePick(-1);
-                return;
-            }
+            const el = (now - start) / 1000; const rem = Math.max(0, roundData.perRoundTime - el);
+            setRoundTimeLeft(rem); if (rem <= 0) { handlePick(-1); return; }
             roundTimerRef.current = requestAnimationFrame(tick);
         };
         roundTimerRef.current = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(roundTimerRef.current);
     }, [phase, roundData, selectedIndex]);
 
-    // Generate tiles
-    const tiles = useMemo<TileData[]>(() => {
+    const handlePick = useCallback((idx: number) => {
+        if (!roundData || selectedIndex !== null || phase !== 'playing') return;
+        cancelAnimationFrame(roundTimerRef.current);
+        const correct = idx === roundData.oddIndex;
+        setSelectedIndex(idx); showFeedback(correct); playSound(correct ? 'correct' : 'incorrect');
+        setTimeout(() => {
+            dismissFeedback();
+            if (correct) {
+                setScore(p => p + 10 * level + Math.round(roundTimeLeft * 5));
+                if (level >= MAX_LEVEL) setPhase('victory');
+                else { setLevel(l => l + 1); startNewRound(level + 1); }
+            } else {
+                setLives(l => {
+                    const nl = l - 1;
+                    if (nl <= 0) setTimeout(() => setPhase('game_over'), 500);
+                    else startNewRound(level);
+                    return nl;
+                });
+            }
+        }, 1500);
+    }, [roundData, selectedIndex, phase, level, roundTimeLeft, startNewRound, playSound, showFeedback, dismissFeedback]);
+
+    const handleFinish = useCallback(async () => {
+        if (hasSavedRef.current) return;
+        hasSavedRef.current = true;
+        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        if (examMode) {
+            await submitResult(level >= 5 || phase === 'victory', score, MAX_LEVEL * 100, duration);
+            navigate("/atolyeler/sinav-simulasyonu/devam"); return;
+        }
+        await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: duration, metadata: { level_reached: level, victory: phase === 'victory' } });
+    }, [phase, score, level, saveGamePlay, examMode, submitResult, navigate]);
+
+    useEffect(() => { if (phase === 'game_over' || phase === 'victory') handleFinish(); }, [phase, handleFinish]);
+
+    const tiles = useMemo(() => {
         if (!roundData) return [];
-        return Array.from({ length: roundData.total }, (_, index) => ({
-            index,
-            style: index === roundData.oddIndex ? roundData.odd : roundData.base,
-            shape: index === roundData.oddIndex ? roundData.oddShape : roundData.baseShape,
-            decor: createDecor(),
-        }));
+        return Array.from({ length: roundData.total }, (_, idx) => ({ index: idx, style: idx === roundData.oddIndex ? roundData.odd : roundData.base, shape: idx === roundData.oddIndex ? roundData.oddShape : roundData.baseShape, decor: createDecor() }));
     }, [roundData]);
 
-    // Start new round
-    const startNewRound = useCallback((lvl: number) => {
-        const data = createRound(lvl);
-        setRoundData(data);
-        setRoundTimeLeft(data.perRoundTime);
-        setSelectedIndex(null);
-    }, []);
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
-    // Start Game
-    const handleStart = useCallback(() => {
-        window.scrollTo(0, 0);
-        setPhase('playing');
-        setScore(0);
-        setLives(INITIAL_LIVES);
-        setLevel(1);
-        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
-        startTimeRef.current = Date.now();
-        hasSavedRef.current = false;
-        startNewRound(1);
-    }, [examMode, examTimeLimit, startNewRound]);
-
-    // Auto Start
-    useEffect(() => {
-        if ((location.state?.autoStart || examMode) && phase === 'welcome') {
-            handleStart();
-        }
-    }, [location.state, examMode, phase, handleStart]);
-
-    // Shared Feedback Hook
-    const lastPickRef = useRef<{ correct: boolean; roundTimeLeft: number }>({ correct: false, roundTimeLeft: 0 });
-
-    const { feedbackState, showFeedback, isFeedbackActive } = useGameFeedback({
-        onFeedbackEnd: (correct) => {
-            if (correct) {
-                const timeBonus = Math.round(lastPickRef.current.roundTimeLeft * 5);
-                setScore(s => s + 10 * level + timeBonus);
-                if (level >= MAX_LEVEL) {
-                    handleVictory();
-                } else {
-                    setLevel(l => l + 1);
-                    startNewRound(level + 1);
-                    setPhase('playing');
-                }
-            } else {
-                const newLives = lives - 1;
-                setLives(newLives);
-                if (newLives <= 0) {
-                    handleGameOver();
-                } else {
-                    startNewRound(level);
-                    setPhase('playing');
-                }
-            }
-        },
-    });
-
-    // Handle Pick
-    const handlePick = useCallback((index: number) => {
-        if (!roundData || selectedIndex !== null) return;
-        cancelAnimationFrame(roundTimerRef.current);
-
-        const correct = index === roundData.oddIndex;
-        setSelectedIndex(index);
-        setPhase('feedback');
-        lastPickRef.current = { correct, roundTimeLeft };
-        showFeedback(correct);
-    }, [roundData, selectedIndex, roundTimeLeft, showFeedback]);
-
-    // Game Over
-    const handleGameOver = useCallback(async () => {
-        if (hasSavedRef.current) return;
-        hasSavedRef.current = true;
-        setPhase('game_over');
-
-        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-
-        if (examMode) {
-            const passed = level >= 5;
-            (async () => {
-                await submitResult(passed, score, 1000, duration);
-                navigate('/atolyeler/sinav-simulasyonu/devam');
-            })();
-            return;
-        }
-
-        await saveGamePlay({
-            game_id: 'farki-bul',
-            score_achieved: score,
-            duration_seconds: duration,
-            metadata: { levels_completed: level, final_lives: lives },
-        });
-    }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate]);
-
-    // Victory
-    const handleVictory = useCallback(async () => {
-        if (hasSavedRef.current) return;
-        hasSavedRef.current = true;
-        setPhase('victory');
-
-        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-
-        if (examMode) {
-            (async () => {
-                await submitResult(true, score + 200, 1000, duration);
-                navigate('/atolyeler/sinav-simulasyonu/devam');
-            })();
-            return;
-        }
-
-        await saveGamePlay({
-            game_id: 'farki-bul',
-            score_achieved: score + 200,
-            duration_seconds: duration,
-            metadata: { levels_completed: MAX_LEVEL, victory: true },
-        });
-    }, [saveGamePlay, score, examMode, submitResult, navigate]);
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    // ============== RENDER ==============
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+    if (phase === 'welcome') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-fuchsia-500/15 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl" /></div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-fuchsia-400 to-purple-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Eye size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-fuchsia-300 via-pink-300 to-indigo-300 bg-clip-text text-transparent">Farkı Bul</h1>
+                    <p className="text-slate-300 mb-8 text-lg">Bir kare diğerlerinden farklı! Renk, şekil, boyut ve açı ipuçlarını gözlemle, farklı olanı bul. Hızlı ol, zaman daralıyor!</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-fuchsia-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-fuchsia-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Ekrana gelen grid içindeki <strong>farklı kareyi</strong> bul</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-fuchsia-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Her round için <strong>üstteki süre barı</strong> dolmadan tıkla</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-fuchsia-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Ne kadar hızlı bulursan <strong>o kadar çok puan</strong> kazanırsın</span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-violet-500/10 text-violet-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-violet-500/30 font-bold uppercase tracking-widest">TUZÖ 5.7.1 Seçici Dikkat</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-fuchsia-500 to-purple-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
             </div>
+        );
+    }
 
-            {/* Header */}
-            <div className="relative z-10 p-4">
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-                        <ChevronLeft size={20} />
-                        <span>Geri</span>
-                    </Link>
-
-                    {(phase === 'playing' || phase === 'feedback') && (
-                        <div className="flex items-center gap-3 sm:gap-4">
-                            <div className="flex items-center gap-2 bg-amber-500/20 px-3 py-2 rounded-xl">
-                                <Star className="text-amber-400" size={16} />
-                                <span className="font-bold text-amber-400 text-sm">{score}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
-                                    <Heart key={i} size={14} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'} />
-                                ))}
-                            </div>
-                            <div className="flex items-center gap-2 bg-blue-500/20 px-3 py-2 rounded-xl">
-                                <Timer className="text-blue-400" size={16} />
-                                <span className={`font-bold text-sm ${timeLeft <= 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'}`}>
-                                    {formatTime(timeLeft)}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-emerald-500/20 px-3 py-2 rounded-xl">
-                                <Zap className="text-emerald-400" size={16} />
-                                <span className="font-bold text-emerald-400 text-sm">Lv.{level}</span>
-                            </div>
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white relative overflow-hidden flex flex-col">
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+                    {(phase !== 'game_over' && phase !== 'victory') && (
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(251, 191, 36, 0.3)' }}><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', border: '1px solid rgba(59, 130, 246, 0.3)' }}><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(192, 38, 211, 0.2) 0%, rgba(147, 51, 234, 0.1) 100%)', border: '1px solid rgba(192, 38, 211, 0.3)' }}><Zap className="text-fuchsia-400" size={18} /><span className="font-bold text-fuchsia-400">Seviye {level}/{MAX_LEVEL}</span></div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
                 <AnimatePresence mode="wait">
-                    {/* Welcome Screen */}
-                    {phase === 'welcome' && (
-                        <motion.div
-                            key="welcome"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-fuchsia-400 to-purple-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
-                                animate={{ y: [0, -8, 0] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                            >
-                                <Eye size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <div className="mb-4 inline-flex items-center gap-1.5 px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full">
-                                <span className="text-[9px] font-black text-violet-300 uppercase tracking-wider">TUZÖ</span>
-                                <span className="text-[9px] font-bold text-violet-400">5.7.1 Seçici Dikkat</span>
-                            </div>
-
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
-                                Farkı Bul
-                            </h1>
-
-                            <p className="text-slate-400 mb-8">
-                                Bir kare diğerlerinden farklı! Renk, şekil, boyut ve açı ipuçlarını gözlemle, farklı olanı bul.
-                            </p>
-
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2">
-                                    <Heart className="text-red-400" size={16} />
-                                    <span className="text-sm text-slate-300">{INITIAL_LIVES} Can</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2">
-                                    <Timer className="text-blue-400" size={16} />
-                                    <span className="text-sm text-slate-300">{TIME_LIMIT / 60} Dakika</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2">
-                                    <Target className="text-emerald-400" size={16} />
-                                    <span className="text-sm text-slate-300">{MAX_LEVEL} Seviye</span>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05, y: -2 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-fuchsia-500 to-purple-600 rounded-2xl font-bold text-xl"
-                                style={{ boxShadow: '0 8px 32px rgba(192, 38, 211, 0.4)' }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Play size={28} className="fill-white" />
-                                    <span>Gözlerini Aç!</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* Game Board */}
                     {(phase === 'playing' || phase === 'feedback') && roundData && (
-                        <motion.div
-                            key="playing"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-lg"
-                        >
-                            {/* Round Timer Bar */}
-                            <div className="mb-4 h-2 bg-white/10 rounded-full overflow-hidden">
-                                <motion.div
-                                    className="h-full rounded-full"
-                                    style={{
-                                        width: `${(roundTimeLeft / roundData.perRoundTime) * 100}%`,
-                                        background: roundTimeLeft < 3
-                                            ? 'linear-gradient(90deg, #ef4444, #f97316)'
-                                            : 'linear-gradient(90deg, #a855f7, #6366f1)',
-                                        transition: 'background 0.3s',
-                                    }}
-                                />
+                        <motion.div key="game" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-lg">
+                            <div className="mb-6 h-3 bg-white/10 rounded-full overflow-hidden border border-white/5 p-0.5 shadow-inner">
+                                <motion.div className="h-full rounded-full shadow-lg" style={{ width: `${(roundTimeLeft / roundData.perRoundTime) * 100}%`, background: roundTimeLeft < 3 ? 'linear-gradient(90deg, #ef4444, #f97316)' : 'linear-gradient(90deg, #a855f7, #6366f1)', transition: 'background 0.3s' }} />
                             </div>
-
-                            {/* Difference hint */}
-                            <div className="mb-4 text-center">
-                                <span className="text-sm text-slate-400">
-                                    Fark Tipi: <span className="text-fuchsia-300 font-bold">{DIFF_LABELS[roundData.diffType]}</span>
-                                </span>
-                            </div>
-
-                            {/* Grid wrapper — relative so feedbackState overlays without layout shift */}
-                            <div className="relative">
-                                <div
-                                    className="grid gap-2 sm:gap-3"
-                                    style={{ gridTemplateColumns: `repeat(${roundData.size}, minmax(0, 1fr))` }}
-                                >
+                            <div className="mb-6 text-center"><span className="px-4 py-1.5 bg-white/5 rounded-full border border-white/10 text-xs font-bold text-slate-400 tracking-wider uppercase">Fark Tipi: <span className="text-fuchsia-400">{DIFF_LABELS[roundData.diffType]}</span></span></div>
+                            <div className="bg-white/5 backdrop-blur-2xl rounded-[40px] p-6 border border-white/10 shadow-3xl">
+                                <div className="grid gap-3 sm:gap-4" style={{ gridTemplateColumns: `repeat(${roundData.size}, minmax(0, 1fr))` }}>
                                     {tiles.map(tile => (
-                                        <Tile
-                                            key={tile.index}
-                                            tile={tile}
-                                            isOdd={tile.index === roundData.oddIndex}
-                                            isSelected={tile.index === selectedIndex}
-                                            isRevealed={isFeedbackActive}
-                                            onClick={() => handlePick(tile.index)}
-                                            disabled={phase !== 'playing'}
-                                        />
+                                        <Tile key={tile.index} tile={tile} isOdd={tile.index === roundData.oddIndex} isSelected={tile.index === selectedIndex} isRevealed={phase === 'feedback'} onClick={() => handlePick(tile.index)} disabled={phase !== 'playing'} />
                                     ))}
                                 </div>
-
-                                {/* Shared Feedback Banner */}
-                                <GameFeedbackBanner feedback={feedbackState}>
-                                    <p className="text-xs text-slate-400">
-                                        Fark: {DIFF_LABELS[roundData.diffType]}
-                                    </p>
-                                </GameFeedbackBanner>
                             </div>
                         </motion.div>
                     )}
-
-                    {/* Game Over */}
-                    {phase === 'game_over' && (
-                        <motion.div
-                            key="game_over"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-3xl flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.2), 0 8px 24px rgba(0,0,0,0.3)' }}
-                            >
-                                <XCircle size={48} className="text-white" />
-                            </div>
-
-                            <h2 className="text-3xl font-bold text-red-400 mb-4">Oyun Bitti!</h2>
-
-                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-2xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Seviye</p>
-                                        <p className="text-2xl font-bold text-emerald-400">{level}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleStart}
-                                className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl font-bold text-lg"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Dene</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* Victory */}
-                    {phase === 'victory' && (
-                        <motion.div
-                            key="victory"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-3xl flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.2), 0 8px 24px rgba(0,0,0,0.3)' }}
-                                animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
-                            >
-                                <Trophy size={48} className="text-white" />
-                            </motion.div>
-
-                            <h2 className="text-3xl font-bold text-amber-400 mb-4">🎉 Şampiyon!</h2>
-
-                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-6">
-                                <p className="text-4xl font-bold text-amber-400">{score + 200}</p>
-                                <p className="text-slate-400">Toplam Puan</p>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleStart}
-                                className="px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl font-bold text-lg"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Oyna</span>
-                                </div>
-                            </motion.button>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-fuchsia-500 to-indigo-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-bold text-amber-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Görsel Dikkat Ustası!' : 'Tebrikler!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'En küçük detayları bile saniyeler içinde fark ediyorsun. Harika bir konsantrasyon!' : 'Daha fazla pratikle konsantrasyonunu ve görsel analiz yeteneğini geliştirebilirsin.'}</p>
+                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-fuchsia-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-fuchsia-500 to-purple-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
+                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );

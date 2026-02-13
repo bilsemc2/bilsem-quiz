@@ -1,0 +1,5 @@
+{
+  "name": "Neon Labyrinth: AI Maze Runner",
+  "description": "An infinite, difficulty-scaling maze game where you draw your path to escape. Features AI-generated level themes and dynamic difficulty.",
+  "requestFramePermissions": []
+}

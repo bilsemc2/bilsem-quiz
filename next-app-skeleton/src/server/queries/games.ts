@@ -77,6 +77,16 @@ export const GAME_CATALOG: Record<string, GameCatalogItem> = {
     category: 'attention',
     durationSeconds: 120,
   },
+  'kosullu-yonerge': {
+    title: 'Kosullu Yonerge',
+    category: 'logic',
+    durationSeconds: 180,
+  },
+  'mantik-bulmacasi': {
+    title: 'Mantik Bulmacasi',
+    category: 'logic',
+    durationSeconds: 180,
+  },
   'sayi-sihirbazi': {
     title: 'Sayi Sihirbazi',
     category: 'logic',

@@ -157,6 +157,34 @@ describe('game-registry', () => {
     expect(item?.migrated).toBe(true);
   });
 
+  it('marks kosullu-yonerge as migrated', () => {
+    const item = getRegistryItem('kosullu-yonerge');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks conditional-logic as migrated', () => {
+    const item = getRegistryItem('conditional-logic');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks mantik-bulmacasi as migrated', () => {
+    const item = getRegistryItem('mantik-bulmacasi');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks logic-puzzle as migrated', () => {
+    const item = getRegistryItem('logic-puzzle');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
   it('marks sayi-sihirbazi as migrated', () => {
     const item = getRegistryItem('sayi-sihirbazi');
 

@@ -1,13 +1,21 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
-import { Grid3X3, Star, Trophy, RotateCcw, ChevronLeft, Play, Eye, Zap, Heart, Sparkles } from 'lucide-react';
+import {
+  Grid3X3, Star, Trophy, RotateCcw, ChevronLeft, Play,
+  Eye, Zap, Heart, Sparkles, Timer as TimerIcon
+} from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
 import GameFeedbackBanner from './shared/GameFeedbackBanner';
+import { useExam } from '../../contexts/ExamContext';
 
-// High Contrast Candy Colors
+// Game Constants
+const INITIAL_LIVES = 5;
+const TIME_LIMIT = 180;
+const MAX_LEVEL = 20;
+
 const COLORS = [
   { id: 'red', name: 'Kırmızı', hex: '#FF6B6B' },
   { id: 'blue', name: 'Mavi', hex: '#4ECDC4' },
@@ -16,506 +24,227 @@ const COLORS = [
   { id: 'purple', name: 'Mor', hex: '#9B59B6' },
 ];
 
-const LEVEL_COLORS = {
-  1: 2, 2: 3, 3: 4, 4: 5, 5: 6
-};
-
-// Child-friendly messages
-
-
-interface GameState {
-  level: number;
-  sequence: Array<{ cellId: number, colorId: string }>;
-  userSequence: Array<{ cellId: number, colorId: string }>;
-  isShowingSequence: boolean;
-  gameOver: boolean;
-  gameStarted: boolean;
-  isUserTurn: boolean;
-}
+type Phase = 'welcome' | 'playing' | 'showing' | 'feedback' | 'game_over' | 'victory';
 
 const ColorGrid: React.FC = () => {
   const { playSound } = useSound();
   const { saveGamePlay } = useGamePersistence();
-    const { feedbackState, showFeedback } = useGameFeedback();
+  const { submitResult } = useExam();
+  const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1000 });
   const location = useLocation();
-  const gameStartTimeRef = useRef<number>(0);
+  const navigate = useNavigate();
 
-  const [cells, setCells] = useState(
-    Array(9).fill(null).map((_, index) => ({ id: index, activeColor: null as string | null }))
-  );
+  const examMode = location.state?.examMode || false;
+  const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
-  const [gameState, setGameState] = useState<GameState>({
-    level: 1,
-    sequence: [],
-    userSequence: [],
-    isShowingSequence: false,
-    gameOver: false,
-    gameStarted: false,
-    isUserTurn: false
-  });
-
+  const [phase, setPhase] = useState<Phase>('welcome');
   const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(3);
-  const [showLevelComplete, setShowLevelComplete] = useState(false);
-  // Back link
-  const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/beyin-antrenoru-merkezi";
+  const [lives, setLives] = useState(INITIAL_LIVES);
+  const [level, setLevel] = useState(1);
+  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const [sequence, setSequence] = useState<Array<{ cellId: number, colorId: string }>>([]);
+  const [userSequence, setUserSequence] = useState<Array<{ cellId: number, colorId: string }>>([]);
+  const [cells, setCells] = useState(Array(9).fill(null).map((_, i) => ({ id: i, activeColor: null as string | null })));
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const hasSavedRef = useRef(false);
+
+  const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
   const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
-  const startGame = useCallback(() => {
-      window.scrollTo(0, 0);
-    gameStartTimeRef.current = Date.now();
-    setGameState({
-      level: 1,
-      sequence: [],
-      userSequence: [],
-      isShowingSequence: false,
-      gameOver: false,
-      gameStarted: true,
-      isUserTurn: false
-    });
-    setCells(Array(9).fill(null).map((_, index) => ({ id: index, activeColor: null })));
-    setScore(0);
-    setLives(3);
-    setShowLevelComplete(false);
-    setTimeout(() => generateSequence(1), 1000);
-  }, []);
-
-  const generateSequence = useCallback((level: number) => {
-    setShowLevelComplete(false);
-    const numberOfColors = LEVEL_COLORS[level as keyof typeof LEVEL_COLORS] || 2;
-    const newSequence: Array<{ cellId: number, colorId: string }> = [];
-
-    for (let i = 0; i < numberOfColors; i++) {
-      const randomCellId = Math.floor(Math.random() * 9);
-      const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-      newSequence.push({ cellId: randomCellId, colorId: randomColor.id });
+  useEffect(() => {
+    if (phase !== 'welcome' && phase !== 'game_over' && phase !== 'victory' && timeLeft > 0) {
+      timerRef.current = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
+    } else if (timeLeft === 0 && (phase === 'playing' || phase === 'showing')) {
+      handleGameOver();
     }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [phase, timeLeft]);
 
-    setGameState(prev => ({
-      ...prev,
-      level,
-      sequence: newSequence,
-      userSequence: [],
-      isShowingSequence: true,
-      isUserTurn: false
-    }));
+  const showSequenceAnimation = async (seq: Array<{ cellId: number, colorId: string }>) => {
+    setPhase('showing');
+    const displayTime = Math.max(300, 1000 - (level * 30)); // Getting faster
+    const delayTime = Math.max(100, 400 - (level * 10));
 
-    showSequence(newSequence);
-  }, []);
+    await new Promise(r => setTimeout(r, 600));
 
-  const showSequence = async (sequence: Array<{ cellId: number, colorId: string }>) => {
-    const colorDisplayTime = 1200;
-    const delayBetweenColors = 400;
-
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    for (let i = 0; i < sequence.length; i++) {
-      const { cellId, colorId } = sequence[i];
-
+    for (let i = 0; i < seq.length; i++) {
+      const { cellId, colorId } = seq[i];
       setCells(prev => prev.map(c => c.id === cellId ? { ...c, activeColor: colorId } : c));
       playSound('pop');
-      await new Promise(resolve => setTimeout(resolve, colorDisplayTime));
+      await new Promise(r => setTimeout(r, displayTime));
       setCells(prev => prev.map(c => c.id === cellId ? { ...c, activeColor: null } : c));
-
-      if (i < sequence.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, delayBetweenColors));
-      }
+      if (i < seq.length - 1) await new Promise(r => setTimeout(r, delayTime));
     }
-
-    setGameState(prev => ({ ...prev, isShowingSequence: false, isUserTurn: true }));
+    setPhase('playing');
+    setUserSequence([]);
   };
 
-  const handleCellClick = (cellId: number) => {
-    if (gameState.isShowingSequence || !gameState.isUserTurn || gameState.gameOver || showLevelComplete) return;
+  const generateSequence = useCallback((lvl: number) => {
+    const count = lvl + 1; // Level 1: 2 colors, Level 20: 21 colors
+    const newSeq: Array<{ cellId: number, colorId: string }> = [];
+    for (let i = 0; i < count; i++) {
+      newSeq.push({
+        cellId: Math.floor(Math.random() * 9),
+        colorId: COLORS[Math.floor(Math.random() * COLORS.length)].id
+      });
+    }
+    setSequence(newSeq);
+    setCells(prev => prev.map(c => ({ ...c, activeColor: null })));
+    showSequenceAnimation(newSeq);
+  }, [level]);
 
-    const currentStep = gameState.userSequence.length;
-    const expected = gameState.sequence[currentStep];
+  const handleStart = useCallback(() => {
+    window.scrollTo(0, 0);
+    setScore(0);
+    setLives(INITIAL_LIVES);
+    setLevel(1);
+    setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+    startTimeRef.current = Date.now();
+    hasSavedRef.current = false;
+    generateSequence(1);
+  }, [generateSequence, examMode, examTimeLimit]);
+
+  useEffect(() => {
+    if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart();
+  }, [location.state, examMode, phase, handleStart]);
+
+  const handleGameOver = useCallback(async () => {
+    if (hasSavedRef.current) return;
+    hasSavedRef.current = true;
+    setPhase('game_over');
+    const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+    if (examMode) {
+      await submitResult(level >= 5, score, MAX_LEVEL * 100, duration);
+      navigate('/atolyeler/sinav-simulasyonu/devam');
+      return;
+    }
+    await saveGamePlay({
+      game_id: 'renk-sekans',
+      score_achieved: score,
+      duration_seconds: duration,
+      metadata: { levels_completed: level, final_lives: lives, game_name: 'Renk Sekansı' },
+    });
+  }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate]);
+
+  const handleVictory = useCallback(async () => {
+    if (hasSavedRef.current) return;
+    hasSavedRef.current = true;
+    setPhase('victory');
+    const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+    if (examMode) {
+      await submitResult(true, score, MAX_LEVEL * 100, duration);
+      navigate('/atolyeler/sinav-simulasyonu/devam');
+      return;
+    }
+    await saveGamePlay({
+      game_id: 'renk-sekans',
+      score_achieved: score,
+      duration_seconds: duration,
+      metadata: { levels_completed: MAX_LEVEL, victory: true, game_name: 'Renk Sekansı' },
+    });
+  }, [saveGamePlay, score, examMode, submitResult, navigate]);
+
+  const handleCellClick = (cellId: number) => {
+    if (phase !== 'playing') return;
+
+    const currentStep = userSequence.length;
+    const expected = sequence[currentStep];
 
     if (cellId !== expected.cellId) {
       playSound('incorrect');
       showFeedback(false);
-
-      const newLives = lives - 1;
-      setLives(newLives);
-
+      setPhase('feedback');
+      setLives(l => l - 1);
       setTimeout(() => {
-        if (newLives <= 0) {
-          setGameState(prev => ({ ...prev, gameOver: true, isUserTurn: false }));
-        } else {
-          // Retry current level
-          generateSequence(gameState.level);
-        }
-      }, 1500);
+        dismissFeedback();
+        const nl = lives - 1;
+        if (nl <= 0) { handleGameOver(); return; }
+        generateSequence(level); // Retry level
+      }, 1000);
       return;
     }
+
 
     setCells(prev => prev.map(c => c.id === cellId ? { ...c, activeColor: expected.colorId } : c));
     playSound('select');
 
-    const newUserSequence = [...gameState.userSequence, expected];
-    setGameState(prev => ({ ...prev, userSequence: newUserSequence }));
+    const newUserSequence = [...userSequence, expected];
+    setUserSequence(newUserSequence);
 
     setTimeout(() => {
       setCells(prev => prev.map(c => c.id === cellId ? { ...c, activeColor: null } : c));
-
-      if (newUserSequence.length === gameState.sequence.length) {
-        setScore(prev => prev + gameState.level * 10);
+      if (newUserSequence.length === sequence.length) {
+        setScore(s => s + level * 50);
         showFeedback(true);
-
-        if (gameState.level === 5) {
-          playSound('complete');
-          setTimeout(() => {
-            setGameState(prev => ({ ...prev, gameOver: true, isUserTurn: false }));
-          }, 1500);
-        } else {
-          playSound('correct');
-          setTimeout(() => {
-            setShowLevelComplete(true);
-          }, 1500);
-        }
+        setPhase('feedback');
+        setTimeout(() => {
+          dismissFeedback();
+          if (level >= MAX_LEVEL) { handleVictory(); return; }
+          setLevel(l => l + 1);
+          generateSequence(level + 1);
+        }, 1000);
       }
-    }, 400);
+    }, 300);
   };
 
-  // Save game data on game over
-  useEffect(() => {
-    if (gameState.gameOver && gameStartTimeRef.current > 0) {
-      const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-      saveGamePlay({
-        game_id: 'renk-sekans',
-        score_achieved: score,
-        duration_seconds: durationSeconds,
-        metadata: {
-          level_reached: gameState.level,
-          game_name: 'Renk Sekansı',
-        }
-      });
-    }
-  }, [gameState.gameOver, score, gameState.level, saveGamePlay]);
-
-  // Auto start from HUB
-  useEffect(() => {
-    if (location.state?.autoStart && !gameState.gameStarted) {
-      startGame();
-    }
-  }, [location.state, gameState.gameStarted, startGame]);
+  const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 text-white">
-      {/* Decorative Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
-
-      {/* Header */}
       <div className="relative z-10 p-4 pt-20">
-        <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
-          <Link
-            to={backLink}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-          >
-            <ChevronLeft size={20} />
-            <span>{backLabel}</span>
-          </Link>
-
-          {gameState.gameStarted && !gameState.gameOver && (
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+          {(phase === 'playing' || phase === 'showing' || phase === 'feedback') && (
             <div className="flex items-center gap-4 flex-wrap">
-              {/* Score */}
-              <div
-                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                  boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(251, 191, 36, 0.3)'
-                }}
-              >
-                <Star className="text-amber-400 fill-amber-400" size={18} />
-                <span className="font-bold text-amber-400">{score}</span>
-              </div>
-
-              {/* Lives */}
-              <div
-                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                  boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)'
-                }}
-              >
-                {[...Array(3)].map((_, i) => (
-                  <Heart
-                    key={i}
-                    size={18}
-                    className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
-                  />
-                ))}
-              </div>
-
-              {/* Level */}
-              <div
-                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
-                  boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)'
-                }}
-              >
-                <Zap className="text-emerald-400" size={18} />
-                <span className="font-bold text-emerald-400">Seviye {gameState.level}/5</span>
-              </div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(251, 191, 36, 0.3)' }}><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />))}</div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', border: '1px solid rgba(59, 130, 246, 0.3)' }}><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%)', border: '1px solid rgba(139, 92, 246, 0.3)' }}><Zap className="text-violet-400" size={18} /><span className="font-bold text-violet-400">{level}/{MAX_LEVEL}</span></div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Main Content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
         <AnimatePresence mode="wait">
-          {/* Welcome Screen */}
-          {!gameState.gameStarted && (
-            <motion.div
-              key="welcome"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="text-center max-w-xl"
-            >
-              {/* 3D Gummy Icon */}
-              <motion.div
-                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                style={{
-                  background: 'linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%)',
-                  boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                }}
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <Grid3X3 size={52} className="text-white drop-shadow-lg" />
-              </motion.div>
-
-              <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                🎨 Renk Sekansı
-              </h1>
-
-              {/* Instructions */}
+          {phase === 'welcome' && (
+            <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
+              <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6" style={{ background: 'linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><Grid3X3 size={52} className="text-white drop-shadow-lg" /></motion.div>
+              <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Renk Sekansı</h1>
+              <p className="text-slate-400 mb-8">Renklerin yanış sırasını aklında tut ve aynı sırayla tekrarla! Görsel hafızanı zirveye taşı.</p>
               <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
-                <h3 className="text-lg font-bold text-purple-300 mb-3 flex items-center gap-2">
-                  <Eye size={20} /> Nasıl Oynanır?
-                </h3>
+                <h3 className="text-lg font-bold text-purple-300 mb-3 flex items-center gap-2"><Eye size={20} /> Nasıl Oynanır?</h3>
                 <ul className="space-y-2 text-slate-300 text-sm">
-                  <li className="flex items-center gap-2">
-                    <Sparkles size={14} className="text-pink-400" />
-                    <span>Renklerin yanış sırasını izle</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Sparkles size={14} className="text-pink-400" />
-                    <span>Aynı hücrelere aynı sırayla tıkla</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Sparkles size={14} className="text-pink-400" />
-                    <span>Her seviyede sekans uzar</span>
-                  </li>
+                  <li className="flex items-center gap-2"><Sparkles size={14} className="text-pink-400" /><span>Ekranda yanıp sönen renkli kutuları izle</span></li>
+                  <li className="flex items-center gap-2"><Sparkles size={14} className="text-pink-400" /><span>Sıra sana geldiğinde aynı kutulara aynı sırayla tıkla</span></li>
+                  <li className="flex items-center gap-2"><Sparkles size={14} className="text-pink-400" /><span>Her seviyede kutu sayısı ve hız artacak!</span></li>
                 </ul>
               </div>
-
-              {/* TUZÖ Badge */}
-              <div className="bg-purple-500/10 text-purple-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-purple-500/30">
-                TUZÖ 5.4.2 Görsel Kısa Süreli Bellek
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.05, y: -4 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={startGame}
-                className="px-8 py-4 rounded-2xl font-bold text-lg"
-                style={{
-                  background: 'linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%)',
-                  boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(155, 89, 182, 0.4)'
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <Play size={24} fill="currentColor" />
-                  <span>Başla</span>
-                </div>
-              </motion.button>
+              <div className="bg-purple-500/10 text-purple-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-purple-500/30 font-bold uppercase tracking-widest">TUZÖ 5.4.2 Görsel Kısa Süreli Bellek</div>
+              <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 rounded-2xl font-bold text-xl" style={{ background: 'linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%)', boxShadow: '0 8px 32px rgba(155, 89, 182, 0.4)' }}><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
             </motion.div>
           )}
-
-          {/* Game Screen */}
-          {gameState.gameStarted && !gameState.gameOver && !showLevelComplete && (
-            <motion.div
-              key="game"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full max-w-md"
-            >
-              {/* Status */}
-              <div className="text-center mb-6">
-                <p className="text-lg font-bold text-purple-300">
-                  {gameState.isShowingSequence ? '👀 Renkleri İzle...' : '🎯 Sıra Sende!'}
-                </p>
-              </div>
-
-              {/* 3x3 Grid */}
-              <div
-                className="p-6 rounded-3xl"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                  boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                  border: '1px solid rgba(255,255,255,0.1)'
-                }}
-              >
-                <div className="grid grid-cols-3 gap-3">
-                  {cells.map((cell) => {
-                    const activeColorData = COLORS.find(c => c.id === cell.activeColor);
-                    return (
-                      <motion.button
-                        key={cell.id}
-                        whileHover={gameState.isUserTurn ? { scale: 0.95, y: -2 } : {}}
-                        whileTap={gameState.isUserTurn ? { scale: 0.9 } : {}}
-                        onClick={() => handleCellClick(cell.id)}
-                        className="aspect-square rounded-[30%] transition-all"
-                        style={{
-                          background: cell.activeColor
-                            ? activeColorData?.hex
-                            : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                          boxShadow: cell.activeColor
-                            ? `inset 0 -6px 12px rgba(0,0,0,0.3), inset 0 6px 12px rgba(255,255,255,0.3), 0 0 30px ${activeColorData?.hex}60`
-                            : 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
-                          border: cell.activeColor
-                            ? `2px solid ${activeColorData?.hex}`
-                            : '1px solid rgba(255,255,255,0.1)',
-                          cursor: gameState.isUserTurn ? 'pointer' : 'default'
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
+          {(phase === 'playing' || phase === 'showing' || phase === 'feedback') && (
+            <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-md">
+              <div className="text-center mb-8"><motion.p animate={{ scale: phase === 'showing' ? [1, 1.05, 1] : 1 }} transition={{ repeat: Infinity, duration: 2 }} className={`text-2xl font-black ${phase === 'showing' ? 'text-purple-300' : 'text-emerald-400'}`}>{phase === 'showing' ? '👀 Dikkatle İzle...' : '🎯 Sıra Sende!'}</motion.p></div>
+              <div className="p-8 rounded-[40px] bg-slate-900/50 backdrop-blur-2xl border border-white/10 shadow-[0_24px_48px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.1)]"><div className="grid grid-cols-3 gap-4">{cells.map((cell) => { const color = COLORS.find(c => c.id === cell.activeColor); return (<motion.button key={cell.id} whileHover={phase === 'playing' ? { scale: 0.95 } : {}} whileTap={phase === 'playing' ? { scale: 0.9 } : {}} onClick={() => handleCellClick(cell.id)} className="aspect-square rounded-3xl transition-all duration-300" style={{ background: cell.activeColor ? color?.hex : 'rgba(255,255,255,0.05)', boxShadow: cell.activeColor ? `0 0 40px ${color?.hex}80, inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3)` : 'inset 0 4px 8px rgba(0,0,0,0.2), 0 2px 4px rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }} />); })}</div></div>
             </motion.div>
           )}
-
-          {/* Level Complete Screen */}
-          {showLevelComplete && (
-            <motion.div
-              key="level-complete"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="text-center max-w-md"
-            >
-              <motion.div
-                className="w-24 h-24 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                style={{
-                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                  boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                }}
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 0.5 }}
-              >
-                <Star size={48} className="text-white fill-white" />
-              </motion.div>
-
-              <h2 className="text-3xl font-black text-emerald-300 mb-2">Harika! 🎉</h2>
-              <p className="text-slate-400 mb-6">{gameState.level}. Seviye Tamamlandı!</p>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => generateSequence(gameState.level + 1)}
-                className="px-8 py-4 rounded-2xl font-bold text-lg"
-                style={{
-                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                  boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(16, 185, 129, 0.4)'
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <Zap size={24} />
-                  <span>Sonraki Seviye</span>
-                </div>
-              </motion.button>
-            </motion.div>
-          )}
-
-          {/* Game Over Screen */}
-          {gameState.gameOver && (
-            <motion.div
-              key="gameover"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="text-center max-w-xl"
-            >
-              <motion.div
-                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                style={{
-                  background: gameState.level === 5
-                    ? 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)'
-                    : 'linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%)',
-                  boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                }}
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Trophy size={52} className="text-white drop-shadow-lg" />
-              </motion.div>
-
-              <h2 className="text-3xl font-black text-amber-300 mb-2">
-                {gameState.level === 5 ? '🎉 Şampiyon!' : 'Görev Tamamlandı!'}
-              </h2>
-              <p className="text-slate-400 mb-6">
-                {gameState.level === 5 ? 'Tüm seviyeleri tamamladın!' : 'Biraz daha pratik yap!'}
-              </p>
-
-              <div
-                className="rounded-2xl p-6 mb-8"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                  boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                  border: '1px solid rgba(255,255,255,0.1)'
-                }}
-              >
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center">
-                    <p className="text-slate-400 text-sm">Skor</p>
-                    <p className="text-3xl font-bold text-amber-400">{score}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-slate-400 text-sm">Seviye</p>
-                    <p className="text-3xl font-bold text-emerald-400">{gameState.level}/5</p>
-                  </div>
-                </div>
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={startGame}
-                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
-                style={{
-                  background: 'linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%)',
-                  boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(155, 89, 182, 0.4)'
-                }}
-              >
-                <div className="flex items-center justify-center gap-3">
-                  <RotateCcw size={24} />
-                  <span>Tekrar Oyna</span>
-                </div>
-              </motion.button>
-
-              <Link
-                to={backLink}
-                className="block text-slate-500 hover:text-white transition-colors"
-              >
-                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
-              </Link>
+          {(phase === 'game_over' || phase === 'victory') && (
+            <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
+              <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-400 to-pink-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+              <h2 className="text-3xl font-bold text-amber-400 mb-2">{phase === 'victory' ? '🎖️ Hafıza Ustası!' : 'Harika Deneme!'}</h2>
+              <p className="text-slate-400 mb-6">{phase === 'victory' ? 'Tüm sekansları başarıyla hatırladın!' : 'Sekansı biraz daha geliştirerek tekrar dene!'}</p>
+              <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
+              <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl font-bold text-xl mb-4" style={{ boxShadow: '0 8px 32px rgba(155, 89, 182, 0.4)' }}><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+              <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link>
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Feedback Overlay */}
         <GameFeedbackBanner feedback={feedbackState} />
       </div>
     </div>

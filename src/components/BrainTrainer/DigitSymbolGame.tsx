@@ -1,529 +1,199 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Timer, CheckCircle2, ChevronLeft, Zap, Hash, Eye, Sparkles } from 'lucide-react';
+import {
+    Trophy, RotateCcw, Play, Star, Timer as TimerIcon,
+    ChevronLeft, Zap, Hash, Sparkles, Heart
+} from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
+import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
+import { useSound } from '../../hooks/useSound';
 
-// Sembol seti - her biri benzersiz ve kolay ayırt edilebilir
+// ─── Constants ───────────────────────────────────────────────
+const INITIAL_LIVES = 5;
+const TIME_LIMIT = 180;
+const MAX_LEVEL = 20;
+const GAME_ID = 'rakam-sembol';
 const SYMBOLS = ['◯', '△', '□', '◇', '★', '♡', '⬡', '⬢', '✕'];
 
-// Sayı-Sembol eşleştirme tablosu (1-9)
 const createSymbolMap = () => {
     const shuffled = [...SYMBOLS].sort(() => Math.random() - 0.5);
     const map: Record<number, string> = {};
-    for (let i = 1; i <= 9; i++) {
-        map[i] = shuffled[i - 1];
-    }
+    for (let i = 1; i <= 9; i++) map[i] = shuffled[i - 1];
     return map;
 };
 
+type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
+
 const DigitSymbolGame: React.FC = () => {
+    const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
-    const { feedbackState, showFeedback } = useGameFeedback();
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
     const location = useLocation();
     const navigate = useNavigate();
-    const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
+
+    const [phase, setPhase] = useState<Phase>('welcome');
     const [symbolMap, setSymbolMap] = useState<Record<number, string>>({});
     const [currentNumber, setCurrentNumber] = useState<number>(1);
     const [score, setScore] = useState(0);
-    const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(60);
-    const [streak, setStreak] = useState(0);
-    const [bestStreak, setBestStreak] = useState(0);
-    const [lastAnswer, setLastAnswer] = useState<string | null>(null);
-    const gameStartTimeRef = useRef<number>(0);
+    const [lives, setLives] = useState(INITIAL_LIVES);
+    const [level, setLevel] = useState(1);
+    const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+    const [scoreInLevel, setScoreInLevel] = useState(0);
+
     const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const hasSavedRef = useRef<boolean>(false);
+    const startTimeRef = useRef(0);
+    const hasSavedRef = useRef(false);
 
-    const gameDuration = 60; // 60 saniye
-
-    // Exam Mode Props
     const examMode = location.state?.examMode || false;
-    const examTimeLimit = location.state?.examTimeLimit || gameDuration;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
-    // Back link
+    const startLevel = useCallback((_lvl: number) => {
+        setSymbolMap(createSymbolMap()); setCurrentNumber(Math.floor(Math.random() * 9) + 1); setScoreInLevel(0); playSound('slide');
+    }, [playSound]);
+
+    const handleStart = useCallback(() => {
+        window.scrollTo(0, 0); setPhase('playing'); setScore(0); setLives(INITIAL_LIVES); setLevel(1); setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        startTimeRef.current = Date.now(); hasSavedRef.current = false; startLevel(1);
+    }, [startLevel, examMode, examTimeLimit]);
+
+    useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, examMode, phase, handleStart]);
+
+    useEffect(() => {
+        if (phase === 'playing' && timeLeft > 0) {
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
+        }
+    }, [phase, timeLeft]);
+
+    const handleAnswer = (sym: string) => {
+        if (phase !== 'playing' || !!feedbackState) return;
+        const correct = symbolMap[currentNumber] === sym;
+        if (correct) {
+            playSound('pop'); setScore(s => s + 15 + level * 2);
+            const ns = scoreInLevel + 1;
+            if (ns >= 5 + Math.floor(level / 4)) {
+                playSound('correct'); showFeedback(true);
+                setTimeout(() => {
+                    dismissFeedback();
+                    if (level >= MAX_LEVEL) setPhase('victory');
+                    else { const nl = level + 1; setLevel(nl); setTimeLeft(p => Math.min(p + 10, TIME_LIMIT)); startLevel(nl); }
+                }, 1000);
+            } else { setScoreInLevel(ns); setCurrentNumber(Math.floor(Math.random() * 9) + 1); }
+        } else {
+            playSound('incorrect'); setLives(l => { const nl = l - 1; if (nl <= 0) setPhase('game_over'); return nl; });
+            showFeedback(false); setTimeout(dismissFeedback, 1000);
+        }
+    };
+
+    const handleFinish = useCallback(async (v: boolean) => {
+        if (hasSavedRef.current) return; hasSavedRef.current = true;
+        const dur = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        if (examMode) { await submitResult(v || level >= 5, score, MAX_LEVEL * 100, dur); navigate('/atolyeler/sinav-simulasyonu/devam'); return; }
+        await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: dur, metadata: { level: level, victory: v } });
+    }, [score, level, examMode, submitResult, navigate, saveGamePlay]);
+
+    useEffect(() => { if (phase === 'game_over' || phase === 'victory') handleFinish(phase === 'victory'); }, [phase, handleFinish]);
+
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
     const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
-    // Yeni sayı üret
-    const generateNewNumber = useCallback(() => {
-        const newNumber = Math.floor(Math.random() * 9) + 1;
-        setCurrentNumber(newNumber);
-    }, []);
-
-    // Oyunu başlat
-    const startGame = useCallback(() => {
-        window.scrollTo(0, 0);
-        const newMap = createSymbolMap();
-        setSymbolMap(newMap);
-        setScore(0);
-        setCorrectCount(0);
-        setWrongCount(0);
-        setTimeLeft(examMode ? examTimeLimit : gameDuration);
-        setStreak(0);
-        setBestStreak(0);
-        setLastAnswer(null);
-        generateNewNumber();
-        setGameState('playing');
-        gameStartTimeRef.current = Date.now();
-        hasSavedRef.current = false;
-    }, [generateNewNumber, examMode, examTimeLimit]);
-
-    // Auto start from HUB or examMode
-    useEffect(() => {
-        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
-            startGame();
-        }
-    }, [location.state, gameState, startGame, examMode]);
-
-    // Zamanlayıcı
-    useEffect(() => {
-        if (gameState === 'playing' && timeLeft > 0) {
-            timerRef.current = setTimeout(() => {
-                setTimeLeft(prev => prev - 1);
-            }, 1000);
-        } else if (gameState === 'playing' && timeLeft === 0) {
-            setGameState('finished');
-        }
-
-        return () => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-            }
-        };
-    }, [gameState, timeLeft]);
-
-    // Oyun bittiğinde verileri kaydet
-    useEffect(() => {
-        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
-            hasSavedRef.current = true;
-            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-            const acc = correctCount + wrongCount > 0 ? correctCount / (correctCount + wrongCount) : 0;
-
-            // Exam mode: submit result and redirect
-            if (examMode) {
-                (async () => {
-                    await submitResult(acc >= 0.6, score, (correctCount + wrongCount) * 50, durationSeconds);
-                        navigate("/atolyeler/sinav-simulasyonu/devam");
-                })();
-                return;
-            }
-
-            saveGamePlay({
-                game_id: 'simge-kodlama',
-                score_achieved: score,
-                duration_seconds: durationSeconds,
-                metadata: {
-                    correct_count: correctCount,
-                    wrong_count: wrongCount,
-                    best_streak: bestStreak,
-                    total_attempts: correctCount + wrongCount,
-                    accuracy: correctCount + wrongCount > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0,
-                    game_name: 'Simge Kodlama',
-                }
-            });
-        }
-    }, [gameState, score, correctCount, wrongCount, bestStreak, saveGamePlay, examMode, submitResult, navigate]);
-
-    // Cevap kontrolü
-    const handleAnswer = (selectedSymbol: string) => {
-        if (feedbackState || gameState !== 'playing') return;
-
-        const correctSymbol = symbolMap[currentNumber];
-        const isCorrect = selectedSymbol === correctSymbol;
-        setLastAnswer(selectedSymbol);
-
-        if (isCorrect) {
-            showFeedback(true);
-            setCorrectCount(prev => prev + 1);
-            setStreak(prev => {
-                const newStreak = prev + 1;
-                if (newStreak > bestStreak) setBestStreak(newStreak);
-                return newStreak;
-            });
-            const streakBonus = Math.min(streak * 5, 50);
-            setScore(prev => prev + 50 + streakBonus);
-        } else {
-            showFeedback(false);
-            setWrongCount(prev => prev + 1);
-            setStreak(0);
-        }
-
-        // Hızlı geçiş - işlem hızı testi
-        setTimeout(() => {
-            setLastAnswer(null);
-            generateNewNumber();
-        }, 300);
-    };
-
-    const accuracy = correctCount + wrongCount > 0
-        ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
-        : 0;
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+    if (phase === 'welcome') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-amber-950 to-orange-950 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" /></div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-amber-400 to-orange-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Hash size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-amber-300 via-orange-300 to-yellow-300 bg-clip-text text-transparent">Rakam Sembol</h1>
+                    <p className="text-slate-300 mb-8 text-lg">Sayılarla şekiller arasındaki bağı hızla kur, dikkatinle sembolleri eşleştirerek rekor kır!</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-amber-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Üstteki anahtardan her <strong>rakamın sembolünü</strong> öğren</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-amber-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Ortada sorulan rakama karşılık gelen sembolü aşağıdaki seçeneklerden bul</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-amber-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Süre bitmeden tüm eşleştirmeleri <strong>hızla tamamla</strong></span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-amber-500/10 text-amber-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-amber-500/30 font-bold uppercase tracking-widest">TUZÖ 5.6.1 Rakam-Sembol Eşleştirme & Hız</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-violet-950 to-indigo-950 text-white">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-            </div>
-
-            {/* Header */}
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-amber-950 to-orange-950 text-white relative overflow-hidden flex flex-col">
             <div className="relative z-10 p-4 pt-20">
-                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
-                    <Link
-                        to={backLink}
-                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft size={20} />
-                        <span>{backLabel}</span>
-                    </Link>
-
-                    {gameState === 'playing' && (
-                        <div className="flex items-center gap-4 flex-wrap">
-                            {/* Score */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(251, 191, 36, 0.3)'
-                                }}
-                            >
-                                <Star className="text-amber-400 fill-amber-400" size={18} />
-                                <span className="font-bold text-amber-400">{score}</span>
-                            </div>
-
-                            {/* Timer */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: timeLeft <= 10
-                                        ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)'
-                                        : 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: timeLeft <= 10
-                                        ? '1px solid rgba(239, 68, 68, 0.5)'
-                                        : '1px solid rgba(139, 92, 246, 0.3)',
-                                    animation: timeLeft <= 10 ? 'pulse 1s infinite' : 'none'
-                                }}
-                            >
-                                <Timer className={timeLeft <= 10 ? 'text-red-400' : 'text-violet-400'} size={18} />
-                                <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-violet-400'}`}>{formatTime(timeLeft)}</span>
-                            </div>
-
-                            {/* Streak */}
-                            {streak > 1 && (
-                                <div
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
-                                        boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(99, 102, 241, 0.3)'
-                                    }}
-                                >
-                                    <Zap className="text-indigo-400" size={18} />
-                                    <span className="font-bold text-indigo-400">x{streak}</span>
-                                </div>
-                            )}
-
-                            {/* Correct Count */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(16, 185, 129, 0.3)'
-                                }}
-                            >
-                                <CheckCircle2 className="text-emerald-400" size={18} />
-                                <span className="font-bold text-emerald-400">{correctCount}</span>
-                            </div>
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+                    {(phase === 'playing' || phase === 'feedback') && (
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20"><Star className="text-amber-400 fill-amber-400" size={16} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={16} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-950'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20"><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={16} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20"><Zap className="text-emerald-400" size={16} /><span className="font-bold text-emerald-400">Puan x{level}</span></div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
                 <AnimatePresence mode="wait">
-                    {/* Welcome Screen */}
-                    {gameState === 'idle' && (
-                        <motion.div
-                            key="welcome"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            {/* 3D Gummy Icon */}
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ y: [0, -8, 0] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                            >
-                                <Hash size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
-                                🔢 Simge Kodlama
-                            </h1>
-
-                            {/* Example */}
-                            <div
-                                className="rounded-2xl p-5 mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <p className="text-slate-400 text-sm mb-3">Nasıl Oynanır:</p>
-                                <div className="flex justify-center gap-4 mb-3 text-2xl">
-                                    {[1, 2, 3].map(n => (
-                                        <div key={n} className="flex flex-col items-center">
-                                            <span className="text-violet-400 font-bold">{n}</span>
-                                            <span className="text-white">{['◯', '△', '□'][n - 1]}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <p className="text-slate-400 text-sm">Ekranda sayı gösterilecek, o sayıya ait sembolü seç!</p>
-                            </div>
-
-                            {/* Instructions */}
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
-                                <h3 className="text-lg font-bold text-violet-300 mb-3 flex items-center gap-2">
-                                    <Eye size={20} /> Oyun Kuralları
-                                </h3>
-                                <ul className="space-y-2 text-slate-300 text-sm">
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-indigo-400" />
-                                        <span>1-9 arası sayılar ve 9 farklı sembol</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-indigo-400" />
-                                        <span>{gameDuration} saniye süren</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-indigo-400" />
-                                        <span>Ne kadar çok doğru, o kadar yüksek puan!</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* TUZÖ Badge */}
-                            <div className="bg-violet-500/10 text-violet-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-violet-500/30">
-                                TUZÖ 5.5.1 İşlem Hızı
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05, y: -4 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="px-8 py-4 rounded-2xl font-bold text-lg"
-                                style={{
-                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(139, 92, 246, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Play size={24} fill="currentColor" />
-                                    <span>Teste Başla</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* Playing */}
-                    {gameState === 'playing' && (
-                        <motion.div
-                            key="game"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-2xl"
-                        >
-                            {/* Legend - Sayı-Sembol Haritası */}
-                            <div
-                                className="rounded-2xl p-4 mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <p className="text-slate-400 text-xs text-center mb-3 uppercase tracking-wider">Referans Tablosu</p>
-                                <div className="flex justify-center gap-2 flex-wrap">
-                                    {Object.entries(symbolMap).map(([num, symbol]) => (
-                                        <div
-                                            key={num}
-                                            className="flex flex-col items-center bg-white/5 rounded-lg px-3 py-2 min-w-[45px]"
-                                        >
-                                            <span className="text-violet-400 font-bold">{num}</span>
-                                            <span className="text-white text-xl">{symbol}</span>
+                    {(phase === 'playing' || phase === 'feedback') && !feedbackState && (
+                        <motion.div key="game" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="w-full max-w-2xl space-y-8">
+                            <div className="bg-white/5 backdrop-blur-xl rounded-[3rem] p-6 border border-white/10 shadow-3xl">
+                                <div className="grid grid-cols-9 gap-1.5 sm:gap-2">
+                                    {Object.entries(symbolMap).map(([num, sym]) => (
+                                        <div key={num} className="bg-white/5 rounded-2xl p-2 border border-white/10 flex flex-col items-center gap-2 shadow-inner group hover:bg-white/10 transition-colors">
+                                            <span className="text-xl font-black text-amber-400">{num}</span>
+                                            <div className="h-px w-6 bg-white/10" />
+                                            <span className="text-2xl font-black text-white group-hover:scale-125 transition-transform">{sym}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Current Number Display */}
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={currentNumber + '-' + correctCount + wrongCount}
-                                    initial={{ opacity: 0, scale: 0.8 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.8 }}
-                                    transition={{ duration: 0.15 }}
-                                    className="text-center mb-6"
-                                >
-                                    <p className="text-slate-400 text-sm mb-2">Bu sayının sembolünü bul:</p>
-                                    <div
-                                        className="rounded-3xl p-8"
-                                        style={{
-                                            background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                            boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                            border: '1px solid rgba(255,255,255,0.1)'
-                                        }}
-                                    >
-                                        <div className="text-8xl font-black text-violet-400">
-                                            {currentNumber}
-                                        </div>
-                                    </div>
+                            <div className="flex flex-col items-center gap-4">
+                                <span className="text-xs font-black uppercase text-white/30 tracking-widest">HEDEF RAKAM</span>
+                                <motion.div key={currentNumber} initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="w-32 h-32 bg-gradient-to-br from-amber-400 to-orange-600 rounded-[3rem] shadow-3xl flex items-center justify-center border-4 border-white/20">
+                                    <span className="text-6xl font-black text-white drop-shadow-2xl">{currentNumber}</span>
                                 </motion.div>
-                            </AnimatePresence>
+                                <div className="flex gap-1 mt-2">
+                                    {Array.from({ length: 5 + Math.floor(level / 4) }).map((_, i) => (
+                                        <div key={i} className={`w-2 h-2 rounded-full ${i < scoreInLevel ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'bg-white/10'}`} />
+                                    ))}
+                                </div>
+                            </div>
 
-                            {/* Symbol Options */}
-                            <div className="grid grid-cols-3 gap-3">
-                                {SYMBOLS.map((symbol, idx) => {
-                                    const isSelected = lastAnswer === symbol;
-                                    const isCorrect = symbol === symbolMap[currentNumber];
-                                    const showResult = feedbackState !== null;
-
-                                    return (
-                                        <motion.button
-                                            key={symbol}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.03 }}
-                                            onClick={() => handleAnswer(symbol)}
-                                            disabled={feedbackState !== null}
-                                            whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
-                                            whileTap={!feedbackState ? { scale: 0.95 } : {}}
-                                            className="py-6 text-4xl font-bold rounded-[25%] transition-all"
-                                            style={{
-                                                background: showResult && isCorrect
-                                                    ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                                                    : showResult && isSelected && !isCorrect
-                                                        ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
-                                                        : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
-                                                border: showResult && isCorrect
-                                                    ? '2px solid #10B981'
-                                                    : '1px solid rgba(255,255,255,0.1)',
-                                                cursor: feedbackState ? 'default' : 'pointer',
-                                                opacity: showResult && !isCorrect && !isSelected ? 0.5 : 1
-                                            }}
-                                        >
-                                            {symbol}
-                                        </motion.button>
-                                    );
-                                })}
+                            <div className="grid grid-cols-3 sm:grid-cols-9 gap-3">
+                                {SYMBOLS.map(sym => (
+                                    <motion.button key={sym} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={() => handleAnswer(sym)} className="aspect-square bg-white/10 border border-white/10 rounded-2xl flex items-center justify-center shadow-xl hover:bg-white/20 hover:border-amber-500/50 transition-all group">
+                                        <span className="text-3xl font-black text-white group-hover:scale-110 transition-transform">{sym}</span>
+                                    </motion.button>
+                                ))}
                             </div>
                         </motion.div>
                     )}
 
-                    {/* Game Over */}
-                    {gameState === 'finished' && (
-                        <motion.div
-                            key="gameover"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                            >
-                                <Trophy size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
+                    {feedbackState && (
+                        <motion.div key="feed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center"><h2 className={`text-5xl font-black ${feedbackState.correct ? 'text-emerald-400' : 'text-red-400'} drop-shadow-2xl italic tracking-tighter`}>{feedbackState.correct ? 'ZİHİNSEL HIZ! 🔥' : 'DİKKAT!'}</h2><GameFeedbackBanner feedback={feedbackState} /></motion.div>
+                    )}
 
-                            <h2 className="text-3xl font-black text-amber-300 mb-2">
-                                {accuracy >= 80 ? '🎉 Süper!' : 'Süre Doldu!'}
-                            </h2>
-                            <p className="text-slate-400 mb-6">
-                                {accuracy >= 80 ? 'Muhteşem işlem hızı!' : 'Biraz daha pratik yap!'}
-                            </p>
-
-                            <div
-                                className="rounded-2xl p-6 mb-8"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-3xl font-bold text-emerald-400">%{accuracy}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Toplam Deneme</p>
-                                        <p className="text-3xl font-bold text-violet-400">{correctCount + wrongCount}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">En İyi Seri</p>
-                                        <p className="text-3xl font-bold text-indigo-400">x{bestStreak}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
-                                style={{
-                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(139, 92, 246, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center justify-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Oyna</span>
-                                </div>
-                            </motion.button>
-
-                            <Link
-                                to={backLink}
-                                className="block text-slate-500 hover:text-white transition-colors"
-                            >
-                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
-                            </Link>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-orange-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-black text-amber-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Sembol Ustası!' : 'Harika!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'Hızlı eşleştirme ve görsel tarama becerin tek kelimeyle mükemmel!' : 'Sayılarla sembolleri eşleştirirken biraz daha hızlanmalısın!'}</p>
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -533,4 +203,3 @@ const DigitSymbolGame: React.FC = () => {
 };
 
 export default DigitSymbolGame;
-

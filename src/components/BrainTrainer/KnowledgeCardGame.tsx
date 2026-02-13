@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Heart, CheckCircle2, XCircle, ChevronLeft, Zap, BookOpen, Loader2, AlertCircle, Sparkles, Timer, Eye } from 'lucide-react';
+import { Trophy, RotateCcw, Play, Star, Heart, ChevronLeft, BookOpen, Loader2, AlertCircle, Sparkles, Timer as TimerIcon, Eye } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSound } from '../../hooks/useSound';
@@ -9,722 +9,279 @@ import { useExam } from '../../contexts/ExamContext';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
 import GameFeedbackBanner from './shared/GameFeedbackBanner';
 
+// ─── Constants ──────────────────────────────────────
+const INITIAL_LIVES = 5;
+const TIME_LIMIT = 180;
+const MAX_LEVEL = 20;
+
 interface Question {
     id: string;
     originalText: string;
-    displayText: string; // Text with blank
+    displayText: string;
     correctAnswer: string;
     options: string[];
 }
 
-// Ana kelimeler listesi (doğru cevap olarak kullanılacak)
 const KEY_WORDS = [
     'beyin', 'kalp', 'akciğer', 'böbrek', 'mide', 'karaciğer', 'kemik', 'kas', 'deri', 'kan',
     'oksijen', 'karbondioksit', 'su', 'enerji', 'besin', 'vitamin', 'protein', 'mineral',
     'bitki', 'hayvan', 'böcek', 'kuş', 'balık', 'memeli', 'sürüngen', 'kurbağa',
     'güneş', 'ay', 'dünya', 'mevsim', 'yaz', 'kış', 'ilkbahar', 'sonbahar',
-    'sıcak', 'soğuk', 'ısı', 'sıcaklık', 'basınç', 'elektrik', 'manyetik', 'ışık',
-    'atom', 'molekül', 'hücre', 'organ', 'sistem', 'vücut', 'iskelet', 'sinir',
-    'kulak', 'göz', 'burun', 'dil', 'dokunma', 'tat', 'koku', 'ses', 'görme',
-    'fotosentez', 'solunum', 'sindirim', 'dolaşım', 'boşaltım',
-    'kök', 'gövde', 'yaprak', 'çiçek', 'meyve', 'tohum', 'polen',
-    'orman', 'çöl', 'okyanus', 'deniz', 'göl', 'nehir', 'dağ',
-    'yumurta', 'yavru', 'süt', 'kanat', 'tüy', 'pul', 'kabuk',
-    'arı', 'karınca', 'kelebek', 'örümcek', 'solucan', 'balina', 'yunus',
-    'aslan', 'fil', 'zürafa', 'tavşan', 'köpek', 'kedi', 'kuş', 'penguen',
-    'erime', 'donma', 'buharlaşma', 'yoğuşma', 'katı', 'sıvı', 'gaz'
+    ' atom', 'molekül', 'hücre', 'organ', 'sistem', 'vücut', 'iskelet', 'sinir',
+    'fotosentez', 'solunum', 'sindirim', 'dolaşım', 'boşaltım'
 ];
 
-// Child-friendly messages
+type Phase = 'welcome' | 'loading' | 'playing' | 'game_over' | 'victory' | 'error';
 
-
-interface KnowledgeCardGameProps {
-    examMode?: boolean;
-    examLevel?: number;
-    examTimeLimit?: number;
-}
-
-const KnowledgeCardGame: React.FC<KnowledgeCardGameProps> = ({ examMode: examModeProp = false }) => {
+const KnowledgeCardGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1000 });
+    const { submitResult } = useExam();
     const location = useLocation();
     const navigate = useNavigate();
-    const { submitResult } = useExam();
-    const { feedbackState, showFeedback } = useGameFeedback();
 
-    // examMode can come from props OR location.state (when navigating from ExamContinuePage)
-    const examMode = examModeProp || location.state?.examMode === true;
-    const [gameState, setGameState] = useState<'idle' | 'loading' | 'playing' | 'finished' | 'error'>('idle');
+    const [phase, setPhase] = useState<Phase>('welcome');
     const [questions, setQuestions] = useState<Question[]>([]);
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [currentIndex, setCurrentIndex] = useState(0);
     const [score, setScore] = useState(0);
-    const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0); const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const [lives, setLives] = useState(INITIAL_LIVES);
+    const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
     const [streak, setStreak] = useState(0);
-    const [bestStreak, setBestStreak] = useState(0);
-    const [lives, setLives] = useState(3);
-    const [totalTime, setTotalTime] = useState(180);
     const [errorMessage, setErrorMessage] = useState('');
-    const gameStartTimeRef = useRef<number>(0);
+
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const startTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
 
-    const totalQuestions = 10;
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
-    // Back link
-    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
-    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
-
-    // Kelime çıkarma ve boşluk oluşturma
     const createBlankFromSentence = (text: string): { displayText: string; answer: string } | null => {
         const words = text.split(/\s+/);
-
-        // Anahtar kelimelerden birini bul
         for (const keyWord of KEY_WORDS) {
-            const wordIndex = words.findIndex(w =>
-                w.toLowerCase().replace(/[.,;:!?()]/g, '') === keyWord.toLowerCase()
-            );
+            const wordIndex = words.findIndex(w => w.toLowerCase().replace(/[.,;:!?()]/g, '') === keyWord.toLowerCase());
             if (wordIndex !== -1) {
                 const originalWord = words[wordIndex].replace(/[.,;:!?()]/g, '');
                 const punctuation = words[wordIndex].replace(originalWord, '');
                 words[wordIndex] = '_____' + punctuation;
-                return {
-                    displayText: words.join(' '),
-                    answer: originalWord
-                };
+                return { displayText: words.join(' '), answer: originalWord };
             }
         }
-
-        // Anahtar kelime bulunamazsa, 4+ harfli kelimeleri dene
-        const longWords = words
-            .map((w, i) => ({ word: w.replace(/[.,;:!?()]/g, ''), index: i, original: w }))
-            .filter(w => w.word.length >= 4 && !['için', 'veya', 'gibi', 'çok', 'daha', 'olan', 'olur', 'olarak', 'eder', 'eler', 'alar', 'eler'].includes(w.word.toLowerCase()));
-
+        const longWords = words.map((w, i) => ({ word: w.replace(/[.,;:!?()]/g, ''), index: i, original: w })).filter(w => w.word.length >= 4 && !['için', 'veya', 'gibi'].includes(w.word.toLowerCase()));
         if (longWords.length === 0) return null;
-
         const selected = longWords[Math.floor(Math.random() * longWords.length)];
         const punctuation = selected.original.replace(selected.word, '');
         words[selected.index] = '_____' + punctuation;
-
-        return {
-            displayText: words.join(' '),
-            answer: selected.word
-        };
+        return { displayText: words.join(' '), answer: selected.word };
     };
 
-    // Yanlış seçenekler oluştur
-    const generateWrongOptions = (correctAnswer: string, allAnswers: string[]): string[] => {
-        const wrongOptions = allAnswers
-            .filter(a => a.toLowerCase() !== correctAnswer.toLowerCase() && a.length >= 3)
-            .sort(() => Math.random() - 0.5)
-            .slice(0, 3);
-
-        // Yeterli yanlış seçenek yoksa anahtar kelimelerden al
-        while (wrongOptions.length < 3) {
-            const randomWord = KEY_WORDS[Math.floor(Math.random() * KEY_WORDS.length)];
-            if (!wrongOptions.includes(randomWord) && randomWord.toLowerCase() !== correctAnswer.toLowerCase()) {
-                wrongOptions.push(randomWord);
-            }
-        }
-
-        return wrongOptions;
-    };
-
-    // Veritabanından bilgi kartlarını çek
     const fetchQuestions = useCallback(async () => {
-        setGameState('loading');
+        setPhase('loading');
         try {
-            const { data, error } = await supabase
-                .from('bilgi_kartlari')
-                .select('id, icerik')
-                .eq('is_active', true)
-                .limit(200);
-
+            const { data, error } = await supabase.from('bilgi_kartlari').select('id, icerik').eq('is_active', true).limit(100);
             if (error) throw error;
-
             if (!data || data.length === 0) {
-                setErrorMessage('Bilgi kartı bulunamadı. Lütfen daha sonra tekrar deneyin.');
-                setGameState('error');
+                setErrorMessage('Bilgi kartı bulunamadı.');
+                setPhase('error');
                 return;
             }
-
-            // Kartları işle ve soruları oluştur
-            const processedQuestions: Question[] = [];
             const allAnswers: string[] = [];
-            const shuffledData = data.sort(() => Math.random() - 0.5);
-
-            for (const card of shuffledData) {
-                if (processedQuestions.length >= totalQuestions) break;
-
-                const result = createBlankFromSentence(card.icerik);
-                if (result) {
-                    allAnswers.push(result.answer);
-                    processedQuestions.push({
-                        id: card.id,
-                        originalText: card.icerik,
-                        displayText: result.displayText,
-                        correctAnswer: result.answer,
-                        options: [] // Sonra dolduracağız
-                    });
+            const processed: Question[] = [];
+            const shuffled = data.sort(() => Math.random() - 0.5);
+            for (const card of shuffled) {
+                if (processed.length >= MAX_LEVEL) break;
+                const res = createBlankFromSentence(card.icerik);
+                if (res) {
+                    allAnswers.push(res.answer);
+                    processed.push({ id: card.id, originalText: card.icerik, displayText: res.displayText, correctAnswer: res.answer, options: [] });
                 }
             }
-
-            // Seçenekleri oluştur
-            const finalQuestions = processedQuestions.map(q => {
-                const wrongOptions = generateWrongOptions(q.correctAnswer, allAnswers);
-                const allOptions = [q.correctAnswer, ...wrongOptions].sort(() => Math.random() - 0.5);
-                return { ...q, options: allOptions };
+            const finalQuestions = processed.map(q => {
+                const wrong = allAnswers.filter(a => a.toLowerCase() !== q.correctAnswer.toLowerCase()).sort(() => Math.random() - 0.5).slice(0, 3);
+                while (wrong.length < 3) {
+                    const r = KEY_WORDS[Math.floor(Math.random() * KEY_WORDS.length)];
+                    if (!wrong.includes(r) && r.toLowerCase() !== q.correctAnswer.toLowerCase()) wrong.push(r);
+                }
+                return { ...q, options: [q.correctAnswer, ...wrong].sort(() => Math.random() - 0.5) };
             });
-
-            if (finalQuestions.length < 5) {
-                setErrorMessage('Yeterli soru oluşturulamadı. Lütfen daha sonra tekrar deneyin.');
-                setGameState('error');
-                return;
-            }
-
             setQuestions(finalQuestions);
-            setGameState('playing');
-            gameStartTimeRef.current = Date.now();
-        } catch (error) {
-            console.error('Sorular yüklenirken hata:', error);
-            setErrorMessage('Sorular yüklenirken bir hata oluştu.');
-            setGameState('error');
+            setPhase('playing');
+        } catch (e) {
+            setErrorMessage('Yükleme hatası.');
+            setPhase('error');
         }
     }, []);
 
-    // Timer
-    useEffect(() => {
-        if (gameState !== 'playing') return;
-        const timer = setInterval(() => {
-            setTotalTime(prev => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    setGameState('finished');
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [gameState]);
-
-    // Oyunu başlat
-    const startGame = useCallback(async () => {
+    const handleStart = useCallback(() => {
         window.scrollTo(0, 0);
         setScore(0);
-        setCorrectCount(0);
-        setWrongCount(0);
-        setCurrentQuestionIndex(0);
+        setLives(INITIAL_LIVES);
+        setCurrentIndex(0);
         setStreak(0);
-        setBestStreak(0);
-        setLives(3);
-        setTotalTime(180);
-        setSelectedAnswer(null);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        startTimeRef.current = Date.now();
         hasSavedRef.current = false;
         fetchQuestions();
-    }, [fetchQuestions]);
+    }, [fetchQuestions, examMode, examTimeLimit]);
 
-    // Handle Auto Start from HUB or Exam Mode
     useEffect(() => {
-        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
-            startGame();
-        }
-    }, [location.state, gameState, startGame, examMode]);
+        if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart();
+    }, [location.state, phase, handleStart, examMode]);
 
-    // Oyun bittiğinde verileri kaydet
     useEffect(() => {
-        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
-            hasSavedRef.current = true;
-            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-
-            // Exam mode: submit result and navigate
-            if (examMode) {
-                const passed = correctCount >= questions.length / 2;
-                (async () => {
-                    await submitResult(passed, score, 1000, durationSeconds);
-                    navigate('/atolyeler/sinav-simulasyonu/devam');
-                })();
-                return;
-            }
-
-            saveGamePlay({
-                game_id: 'bilgi-kartlari-bosluk-doldur',
-                score_achieved: score,
-                duration_seconds: durationSeconds,
-                lives_remaining: lives,
-                metadata: {
-                    correct_count: correctCount,
-                    wrong_count: wrongCount,
-                    best_streak: bestStreak,
-                    total_questions: questions.length,
-                    accuracy: correctCount + wrongCount > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0,
-                    game_name: 'Bilgi Kartları - Boşluk Doldur',
+        if (phase === 'playing' && timeLeft > 0) {
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) {
+                    clearInterval(timerRef.current!);
+                    setPhase('game_over');
+                    return 0;
                 }
-            });
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
         }
-    }, [gameState, score, lives, correctCount, wrongCount, bestStreak, questions.length, saveGamePlay, examMode, navigate, submitResult]);
+    }, [phase, timeLeft]);
 
-    // Cevap kontrolü
+    const handleFinish = useCallback(async () => {
+        if (hasSavedRef.current) return;
+        hasSavedRef.current = true;
+        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const isVictory = phase === 'victory';
+
+        if (examMode) {
+            await submitResult(isVictory || currentIndex >= 5, score, MAX_LEVEL * 100, duration);
+            navigate("/atolyeler/sinav-simulasyonu/devam");
+            return;
+        }
+
+        await saveGamePlay({
+            game_id: 'bilgi-kartlari-bosluk-doldur',
+            score_achieved: score,
+            duration_seconds: duration,
+            metadata: { level_reached: currentIndex + 1, game_name: 'Bilgi Kartları', victory: isVictory }
+        });
+    }, [phase, score, currentIndex, saveGamePlay, examMode, submitResult, navigate]);
+
+    useEffect(() => {
+        if (phase === 'game_over' || phase === 'victory') handleFinish();
+    }, [phase, handleFinish]);
+
     const handleAnswer = (answer: string) => {
-        if (feedbackState || !questions[currentQuestionIndex]) return;
+        if (feedbackState || !questions[currentIndex]) return;
 
-        setSelectedAnswer(answer);
-        const currentQuestion = questions[currentQuestionIndex];
-        const isCorrect = answer.toLowerCase() === currentQuestion.correctAnswer.toLowerCase();
+        const isCorrect = answer.toLowerCase() === questions[currentIndex].correctAnswer.toLowerCase();
+        showFeedback(isCorrect);
+        playSound(isCorrect ? 'correct' : 'incorrect');
 
         if (isCorrect) {
-            playSound('correct');
-            showFeedback(true);
-            setCorrectCount(prev => prev + 1);
-            setStreak(prev => {
-                const newStreak = prev + 1;
-                if (newStreak > bestStreak) setBestStreak(newStreak);
-                return newStreak;
-            });
-            const streakBonus = streak * 10;
-            setScore(prev => prev + 100 + streakBonus);
+            setStreak(p => p + 1);
+            setScore(p => p + 10 * (currentIndex + 1) + (streak * 5));
         } else {
-            playSound('incorrect');
-            showFeedback(false);
-            setWrongCount(prev => prev + 1);
             setStreak(0);
-            setLives(l => l - 1);
+            setLives(l => {
+                const nl = l - 1;
+                if (nl <= 0) setTimeout(() => setPhase('game_over'), 1000);
+                return nl;
+            });
         }
 
         setTimeout(() => {
-            setSelectedAnswer(null);
+            dismissFeedback();
+            if (lives <= 0 && !isCorrect) return;
 
-            if (lives <= 1 && !isCorrect) {
-                setGameState('finished');
-            } else if (currentQuestionIndex + 1 >= questions.length) {
-                setGameState('finished');
+            if (currentIndex + 1 >= MAX_LEVEL || currentIndex + 1 >= questions.length) {
+                setPhase('victory');
             } else {
-                setCurrentQuestionIndex(prev => prev + 1);
+                setCurrentIndex(p => p + 1);
             }
-        }, 2000);
+        }, 1200);
     };
 
-    const currentQuestion = questions[currentQuestionIndex];
-    const accuracy = correctCount + wrongCount > 0
-        ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
-        : 0;
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
-    // Welcome Screen
-    if (gameState === 'idle') {
+    if (phase === 'welcome') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-950 text-white">
-                {/* Decorative Background */}
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-950 flex items-center justify-center p-6 text-white relative overflow-hidden">
                 <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
                 </div>
-
-                <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="text-center max-w-xl"
-                    >
-                        {/* 3D Gummy Icon */}
-                        <motion.div
-                            className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                            style={{
-                                background: 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)',
-                                boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                            }}
-                            animate={{ y: [0, -8, 0] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                            <BookOpen size={52} className="text-white drop-shadow-lg" />
-                        </motion.div>
-
-                        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">
-                            📚 Bilgi Kartları
-                        </h1>
-
-                        {/* Example */}
-                        <div
-                            className="rounded-2xl p-5 mb-6"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                border: '1px solid rgba(255,255,255,0.1)'
-                            }}
-                        >
-                            <p className="text-slate-400 text-sm mb-3">Örnek:</p>
-                            <div className="text-lg font-bold text-white mb-2">
-                                "Kafatası kemikleri <span className="text-teal-400 bg-teal-400/20 px-2 py-1 rounded">_____</span> korur."
-                            </div>
-                            <p className="text-slate-400 text-sm">
-                                = <span className="text-amber-400 font-bold">beynimizi</span>
-                            </p>
-                        </div>
-
-                        {/* Instructions */}
-                        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
-                            <h3 className="text-lg font-bold text-teal-300 mb-3 flex items-center gap-2">
-                                <Eye size={20} /> Nasıl Oynanır?
-                            </h3>
-                            <ul className="space-y-2 text-slate-300 text-sm">
-                                <li className="flex items-center gap-2">
-                                    <Sparkles size={14} className="text-teal-400" />
-                                    <span>Cümledeki <strong>eksik kelimeyi</strong> bul</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <Sparkles size={14} className="text-teal-400" />
-                                    <span>4 seçenekten doğru olanı seç</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <Sparkles size={14} className="text-teal-400" />
-                                    <span>10 soru, 3 can, 3 dakika! Genel kültürünü test et!</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* TUZÖ Badge */}
-                        <div className="bg-teal-500/10 text-teal-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-teal-500/30">
-                            TUZÖ 6.3.1 Genel Bilgi
-                        </div>
-
-                        <motion.button
-                            whileHover={{ scale: 1.05, y: -4 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={startGame}
-                            className="px-8 py-4 rounded-2xl font-bold text-lg"
-                            style={{
-                                background: 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)',
-                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(20, 184, 166, 0.4)'
-                            }}
-                        >
-                            <div className="flex items-center gap-3">
-                                <Play size={24} fill="currentColor" />
-                                <span>Teste Başla</span>
-                            </div>
-                        </motion.button>
-                    </motion.div>
-                </div>
-            </div>
-        );
-    }
-
-    // Loading Screen
-    if (gameState === 'loading') {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-950 flex items-center justify-center">
-                <div className="text-center">
-                    <Loader2 className="w-12 h-12 text-teal-400 animate-spin mx-auto mb-4" />
-                    <p className="text-slate-400">Bilgi kartları yükleniyor...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Error Screen
-    if (gameState === 'error') {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-950 flex items-center justify-center p-4">
-                <div className="text-center max-w-md">
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-8">
-                        <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                        <h2 className="text-xl font-bold text-white mb-2">Hata</h2>
-                        <p className="text-slate-400 mb-6">{errorMessage}</p>
-                        <Link
-                            to={backLink}
-                            className="px-6 py-3 bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-600 transition-all inline-block"
-                        >
-                            Geri Dön
-                        </Link>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6" style={{ background: 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><BookOpen size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-cyan-300 to-teal-300 bg-clip-text text-transparent">Bilgi Kartları</h1>
+                    <p className="text-slate-400 mb-8 text-lg">Genel kültürünü ve kelime dağarcığını test et! Cümlelerdeki eksik kelimeleri bul ve bilgi ustası ol.</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2"><Eye size={20} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><Sparkles size={14} className="text-cyan-400" /><span>Cümledeki eksik bölümü dikkatle oku</span></li>
+                            <li className="flex items-center gap-2"><Sparkles size={14} className="text-cyan-400" /><span>Anlamı tamamlayan doğru kelimeyi seç</span></li>
+                            <li className="flex items-center gap-2"><Sparkles size={14} className="text-cyan-400" /><span>3 canın bitmeden 20 soruyu başarıyla tamamla!</span></li>
+                        </ul>
                     </div>
-                </div>
+                    <div className="bg-teal-500/10 text-teal-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-teal-500/30 font-bold uppercase tracking-widest">TUZÖ 6.3.1 Genel Bilgi</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-teal-600 rounded-2xl font-bold text-xl" style={{ boxShadow: '0 8px 32px rgba(20, 184, 166, 0.4)' }}><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
             </div>
         );
     }
+
+    if (phase === 'loading') return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 size={48} className="text-cyan-400 animate-spin" /></div>;
+    if (phase === 'error') return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-center p-6"><div className="bg-red-500/10 p-8 rounded-3xl border border-red-500/20"><AlertCircle size={48} className="text-red-400 mx-auto mb-4" /><h2 className="text-xl font-bold mb-2">Hata Oluştu</h2><p className="text-slate-400 mb-6">{errorMessage}</p><Link to={backLink} className="px-6 py-3 bg-red-500 rounded-xl font-bold">Geri Dön</Link></div></div>;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-950 text-white">
-            {/* Decorative Background */}
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-950 text-white relative overflow-hidden">
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
             </div>
-
-            {/* Header */}
             <div className="relative z-10 p-4 pt-20">
-                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
-                    <Link
-                        to={backLink}
-                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft size={20} />
-                        <span>{backLabel}</span>
-                    </Link>
-
-                    <div className="flex items-center gap-4 flex-wrap">
-                        {/* Score */}
-                        <div
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(251, 191, 36, 0.3)'
-                            }}
-                        >
-                            <Star className="text-amber-400 fill-amber-400" size={18} />
-                            <span className="font-bold text-amber-400">{score}</span>
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+                    {(phase === 'playing') && (
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(251, 191, 36, 0.3)' }}><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', border: '1px solid rgba(59, 130, 246, 0.3)' }}><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(13, 148, 136, 0.1) 100%)', border: '1px solid rgba(20, 184, 166, 0.3)' }}><BookOpen className="text-cyan-400" size={18} /><span className="font-bold text-cyan-400">{currentIndex + 1}/{MAX_LEVEL}</span></div>
                         </div>
-
-                        {/* Lives */}
-                        <div
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(239, 68, 68, 0.3)'
-                            }}
-                        >
-                            {[...Array(3)].map((_, i) => (
-                                <Heart
-                                    key={i}
-                                    size={18}
-                                    className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Timer */}
-                        <div
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl ${totalTime < 30 ? 'animate-pulse' : ''}`}
-                            style={{
-                                background: totalTime < 30
-                                    ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)'
-                                    : 'linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(13, 148, 136, 0.1) 100%)',
-                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                border: totalTime < 30 ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(20, 184, 166, 0.3)'
-                            }}
-                        >
-                            <Timer className={totalTime < 30 ? 'text-red-400' : 'text-teal-400'} size={18} />
-                            <span className={`font-bold font-mono ${totalTime < 30 ? 'text-red-400' : 'text-teal-400'}`}>
-                                {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}
-                            </span>
-                        </div>
-
-                        {/* Progress */}
-                        <div
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(13, 148, 136, 0.1) 100%)',
-                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(20, 184, 166, 0.3)'
-                            }}
-                        >
-                            <BookOpen className="text-teal-400" size={18} />
-                            <span className="font-bold text-teal-400">{currentQuestionIndex + 1}/{questions.length}</span>
-                        </div>
-
-                        {/* Streak */}
-                        {streak > 0 && (
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(251, 191, 36, 0.5)'
-                                }}
-                            >
-                                <Zap className="text-amber-400" size={18} />
-                                <span className="font-bold text-amber-400">x{streak}</span>
-                            </div>
-                        )}
-                    </div>
+                    )}
                 </div>
             </div>
-
-            {/* Main Content */}
             <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
                 <AnimatePresence mode="wait">
-                    {gameState === 'playing' && currentQuestion && (
-                        <motion.div
-                            key="game"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-2xl"
-                        >
-                            {/* Progress Bar */}
-                            <div className="h-2 bg-slate-800/50 rounded-full mb-8 overflow-hidden">
-                                <motion.div
-                                    className="h-full rounded-full"
-                                    style={{ background: 'linear-gradient(90deg, #14B8A6 0%, #06B6D4 100%)' }}
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-                                />
+                    {phase === 'playing' && questions[currentIndex] && (
+                        <motion.div key="game" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="w-full max-w-2xl text-center">
+                            <div className="mb-6 h-2 bg-white/5 rounded-full overflow-hidden"><motion.div className="h-full bg-gradient-to-r from-cyan-400 to-teal-400" initial={{ width: 0 }} animate={{ width: `${((currentIndex + 1) / MAX_LEVEL) * 100}%` }} /></div>
+                            <div className="p-10 bg-white/5 backdrop-blur-3xl rounded-[48px] border border-white/10 shadow-3xl mb-8">
+                                <p className="text-slate-400 font-bold mb-6 text-lg tracking-wide uppercase">CÜMLEYİ TAMAMLA</p>
+                                <motion.h2 key={currentIndex} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-2xl lg:text-3xl font-bold leading-relaxed">{questions[currentIndex].displayText.split('_____').map((p, i, a) => (<React.Fragment key={i}>{p}{i < a.length - 1 && (<span className={`inline-block px-3 py-1 rounded-xl mx-2 border-2 border-dashed ${feedbackState ? (feedbackState.correct ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-red-500/20 border-red-500 text-red-400') : 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400'}`}>{feedbackState ? questions[currentIndex].correctAnswer : '.....'}</span>)}</React.Fragment>))}</motion.h2>
                             </div>
-
-                            {/* Question Display */}
-                            <div
-                                className="rounded-3xl p-8 mb-8"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <p className="text-slate-400 text-sm mb-4 text-center">Boşluğa hangi kelime gelmelidir?</p>
-                                <motion.h2
-                                    key={currentQuestionIndex}
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="text-xl lg:text-2xl font-bold text-white text-center leading-relaxed"
-                                >
-                                    {currentQuestion.displayText.split('_____').map((part, i, arr) => (
-                                        <React.Fragment key={i}>
-                                            {part}
-                                            {i < arr.length - 1 && (
-                                                <span className="inline-block bg-teal-400/20 text-teal-400 px-3 py-1 rounded-lg border-2 border-dashed border-teal-400/50 mx-1">
-                                                    {feedbackState ? currentQuestion.correctAnswer : '?????'}
-                                                </span>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-                                </motion.h2>
-                            </div>
-
-                            {/* Options */}
                             <div className="grid grid-cols-2 gap-4">
-                                {currentQuestion.options.map((option, idx) => {
-                                    const isSelected = selectedAnswer === option;
-                                    const isCorrect = option.toLowerCase() === currentQuestion.correctAnswer.toLowerCase();
+                                {questions[currentIndex].options.map((opt, i) => {
+                                    const isCorrect = opt.toLowerCase() === questions[currentIndex].correctAnswer.toLowerCase();
                                     const showResult = feedbackState !== null;
-
                                     return (
-                                        <motion.button
-                                            key={option}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.1 }}
-                                            onClick={() => handleAnswer(option)}
-                                            disabled={feedbackState !== null}
-                                            whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
-                                            whileTap={!feedbackState ? { scale: 0.95 } : {}}
-                                            className="py-5 px-4 rounded-2xl font-bold text-lg transition-all"
-                                            style={{
-                                                background: showResult && isCorrect
-                                                    ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                                                    : showResult && isSelected && !isCorrect
-                                                        ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
-                                                        : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                                                boxShadow: showResult && (isCorrect || (isSelected && !isCorrect))
-                                                    ? '0 0 20px rgba(20, 184, 166, 0.3)'
-                                                    : 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.05)',
-                                                border: showResult && isCorrect
-                                                    ? '2px solid #10B981'
-                                                    : showResult && isSelected && !isCorrect
-                                                        ? '2px solid #EF4444'
-                                                        : '1px solid rgba(255,255,255,0.1)',
-                                                color: '#fff',
-                                                cursor: feedbackState ? 'default' : 'pointer',
-                                                opacity: showResult && !isCorrect && !isSelected ? 0.5 : 1
-                                            }}
-                                        >
-                                            <div className="flex items-center justify-center gap-3">
-                                                <span className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-sm uppercase">
-                                                    {String.fromCharCode(65 + idx)}
-                                                </span>
-                                                {showResult && isCorrect && <CheckCircle2 className="w-5 h-5" />}
-                                                {showResult && isSelected && !isCorrect && <XCircle className="w-5 h-5" />}
-                                                <span>{option}</span>
-                                            </div>
+                                        <motion.button key={i} whileHover={!showResult ? { scale: 1.05, y: -2 } : {}} whileTap={!showResult ? { scale: 0.95 } : {}} onClick={() => handleAnswer(opt)} disabled={showResult} className={`p-5 rounded-3xl flex items-center gap-4 transition-all duration-300 relative overflow-hidden shadow-xl ${showResult ? (isCorrect ? 'bg-emerald-500 border-2 border-white' : 'bg-slate-800 opacity-20') : 'bg-slate-800/80 border border-white/10 hover:border-cyan-500/50 hover:text-cyan-400'}`}>
+                                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xs font-black">{String.fromCharCode(65 + i)}</div>
+                                            <div className="text-left font-black tracking-wide text-lg">{opt}</div>
                                         </motion.button>
                                     );
                                 })}
                             </div>
                         </motion.div>
                     )}
-
-                    {/* Game Over */}
-                    {gameState === 'finished' && (
-                        <motion.div
-                            key="gameover"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: accuracy >= 70
-                                        ? 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)'
-                                        : 'linear-gradient(135deg, #14B8A6 0%, #EF4444 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                            >
-                                <Trophy size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <h2 className="text-3xl font-black text-teal-300 mb-2">
-                                {lives <= 0 ? 'Tekrar Deneyelim! 💪' : totalTime <= 0 ? 'Süre Doldu! ⏰' : accuracy >= 80 ? '🎉 Harika!' : 'İyi İş!'}
-                            </h2>
-                            <p className="text-slate-400 mb-6">
-                                {accuracy >= 80 ? 'Bilgi ustasısın!' : 'Tekrar deneyelim!'}
-                            </p>
-
-                            <div
-                                className="rounded-2xl p-6 mb-8"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-2xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-2xl font-bold text-emerald-400">%{accuracy}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Doğru</p>
-                                        <p className="text-2xl font-bold text-teal-400">{correctCount}/{questions.length}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">En İyi Seri</p>
-                                        <p className="text-2xl font-bold text-cyan-400">x{bestStreak}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
-                                style={{
-                                    background: 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(20, 184, 166, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center justify-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Oyna</span>
-                                </div>
-                            </motion.button>
-
-                            <Link
-                                to={backLink}
-                                className="block text-slate-500 hover:text-white transition-colors"
-                            >
-                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
-                            </Link>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-cyan-500 to-teal-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-bold text-amber-400 mb-2">{phase === 'victory' ? '🎖️ Bilgi Ustası!' : 'Tebrikler!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' ? 'Genel kültür ve dikkat konusunda gerçekten harikasın!' : 'Daha fazla kartla kendini geliştirebilirsin.'}</p>
+                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Soru</p><p className="text-2xl font-bold text-cyan-400">{currentIndex + 1}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-teal-600 rounded-2xl font-bold text-xl mb-4" style={{ boxShadow: '0 8px 32px rgba(20, 184, 166, 0.4)' }}><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Feedback Overlay */}
                 <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>

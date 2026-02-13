@@ -17,11 +17,7 @@ const MAX_LEVEL = 20;
 
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-interface TimeExplorerGameProps {
-    examMode?: boolean;
-    examLevel?: number;
-    examTimeLimit?: number;
-}
+
 
 // ─── Clock Utilities (inline) ───────────────────────────────────────
 

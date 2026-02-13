@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 type SoundType =
-    | 'correct' | 'incorrect' | 'tick' | 'timeWarning' | 'select' | 'pop' | 'complete'
+    | 'correct' | 'incorrect' | 'tick' | 'timeWarning' | 'select' | 'pop' | 'complete' | 'slide' | 'shing'
     | 'cosmic_pop' | 'cosmic_success' | 'cosmic_fail'
     | 'radar_beep' | 'radar_scan' | 'radar_warning' | 'radar_correct' | 'radar_incorrect'
     | 'detective_click' | 'detective_mystery' | 'detective_clue' | 'detective_correct' | 'detective_incorrect'
@@ -18,6 +18,8 @@ const SOUND_URLS: { [key in SoundType]: string } = {
     select: '/sounds/select.mp3',
     pop: '/sounds/pop.mp3',
     complete: '/sounds/complete.mp3',
+    slide: '/sounds/select.mp3',
+    shing: '/sounds/pop.mp3',
     // Kozmik (Space) Tema
     cosmic_pop: '/sounds/pop.mp3',
     cosmic_success: '/sounds/levelUp.mp3',

@@ -13,6 +13,15 @@ export const EXAM_MODULES: ExamModule[] = [
         active: true
     },
     {
+        id: 'lazer-hafiza',
+        title: 'Lazer Hafıza',
+        link: '/games/lazer-hafiza',
+        tuzo: '5.4.2 Görsel Kısa Süreli Bellek',
+        category: 'memory',
+        timeLimit: 120,
+        active: true
+    },
+    {
         id: 'n-back',
         title: 'N-Geri Şifresi',
         link: '/games/n-geri-sifresi',
@@ -347,6 +356,15 @@ export const EXAM_MODULES: ExamModule[] = [
         link: '/games/farki-bul',
         tuzo: '5.7.1 Seçici Dikkat',
         category: 'attention',
+        timeLimit: 120,
+        active: true
+    },
+    {
+        id: 'labirent',
+        title: 'Labirent Koşusu',
+        link: '/games/labirent',
+        tuzo: '5.3.3 Uzamsal İlişki Çözümleme',
+        category: 'perception',
         timeLimit: 120,
         active: true
     },

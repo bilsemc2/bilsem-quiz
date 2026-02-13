@@ -1,728 +1,207 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Target, CheckCircle2, XCircle, ChevronLeft, Zap, Hash, TrendingUp, Eye, Sparkles, Heart } from 'lucide-react';
+import {
+    Trophy, RotateCcw, Play, Star,
+    ChevronLeft, Zap,
+    TrendingUp, Sparkles, Heart, Timer as TimerIcon
+} from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
 import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
+import { useSound } from '../../hooks/useSound';
+
+// ─── Constants ───────────────────────────────────────────────
+const INITIAL_LIVES = 5;
+const TIME_LIMIT = 180;
+const MAX_LEVEL = 20;
+const GAME_ID = 'sayi-dizileri';
 
 type PatternType = 'arithmetic' | 'geometric' | 'fibonacci' | 'square' | 'cube' | 'prime' | 'alternating' | 'doubleStep';
-
-interface Question {
-    sequence: number[];
-    answer: number;
-    options: number[];
-    patternType: PatternType;
-    patternDescription: string;
-}
-
-// Asal sayılar listesi
+interface Question { sequence: number[]; answer: number; options: number[]; patternType: PatternType; patternDescription: string; }
 const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
-
-// Child-friendly messages
-
+type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
 const NumberSequenceGame: React.FC = () => {
+    const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
-    const { feedbackState, showFeedback: triggerFeedback } = useGameFeedback();
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
     const location = useLocation();
     const navigate = useNavigate();
-    const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
-    const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
-    const [questionNumber, setQuestionNumber] = useState(0);
+
+    const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(3);
-    const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0);
+    const [lives, setLives] = useState(INITIAL_LIVES);
     const [level, setLevel] = useState(1);
+    const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+    const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-    const [streak, setStreak] = useState(0);
-    const [bestStreak, setBestStreak] = useState(0);
-    const gameStartTimeRef = useRef<number>(0);
-    const hasSavedRef = useRef<boolean>(false);
 
-    const totalQuestions = 15;
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const startTimeRef = useRef(0);
+    const hasSavedRef = useRef(false);
 
-    // Exam Mode Props
     const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
-    // Back link
+    const generatePattern = useCallback((lvl: number): Question => {
+        const types: PatternType[] = lvl <= 3 ? ['arithmetic', 'geometric'] : lvl <= 6 ? ['arithmetic', 'geometric', 'square', 'fibonacci'] : lvl <= 10 ? ['arithmetic', 'geometric', 'square', 'fibonacci', 'cube', 'alternating'] : ['arithmetic', 'geometric', 'square', 'fibonacci', 'cube', 'alternating', 'prime', 'doubleStep'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        const len = Math.min(4 + Math.floor(lvl / 5), 6);
+        let seq: number[] = [], ans = 0, desc = '';
+
+        switch (type) {
+            case 'arithmetic': { const s = Math.floor(Math.random() * 10) + 1; const d = Math.floor(Math.random() * (lvl + 2)) + 1; seq = Array.from({ length: len }, (_, i) => s + i * d); ans = s + len * d; desc = `+${d}`; break; }
+            case 'geometric': { const s = Math.floor(Math.random() * 3) + 1; const r = lvl <= 5 ? 2 : Math.floor(Math.random() * 2) + 2; seq = Array.from({ length: len }, (_, i) => s * Math.pow(r, i)); ans = s * Math.pow(r, len); desc = `x${r}`; break; }
+            case 'fibonacci': { let a = Math.floor(Math.random() * 3) + 1, b = Math.floor(Math.random() * 3) + 1; seq = [a, b]; for (let i = 2; i < len; i++) seq.push(seq[i - 1] + seq[i - 2]); ans = seq[len - 1] + seq[len - 2]; desc = 'Toplayarak'; break; }
+            case 'square': { const s = Math.floor(Math.random() * 3) + 1; seq = Array.from({ length: len }, (_, i) => Math.pow(s + i, 2)); ans = Math.pow(s + len, 2); desc = 'Kareler'; break; }
+            case 'cube': { const s = Math.floor(Math.random() * 2) + 1; seq = Array.from({ length: len }, (_, i) => Math.pow(s + i, 3)); ans = Math.pow(s + len, 3); desc = 'Küpler'; break; }
+            case 'alternating': { const s = Math.floor(Math.random() * 10) + 5; const d1 = Math.floor(Math.random() * 4) + 1, d2 = Math.floor(Math.random() * 3) + 1; seq = [s]; for (let i = 1; i < len; i++) seq.push(i % 2 === 1 ? seq[i - 1] + d1 : seq[i - 1] - d2); ans = len % 2 === 1 ? seq[len - 1] + d1 : seq[len - 1] - d2; desc = `+${d1}/-${d2}`; break; }
+            case 'doubleStep': { const s = Math.floor(Math.random() * 5) + 1; seq = [s]; let d = 2; for (let i = 1; i < len; i++) { seq.push(seq[i - 1] + d); d += 1; } ans = seq[len - 1] + d; desc = 'Artan Fark'; break; }
+            case 'prime': { const idx = Math.floor(Math.random() * (PRIMES.length - len - 1)); seq = PRIMES.slice(idx, idx + len); ans = PRIMES[idx + len]; desc = 'Asallar'; break; }
+        }
+
+        const opts = new Set<number>([ans]); while (opts.size < 4) opts.add(ans + (Math.floor(Math.random() * 20) - 10) || ans + 5);
+        return { sequence: seq, answer: ans, options: Array.from(opts).sort(() => Math.random() - 0.5), patternType: type, patternDescription: desc };
+    }, []);
+
+    const startLevel = useCallback((lvl: number) => {
+        setCurrentQuestion(generatePattern(lvl)); setSelectedAnswer(null); playSound('slide');
+    }, [generatePattern, playSound]);
+
+    const handleStart = useCallback(() => {
+        window.scrollTo(0, 0); setPhase('playing'); setScore(0); setLives(INITIAL_LIVES); setLevel(1); setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        startTimeRef.current = Date.now(); hasSavedRef.current = false; startLevel(1);
+    }, [startLevel, examMode, examTimeLimit]);
+
+    useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, examMode, phase, handleStart]);
+
+    useEffect(() => {
+        if (phase === 'playing' && timeLeft > 0) {
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
+        }
+    }, [phase, timeLeft]);
+
+    const handleAnswer = (val: number) => {
+        if (phase !== 'playing' || !!feedbackState) return;
+        setSelectedAnswer(val); const correct = val === currentQuestion?.answer;
+        if (correct) {
+            playSound('correct'); showFeedback(true); setScore(s => s + 25 + level * 5);
+            setTimeout(() => {
+                dismissFeedback();
+                if (level >= MAX_LEVEL) setPhase('victory');
+                else { const nl = level + 1; setLevel(nl); setTimeLeft(p => Math.min(p + 15, TIME_LIMIT)); startLevel(nl); }
+            }, 1000);
+        } else {
+            playSound('incorrect'); showFeedback(false); setLives(l => { const nl = l - 1; if (nl <= 0) setPhase('game_over'); return nl; });
+            setTimeout(dismissFeedback, 1000);
+        }
+    };
+
+    const handleFinish = useCallback(async (v: boolean) => {
+        if (hasSavedRef.current) return; hasSavedRef.current = true;
+        const dur = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        if (examMode) { await submitResult(v || level >= 5, score, MAX_LEVEL * 100, dur); navigate('/atolyeler/sinav-simulasyonu/devam'); return; }
+        await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: dur, metadata: { level: level, victory: v } });
+    }, [score, level, examMode, submitResult, navigate, saveGamePlay]);
+
+    useEffect(() => { if (phase === 'game_over' || phase === 'victory') handleFinish(phase === 'victory'); }, [phase, handleFinish]);
+
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
     const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
     const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
-    // Zorluk seviyesine göre desen türleri
-    const getAvailablePatterns = (lvl: number): PatternType[] => {
-        if (lvl <= 2) return ['arithmetic', 'geometric'];
-        if (lvl <= 4) return ['arithmetic', 'geometric', 'square', 'fibonacci'];
-        if (lvl <= 6) return ['arithmetic', 'geometric', 'square', 'fibonacci', 'cube', 'alternating'];
-        return ['arithmetic', 'geometric', 'square', 'fibonacci', 'cube', 'alternating', 'prime', 'doubleStep'];
-    };
-
-    // Desen oluşturma fonksiyonları
-    const generatePattern = useCallback((type: PatternType, lvl: number): { sequence: number[], answer: number, description: string } => {
-        const seqLength = Math.min(4 + Math.floor(lvl / 3), 6);
-
-        switch (type) {
-            case 'arithmetic': {
-                const start = Math.floor(Math.random() * 10) + 1;
-                const diff = Math.floor(Math.random() * (lvl + 2)) + 1;
-                const sequence = Array.from({ length: seqLength }, (_, i) => start + i * diff);
-                const answer = start + seqLength * diff;
-                return { sequence, answer, description: `Her sayı ${diff} artıyor` };
-            }
-            case 'geometric': {
-                const start = Math.floor(Math.random() * 3) + 1;
-                const ratio = lvl <= 3 ? 2 : Math.floor(Math.random() * 2) + 2;
-                const sequence = Array.from({ length: seqLength }, (_, i) => start * Math.pow(ratio, i));
-                const answer = start * Math.pow(ratio, seqLength);
-                return { sequence, answer, description: `Her sayı ${ratio} ile çarpılıyor` };
-            }
-            case 'fibonacci': {
-                const a = Math.floor(Math.random() * 3) + 1;
-                const b = Math.floor(Math.random() * 3) + 1;
-                const sequence = [a, b];
-                for (let i = 2; i < seqLength; i++) {
-                    sequence.push(sequence[i - 1] + sequence[i - 2]);
-                }
-                const answer = sequence[seqLength - 1] + sequence[seqLength - 2];
-                return { sequence, answer, description: 'Her sayı önceki iki sayının toplamı' };
-            }
-            case 'square': {
-                const start = Math.floor(Math.random() * 3) + 1;
-                const sequence = Array.from({ length: seqLength }, (_, i) => Math.pow(start + i, 2));
-                const answer = Math.pow(start + seqLength, 2);
-                return { sequence, answer, description: 'Ardışık sayıların kareleri' };
-            }
-            case 'cube': {
-                const start = Math.floor(Math.random() * 2) + 1;
-                const sequence = Array.from({ length: seqLength }, (_, i) => Math.pow(start + i, 3));
-                const answer = Math.pow(start + seqLength, 3);
-                return { sequence, answer, description: 'Ardışık sayıların küpleri' };
-            }
-            case 'prime': {
-                const startIdx = Math.floor(Math.random() * 5);
-                const sequence = PRIMES.slice(startIdx, startIdx + seqLength);
-                const answer = PRIMES[startIdx + seqLength];
-                return { sequence, answer, description: 'Asal sayılar serisi' };
-            }
-            case 'alternating': {
-                const start = Math.floor(Math.random() * 5) + 1;
-                const diff1 = Math.floor(Math.random() * 3) + 1;
-                const diff2 = Math.floor(Math.random() * 3) + 2;
-                const sequence = [start];
-                for (let i = 1; i < seqLength; i++) {
-                    sequence.push(sequence[i - 1] + (i % 2 === 1 ? diff1 : diff2));
-                }
-                const answer = sequence[seqLength - 1] + (seqLength % 2 === 1 ? diff1 : diff2);
-                return { sequence, answer, description: `Değişen artış: +${diff1}, +${diff2}...` };
-            }
-            case 'doubleStep': {
-                const start = Math.floor(Math.random() * 5) + 1;
-                const sequence = [start];
-                let step = 1;
-                for (let i = 1; i < seqLength; i++) {
-                    sequence.push(sequence[i - 1] + step);
-                    step++;
-                }
-                const answer = sequence[seqLength - 1] + step;
-                return { sequence, answer, description: 'Artış miktarı her adımda 1 artıyor' };
-            }
-            default:
-                return generatePattern('arithmetic', lvl);
-        }
-    }, []);
-
-    // Soru oluştur
-    const generateQuestion = useCallback((): Question => {
-        const patterns = getAvailablePatterns(level);
-        const patternType = patterns[Math.floor(Math.random() * patterns.length)];
-        const { sequence, answer, description } = generatePattern(patternType, level);
-
-        const wrongOptions = new Set<number>();
-        while (wrongOptions.size < 3) {
-            const offset = (Math.floor(Math.random() * 20) - 10) || 1;
-            const wrongAnswer = answer + offset;
-            if (wrongAnswer !== answer && wrongAnswer > 0 && !wrongOptions.has(wrongAnswer)) {
-                wrongOptions.add(wrongAnswer);
-            }
-        }
-
-        const options = [answer, ...Array.from(wrongOptions)].sort(() => Math.random() - 0.5);
-
-        return {
-            sequence,
-            answer,
-            options,
-            patternType,
-            patternDescription: description,
-        };
-    }, [level, generatePattern]);
-
-    // Oyunu başlat
-    const startGame = useCallback(async () => {
-        window.scrollTo(0, 0);
-        setGameState('playing');
-        setQuestionNumber(1);
-        setScore(0);
-        setLives(3);
-        setCorrectCount(0);
-        setWrongCount(0);
-        setLevel(1);
-        setStreak(0);
-        setBestStreak(0);
-        gameStartTimeRef.current = Date.now();
-        hasSavedRef.current = false;
-        const question = generateQuestion();
-        setCurrentQuestion(question);
-        setSelectedAnswer(null);
-    }, [generateQuestion]);
-
-    // Auto start from HUB or examMode
-    useEffect(() => {
-        if ((location.state?.autoStart || examMode) && gameState === 'idle') {
-            startGame();
-        }
-    }, [location.state, gameState, startGame, examMode]);
-
-    // Oyun bittiğinde verileri kaydet
-    useEffect(() => {
-        if (gameState === 'finished' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
-            hasSavedRef.current = true;
-            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-
-            // Exam mode: submit result and redirect
-            if (examMode) {
-                const passed = correctCount >= Math.floor(totalQuestions * 0.6);
-                (async () => {
-                    await submitResult(passed, score, totalQuestions * 150, durationSeconds);
-                    navigate("/atolyeler/sinav-simulasyonu/devam");
-                })();
-                return;
-            }
-
-            saveGamePlay({
-                game_id: 'sayisal-dizi',
-                score_achieved: score,
-                duration_seconds: durationSeconds,
-                lives_remaining: lives,
-                metadata: {
-                    correct_count: correctCount,
-                    wrong_count: wrongCount,
-                    level_reached: level,
-                    best_streak: bestStreak,
-                    total_questions: totalQuestions,
-                    accuracy: Math.round((correctCount / (correctCount + wrongCount)) * 100),
-                    game_name: 'Sayısal Dizi Tamamlama',
-                }
-            });
-        }
-    }, [gameState, score, lives, correctCount, wrongCount, level, bestStreak, saveGamePlay, examMode, submitResult, navigate]);
-
-    // Cevap kontrolü
-    const handleAnswer = (answer: number) => {
-        if (feedbackState || !currentQuestion) return;
-
-        setSelectedAnswer(answer);
-        const isCorrect = answer === currentQuestion.answer;
-
-        if (isCorrect) {
-            triggerFeedback(true);
-            setCorrectCount(prev => prev + 1);
-            setStreak(prev => {
-                const newStreak = prev + 1;
-                if (newStreak > bestStreak) setBestStreak(newStreak);
-                return newStreak;
-            });
-            const levelBonus = level * 10;
-            const streakBonus = streak * 5;
-            setScore(prev => prev + 100 + levelBonus + streakBonus);
-        } else {
-            triggerFeedback(false);
-            setWrongCount(prev => prev + 1);
-            setStreak(0);
-            setLives(prev => prev - 1);
-        }
-
-        setTimeout(() => {
-            setSelectedAnswer(null);
-
-            if (lives <= 1 && !isCorrect) {
-                setGameState('finished');
-            } else if (questionNumber >= totalQuestions) {
-                setGameState('finished');
-            } else {
-                if ((questionNumber + 1) % 3 === 0 && level < 8) {
-                    setLevel(prev => prev + 1);
-                }
-                setQuestionNumber(prev => prev + 1);
-                const question = generateQuestion();
-                setCurrentQuestion(question);
-            }
-        }, 2000);
-    };
-
-    const accuracy = correctCount + wrongCount > 0
-        ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
-        : 0;
+    if (phase === 'welcome') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-950 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" /></div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><TrendingUp size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 bg-clip-text text-transparent">Sayı Dizileri</h1>
+                    <p className="text-slate-300 mb-8 text-lg">Sayılar arasındaki gizli kuralı keşfet, mantık zincirini tamamlayarak zekanı konuştur!</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-emerald-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-emerald-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Verilen sayı dizisindeki <strong>mantıksal kuralı</strong> bul</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-emerald-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Soru işareti yerine gelmesi gereken sayıyı seçeneklerden seç</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-emerald-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Seviye arttıkça kurallar <strong>karmaşıklaşacak</strong>, dikkatli ol!</span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-emerald-500/10 text-emerald-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-emerald-500/30 font-bold uppercase tracking-widest">TUZÖ 5.3.1 Sayısal Mantık & Örüntü Tanıma</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 text-white">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-            </div>
-
-            {/* Header */}
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-950 text-white relative overflow-hidden flex flex-col">
             <div className="relative z-10 p-4 pt-20">
-                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
-                    <Link
-                        to={backLink}
-                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft size={20} />
-                        <span>{backLabel}</span>
-                    </Link>
-
-                    {gameState === 'playing' && (
-                        <div className="flex items-center gap-4 flex-wrap">
-                            {/* Score */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(251, 191, 36, 0.3)'
-                                }}
-                            >
-                                <Star className="text-amber-400 fill-amber-400" size={18} />
-                                <span className="font-bold text-amber-400">{score}</span>
-                            </div>
-
-                            {/* Lives */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)'
-                                }}
-                            >
-                                {[...Array(3)].map((_, i) => (
-                                    <Heart
-                                        key={i}
-                                        size={18}
-                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Level */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(99, 102, 241, 0.3)'
-                                }}
-                            >
-                                <TrendingUp className="text-indigo-400" size={18} />
-                                <span className="font-bold text-indigo-400">Lv.{level}</span>
-                            </div>
-
-                            {/* Streak */}
-                            {streak > 0 && (
-                                <div
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%)',
-                                        boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(168, 85, 247, 0.3)'
-                                    }}
-                                >
-                                    <Zap className="text-purple-400" size={18} />
-                                    <span className="font-bold text-purple-400">x{streak}</span>
-                                </div>
-                            )}
-
-                            {/* Progress */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(6, 182, 212, 0.3)'
-                                }}
-                            >
-                                <Target className="text-cyan-400" size={18} />
-                                <span className="font-bold text-cyan-400">{questionNumber}/{totalQuestions}</span>
-                            </div>
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+                    {(phase === 'playing' || phase === 'feedback') && (
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20"><Star className="text-amber-400 fill-amber-400" size={16} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={16} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-950'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20"><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={16} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20"><Zap className="text-emerald-400" size={16} /><span className="font-bold text-emerald-400">Puan x{level}</span></div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
                 <AnimatePresence mode="wait">
-                    {/* Welcome Screen */}
-                    {gameState === 'idle' && (
-                        <motion.div
-                            key="welcome"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            {/* 3D Gummy Icon */}
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ y: [0, -8, 0] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                            >
-                                <Hash size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                                🔢 Sayısal Dizi
-                            </h1>
-
-                            {/* Example */}
-                            <div
-                                className="rounded-2xl p-5 mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <p className="text-slate-400 text-sm mb-3">Örnek:</p>
-                                <div className="flex justify-center gap-2 mb-3">
-                                    {[2, 4, 8, 16].map((n, i) => (
-                                        <div
-                                            key={i}
-                                            className="w-12 h-12 rounded-[30%] flex items-center justify-center text-lg font-bold"
-                                            style={{
-                                                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(79, 70, 229, 0.2) 100%)',
-                                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
-                                                border: '1px solid rgba(99, 102, 241, 0.3)'
-                                            }}
-                                        >
-                                            {n}
+                    {(phase === 'playing' || phase === 'feedback') && !feedbackState && (
+                        <motion.div key="game" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="w-full max-w-2xl space-y-12">
+                            <div className="flex flex-col items-center gap-8">
+                                <span className="text-xs font-black uppercase text-white/30 tracking-widest">SAYI DİZİSİ</span>
+                                <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+                                    {currentQuestion?.sequence.map((n, i) => (
+                                        <div key={i} className="w-16 h-16 sm:w-20 sm:h-20 bg-white/5 backdrop-blur-xl rounded-[1.5rem] border border-white/10 flex items-center justify-center shadow-xl group hover:bg-white/10 transition-colors">
+                                            <span className="text-2xl sm:text-3xl font-black text-emerald-400">{n}</span>
                                         </div>
                                     ))}
-                                    <div
-                                        className="w-12 h-12 rounded-[30%] flex items-center justify-center text-lg font-bold text-amber-400"
-                                        style={{
-                                            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)',
-                                            boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
-                                            border: '2px solid rgba(251, 191, 36, 0.5)'
-                                        }}
-                                    >
-                                        ?
+                                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-500/20 backdrop-blur-xl rounded-[1.5rem] border-2 border-emerald-400/50 flex items-center justify-center shadow-3xl animate-pulse">
+                                        <span className="text-3xl font-black text-emerald-400">?</span>
                                     </div>
                                 </div>
-                                <p className="text-slate-400 text-sm">Cevap: <span className="text-indigo-400 font-bold">32</span> (×2 ile çarpılıyor)</p>
                             </div>
 
-                            {/* Instructions */}
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
-                                <h3 className="text-lg font-bold text-indigo-300 mb-3 flex items-center gap-2">
-                                    <Eye size={20} /> Nasıl Oynanır?
-                                </h3>
-                                <ul className="space-y-2 text-slate-300 text-sm">
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-blue-400" />
-                                        <span>Sayı dizisindeki <strong>deseni bul</strong></span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-blue-400" />
-                                        <span>Sıradaki sayıyı tahmin et</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-blue-400" />
-                                        <span>{totalQuestions} soru, 3 can!</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* TUZÖ Badge */}
-                            <div className="bg-indigo-500/10 text-indigo-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30">
-                                TUZÖ 3.1.1 Sayısal Akıl Yürütme
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05, y: -4 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="px-8 py-4 rounded-2xl font-bold text-lg"
-                                style={{
-                                    background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(99, 102, 241, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Play size={24} fill="currentColor" />
-                                    <span>Teste Başla</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* Playing State */}
-                    {gameState === 'playing' && currentQuestion && (
-                        <motion.div
-                            key="game"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-2xl"
-                        >
-                            {/* Progress Bar */}
-                            <div
-                                className="h-3 rounded-full mb-8 overflow-hidden"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <motion.div
-                                    className="h-full rounded-full"
-                                    style={{
-                                        background: 'linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%)',
-                                        boxShadow: '0 0 10px rgba(99, 102, 241, 0.5)'
-                                    }}
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${(questionNumber / totalQuestions) * 100}%` }}
-                                    transition={{ duration: 0.3 }}
-                                />
-                            </div>
-
-                            {/* Sequence Display */}
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={questionNumber}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                    className="rounded-3xl p-8 mb-6 transition-all"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                        border: feedbackState?.correct === true ? '2px solid #10B981' :
-                                            feedbackState?.correct === false ? '2px solid #EF4444' :
-                                                '1px solid rgba(255,255,255,0.1)'
-                                    }}
-                                >
-                                    <p className="text-slate-400 text-sm text-center mb-6">Sıradaki sayı nedir?</p>
-
-                                    <div className="flex justify-center items-center gap-3 flex-wrap">
-                                        {currentQuestion.sequence.map((num, idx) => (
-                                            <motion.div
-                                                key={idx}
-                                                initial={{ opacity: 0, scale: 0 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                transition={{ delay: idx * 0.1 }}
-                                                className="w-14 h-14 lg:w-16 lg:h-16 rounded-[30%] flex items-center justify-center"
-                                                style={{
-                                                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(79, 70, 229, 0.2) 100%)',
-                                                    boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)',
-                                                    border: '1px solid rgba(99, 102, 241, 0.3)'
-                                                }}
-                                            >
-                                                <span className="text-indigo-300 font-bold text-xl lg:text-2xl">{num}</span>
-                                            </motion.div>
-                                        ))}
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ delay: currentQuestion.sequence.length * 0.1 }}
-                                            className="w-14 h-14 lg:w-16 lg:h-16 rounded-[30%] flex items-center justify-center"
-                                            style={{
-                                                background: feedbackState?.correct === true
-                                                    ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                                                    : feedbackState?.correct === false
-                                                        ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
-                                                        : 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)',
-                                                boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)',
-                                                border: feedbackState?.correct === true ? '2px solid #10B981' :
-                                                    feedbackState?.correct === false ? '2px solid #EF4444' :
-                                                        '2px solid rgba(251, 191, 36, 0.5)'
-                                            }}
-                                        >
-                                            <span className={`font-bold text-xl lg:text-2xl ${feedbackState ? 'text-white' : 'text-amber-400'
-                                                }`}>
-                                                {feedbackState ? currentQuestion.answer : '?'}
-                                            </span>
-                                        </motion.div>
-                                    </div>
-
-                                    {/* Pattern Description */}
-                                    <AnimatePresence>
-                                        {feedbackState && (
-                                            <motion.p
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                className="text-center text-slate-400 text-sm mt-4"
-                                            >
-                                                💡 {currentQuestion.patternDescription}
-                                            </motion.p>
-                                        )}
-                                    </AnimatePresence>
-                                </motion.div>
-                            </AnimatePresence>
-
-                            {/* Options */}
-                            <div className="grid grid-cols-2 gap-4">
-                                {currentQuestion.options.map((option, idx) => {
-                                    const isSelected = selectedAnswer === option;
-                                    const isCorrect = option === currentQuestion.answer;
-                                    const showResult = feedbackState !== null;
-
-                                    return (
-                                        <motion.button
-                                            key={idx}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.1 }}
-                                            onClick={() => handleAnswer(option)}
-                                            disabled={feedbackState !== null}
-                                            whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
-                                            whileTap={!feedbackState ? { scale: 0.95 } : {}}
-                                            className="py-6 px-4 text-2xl font-bold rounded-[25%] transition-all"
-                                            style={{
-                                                background: showResult && isCorrect
-                                                    ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                                                    : showResult && isSelected && !isCorrect
-                                                        ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
-                                                        : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
-                                                border: showResult && isCorrect ? '2px solid #10B981' :
-                                                    showResult && isSelected ? '2px solid #EF4444' :
-                                                        '1px solid rgba(255,255,255,0.1)',
-                                                cursor: feedbackState ? 'default' : 'pointer',
-                                                opacity: showResult && !isCorrect && !isSelected ? 0.5 : 1
-                                            }}
-                                        >
-                                            <div className="flex items-center justify-center gap-2">
-                                                {showResult && isCorrect && <CheckCircle2 className="w-6 h-6" />}
-                                                {showResult && isSelected && !isCorrect && <XCircle className="w-6 h-6" />}
-                                                {option}
-                                            </div>
-                                        </motion.button>
-                                    );
-                                })}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                {currentQuestion?.options.map(opt => (
+                                    <motion.button key={opt} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={() => handleAnswer(opt)} className={`p-6 rounded-3xl font-black text-2xl transition-all shadow-xl group ${selectedAnswer === opt ? (opt === currentQuestion.answer ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white') : 'bg-white/10 text-white hover:bg-white/20 border border-white/10 hover:border-emerald-500/50'}`}>
+                                        {opt}
+                                    </motion.button>
+                                ))}
                             </div>
                         </motion.div>
                     )}
 
-                    {/* Game Over */}
-                    {gameState === 'finished' && (
-                        <motion.div
-                            key="gameover"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                            >
-                                <Trophy size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
+                    {feedbackState && (
+                        <motion.div key="feed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center"><h2 className={`text-5xl font-black ${feedbackState.correct ? 'text-emerald-400' : 'text-red-400'} drop-shadow-2xl italic tracking-tighter`}>{feedbackState.correct ? 'MANTIKLI SEÇİM!' : 'DİKKAT!'}</h2><GameFeedbackBanner feedback={feedbackState} /></motion.div>
+                    )}
 
-                            <h2 className="text-3xl font-black text-amber-300 mb-2">
-                                {accuracy >= 80 ? '🎉 Harika!' : 'Test Tamamlandı!'}
-                            </h2>
-                            <p className="text-slate-400 mb-6">
-                                {accuracy >= 80 ? 'Müthiş sayısal zekâ!' : 'Tekrar deneyelim!'}
-                            </p>
-
-                            <div
-                                className="rounded-2xl p-6 mb-8"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-3xl font-bold text-emerald-400">%{accuracy}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Seviye</p>
-                                        <p className="text-3xl font-bold text-indigo-400">Lv.{level}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">En İyi Seri</p>
-                                        <p className="text-3xl font-bold text-purple-400">x{bestStreak}</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-center gap-4 text-sm text-slate-400 mt-6">
-                                    <div className="flex items-center gap-1">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                        <span>{correctCount} Doğru</span>
-                                    </div>
-                                    <span className="text-slate-600">|</span>
-                                    <div className="flex items-center gap-1">
-                                        <XCircle className="w-4 h-4 text-red-400" />
-                                        <span>{wrongCount} Yanlış</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
-                                style={{
-                                    background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(99, 102, 241, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center justify-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Oyna</span>
-                                </div>
-                            </motion.button>
-
-                            <Link
-                                to={backLink}
-                                className="block text-slate-500 hover:text-white transition-colors"
-                            >
-                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
-                            </Link>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-emerald-500 to-teal-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-black text-emerald-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Örüntü Ustası!' : 'Harika!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'Sayı dizileri ve mantıksal örüntü tanıma becerin tek kelimeyle mükemmel!' : 'Sayılar arasındaki kuralları çözmek için biraz daha pratik yapmalısın!'}</p>
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Feedback Overlay */}
-                <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
     );
 };
 
 export default NumberSequenceGame;
-

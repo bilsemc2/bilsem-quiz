@@ -1,645 +1,238 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Trophy, RotateCcw, Play, Star, Timer, Target,
-    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, Eye
+    Trophy, RotateCcw, Play, Star, Timer as TimerIcon,
+    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, Eye, Sparkles
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
+import { useSound } from '../../hooks/useSound';
 import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
 
-// ── Platform Standards ──
+// ─── Constants ───────────────────────────────────────────────
 const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 const BASE_DIGIT_LENGTH = 5;
+const GAME_ID = 'algisal-hiz';
 
-type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
-
-// Visual confusion map (psikolojik test standartlarına uygun)
 const CONFUSION_PAIRS: Record<string, string[]> = {
-    '3': ['8', '5'],
-    '8': ['3', '0'],
-    '1': ['7'],
-    '7': ['1'],
-    '6': ['9', '0'],
-    '9': ['6'],
-    '5': ['2', '3'],
-    '2': ['5'],
+    '3': ['8', '5'], '8': ['3', '0'], '1': ['7'], '7': ['1'],
+    '6': ['9', '0'], '9': ['6'], '5': ['2', '3'], '2': ['5'],
 };
 
-interface Challenge {
-    left: string;
-    right: string;
-    isSame: boolean;
-    type: 'same' | 'transposition' | 'similarity' | 'random';
-}
+interface Challenge { left: string; right: string; isSame: boolean; type: 'same' | 'transposition' | 'similarity' | 'random'; }
+type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-
-
-// ── Helper Functions ──
 const generateRandomNumberString = (length: number): string => {
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        result += Math.floor(Math.random() * 10).toString();
-    }
-    return result;
+    let res = ''; for (let i = 0; i < length; i++) res += Math.floor(Math.random() * 10).toString(); return res;
 };
 
 const createChallenge = (digitLength: number): Challenge => {
-    const base = generateRandomNumberString(digitLength);
-    const isSame = Math.random() > 0.5;
-
-    if (isSame) {
-        return { left: base, right: base, isSame: true, type: 'same' };
-    }
-
-    const modified = base.split('');
-    const roll = Math.random();
+    const base = generateRandomNumberString(digitLength), isSame = Math.random() > 0.5;
+    if (isSame) return { left: base, right: base, isSame: true, type: 'same' };
+    const mod = base.split(''), roll = Math.random();
     let type: Challenge['type'] = 'random';
-
-    if (roll < 0.45) {
-        // Transpozisyon: yan yana rakamların yeri değişir
-        const idx = Math.floor(Math.random() * (base.length - 1));
-        [modified[idx], modified[idx + 1]] = [modified[idx + 1], modified[idx]];
-        type = 'transposition';
-    } else if (roll < 0.90) {
-        // Görsel benzerlik: 3↔8, 1↔7 vb.
-        const candidates = base
-            .split('')
-            .map((c, i) => ({ c, i }))
-            .filter(item => CONFUSION_PAIRS[item.c]);
-
-        if (candidates.length > 0) {
-            const target = candidates[Math.floor(Math.random() * candidates.length)];
-            const replacements = CONFUSION_PAIRS[target.c];
-            modified[target.i] = replacements[Math.floor(Math.random() * replacements.length)];
-            type = 'similarity';
-        } else {
-            const idx = Math.floor(Math.random() * base.length);
-            modified[idx] = ((parseInt(modified[idx]) + 1) % 10).toString();
-            type = 'random';
-        }
+    if (roll < 0.45) { const idx = Math.floor(Math.random() * (base.length - 1));[mod[idx], mod[idx + 1]] = [mod[idx + 1], mod[idx]]; type = 'transposition'; }
+    else if (roll < 0.90) {
+        const candy = base.split('').map((c, i) => ({ c, i })).filter(it => CONFUSION_PAIRS[it.c]);
+        if (candy.length > 0) { const target = candy[Math.floor(Math.random() * candy.length)]; const reps = CONFUSION_PAIRS[target.c]; mod[target.i] = reps[Math.floor(Math.random() * reps.length)]; type = 'similarity'; }
+        else { const idx = Math.floor(Math.random() * base.length); mod[idx] = ((parseInt(mod[idx]) + 1) % 10).toString(); type = 'random'; }
     } else {
-        // Rastgele tek rakam değişimi
-        const idx = Math.floor(Math.random() * base.length);
-        let newDigit = Math.floor(Math.random() * 10).toString();
-        while (newDigit === modified[idx]) {
-            newDigit = Math.floor(Math.random() * 10).toString();
-        }
-        modified[idx] = newDigit;
+        const idx = Math.floor(Math.random() * base.length); let nd = Math.floor(Math.random() * 10).toString();
+        while (nd === mod[idx]) nd = Math.floor(Math.random() * 10).toString(); mod[idx] = nd;
     }
-
-    const right = modified.join('');
-    if (base === right) {
-        modified[0] = modified[0] === '1' ? '2' : '1';
-    }
-
-    return { left: base, right: modified.join(''), isSame: false, type };
+    const right = mod.join(''); if (base === right) mod[0] = mod[0] === '1' ? '2' : '1';
+    return { left: base, right: mod.join(''), isSame: false, type };
 };
 
-// ── Component ──
-
 const PerceptualSpeedGame: React.FC = () => {
+    const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
-    const hasSavedRef = useRef(false);
+    const { submitResult } = useExam();
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
     const location = useLocation();
     const navigate = useNavigate();
-    const examMode = location.state?.examMode || false;
-    const { submitResult } = useExam();
-    const { feedbackState, showFeedback } = useGameFeedback();
 
-    // Core State
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(INITIAL_LIVES);
     const [level, setLevel] = useState(1);
+    const [lives, setLives] = useState(INITIAL_LIVES);
     const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
-
-    // Game-specific
     const [challenge, setChallenge] = useState<Challenge | null>(null);
-    const [correctCount, setCorrectCount] = useState(0);
-    const [totalAttempts, setTotalAttempts] = useState(0);
+    const [_correctCount, setCorrectCount] = useState(0);
+    const [_totalAttempts, setTotalAttempts] = useState(0);
 
-    // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const startTimeRef = useRef<number>(0);
-    const challengeStartRef = useRef<number>(0);
+    const startTimeRef = useRef(0);
+    const challengeStartRef = useRef(0);
     const reactionTimesRef = useRef<number[]>([]);
+    const correctInLevelRef = useRef(0);
+    const hasSavedRef = useRef(false);
 
-    // Seviye → rakam uzunluğu (5 → 9)
-    const getDigitLength = useCallback((lvl: number) => {
-        return Math.min(BASE_DIGIT_LENGTH + Math.floor((lvl - 1) / 4), 9);
-    }, []);
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
-    // Timer
-    useEffect(() => {
-        if (phase === 'playing' && timeLeft > 0) {
-            timerRef.current = setTimeout(() => {
-                setTimeLeft(prev => prev - 1);
-            }, 1000);
-        } else if (timeLeft === 0 && phase === 'playing') {
-            handleGameOver();
-        }
-        return () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-        };
-    }, [phase, timeLeft]);
+    const setupChallenge = useCallback(() => {
+        const len = Math.min(BASE_DIGIT_LENGTH + Math.floor((level - 1) / 4), 9);
+        setChallenge(createChallenge(len)); challengeStartRef.current = performance.now();
+    }, [level]);
 
-    // Generate challenge
-    const generateChallenge = useCallback(() => {
-        const digitLen = getDigitLength(level);
-        setChallenge(createChallenge(digitLen));
-        challengeStartRef.current = performance.now();
-    }, [level, getDigitLength]);
-
-    // Level setup
-    useEffect(() => {
-        if (phase === 'playing') {
-            generateChallenge();
-        }
-    }, [phase, level, generateChallenge]);
-
-    // Start
     const handleStart = useCallback(() => {
         window.scrollTo(0, 0);
-        setPhase('playing');
-        setScore(0);
-        setLives(INITIAL_LIVES);
-        setLevel(1);
-        setTimeLeft(TIME_LIMIT);
-        setCorrectCount(0);
-        setTotalAttempts(0);
-        reactionTimesRef.current = [];
-        correctInLevelRef.current = 0;
-        startTimeRef.current = Date.now();
-        hasSavedRef.current = false;
-    }, []);
+        setPhase('playing'); setScore(0); setLevel(1); setLives(INITIAL_LIVES);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        setCorrectCount(0); setTotalAttempts(0); reactionTimesRef.current = []; correctInLevelRef.current = 0;
+        startTimeRef.current = Date.now(); hasSavedRef.current = false;
+        setupChallenge(); playSound('slide');
+    }, [setupChallenge, playSound, examMode, examTimeLimit]);
 
-    // Auto-start
+    useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, phase, handleStart, examMode]);
+
     useEffect(() => {
-        if ((location.state?.autoStart || examMode) && phase === 'welcome') {
-            handleStart();
+        if (phase === 'playing' && timeLeft > 0) {
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
         }
-    }, [location.state, examMode, phase, handleStart]);
+    }, [phase, timeLeft]);
 
-    // Game Over
-    const handleGameOver = useCallback(async () => {
-        if (hasSavedRef.current) return;
-        hasSavedRef.current = true;
-        setPhase('game_over');
-
-        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        const avgReaction = reactionTimesRef.current.length > 0
-            ? Math.round(reactionTimesRef.current.reduce((a, b) => a + b, 0) / reactionTimesRef.current.length)
-            : 0;
-
-        if (examMode) {
-            const passed = correctCount >= 10 && avgReaction < 2000;
-            submitResult(passed, score, 1000, duration);
-            navigate('/atolyeler/sinav-simulasyonu/devam');
-            return;
-        }
-
-        await saveGamePlay({
-            game_id: 'algisal-hiz',
-            score_achieved: score,
-            duration_seconds: duration,
-            metadata: {
-                levels_completed: level,
-                final_lives: lives,
-                correct_count: correctCount,
-                total_attempts: totalAttempts,
-                avg_reaction_ms: avgReaction,
-            },
-        });
-    }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate, correctCount, totalAttempts]);
-
-    // Victory
-    const handleVictory = useCallback(async () => {
-        if (hasSavedRef.current) return;
-        hasSavedRef.current = true;
-        setPhase('victory');
-
-        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        const avgReaction = reactionTimesRef.current.length > 0
-            ? Math.round(reactionTimesRef.current.reduce((a, b) => a + b, 0) / reactionTimesRef.current.length)
-            : 0;
-
-        if (examMode) {
-            submitResult(true, score, 1000, duration);
-            navigate('/atolyeler/sinav-simulasyonu/devam');
-            return;
-        }
-
-        await saveGamePlay({
-            game_id: 'algisal-hiz',
-            score_achieved: score,
-            duration_seconds: duration,
-            metadata: {
-                levels_completed: MAX_LEVEL,
-                victory: true,
-                correct_count: correctCount,
-                total_attempts: totalAttempts,
-                avg_reaction_ms: avgReaction,
-            },
-        });
-    }, [saveGamePlay, score, examMode, submitResult, navigate, correctCount, totalAttempts]);
-
-    // Doğru yanlış kontrol — her seviyede 3 doğru yanıt gerekiyor
-    const correctInLevelRef = useRef(0);
-
-    const handleAnswer = useCallback((userSaysSame: boolean) => {
+    const handleAnswer = useCallback((val: boolean) => {
         if (!challenge || phase !== 'playing') return;
-
-        const reaction = performance.now() - challengeStartRef.current;
-        reactionTimesRef.current.push(reaction);
-
-        const isCorrect = userSaysSame === challenge.isSame;
-        setTotalAttempts(prev => prev + 1);
-
-        showFeedback(isCorrect);
-
+        const reaction = performance.now() - challengeStartRef.current; reactionTimesRef.current.push(reaction);
+        const correct = val === challenge.isSame;
+        setTotalAttempts(a => a + 1); showFeedback(correct); playSound(correct ? 'correct' : 'incorrect');
         setPhase('feedback');
-
-        if (isCorrect) {
-            setScore(prev => prev + 10 * level);
-            setCorrectCount(prev => prev + 1);
-            correctInLevelRef.current += 1;
-
-            setTimeout(() => {
+        setTimeout(() => {
+            dismissFeedback();
+            if (correct) {
+                setScore(s => s + 10 * level); setCorrectCount(c => c + 1); correctInLevelRef.current += 1;
                 if (correctInLevelRef.current >= 3) {
-                    // Seviye atla
                     correctInLevelRef.current = 0;
-                    if (level >= MAX_LEVEL) {
-                        handleVictory();
-                    } else {
-                        setLevel(prev => prev + 1);
-                        setPhase('playing');
-                    }
-                } else {
-                    setPhase('playing');
-                    generateChallenge();
-                }
-            }, 600);
-        } else {
-            const newLives = lives - 1;
-            setLives(newLives);
+                    if (level >= MAX_LEVEL) setPhase('victory');
+                    else { setLevel(l => l + 1); setPhase('playing'); setupChallenge(); }
+                } else { setPhase('playing'); setupChallenge(); }
+            } else {
+                setLives(l => {
+                    const nl = l - 1;
+                    if (nl <= 0) setTimeout(() => setPhase('game_over'), 500);
+                    else { setPhase('playing'); setupChallenge(); }
+                    return nl;
+                });
+            }
+        }, 1500);
+    }, [challenge, phase, level, setupChallenge, playSound, showFeedback, dismissFeedback]);
 
-            setTimeout(() => {
-                if (newLives <= 0) {
-                    handleGameOver();
-                } else {
-                    setPhase('playing');
-                    generateChallenge();
-                }
-            }, 800);
-        }
-    }, [challenge, phase, level, lives, handleVictory, handleGameOver, generateChallenge]);
-
-    // Keyboard
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (phase !== 'playing') return;
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') handleAnswer(true);
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') handleAnswer(false);
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        const hk = (e: KeyboardEvent) => { if (phase === 'playing' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) handleAnswer(e.key === 'ArrowLeft'); };
+        window.addEventListener('keydown', hk); return () => window.removeEventListener('keydown', hk);
     }, [phase, handleAnswer]);
 
-    // Format time
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+    const handleFinish = useCallback(async () => {
+        if (hasSavedRef.current) return;
+        hasSavedRef.current = true;
+        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const avgReact = reactionTimesRef.current.length > 0 ? Math.round(reactionTimesRef.current.reduce((a, b) => a + b, 0) / reactionTimesRef.current.length) : 0;
+        if (examMode) {
+            await submitResult(level >= 5 || phase === 'victory', score, MAX_LEVEL * 100, duration);
+            navigate("/atolyeler/sinav-simulasyonu/devam"); return;
+        }
+        await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: duration, metadata: { level_reached: level, victory: phase === 'victory', avg_reaction_ms: avgReact } });
+    }, [phase, score, level, saveGamePlay, examMode, submitResult, navigate]);
+
+    useEffect(() => { if (phase === 'game_over' || phase === 'victory') handleFinish(); }, [phase, handleFinish]);
+
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
+    if (phase === 'welcome') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" /></div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Eye size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-cyan-300 via-blue-300 to-indigo-300 bg-clip-text text-transparent">Algısal Hız Testi</h1>
+                    <p className="text-slate-300 mb-8 text-lg">İki sayı dizisini saniyeler içinde karşılaştır. Gözlerin ne kadar keskin, zihnin ne kadar hızlı?</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-cyan-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Ekrandaki iki sayıyı <strong>hızlıca tara</strong></span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-cyan-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Aynıysa <strong>AYNI</strong>, farklıysa <strong>FARKLI</strong>'ya bas</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-cyan-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Karıştırılan rakamlara (3-8, 1-7) <strong>dikkat et</strong></span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-cyan-500/10 text-cyan-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-cyan-500/30 font-bold uppercase tracking-widest">TUZÖ 5.6.1 İşleme Hızı</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-            </div>
-
-            {/* Header */}
-            <div className="relative z-10 p-4">
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <Link
-                        to="/atolyeler/bireysel-degerlendirme"
-                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft size={20} />
-                        <span>Geri</span>
-                    </Link>
-
-                    {phase === 'playing' && (
-                        <div className="flex items-center gap-3 md:gap-6">
-                            {/* Score */}
-                            <div className="flex items-center gap-2 bg-amber-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-amber-500/30">
-                                <Star className="text-amber-400" size={16} />
-                                <span className="font-bold text-amber-400 text-sm">{score}</span>
-                            </div>
-
-                            {/* Lives */}
-                            <div className="flex items-center gap-1 bg-red-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-red-500/30">
-                                {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
-                                    <Heart
-                                        key={i}
-                                        size={14}
-                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Timer */}
-                            <div className="flex items-center gap-2 bg-blue-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-blue-500/30">
-                                <Timer className="text-blue-400" size={16} />
-                                <span className={`font-bold text-sm ${timeLeft <= 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'}`}>
-                                    {formatTime(timeLeft)}
-                                </span>
-                            </div>
-
-                            {/* Level */}
-                            <div className="flex items-center gap-2 bg-emerald-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-emerald-500/30">
-                                <Zap className="text-emerald-400" size={16} />
-                                <span className="font-bold text-emerald-400 text-sm">Lv.{level}</span>
-                            </div>
+        <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white relative overflow-hidden flex flex-col">
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+                    {(phase !== 'game_over' && phase !== 'victory') && (
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(251, 191, 36, 0.3)' }}><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-950'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', border: '1px solid rgba(59, 130, 246, 0.3)' }}><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)', border: '1px solid rgba(16, 185, 129, 0.3)' }}><Zap className="text-emerald-400" size={18} /><span className="font-bold text-emerald-400">Seviye {level}/{MAX_LEVEL}</span></div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
                 <AnimatePresence mode="wait">
-                    {/* ── Welcome ── */}
-                    {phase === 'welcome' && (
-                        <motion.div
-                            key="welcome"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            {/* TUZÖ Badge */}
-                            <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full">
-                                <span className="text-[9px] font-black text-violet-300 uppercase tracking-wider">TUZÖ</span>
-                                <span className="text-[9px] font-bold text-violet-400">5.6.1 İşleme Hızı</span>
-                            </div>
-
-                            <motion.div
-                                className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
-                                animate={{ y: [0, -8, 0] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                            >
-                                <Eye size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                                Algısal Hız Testi
-                            </h1>
-
-                            <p className="text-slate-400 mb-4">
-                                İki sayı dizisini karşılaştır — aynı mı, farklı mı?
-                                Görsel benzerlikler ve transpozisyonlara dikkat et!
-                            </p>
-
-                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 mb-6 text-left text-sm text-slate-400 border border-white/10">
-                                <p className="text-slate-300 font-semibold mb-2">Nasıl Oynanır?</p>
-                                <ul className="space-y-1 list-disc list-inside">
-                                    <li>Ekrandaki iki sayı dizisini hızlıca karşılaştır</li>
-                                    <li>Diziler <span className="text-cyan-400 font-semibold">birebir aynı</span> ise AYNI, farklıysa FARKLI tuşuna bas</li>
-                                    <li>Hatalar: 3↔8, 1↔7 ve yan yana rakam yer değiştirmeleri</li>
-                                    <li className="text-slate-500">Klavye: ← Sol Ok (Aynı) / Sağ Ok → (Farklı)</li>
-                                </ul>
-                            </div>
-
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/20">
-                                    <Heart className="text-red-400" size={16} />
-                                    <span className="text-sm text-slate-300">{INITIAL_LIVES} Can</span>
-                                </div>
-                                <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/20">
-                                    <Timer className="text-blue-400" size={16} />
-                                    <span className="text-sm text-slate-300">{TIME_LIMIT / 60} Dakika</span>
-                                </div>
-                                <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2 border border-white/20">
-                                    <Target className="text-emerald-400" size={16} />
-                                    <span className="text-sm text-slate-300">{MAX_LEVEL} Seviye</span>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05, y: -2 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-bold text-xl"
-                                style={{ boxShadow: '0 8px 32px rgba(6, 182, 212, 0.4)' }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Play size={28} className="fill-white" />
-                                    <span>Başla</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* ── Playing ── */}
                     {(phase === 'playing' || phase === 'feedback') && challenge && (
-                        <motion.div
-                            key="playing"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-2xl"
-                        >
-                            {/* Seviye bilgisi */}
-                            <div className="text-center mb-4">
-                                <p className="text-sm text-slate-400">
-                                    {getDigitLength(level)} haneli — {correctInLevelRef.current}/3 doğru
-                                </p>
-                            </div>
-
-                            {/* Karşılaştırma Kartları */}
-                            <div
-                                className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 md:p-10 border border-white/20 mb-8"
-                                style={{
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1), 0 0 30px rgba(6, 182, 212, 0.15)',
-                                }}
-                            >
-                                <div className="flex flex-col items-center gap-6 py-4">
-                                    {/* Row 1 */}
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-slate-500 font-mono text-lg select-none w-8 text-right">1.</span>
-                                        <div className="font-mono text-3xl md:text-5xl lg:text-6xl tracking-[0.25em] font-bold text-white drop-shadow-md tabular-nums select-none">
-                                            {challenge.left}
-                                        </div>
+                        <motion.div key="game" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-4xl">
+                            <div className="bg-white/5 backdrop-blur-3xl rounded-[40px] p-8 md:p-14 border border-white/10 shadow-3xl mb-10 text-center relative overflow-hidden">
+                                <p className="text-slate-400 text-sm font-black uppercase tracking-widest mb-10 flex items-center justify-center gap-3"><Eye size={20} className="text-cyan-400" /> Sayı Dizilerini Karşılaştır</p>
+                                <div className="space-y-12">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">BİRİNCİ DİZİ</span>
+                                        <div className="text-4xl md:text-6xl lg:text-7xl font-mono font-black tracking-[0.15em] text-white drop-shadow-2xl tabular-nums select-none">{challenge.left}</div>
                                     </div>
-
-                                    <div className="w-full h-px bg-white/10" />
-
-                                    {/* Row 2 */}
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-slate-500 font-mono text-lg select-none w-8 text-right">2.</span>
-                                        <div className="font-mono text-3xl md:text-5xl lg:text-6xl tracking-[0.25em] font-bold text-white drop-shadow-md tabular-nums select-none">
-                                            {challenge.right}
-                                        </div>
+                                    <div className="w-32 h-1 bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent mx-auto rounded-full" />
+                                    <div className="flex flex-col items-center gap-2">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">İKİNCİ DİZİ</span>
+                                        <div className="text-4xl md:text-6xl lg:text-7xl font-mono font-black tracking-[0.15em] text-white drop-shadow-2xl tabular-nums select-none">{challenge.right}</div>
                                     </div>
                                 </div>
+                                <div className="mt-12 text-center"><span className="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">{correctInLevelRef.current}/3 TAMAMLANDI</span></div>
                             </div>
-
-                            {/* Butonlar */}
-                            <div className="grid grid-cols-2 gap-4 md:gap-6">
-                                <motion.button
-                                    whileHover={{ scale: 1.05, y: -2 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleAnswer(true)}
-                                    className="flex flex-col items-center justify-center min-h-[80px] p-5 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 backdrop-blur-xl rounded-2xl border border-emerald-500/30"
-                                    style={{ boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)' }}
-                                >
-                                    <CheckCircle2 className="text-emerald-400 mb-2" size={28} />
-                                    <span className="text-lg font-bold text-emerald-300">AYNI</span>
-                                    <span className="text-[10px] text-slate-500 mt-1">← Sol Ok</span>
+                            <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
+                                <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => handleAnswer(true)} className="flex flex-col items-center justify-center min-h-[120px] bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 backdrop-blur-2xl rounded-[32px] border border-emerald-500/30 shadow-lg shadow-emerald-500/10 transition-all hover:border-emerald-400 group">
+                                    <CheckCircle2 className="text-emerald-400 mb-2 group-hover:scale-110 transition-transform" size={32} />
+                                    <span className="text-xl font-black text-emerald-300 uppercase tracking-widest">AYNI</span>
+                                    <span className="text-[10px] font-bold text-slate-500 mt-2 uppercase">Klavye: Sol Ok</span>
                                 </motion.button>
-
-                                <motion.button
-                                    whileHover={{ scale: 1.05, y: -2 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleAnswer(false)}
-                                    className="flex flex-col items-center justify-center min-h-[80px] p-5 bg-gradient-to-br from-rose-500/20 to-rose-600/10 backdrop-blur-xl rounded-2xl border border-rose-500/30"
-                                    style={{ boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)' }}
-                                >
-                                    <XCircle className="text-rose-400 mb-2" size={28} />
-                                    <span className="text-lg font-bold text-rose-300">FARKLI</span>
-                                    <span className="text-[10px] text-slate-500 mt-1">Sağ Ok →</span>
+                                <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => handleAnswer(false)} className="flex flex-col items-center justify-center min-h-[120px] bg-gradient-to-br from-rose-500/20 to-rose-600/10 backdrop-blur-2xl rounded-[32px] border border-rose-500/30 shadow-lg shadow-rose-500/10 transition-all hover:border-rose-400 group">
+                                    <XCircle className="text-rose-400 mb-2 group-hover:scale-110 transition-transform" size={32} />
+                                    <span className="text-xl font-black text-rose-300 uppercase tracking-widest">FARKLI</span>
+                                    <span className="text-[10px] font-bold text-slate-500 mt-2 uppercase">Klavye: Sağ Ok</span>
                                 </motion.button>
                             </div>
                         </motion.div>
                     )}
-
-                    {/* ── Game Over ── */}
-                    {phase === 'game_over' && (
-                        <motion.div
-                            key="game_over"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <div
-                                className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3)' }}
-                            >
-                                <XCircle size={48} className="text-white" />
-                            </div>
-
-                            <h2 className="text-3xl font-bold text-red-400 mb-4">Oyun Bitti!</h2>
-
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/20">
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-2xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Seviye</p>
-                                        <p className="text-2xl font-bold text-emerald-400">{level}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-2xl font-bold text-cyan-400">
-                                            {totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0}%
-                                        </p>
-                                    </div>
-                                </div>
-                                {reactionTimesRef.current.length > 0 && (
-                                    <div className="mt-4 pt-4 border-t border-white/10 text-center">
-                                        <p className="text-slate-400 text-sm">Ort. Tepki Süresi</p>
-                                        <p className="text-xl font-bold text-purple-400">
-                                            {(reactionTimesRef.current.reduce((a, b) => a + b, 0) / reactionTimesRef.current.length / 1000).toFixed(2)}s
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleStart}
-                                className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl font-bold text-lg"
-                                style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Dene</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* ── Victory ── */}
-                    {phase === 'victory' && (
-                        <motion.div
-                            key="victory"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3)' }}
-                                animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
-                            >
-                                <Trophy size={48} className="text-white" />
-                            </motion.div>
-
-                            <h2 className="text-3xl font-bold text-amber-400 mb-4">🎉 Şampiyon!</h2>
-
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/20">
-                                <p className="text-4xl font-bold text-amber-400">{score}</p>
-                                <p className="text-slate-400">Toplam Puan</p>
-                                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/10">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Doğruluk</p>
-                                        <p className="text-xl font-bold text-cyan-400">
-                                            {totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0}%
-                                        </p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Ort. Tepki</p>
-                                        <p className="text-xl font-bold text-purple-400">
-                                            {reactionTimesRef.current.length > 0
-                                                ? (reactionTimesRef.current.reduce((a, b) => a + b, 0) / reactionTimesRef.current.length / 1000).toFixed(2)
-                                                : '0'}s
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleStart}
-                                className="px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl font-bold text-lg"
-                                style={{ boxShadow: '0 8px 32px rgba(245, 158, 11, 0.4)' }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Oyna</span>
-                                </div>
-                            </motion.button>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-cyan-500 to-blue-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-black text-cyan-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Algı Şampiyonu!' : 'Fevkalade!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'Sayıları tarama hızın ve yüksek doğruluğun tek kelimeyle inanılmaz!' : 'Hızını ve doğruluğunu artırmak için bol bol pratik yapmalısın.'}</p>
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Feedback Overlay */}
                 <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
@@ -647,4 +240,3 @@ const PerceptualSpeedGame: React.FC = () => {
 };
 
 export default PerceptualSpeedGame;
-

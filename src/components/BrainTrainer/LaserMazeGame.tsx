@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Trophy, RotateCcw, Play, Star, Timer, Target, XCircle, ChevronLeft, Zap, Heart, Crosshair
+    Trophy, RotateCcw, Play, Star, Timer as TimerIcon, ChevronLeft, Zap, Heart, Crosshair, Eye, Sparkles
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
 import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useExam } from '../../contexts/ExamContext';
+import { useSound } from '../../hooks/useSound';
 import * as THREE from 'three';
 
-// Game Constants
+// ─── Constants ──────────────────────────────────────
 const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
@@ -25,13 +26,7 @@ const LASER_EMISSIVE = '#ff3a3a';
 
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-interface LaserMazeGameProps {
-    examMode?: boolean;
-    examLevel?: number;
-    examTimeLimit?: number;
-}
-
-// --- Maze Generation Utilities ---
+// Maze Dirs
 const DIRS: Record<string, { dr: number; dc: number; vec: THREE.Vector3 }> = {
     N: { dr: -1, dc: 0, vec: new THREE.Vector3(0, 0, -1) },
     S: { dr: 1, dc: 0, vec: new THREE.Vector3(0, 0, 1) },
@@ -40,6 +35,7 @@ const DIRS: Record<string, { dr: number; dc: number; vec: THREE.Vector3 }> = {
 };
 const OPPOSITE: Record<string, string> = { N: 'S', S: 'N', W: 'E', E: 'W' };
 
+// Helpers
 const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 const shuffle = <T,>(arr: T[]): T[] => {
     for (let i = arr.length - 1; i > 0; i--) {
@@ -49,70 +45,54 @@ const shuffle = <T,>(arr: T[]): T[] => {
     return arr;
 };
 
-interface MazeCell {
-    row: number; col: number; visited: boolean;
-    walls: Record<string, boolean>;
-}
-interface MirrorData {
-    row: number; col: number; incoming: string; outgoing: string; real: boolean;
-}
-interface ExitData {
-    row: number; col: number; side: string; id: number;
-}
+interface MazeCell { row: number; col: number; visited: boolean; walls: Record<string, boolean>; }
+interface MirrorData { row: number; col: number; incoming: string; outgoing: string; real: boolean; }
+interface ExitData { row: number; col: number; side: string; id: number; }
 interface MazeConfig {
     cells: MazeCell[][]; entrance: { row: number; col: number; side: string };
     exits: ExitData[]; correctIndex: number; path: { row: number; col: number }[];
     mirrors: MirrorData[]; entryDir: string; exitDir: string;
 }
 
-function cellKey(c: { row: number; col: number }) { return `${c.row},${c.col}`; }
-function cellToWorld(row: number, col: number, gridSize: number) {
-    const offset = (gridSize - 1) / 2;
-    return new THREE.Vector3((col - offset) * CELL_SIZE, 0, (row - offset) * CELL_SIZE);
-}
+const cellKey = (c: { row: number; col: number }) => `${c.row},${c.col}`;
+const cellToWorld = (r: number, c: number, size: number) => {
+    const off = (size - 1) / 2;
+    return new THREE.Vector3((c - off) * CELL_SIZE, 0, (r - off) * CELL_SIZE);
+};
 
+// Logic
 function generateMazeCells(size: number): MazeCell[][] {
-    const cells: MazeCell[][] = Array.from({ length: size }, (_, row) =>
-        Array.from({ length: size }, (_, col) => ({
-            row, col, visited: false, walls: { N: true, E: true, S: true, W: true },
-        }))
+    const cells: MazeCell[][] = Array.from({ length: size }, (_, r) =>
+        Array.from({ length: size }, (_, c) => ({ r, c, visited: false, walls: { N: true, E: true, S: true, W: true }, row: r, col: c }))
     );
     const stack: MazeCell[] = [];
-    let current = cells[randInt(0, size - 1)][randInt(0, size - 1)];
-    current.visited = true;
+    let cur = cells[randInt(0, size - 1)][randInt(0, size - 1)];
+    cur.visited = true;
     let visited = 1;
     while (visited < size * size) {
         const neighbors: { neighbor: MazeCell; dir: string }[] = [];
         Object.entries(DIRS).forEach(([dir, data]) => {
-            const nr = current.row + data.dr, nc = current.col + data.dc;
+            const nr = cur.row + data.dr, nc = cur.col + data.dc;
             if (nr < 0 || nr >= size || nc < 0 || nc >= size) return;
             if (!cells[nr][nc].visited) neighbors.push({ neighbor: cells[nr][nc], dir });
         });
         if (neighbors.length > 0) {
             const { neighbor, dir } = neighbors[randInt(0, neighbors.length - 1)];
-            current.walls[dir] = false;
+            cur.walls[dir] = false;
             neighbor.walls[OPPOSITE[dir]] = false;
-            stack.push(current);
-            current = neighbor;
-            current.visited = true;
+            stack.push(cur);
+            cur = neighbor;
+            cur.visited = true;
             visited++;
-        } else if (stack.length > 0) {
-            current = stack.pop()!;
-        }
+        } else if (stack.length > 0) { cur = stack.pop()!; }
     }
     return cells;
 }
 
 function boundaryCells(size: number) {
     const list: { row: number; col: number; side: string }[] = [];
-    for (let col = 1; col < size - 1; col++) {
-        list.push({ row: 0, col, side: 'N' });
-        list.push({ row: size - 1, col, side: 'S' });
-    }
-    for (let row = 1; row < size - 1; row++) {
-        list.push({ row, col: 0, side: 'W' });
-        list.push({ row, col: size - 1, side: 'E' });
-    }
+    for (let col = 1; col < size - 1; col++) { list.push({ row: 0, col, side: 'N' }); list.push({ row: size - 1, col, side: 'S' }); }
+    for (let row = 1; row < size - 1; row++) { list.push({ row, col: 0, side: 'W' }); list.push({ row, col: size - 1, side: 'E' }); }
     return list;
 }
 
@@ -139,16 +119,13 @@ function bfs(cells: MazeCell[][], start: { row: number; col: number }) {
 function buildPath(parent: ({ row: number; col: number } | null)[][], start: { row: number; col: number }, end: { row: number; col: number }) {
     const path: { row: number; col: number }[] = [];
     let cur: { row: number; col: number } | null = { row: end.row, col: end.col };
-    while (cur && !(cur.row === start.row && cur.col === start.col)) {
-        path.push(cur);
-        cur = parent[cur.row][cur.col];
-    }
+    while (cur && !(cur.row === start.row && cur.col === start.col)) { path.push(cur); cur = parent[cur.row][cur.col]; }
     path.push({ row: start.row, col: start.col });
     path.reverse();
     return path;
 }
 
-function getDir(from: { row: number; col: number }, to: { row: number; col: number }) {
+function getMoveDir(from: { row: number; col: number }, to: { row: number; col: number }) {
     if (to.row === from.row - 1) return 'N';
     if (to.row === from.row + 1) return 'S';
     if (to.col === from.col - 1) return 'W';
@@ -180,13 +157,12 @@ function createMazeConfig(gridSize: number, exitCount: number): MazeConfig {
             const entryDir = OPPOSITE[entrance.side];
             const exitDir = candidate.side;
             const pathDirs: string[] = [];
-            for (let p = 0; p < path.length - 1; p++) pathDirs.push(getDir(path[p], path[p + 1]));
+            for (let p = 0; p < path.length - 1; p++) pathDirs.push(getMoveDir(path[p], path[p + 1]));
             const mirrors: MirrorData[] = [];
             for (let p = 0; p < path.length; p++) {
-                const cell = path[p];
                 const incoming = p === 0 ? entryDir : pathDirs[p - 1];
                 const outgoing = p === path.length - 1 ? exitDir : pathDirs[p];
-                if (incoming !== outgoing) mirrors.push({ row: cell.row, col: cell.col, incoming, outgoing, real: true });
+                if (incoming !== outgoing) mirrors.push({ row: path[p].row, col: path[p].col, incoming, outgoing, real: true });
             }
             const mirrorSet = new Set(mirrors.map(cellKey));
             const decoyCandidates: { row: number; col: number }[] = [];
@@ -206,7 +182,7 @@ function createMazeConfig(gridSize: number, exitCount: number): MazeConfig {
             return { cells, entrance, exits, correctIndex, path, mirrors, entryDir, exitDir };
         }
     }
-    throw new Error('Maze generation failed');
+    throw new Error('Maze fail');
 }
 
 function densifyPath(points: THREE.Vector3[], step: number) {
@@ -225,16 +201,7 @@ function densifyPath(points: THREE.Vector3[], step: number) {
     return dense;
 }
 
-// --- Level Config ---
-function getLevelConfig(level: number): { gridSize: number; exitCount: number } {
-    if (level <= 4) return { gridSize: 6, exitCount: 3 };
-    if (level <= 8) return { gridSize: 6, exitCount: 4 };
-    if (level <= 12) return { gridSize: 8, exitCount: 4 };
-    if (level <= 16) return { gridSize: 8, exitCount: 5 };
-    return { gridSize: 10, exitCount: 6 };
-}
-
-// --- Three.js Engine ---
+// Three Engine
 function createEngine(container: HTMLDivElement, gridSize: number, exitCount: number) {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#1a1a2e');
@@ -243,249 +210,163 @@ function createEngine(container: HTMLDivElement, gridSize: number, exitCount: nu
     const rect = container.getBoundingClientRect();
     renderer.setSize(rect.width, rect.height);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
     const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 200);
-    camera.position.set(0, 26, 0);
-    camera.up.set(0, 0, -1);
-    camera.lookAt(0, 0, 0);
-
+    camera.position.set(0, 26, 0); camera.up.set(0, 0, -1); camera.lookAt(0, 0, 0);
     scene.add(new THREE.AmbientLight('#f6f2e7', 0.6));
-    const keyLight = new THREE.DirectionalLight('#ffffff', 0.95);
-    keyLight.position.set(10, 18, 8);
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(1024, 1024);
-    keyLight.shadow.camera.near = 2; keyLight.shadow.camera.far = 80;
-    keyLight.shadow.camera.left = -30; keyLight.shadow.camera.right = 30;
-    keyLight.shadow.camera.top = 30; keyLight.shadow.camera.bottom = -30;
+    const keyLight = new THREE.DirectionalLight('#ffffff', 0.9);
+    keyLight.position.set(10, 18, 8); keyLight.castShadow = true;
     scene.add(keyLight);
 
-    const mazeConfig = createMazeConfig(gridSize, exitCount);
-    const group = new THREE.Group();
-    scene.add(group);
+    const config = createMazeConfig(gridSize, exitCount);
+    const group = new THREE.Group(); scene.add(group);
 
-    // Floor
     const floorSize = gridSize * CELL_SIZE + CELL_SIZE;
-    const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(floorSize, floorSize),
-        new THREE.MeshStandardMaterial({ color: '#16213e', roughness: 0.85 })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    group.add(floor);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(floorSize, floorSize), new THREE.MeshStandardMaterial({ color: '#16213e' }));
+    floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; group.add(floor);
 
-    const gridHelper = new THREE.GridHelper(gridSize * CELL_SIZE, gridSize, '#2a2a5a', '#1e1e4a');
-    gridHelper.position.y = 0.02;
-    group.add(gridHelper);
-
-    // Walls
-    const wallMat = new THREE.MeshStandardMaterial({ color: '#4a5a8a', roughness: 0.6, metalness: 0.05 });
+    const wallMat = new THREE.MeshStandardMaterial({ color: '#4a5a8a' });
     const wallNS = new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, WALL_THICK);
     const wallWE = new THREE.BoxGeometry(WALL_THICK, WALL_HEIGHT, CELL_SIZE);
     for (let r = 0; r < gridSize; r++) {
         for (let c = 0; c < gridSize; c++) {
-            const cell = mazeConfig.cells[r][c];
-            const center = cellToWorld(r, c, gridSize);
-            if (cell.walls.N) { const w = new THREE.Mesh(wallNS, wallMat); w.position.set(center.x, WALL_HEIGHT / 2, center.z - CELL_SIZE / 2); w.castShadow = true; group.add(w); }
-            if (cell.walls.W) { const w = new THREE.Mesh(wallWE, wallMat); w.position.set(center.x - CELL_SIZE / 2, WALL_HEIGHT / 2, center.z); w.castShadow = true; group.add(w); }
-            if (r === gridSize - 1 && cell.walls.S) { const w = new THREE.Mesh(wallNS, wallMat); w.position.set(center.x, WALL_HEIGHT / 2, center.z + CELL_SIZE / 2); w.castShadow = true; group.add(w); }
-            if (c === gridSize - 1 && cell.walls.E) { const w = new THREE.Mesh(wallWE, wallMat); w.position.set(center.x + CELL_SIZE / 2, WALL_HEIGHT / 2, center.z); w.castShadow = true; group.add(w); }
+            const cell = config.cells[r][c]; const cur = cellToWorld(r, c, gridSize);
+            if (cell.walls.N) { const w = new THREE.Mesh(wallNS, wallMat); w.position.set(cur.x, WALL_HEIGHT / 2, cur.z - CELL_SIZE / 2); w.castShadow = true; group.add(w); }
+            if (cell.walls.W) { const w = new THREE.Mesh(wallWE, wallMat); w.position.set(cur.x - CELL_SIZE / 2, WALL_HEIGHT / 2, cur.z); w.castShadow = true; group.add(w); }
+            if (r === gridSize - 1 && cell.walls.S) { const w = new THREE.Mesh(wallNS, wallMat); w.position.set(cur.x, WALL_HEIGHT / 2, cur.z + CELL_SIZE / 2); w.castShadow = true; group.add(w); }
+            if (c === gridSize - 1 && cell.walls.E) { const w = new THREE.Mesh(wallWE, wallMat); w.position.set(cur.x + CELL_SIZE / 2, WALL_HEIGHT / 2, cur.z); w.castShadow = true; group.add(w); }
         }
     }
 
-    // Mirrors — flat diamond markers visible from top-down camera
-    const mirrorRealMat = new THREE.MeshStandardMaterial({ color: '#60d5f7', emissive: '#40c0ff', emissiveIntensity: 0.8, roughness: 0.3, metalness: 0.4 });
-    const mirrorDecoyMat = new THREE.MeshStandardMaterial({ color: '#8888aa', emissive: '#6666aa', emissiveIntensity: 0.4, roughness: 0.5, metalness: 0.3 });
-    const mirrorSize = CELL_SIZE * 0.55;
-    const mirrorGeo = new THREE.BoxGeometry(mirrorSize, 0.15, mirrorSize * 0.18);
-
-    function getMirrorAngle(incoming: string, outgoing: string): number {
-        // Determine the rotation angle for the mirror on the XZ plane
-        const pair = incoming + outgoing;
-        // Mirror reflects: NE/EN→45°, NW/WN→-45°, SE/ES→-45°, SW/WS→45°
-        if (pair === 'NE' || pair === 'EN' || pair === 'SW' || pair === 'WS') return Math.PI / 4;
-        if (pair === 'NW' || pair === 'WN' || pair === 'SE' || pair === 'ES') return -Math.PI / 4;
-        return 0;
-    }
-
-    mazeConfig.mirrors.forEach(m => {
-        const center = cellToWorld(m.row, m.col, gridSize);
-        const mat = m.real ? mirrorRealMat : mirrorDecoyMat;
-        const mesh = new THREE.Mesh(mirrorGeo, mat);
-        mesh.position.set(center.x, 0.12, center.z);
-        mesh.rotation.y = getMirrorAngle(m.incoming, m.outgoing);
-        mesh.castShadow = true;
-        group.add(mesh);
-
-        // Glow ring under mirror
-        const ringGeo = new THREE.RingGeometry(mirrorSize * 0.3, mirrorSize * 0.45, 16);
-        const ringMat = new THREE.MeshBasicMaterial({ color: m.real ? '#40c0ff' : '#6666aa', transparent: true, opacity: 0.4, side: THREE.DoubleSide });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.set(center.x, 0.03, center.z);
-        group.add(ring);
+    const mRMat = new THREE.MeshStandardMaterial({ color: '#60d5f7', emissive: '#40c0ff', emissiveIntensity: 0.8 });
+    const mDMat = new THREE.MeshStandardMaterial({ color: '#8888aa', emissive: '#6666aa', emissiveIntensity: 0.4 });
+    const mSize = CELL_SIZE * 0.55;
+    const mGeo = new THREE.BoxGeometry(mSize, 0.15, mSize * 0.18);
+    config.mirrors.forEach(m => {
+        const cur = cellToWorld(m.row, m.col, gridSize); const mesh = new THREE.Mesh(mGeo, m.real ? mRMat : mDMat);
+        mesh.position.set(cur.x, 0.12, cur.z);
+        const p = m.incoming + m.outgoing;
+        mesh.rotation.y = (p === 'NE' || p === 'EN' || p === 'SW' || p === 'WS') ? Math.PI / 4 : -Math.PI / 4;
+        mesh.castShadow = true; group.add(mesh);
     });
 
-    // Exit markers with text sprites
-    function makeTextSprite(text: string) {
+    // ── Entrance: glowing laser source ──
+    const entranceWorld = cellToWorld(config.entrance.row, config.entrance.col, gridSize);
+    const entranceOff = DIRS[config.entrance.side].vec.clone().multiplyScalar(CELL_SIZE * 0.55);
+    const entrancePos = entranceWorld.clone().add(entranceOff);
+    const laserSourceGeo = new THREE.SphereGeometry(CELL_SIZE * 0.18, 16, 16);
+    const laserSourceMat = new THREE.MeshStandardMaterial({ color: '#ff2020', emissive: '#ff4444', emissiveIntensity: 1.5, transparent: true, opacity: 0.9 });
+    const laserSource = new THREE.Mesh(laserSourceGeo, laserSourceMat);
+    laserSource.position.set(entrancePos.x, 0.35, entrancePos.z);
+    group.add(laserSource);
+    // Laser source glow ring
+    const glowRingGeo = new THREE.RingGeometry(CELL_SIZE * 0.22, CELL_SIZE * 0.32, 32);
+    const glowRingMat = new THREE.MeshBasicMaterial({ color: '#ff4444', transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+    const glowRing = new THREE.Mesh(glowRingGeo, glowRingMat);
+    glowRing.position.set(entrancePos.x, 0.02, entrancePos.z);
+    glowRing.rotation.x = -Math.PI / 2;
+    group.add(glowRing);
+
+    // ── Helper: create text sprite ──
+    const createTextSprite = (text: string, color: string) => {
         const canvas = document.createElement('canvas');
         canvas.width = 128; canvas.height = 128;
-        const ctx = canvas.getContext('2d')!;
-        ctx.clearRect(0, 0, 128, 128);
-        ctx.fillStyle = '#1a1a3e';
-        ctx.beginPath(); ctx.arc(64, 64, 58, 0, Math.PI * 2); ctx.fill();
-        ctx.lineWidth = 6; ctx.strokeStyle = '#6366f1'; ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.font = '700 60px sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(text, 64, 68);
+        const ctx2d = canvas.getContext('2d')!;
+        ctx2d.clearRect(0, 0, 128, 128);
+        // Background circle
+        ctx2d.beginPath();
+        ctx2d.arc(64, 64, 56, 0, Math.PI * 2);
+        ctx2d.fillStyle = color;
+        ctx2d.fill();
+        // Border
+        ctx2d.lineWidth = 4;
+        ctx2d.strokeStyle = '#ffffff';
+        ctx2d.stroke();
+        // Text
+        ctx2d.fillStyle = '#ffffff';
+        ctx2d.font = 'bold 64px Arial';
+        ctx2d.textAlign = 'center';
+        ctx2d.textBaseline = 'middle';
+        ctx2d.fillText(text, 64, 68);
         const tex = new THREE.CanvasTexture(canvas);
-        tex.minFilter = THREE.LinearFilter;
-        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
         const sprite = new THREE.Sprite(mat);
-        sprite.scale.set(0.85, 0.85, 1);
+        sprite.scale.set(CELL_SIZE * 0.6, CELL_SIZE * 0.6, 1);
         return sprite;
-    }
+    };
 
-    const exitMat = new THREE.MeshStandardMaterial({ color: '#6366f1', emissive: '#818cf8', emissiveIntensity: 0.6, roughness: 0.35 });
+    // ── Exits with numbered labels ──
     const exitGeo = new THREE.BoxGeometry(CELL_SIZE * 0.75, 0.6, 0.18);
-    mazeConfig.exits.forEach((exit, idx) => {
-        const center = cellToWorld(exit.row, exit.col, gridSize);
-        const offset = DIRS[exit.side].vec.clone().multiplyScalar(CELL_SIZE * 0.55);
-        const pos = center.clone().add(offset);
-        const marker = new THREE.Mesh(exitGeo, exitMat.clone());
-        marker.position.set(pos.x, 0.25, pos.z);
-        marker.rotation.y = exit.side === 'N' ? Math.PI : exit.side === 'E' ? Math.PI / 2 : exit.side === 'W' ? -Math.PI / 2 : 0;
-        group.add(marker);
-        const sprite = makeTextSprite(`${idx + 1}`);
-        sprite.position.set(pos.x, 1.2, pos.z);
-        group.add(sprite);
+    config.exits.forEach((e) => {
+        const cur = cellToWorld(e.row, e.col, gridSize); const off = DIRS[e.side].vec.clone().multiplyScalar(CELL_SIZE * 0.55);
+        const pos = cur.clone().add(off);
+        const m = new THREE.Mesh(exitGeo, new THREE.MeshStandardMaterial({ color: '#6366f1', emissive: '#818cf8', emissiveIntensity: 0.6 }));
+        m.position.set(pos.x, 0.25, pos.z);
+        m.rotation.y = e.side === 'N' ? Math.PI : e.side === 'E' ? Math.PI / 2 : e.side === 'W' ? -Math.PI / 2 : 0;
+        group.add(m);
+        // Number label above exit
+        const label = createTextSprite(String(e.id), '#6366f1');
+        label.position.set(pos.x, 1.6, pos.z);
+        group.add(label);
     });
 
-    // Entrance marker — laser-colored
-    const entranceCenter = cellToWorld(mazeConfig.entrance.row, mazeConfig.entrance.col, gridSize);
-    const entranceOffset = DIRS[mazeConfig.entrance.side].vec.clone().multiplyScalar(CELL_SIZE * 0.55);
-    const entrancePos = entranceCenter.clone().add(entranceOffset);
-    const entMarker = new THREE.Mesh(exitGeo, new THREE.MeshStandardMaterial({ color: LASER_COLOR, emissive: LASER_EMISSIVE, emissiveIntensity: 0.8, roughness: 0.3 }));
-    entMarker.position.set(entrancePos.x, 0.25, entrancePos.z);
-    entMarker.rotation.y = mazeConfig.entrance.side === 'N' ? Math.PI : mazeConfig.entrance.side === 'E' ? Math.PI / 2 : mazeConfig.entrance.side === 'W' ? -Math.PI / 2 : 0;
-    group.add(entMarker);
-    const entSprite = makeTextSprite('G');
-    entSprite.position.set(entrancePos.x, 1.2, entrancePos.z);
-    group.add(entSprite);
-
-    // Laser path
-    const entryVec = DIRS[mazeConfig.entrance.side].vec.clone();
-    const exitVec = DIRS[mazeConfig.exitDir].vec.clone();
     const pathPoints: THREE.Vector3[] = [];
-    pathPoints.push(entranceCenter.clone().add(entryVec.clone().multiplyScalar(CELL_SIZE * 0.6)).setY(LASER_Y));
-    mazeConfig.path.forEach(c => pathPoints.push(cellToWorld(c.row, c.col, gridSize).setY(LASER_Y)));
-    const lastCell = mazeConfig.path[mazeConfig.path.length - 1];
-    pathPoints.push(cellToWorld(lastCell.row, lastCell.col, gridSize).add(exitVec.clone().multiplyScalar(CELL_SIZE * 0.6)).setY(LASER_Y));
+    const enCur = cellToWorld(config.entrance.row, config.entrance.col, gridSize);
+    pathPoints.push(enCur.clone().add(DIRS[config.entrance.side].vec.clone().multiplyScalar(CELL_SIZE * 0.6)).setY(LASER_Y));
+    config.path.forEach(c => pathPoints.push(cellToWorld(c.row, c.col, gridSize).setY(LASER_Y)));
+    const last = config.path[config.path.length - 1];
+    pathPoints.push(cellToWorld(last.row, last.col, gridSize).add(DIRS[config.exitDir].vec.clone().multiplyScalar(CELL_SIZE * 0.6)).setY(LASER_Y));
     const laserPoints = densifyPath(pathPoints, LASER_STEP);
 
-    const laserMat = new THREE.MeshStandardMaterial({
-        color: LASER_COLOR, emissive: LASER_EMISSIVE, emissiveIntensity: 1.2,
-        roughness: 0.25, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending,
-    });
-    const laserSegments: THREE.Mesh[] = [];
+    const laserMat = new THREE.MeshStandardMaterial({ color: LASER_COLOR, emissive: LASER_EMISSIVE, emissiveIntensity: 1.2, transparent: true, opacity: 0, blending: THREE.AdditiveBlending });
+    const segments: THREE.Mesh[] = [];
     for (let i = 0; i < laserPoints.length - 1; i++) {
-        const a = laserPoints[i], b = laserPoints[i + 1];
-        const dir = b.clone().sub(a);
-        const len = dir.length();
+        const a = laserPoints[i], b = laserPoints[i + 1]; const dir = b.clone().sub(a); const len = dir.length();
         if (len <= 0.001) continue;
-        const mid = a.clone().add(b).multiplyScalar(0.5);
-        const geo = new THREE.CylinderGeometry(LASER_RADIUS, LASER_RADIUS, len, 8, 1, true);
-        const seg = new THREE.Mesh(geo, laserMat);
-        seg.position.copy(mid);
-        seg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-        seg.visible = false;
-        group.add(seg);
-        laserSegments.push(seg);
+        const g = new THREE.CylinderGeometry(LASER_RADIUS, LASER_RADIUS, len, 8); const s = new THREE.Mesh(g, laserMat);
+        s.position.copy(a.clone().add(b).multiplyScalar(0.5));
+        s.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+        s.visible = false; group.add(s); segments.push(s);
     }
 
-    // Camera
-    const aspect = rect.width / rect.height;
-    const camSize = gridSize * CELL_SIZE * 0.65;
-    camera.left = -camSize * aspect; camera.right = camSize * aspect;
-    camera.top = camSize; camera.bottom = -camSize;
-    camera.updateProjectionMatrix();
+    const aspect = rect.width / rect.height; const s = gridSize * CELL_SIZE * 0.65;
+    camera.left = -s * aspect; camera.right = s * aspect; camera.top = s; camera.bottom = -s; camera.updateProjectionMatrix();
 
-    let running = true;
-    let frameId: number;
-    let laserAnim = { active: false, start: 0, duration: 0, hold: 0, fade: 0, peak: 0.9 };
-
+    let run = true; let lAnim = { active: false, start: 0, dur: 0, hold: 0, fade: 0 };
     function animate() {
-        if (!running) return;
-        const now = performance.now();
-        if (laserAnim.active) {
-            const elapsed = now - laserAnim.start;
-            const total = laserAnim.duration + laserAnim.hold + laserAnim.fade;
-            if (elapsed <= total) {
-                let opacity = laserAnim.peak;
-                let drawCount = laserSegments.length;
-                if (elapsed < laserAnim.duration) {
-                    const progress = elapsed / laserAnim.duration;
-                    drawCount = Math.max(1, Math.floor(progress * laserSegments.length));
-                } else if (elapsed > laserAnim.duration + laserAnim.hold) {
-                    const fadeP = (elapsed - laserAnim.duration - laserAnim.hold) / laserAnim.fade;
-                    opacity = laserAnim.peak * (1 - Math.min(1, fadeP));
-                }
-                laserMat.opacity = opacity;
-                laserSegments.forEach((seg, i) => { seg.visible = i < drawCount; });
-            } else {
-                laserMat.opacity = 0;
-                laserSegments.forEach(s => { s.visible = false; });
-                laserAnim.active = false;
-            }
+        if (!run) return;
+        if (lAnim.active) {
+            const el = performance.now() - lAnim.start; const tot = lAnim.dur + lAnim.hold + lAnim.fade;
+            if (el <= tot) {
+                let op = 0.95; let d = segments.length;
+                if (el < lAnim.dur) { d = Math.max(1, Math.floor((el / lAnim.dur) * segments.length)); }
+                else if (el > lAnim.dur + lAnim.hold) { op = 0.95 * (1 - (el - lAnim.dur - lAnim.hold) / lAnim.fade); }
+                laserMat.opacity = op; segments.forEach((s, i) => s.visible = i < d);
+            } else { laserMat.opacity = 0; segments.forEach(s => s.visible = false); lAnim.active = false; }
         }
-        renderer.render(scene, camera);
-        frameId = requestAnimationFrame(animate);
+        renderer.render(scene, camera); requestAnimationFrame(animate);
     }
-
-    function handleResize() {
-        const r = container.getBoundingClientRect();
-        renderer.setSize(r.width, r.height);
-        const a = r.width / r.height;
-        const s = gridSize * CELL_SIZE * 0.65;
-        camera.left = -s * a; camera.right = s * a; camera.top = s; camera.bottom = -s;
-        camera.updateProjectionMatrix();
-    }
-    window.addEventListener('resize', handleResize);
     animate();
 
     return {
-        correctIndex: mazeConfig.correctIndex,
-        exitCount: mazeConfig.exits.length,
-        guess(index: number) {
-            const isCorrect = index === mazeConfig.correctIndex;
-            laserSegments.forEach(s => { s.visible = false; });
-            laserAnim = {
-                active: true, start: performance.now(),
-                duration: isCorrect ? 2800 : 1400, hold: isCorrect ? 800 : 300, fade: 700, peak: 0.95,
-            };
-            return isCorrect;
+        correctIndex: config.correctIndex, exitCount: config.exits.length,
+        guess(idx: number) {
+            const ok = idx === config.correctIndex;
+            lAnim = { active: true, start: performance.now(), dur: ok ? 2800 : 1400, hold: ok ? 800 : 300, fade: 700 };
+            return ok;
         },
-        dispose() {
-            running = false;
-            cancelAnimationFrame(frameId);
-            window.removeEventListener('resize', handleResize);
-            renderer.dispose();
-            if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
-        },
+        dispose() { run = false; renderer.dispose(); if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement); }
     };
 }
 
-// --- Feedback Messages ---
-
 const LaserMazeGame: React.FC = () => {
+    const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
-    const hasSavedRef = useRef(false);
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
+    const { submitResult } = useExam();
     const location = useLocation();
     const navigate = useNavigate();
-    const examMode = location.state?.examMode || false;
-    const { submitResult } = useExam();
-    const { feedbackState, showFeedback } = useGameFeedback();
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
@@ -495,269 +376,178 @@ const LaserMazeGame: React.FC = () => {
     const [exitCount, setExitCount] = useState(3);
     const [puzzleKey, setPuzzleKey] = useState(0);
 
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef(0);
     const canvasRef = useRef<HTMLDivElement | null>(null);
-    const engineRef = useRef<ReturnType<typeof createEngine> | null>(null);
+    const engineRef = useRef<any>(null);
     const guessedRef = useRef(false);
+    const hasSavedRef = useRef(false);
 
-    // Timer
-    useEffect(() => {
-        if (phase === 'playing' && timeLeft > 0) {
-            timerRef.current = setTimeout(() => setTimeLeft(p => p - 1), 1000);
-        } else if (timeLeft === 0 && phase === 'playing') {
-            handleGameOver();
-        }
-        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-    }, [phase, timeLeft]);
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
-    // Build maze when canvas mounts or level changes
-    const mountedLevelRef = useRef(0);
-
-    const canvasCallbackRef = useCallback((node: HTMLDivElement | null) => {
-        canvasRef.current = node;
-        if (!node) {
-            if (engineRef.current) { engineRef.current.dispose(); engineRef.current = null; }
-            return;
-        }
-        if (engineRef.current) engineRef.current.dispose();
-        const config = getLevelConfig(level);
-        const engine = createEngine(node, config.gridSize, config.exitCount);
-        engineRef.current = engine;
-        setExitCount(engine.exitCount);
-        guessedRef.current = false;
-        mountedLevelRef.current = level;
-    }, [level, puzzleKey]);
-
-    // Rebuild maze when level changes while already mounted
-    useEffect(() => {
-        if (phase !== 'playing') return;
+    const initEngine = useCallback(() => {
         if (!canvasRef.current) return;
-        if (mountedLevelRef.current === level) return; // Already built by callback ref
         if (engineRef.current) engineRef.current.dispose();
-        const config = getLevelConfig(level);
-        const engine = createEngine(canvasRef.current, config.gridSize, config.exitCount);
+        const cfg = level <= 4 ? { s: 6, e: 3 } : level <= 8 ? { s: 6, e: 4 } : level <= 12 ? { s: 8, e: 4 } : level <= 16 ? { s: 8, e: 5 } : { s: 10, e: 6 };
+        const engine = createEngine(canvasRef.current, cfg.s, cfg.e);
         engineRef.current = engine;
         setExitCount(engine.exitCount);
         guessedRef.current = false;
-        mountedLevelRef.current = level;
-    }, [level, phase, puzzleKey]);
+        setPhase('playing');
+        playSound('detective_mystery');
+    }, [level, playSound]);
+
+    // Initialize 3D engine when canvas mounts or puzzleKey changes
+    useEffect(() => {
+        if (phase === 'playing' || phase === 'feedback') {
+            const timer = setTimeout(initEngine, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [puzzleKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleStart = useCallback(() => {
         window.scrollTo(0, 0);
-        setPhase('playing');
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevel(1);
-        setTimeLeft(TIME_LIMIT);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
-    }, []);
+        setPhase('playing');
+        setPuzzleKey(k => k + 1);
+    }, [examMode, examTimeLimit]);
 
     useEffect(() => {
         if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart();
-    }, [location.state, examMode, phase, handleStart]);
+    }, [location.state, phase, handleStart, examMode]);
 
-    const handleGameOver = useCallback(async () => {
+    useEffect(() => {
+        if (phase === 'playing' && timeLeft > 0) {
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
+        }
+    }, [phase, timeLeft]);
+
+    const handleFinish = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
-        setPhase('game_over');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const isVictory = phase === 'victory';
+
         if (examMode) {
-            (async () => {
-                await submitResult(level >= 5, score, 1000, duration);
-                navigate('/atolyeler/sinav-simulasyonu/devam');
-            })();
+            await submitResult(isVictory || level >= 5, score, MAX_LEVEL * 100, duration);
+            navigate("/atolyeler/sinav-simulasyonu/devam");
             return;
         }
+
         await saveGamePlay({
             game_id: 'lazer-labirent', score_achieved: score, duration_seconds: duration,
-            metadata: { levels_completed: level, final_lives: lives },
+            metadata: { level_reached: level, game_name: 'Lazer Labirent', victory: isVictory }
         });
-    }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate]);
+    }, [phase, score, level, saveGamePlay, examMode, submitResult, navigate]);
 
-    const handleVictory = useCallback(async () => {
-        if (hasSavedRef.current) return;
-        hasSavedRef.current = true;
-        setPhase('victory');
-        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        if (examMode) {
-            (async () => {
-                await submitResult(true, score, 1000, duration);
-                navigate('/atolyeler/sinav-simulasyonu/devam');
-            })();
-            return;
-        }
-        await saveGamePlay({
-            game_id: 'lazer-labirent', score_achieved: score, duration_seconds: duration,
-            metadata: { levels_completed: MAX_LEVEL, victory: true },
-        });
-    }, [saveGamePlay, score, examMode, submitResult, navigate]);
+    useEffect(() => {
+        if (phase === 'game_over' || phase === 'victory') handleFinish();
+    }, [phase, handleFinish]);
 
-    const handleGuess = useCallback((index: number) => {
+    const handleGuess = (idx: number) => {
         if (!engineRef.current || guessedRef.current) return;
         guessedRef.current = true;
-        const isCorrect = engineRef.current.guess(index);
+        const ok = engineRef.current.guess(idx);
+        playSound(ok ? 'detective_correct' : 'detective_incorrect');
+        setPhase('feedback');
 
-        // Wait for laser animation to finish before showing feedback
-        const laserDuration = isCorrect ? 2800 + 800 : 1400 + 300;
         setTimeout(() => {
-            showFeedback(isCorrect);
-
-            setPhase('feedback');
-
-            if (isCorrect) {
+            showFeedback(ok);
+            if (ok) {
                 setScore(p => p + 10 * level);
                 setTimeout(() => {
-                    if (level >= MAX_LEVEL) { handleVictory(); }
-                    else { setLevel(p => p + 1); setPhase('playing'); }
-                }, 2000);
-            } else {
-                const newLives = lives - 1;
-                setLives(newLives);
-                setTimeout(() => {
-                    if (newLives <= 0) { handleGameOver(); }
-                    else {
-                        setPuzzleKey(k => k + 1);
-                        guessedRef.current = false;
-                        setPhase('playing');
-                    }
+                    dismissFeedback();
+                    if (level >= MAX_LEVEL) setPhase('victory');
+                    else { setLevel(p => p + 1); setPuzzleKey(k => k + 1); }
                 }, 1500);
+            } else {
+                setLives(l => {
+                    const nl = l - 1;
+                    if (nl <= 0) setTimeout(() => setPhase('game_over'), 1500);
+                    else setTimeout(() => { dismissFeedback(); setPuzzleKey(k => k + 1); }, 1500);
+                    return nl;
+                });
             }
-        }, laserDuration);
-    }, [level, lives, handleVictory, handleGameOver]);
+        }, ok ? 3000 : 1500);
+    };
 
     const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
+    if (phase === 'welcome') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+                </div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6" style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Crosshair size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">Lazer Labirent</h1>
+                    <p className="text-slate-400 mb-8 text-lg">Görünmez lazerin aynalardan yansıyarak hangi çıkışa ulaştığını tahmin et! Uzamsal zekanı ve analiz yeteneğini kullan.</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-indigo-300 mb-3 flex items-center gap-2"><Eye size={20} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><Sparkles size={14} className="text-indigo-400" /><span>Aynaların yerlerini ve yönlerini analiz et</span></li>
+                            <li className="flex items-center gap-2"><Sparkles size={14} className="text-indigo-400" /><span>Lazerin izleyeceği yolu zihninde canlandır</span></li>
+                            <li className="flex items-center gap-2"><Sparkles size={14} className="text-indigo-400" /><span>Doğru çıkışı seç ve lazeri ateşle!</span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-indigo-500/10 text-indigo-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30 font-bold uppercase tracking-widest">TUZÖ 5.3.3 Uzamsal İlişki Çözümleme</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white">
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-            </div>
-
-            {/* Header */}
-            <div className="relative z-10 p-4">
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <Link to="/atolyeler/bireysel-degerlendirme" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-                        <ChevronLeft size={20} /><span>Geri</span>
-                    </Link>
-                    {(phase === 'playing' || phase === 'feedback') && (
-                        <div className="flex items-center gap-4 flex-wrap justify-end">
-                            <div className="flex items-center gap-2 bg-amber-500/20 px-3 py-2 rounded-xl border border-amber-500/30">
-                                <Star className="text-amber-400" size={16} /><span className="font-bold text-amber-400 text-sm">{score}</span>
-                            </div>
-                            <div className="flex items-center gap-1 bg-red-500/20 px-3 py-2 rounded-xl border border-red-500/30">
-                                {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
-                                    <Heart key={i} size={14} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'} />
-                                ))}
-                            </div>
-                            <div className="flex items-center gap-2 bg-blue-500/20 px-3 py-2 rounded-xl border border-blue-500/30">
-                                <Timer className="text-blue-400" size={16} />
-                                <span className={`font-bold text-sm ${timeLeft <= 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-emerald-500/20 px-3 py-2 rounded-xl border border-emerald-500/30">
-                                <Zap className="text-emerald-400" size={16} /><span className="font-bold text-emerald-400 text-sm">Seviye {level}</span>
-                            </div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white relative overflow-hidden">
+            <div className="relative z-10 p-4 pt-20">
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+                    {(phase !== 'game_over' && phase !== 'victory') && (
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(251, 191, 36, 0.3)' }}><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', border: '1px solid rgba(59, 130, 246, 0.3)' }}><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)', border: '1px solid rgba(99, 102, 241, 0.3)' }}><Zap className="text-indigo-400" size={18} /><span className="font-bold text-indigo-400">Seviye {level}</span></div>
                         </div>
                     )}
                 </div>
             </div>
-
-            {/* Main */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center p-4">
                 <AnimatePresence mode="wait">
-                    {phase === 'welcome' && (
-                        <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <motion.div
-                                className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
-                                animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                            >
-                                <Crosshair size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-                            <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full">
-                                <span className="text-[9px] font-black text-violet-300 uppercase tracking-wider">TUZÖ</span>
-                                <span className="text-[9px] font-bold text-violet-400">5.3.3 Uzamsal İlişki Çözümleme</span>
-                            </div>
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Lazer Labirent</h1>
-                            <p className="text-slate-400 mb-8">Görünmez lazerin aynalardan yansıyarak hangi çıkışa ulaştığını tahmin et! Ayna açılarını analiz et ve doğru çıkışı bul.</p>
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2">
-                                    <Heart className="text-red-400" size={16} /><span className="text-sm text-slate-300">{INITIAL_LIVES} Can</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2">
-                                    <Timer className="text-blue-400" size={16} /><span className="text-sm text-slate-300">{TIME_LIMIT / 60} Dakika</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2">
-                                    <Target className="text-emerald-400" size={16} /><span className="text-sm text-slate-300">{MAX_LEVEL} Seviye</span>
-                                </div>
-                            </div>
-                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl"
-                                style={{ boxShadow: '0 8px 32px rgba(99,102,241,0.4)' }}
-                            >
-                                <div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
                     {(phase === 'playing' || phase === 'feedback') && (
-                        <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-4xl">
-                            <div ref={canvasCallbackRef} className="w-full aspect-square max-h-[60vh] rounded-3xl overflow-hidden border border-white/10 mb-6" />
-                            <div className="flex flex-wrap justify-center gap-3">
+                        <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-4xl flex flex-col items-center">
+                            <div ref={canvasRef} className="w-full aspect-square max-h-[60vh] rounded-3xl overflow-hidden border border-white/10 shadow-3xl mb-10" />
+                            <div className="flex flex-wrap justify-center gap-4">
                                 {Array.from({ length: exitCount }).map((_, i) => (
-                                    <motion.button key={i} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
-                                        onClick={() => handleGuess(i)} disabled={phase === 'feedback'}
-                                        className="min-w-[80px] min-h-[56px] px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-700 rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                        style={{ boxShadow: '0 4px 16px rgba(99,102,241,0.3)' }}
-                                    >
-                                        Çıkış {i + 1}
-                                    </motion.button>
+                                    <motion.button key={i} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => handleGuess(i)} disabled={phase === 'feedback'} className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl font-black text-xl shadow-xl disabled:opacity-50">ÇIKIŞ {i + 1}</motion.button>
                                 ))}
                             </div>
                         </motion.div>
                     )}
-
-                    {phase === 'game_over' && (
-                        <motion.div key="game_over" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-3xl flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3)' }}>
-                                <XCircle size={48} className="text-white" />
-                            </div>
-                            <h2 className="text-3xl font-bold text-red-400 mb-4">Oyun Bitti!</h2>
-                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div>
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{level}</p></div>
-                                </div>
-                            </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl font-bold text-lg">
-                                <div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Dene</span></div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {phase === 'victory' && (
-                        <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-3xl flex items-center justify-center animate-bounce"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3)' }}>
-                                <Trophy size={48} className="text-white" />
-                            </div>
-                            <h2 className="text-3xl font-bold text-amber-400 mb-4">🎉 Şampiyon!</h2>
-                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-6">
-                                <p className="text-4xl font-bold text-amber-400">{score}</p><p className="text-slate-400">Toplam Puan</p>
-                            </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl font-bold text-lg">
-                                <div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div>
-                            </motion.button>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-bold text-amber-400 mb-2">{phase === 'victory' ? '🎖️ Lazer Ustası!' : 'Tebrikler!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' ? 'Tüm labirentleri başarıyla çözdün ve ışığın yolunu buldun!' : 'Uzamsal zekanı geliştirmek için labirentleri çözmeye devam et.'}</p>
+                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-indigo-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Feedback Overlay */}
                 <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
@@ -765,4 +555,3 @@ const LaserMazeGame: React.FC = () => {
 };
 
 export default LaserMazeGame;
-

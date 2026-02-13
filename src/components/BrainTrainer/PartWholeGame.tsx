@@ -1,721 +1,262 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Play, Trophy, Sparkles, Heart, Star, Timer, Puzzle, Eye, RefreshCw } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+    ChevronLeft, RotateCcw, Play, Trophy, Sparkles, Heart, Star,
+    Timer as TimerIcon, Puzzle, Eye, RefreshCw, Zap
+} from 'lucide-react';
 import { useSound } from '../../hooks/useSound';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
 import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
+import { useExam } from '../../contexts/ExamContext';
 
-// ------------------ Tip Tanımları ------------------
-interface PatternProps {
-    points?: number;
-    sides?: number;
-    lines?: number;
-    pathData?: string;
-}
+// ─── Types ───────────────────────────────────────────────
+interface PatternProps { points?: number; sides?: number; lines?: number; pathData?: string; }
+interface Pattern { defs: string; type: string; backgroundColor: string; foregroundColor: string; size: number; rotation: number; opacity: number; id: string; props?: PatternProps; }
+interface GameOption { pattern: Pattern[]; isCorrect: boolean; }
+type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-type Pattern = {
-    defs: string;
-    type: string;
-    backgroundColor: string;
-    foregroundColor: string;
-    size: number;
-    rotation: number;
-    opacity: number;
-    id: string;
-    props?: PatternProps;
-};
+// ─── Constants ───────────────────────────────────────────────
+const INITIAL_LIVES = 5;
+const TIME_LIMIT = 180;
+const MAX_LEVEL = 20;
+const GAME_ID = 'parca-butun';
 
-interface GameOption {
-    pattern: Pattern[];
-    isCorrect: boolean;
-}
-
-// Çocuk dostu, canlı renk paleti
-const COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#A29BFE', '#55E6C1', '#FD79A8', '#FAB1A0', '#00D2D3', '#54A0FF', '#5F27CD', '#FF9F43'];
+const COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#A29BFE', '#55E6C1', '#FD79A8', '#FAB1A0', '#00D2D3', '#54A0FF', '#5F27CD'];
 const PATTERN_TYPES = ['dots', 'stripes', 'zigzag', 'waves', 'checkerboard', 'crosshatch', 'star', 'polygon', 'scribble', 'burst'];
-
-// Child-friendly messages
-
 
 const PartWholeGame: React.FC = () => {
     const { playSound } = useSound();
-    const { feedbackState, showFeedback } = useGameFeedback();
     const { saveGamePlay } = useGamePersistence();
+    const { submitResult } = useExam();
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
     const location = useLocation();
+    const navigate = useNavigate();
+
+    const [phase, setPhase] = useState<Phase>('welcome');
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
+    const [lives, setLives] = useState(INITIAL_LIVES);
+    const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
     const [gamePattern, setGamePattern] = useState<Pattern[]>([]);
     const [options, setOptions] = useState<GameOption[]>([]);
     const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
-    const [gameStarted, setGameStarted] = useState(false);
-    const [gameOver, setGameOver] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(30);
-    const [lives, setLives] = useState(3);
-    const gameStartTimeRef = useRef<number>(0);
-    const hasSavedRef = useRef<boolean>(false);
-    const totalQuestions = 10;
 
-    // Back link
-    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
-    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const startTimeRef = useRef(0);
+    const hasSavedRef = useRef(false);
+
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
     const svgSize = 300;
     const pieceSize = 100;
 
-    // ------------------ Desen Generator ------------------
     const getPatternDefs = useCallback((pattern: Pattern): string => {
-        const strokeWidth = pattern.size / 6;
         const { size, backgroundColor, foregroundColor, type, id, props } = pattern;
-
-        const baseRect = `<rect width="${size}" height="${size}" fill="${backgroundColor}"/>`;
-
+        const sw = size / 6;
+        const br = `<rect width="${size}" height="${size}" fill="${backgroundColor}"/>`;
         switch (type) {
-            case 'dots':
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<circle cx="${size / 2}" cy="${size / 2}" r="${size / 3}" fill="${foregroundColor}"/></pattern>`;
-            case 'stripes':
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<rect width="${size}" height="${size / 3}" fill="${foregroundColor}"/></pattern>`;
-            case 'zigzag':
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<path d="M0 0 L${size / 2} ${size} L${size} 0" stroke="${foregroundColor}" fill="none" stroke-width="${strokeWidth}"/></pattern>`;
-            case 'waves':
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<path d="M0 ${size / 2} Q${size / 4} 0 ${size / 2} ${size / 2} T${size} ${size / 2}" stroke="${foregroundColor}" fill="none" stroke-width="${strokeWidth}"/></pattern>`;
-            case 'checkerboard':
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<rect width="${size / 2}" height="${size / 2}" fill="${foregroundColor}"/><rect x="${size / 2}" y="${size / 2}" width="${size / 2}" height="${size / 2}" fill="${foregroundColor}"/></pattern>`;
-            case 'crosshatch':
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<path d="M0 0 L${size} ${size} M0 ${size} L${size} 0" stroke="${foregroundColor}" stroke-width="${strokeWidth}"/></pattern>`;
-
-            case 'star': {
-                const points = props?.points || 5;
-                const innerRadius = size / 4;
-                const outerRadius = size / 2.5;
-                let path = '';
-                for (let i = 0; i < points * 2; i++) {
-                    const angle = (i * Math.PI) / points;
-                    const r = i % 2 === 0 ? outerRadius : innerRadius;
-                    const x = size / 2 + Math.cos(angle) * r;
-                    const y = size / 2 + Math.sin(angle) * r;
-                    path += (i === 0 ? 'M' : 'L') + `${x},${y}`;
-                }
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<path d="${path}Z" fill="${foregroundColor}"/></pattern>`;
-            }
-
-            case 'polygon': {
-                const sides = props?.sides || 6;
-                const radius = size / 2.5;
-                let path = '';
-                for (let i = 0; i < sides; i++) {
-                    const angle = (i * 2 * Math.PI) / sides;
-                    const x = size / 2 + Math.cos(angle) * radius;
-                    const y = size / 2 + Math.sin(angle) * radius;
-                    path += (i === 0 ? 'M' : 'L') + `${x},${y}`;
-                }
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<path d="${path}Z" fill="${foregroundColor}"/></pattern>`;
-            }
-
-            case 'scribble': {
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<path d="${props?.pathData}" stroke="${foregroundColor}" fill="none" stroke-width="${strokeWidth}" stroke-linecap="round"/></pattern>`;
-            }
-
-            case 'burst': {
-                const lines = props?.lines || 8;
-                let path = '';
-                for (let i = 0; i < lines; i++) {
-                    const angle = (i * 2 * Math.PI) / lines;
-                    const x2 = size / 2 + Math.cos(angle) * (size / 2);
-                    const y2 = size / 2 + Math.sin(angle) * (size / 2);
-                    path += `M${size / 2},${size / 2} L${x2},${y2} `;
-                }
-                return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}<path d="${path}" stroke="${foregroundColor}" stroke-width="${strokeWidth}"/></pattern>`;
-            }
-
-            default: return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${baseRect}</pattern>`;
+            case 'dots': return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<circle cx="${size / 2}" cy="${size / 2}" r="${size / 3}" fill="${foregroundColor}"/></pattern>`;
+            case 'stripes': return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<rect width="${size}" height="${size / 3}" fill="${foregroundColor}"/></pattern>`;
+            case 'zigzag': return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<path d="M0 0 L${size / 2} ${size} L${size} 0" stroke="${foregroundColor}" fill="none" stroke-width="${sw}"/></pattern>`;
+            case 'waves': return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<path d="M0 ${size / 2} Q${size / 4} 0 ${size / 2} ${size / 2} T${size} ${size / 2}" stroke="${foregroundColor}" fill="none" stroke-width="${sw}"/></pattern>`;
+            case 'checkerboard': return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<rect width="${size / 2}" height="${size / 2}" fill="${foregroundColor}"/><rect x="${size / 2}" y="${size / 2}" width="${size / 2}" height="${size / 2}" fill="${foregroundColor}"/></pattern>`;
+            case 'crosshatch': return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<path d="M0 0 L${size} ${size} M0 ${size} L${size} 0" stroke="${foregroundColor}" stroke-width="${sw}"/></pattern>`;
+            case 'star': { const p = props?.points || 5; let d = ''; for (let i = 0; i < p * 2; i++) { const r = i % 2 === 0 ? size / 2.5 : size / 4; const x = size / 2 + Math.cos(i * Math.PI / p) * r; const y = size / 2 + Math.sin(i * Math.PI / p) * r; d += (i === 0 ? 'M' : 'L') + `${x},${y}`; } return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<path d="${d}Z" fill="${foregroundColor}"/></pattern>`; }
+            case 'polygon': { const s = props?.sides || 6; let d = ''; for (let i = 0; i < s; i++) { const x = size / 2 + Math.cos(i * 2 * Math.PI / s) * (size / 2.5); const y = size / 2 + Math.sin(i * 2 * Math.PI / s) * (size / 2.5); d += (i === 0 ? 'M' : 'L') + `${x},${y}`; } return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<path d="${d}Z" fill="${foregroundColor}"/></pattern>`; }
+            case 'scribble': return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<path d="${props?.pathData}" stroke="${foregroundColor}" fill="none" stroke-width="${sw}" stroke-linecap="round"/></pattern>`;
+            case 'burst': { const l = props?.lines || 8; let d = ''; for (let i = 0; i < l; i++) { const x2 = size / 2 + Math.cos(i * 2 * Math.PI / l) * (size / 2); const y2 = size / 2 + Math.sin(i * 2 * Math.PI / l) * (size / 2); d += `M${size / 2},${size / 2} L${x2},${y2} `; } return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}<path d="${d}" stroke="${foregroundColor}" stroke-width="${sw}"/></pattern>`; }
+            default: return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">${br}</pattern>`;
         }
     }, []);
 
     const generatePattern = useCallback((): Pattern => {
         const type = PATTERN_TYPES[Math.floor(Math.random() * PATTERN_TYPES.length)];
-        const backgroundColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-        const foregroundColor = COLORS.filter(c => c !== backgroundColor)[Math.floor(Math.random() * (COLORS.length - 1))];
-        const size = 30 + Math.random() * 40;
-
+        const bc = COLORS[Math.floor(Math.random() * COLORS.length)];
+        const fc = COLORS.filter(c => c !== bc)[Math.floor(Math.random() * (COLORS.length - 1))];
+        const sz = 30 + Math.random() * 40;
         const props: PatternProps = {};
         if (type === 'star') props.points = 4 + Math.floor(Math.random() * 5);
         if (type === 'polygon') props.sides = 3 + Math.floor(Math.random() * 6);
         if (type === 'burst') props.lines = 6 + Math.floor(Math.random() * 10);
-        if (type === 'scribble') {
-            const points = Array.from({ length: 4 }, () => ({
-                x: Math.random() * size,
-                y: Math.random() * size
-            }));
-            props.pathData = `M${points[0].x},${points[0].y} Q${points[1].x},${points[1].y} ${points[2].x},${points[2].y} T${points[3].x},${points[3].y}`;
-        }
-
-        const base: Pattern = {
-            defs: '',
-            type,
-            backgroundColor,
-            foregroundColor,
-            size,
-            rotation: Math.random() * 360,
-            opacity: 0.85 + Math.random() * 0.15,
-            id: `pattern-${Math.random().toString(36).slice(2, 11)}`,
-            props
-        };
-        return { ...base, defs: getPatternDefs(base) };
+        if (type === 'scribble') { const pts = Array.from({ length: 4 }, () => ({ x: Math.random() * sz, y: Math.random() * sz })); props.pathData = `M${pts[0].x},${pts[0].y} Q${pts[1].x},${pts[1].y} ${pts[2].x},${pts[2].y} T${pts[3].x},${pts[3].y}`; }
+        const b: Pattern = { defs: '', type, backgroundColor: bc, foregroundColor: fc, size: sz, rotation: Math.random() * 360, opacity: 0.85 + Math.random() * 0.15, id: `p-${Math.random().toString(36).slice(2, 9)}`, props };
+        return { ...b, defs: getPatternDefs(b) };
     }, [getPatternDefs]);
 
-    // Mikro renk sapması
-    const distortColor = (hex: string | undefined, intensity: number = 10): string => {
-        if (!hex || typeof hex !== 'string' || hex.length < 7) {
-            return '#888888';
-        }
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        const adjust = (c: number) => Math.max(0, Math.min(255, c + Math.round((Math.random() - 0.5) * intensity)));
-        return `#${adjust(r).toString(16).padStart(2, '0')}${adjust(g).toString(16).padStart(2, '0')}${adjust(b).toString(16).padStart(2, '0')}`;
+    const distortColor = (hex: string, intensity: number = 15): string => {
+        const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+        const adj = (c: number) => Math.max(0, Math.min(255, c + Math.round((Math.random() - 0.5) * intensity))).toString(16).padStart(2, '0');
+        return `#${adj(r)}${adj(g)}${adj(b)}`;
     };
 
-    const generateLevel = useCallback(() => {
-        const numShapes = Math.min(level + 1, 8);
-        const newPattern = Array.from({ length: numShapes }, () => generatePattern());
-        setGamePattern(newPattern);
-
-        const x = Math.floor(Math.random() * (svgSize - pieceSize));
-        const y = Math.floor(Math.random() * (svgSize - pieceSize));
-        setTargetPos({ x, y });
-
-        const correctOption: GameOption = { pattern: newPattern, isCorrect: true };
+    const setupRound = useCallback(() => {
+        const count = Math.min(Math.floor(level / 3) + 2, 8);
+        const p = Array.from({ length: count }, () => generatePattern());
+        setGamePattern(p);
+        const tx = Math.floor(Math.random() * (svgSize - pieceSize)), ty = Math.floor(Math.random() * (svgSize - pieceSize));
+        setTargetPos({ x: tx, y: ty });
+        const correct: GameOption = { pattern: p, isCorrect: true };
         const distractors: GameOption[] = Array.from({ length: 3 }, () => {
-            const wrongPattern = newPattern.map(p => {
-                const updatedP = {
-                    ...p,
-                    id: `pattern-${Math.random().toString(36).slice(2, 11)}`,
-                    rotation: p.rotation + (Math.random() - 0.5) * (level + 5),
-                    size: p.size * (0.95 + Math.random() * 0.1),
-                    backgroundColor: distortColor(p.backgroundColor, 12),
-                    foregroundColor: distortColor(p.foregroundColor, 12),
-                    opacity: Math.max(0.5, p.opacity * (0.95 + Math.random() * 0.1))
-                };
-                return { ...updatedP, defs: getPatternDefs(updatedP) };
+            const wp = p.map(pi => {
+                const up = { ...pi, id: `p-${Math.random().toString(36).slice(2, 9)}`, rotation: pi.rotation + (Math.random() - 0.5) * (level + 5), size: pi.size * (0.9 + Math.random() * 0.2), backgroundColor: distortColor(pi.backgroundColor), foregroundColor: distortColor(pi.foregroundColor) };
+                return { ...up, defs: getPatternDefs(up) };
             });
-            return { pattern: wrongPattern, isCorrect: false };
+            return { pattern: wp, isCorrect: false };
         });
-
-        setOptions([...distractors, correctOption].sort(() => Math.random() - 0.5));
-        setTimeLeft(30);
+        setOptions([...distractors, correct].sort(() => Math.random() - 0.5));
     }, [level, generatePattern, getPatternDefs]);
 
+    const handleStart = useCallback(() => {
+        window.scrollTo(0, 0);
+        setPhase('playing'); setScore(0); setLevel(1); setLives(INITIAL_LIVES);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        startTimeRef.current = Date.now(); hasSavedRef.current = false;
+        setupRound(); playSound('slide');
+    }, [setupRound, playSound, examMode, examTimeLimit]);
+
+    useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, phase, handleStart, examMode]);
+
     useEffect(() => {
-        if (gameStarted && !gameOver && !feedbackState) {
-            generateLevel();
+        if (phase === 'playing' && timeLeft > 0) {
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
         }
-    }, [gameStarted, gameOver, level, generateLevel, feedbackState]);
+    }, [phase, timeLeft]);
 
-    // Timer
-    useEffect(() => {
-        if (!gameStarted || gameOver || feedbackState) return;
-        const timer = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    showFeedback(false);
-                    setLives(l => l - 1);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [gameStarted, gameOver, feedbackState]);
-
-    // Handle feedbackState timeout
-    useEffect(() => {
-        if (feedbackState) {
-            const timeout = setTimeout(() => {
-                if (lives <= 0 && feedbackState?.correct === false) {
-                    setGameOver(true);
-                } else if (level >= totalQuestions) {
-                    setGameOver(true);
-                } else {
-                    setLevel(l => l + 1);
-                }
-            }, 2000);
-            return () => clearTimeout(timeout);
-        }
-    }, [feedbackState, lives, level]);
-
-    const handleOptionSelect = (option: GameOption) => {
-        if (feedbackState || gameOver) return;
-
-        if (option.isCorrect) {
-            playSound('correct');
-            showFeedback(true);
-            setScore(s => s + (level * 100) + (timeLeft * 5));
-        } else {
-            playSound('incorrect');
-            showFeedback(false);
-            setLives(l => l - 1);
-        }
+    const handleAnswer = (option: GameOption) => {
+        if (phase !== 'playing' || options.length === 0) return;
+        const correct = option.isCorrect;
+        showFeedback(correct); playSound(correct ? 'correct' : 'incorrect');
+        setPhase('feedback');
+        setTimeout(() => {
+            dismissFeedback();
+            if (correct) {
+                setScore(s => s + 100 + level * 20);
+                if (level >= MAX_LEVEL) setPhase('victory');
+                else { setLevel(l => l + 1); setPhase('playing'); setupRound(); }
+            } else {
+                setLives(l => {
+                    const nl = l - 1;
+                    if (nl <= 0) setTimeout(() => setPhase('game_over'), 500);
+                    else { setPhase('playing'); setupRound(); }
+                    return nl;
+                });
+            }
+        }, 1500);
     };
 
-    const startGame = useCallback(() => {
-        window.scrollTo(0, 0);
-        setOptions([]);
-        setGamePattern([]);
-        setLevel(1);
-        setScore(0);
-        setLives(3);
-        setGameOver(false);
-        setGameStarted(true);
-        gameStartTimeRef.current = Date.now();
-        hasSavedRef.current = false;
-    }, []);
-
-    // Handle Auto Start from HUB
-    useEffect(() => {
-        if (location.state?.autoStart && !gameStarted) {
-            startGame();
-        }
-    }, [location.state, gameStarted, startGame]);
-
-    // Save game data on finish
-    useEffect(() => {
-        if (gameOver && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
-            hasSavedRef.current = true;
-            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-            saveGamePlay({
-                game_id: 'parca-butun',
-                score_achieved: score,
-                duration_seconds: durationSeconds,
-                lives_remaining: lives,
-                metadata: {
-                    level_reached: level,
-                    game_name: 'Parça Bütün İlişkisi',
-                }
-            });
-        }
-    }, [gameOver, score, lives, level, saveGamePlay]);
-
-    // Skip question with penalty
     const skipQuestion = useCallback(() => {
-        if (feedbackState || gameOver) return;
-        setScore(s => Math.max(0, s - 50));
-        generateLevel();
-    }, [feedbackState, gameOver, generateLevel]);
+        if (phase !== 'playing') return;
+        setScore(s => Math.max(0, s - 50)); setupRound();
+    }, [phase, setupRound]);
 
-    // ------------------ Render Component ------------------
+    const handleFinish = useCallback(async () => {
+        if (hasSavedRef.current) return;
+        hasSavedRef.current = true;
+        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        if (examMode) {
+            await submitResult(level >= 5 || phase === 'victory', score, MAX_LEVEL * 100, duration);
+            navigate("/atolyeler/sinav-simulasyonu/devam"); return;
+        }
+        await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: duration, metadata: { level_reached: level, victory: phase === 'victory' } });
+    }, [phase, score, level, saveGamePlay, examMode, submitResult, navigate]);
+
+    useEffect(() => { if (phase === 'game_over' || phase === 'victory') handleFinish(); }, [phase, handleFinish]);
+
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
     const PatternSVG = ({ pattern, size, viewBox, isMain = false }: { pattern: Pattern[], size: number, viewBox?: string, isMain?: boolean }) => (
-        <svg
-            width={size}
-            height={size}
-            viewBox={viewBox || `0 0 ${svgSize} ${svgSize}`}
-            className="rounded-[25%] overflow-hidden"
-            style={{ boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2)' }}
-        >
+        <svg width={size} height={size} viewBox={viewBox || `0 0 ${svgSize} ${svgSize}`} className="rounded-3xl overflow-hidden shadow-2xl">
             {pattern.map((p, i) => (
                 <React.Fragment key={`${p.id}-${i}`}>
                     <defs dangerouslySetInnerHTML={{ __html: p.defs }} />
-                    <rect
-                        x="0" y="0" width={svgSize} height={svgSize}
-                        fill={`url(#${p.id})`}
-                        opacity={p.opacity}
-                        transform={`rotate(${p.rotation} ${svgSize / 2} ${svgSize / 2})`}
-                    />
+                    <rect x="0" y="0" width={svgSize} height={svgSize} fill={`url(#${p.id})`} opacity={p.opacity} transform={`rotate(${p.rotation} ${svgSize / 2} ${svgSize / 2})`} />
                 </React.Fragment>
             ))}
-            {isMain && (
-                <motion.rect
-                    layoutId="white-gap"
-                    x={targetPos.x}
-                    y={targetPos.y}
-                    width={pieceSize}
-                    height={pieceSize}
-                    fill="white"
-                    stroke="rgba(255,255,255,0.5)"
-                    strokeWidth="3"
-                    rx="15"
-                    style={{ filter: 'drop-shadow(0 0 10px rgba(0,0,0,0.3))' }}
-                />
-            )}
+            {isMain && <rect x={targetPos.x} y={targetPos.y} width={pieceSize} height={pieceSize} fill="white" stroke="white" strokeWidth="4" rx="16" style={{ filter: 'drop-shadow(0 0 15px rgba(0,0,0,0.4))' }} />}
         </svg>
     );
 
-    // Welcome Screen
-    if (!gameStarted) {
+    if (phase === 'welcome') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-emerald-950 text-white">
-                {/* Decorative Background */}
-                <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
-                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-                </div>
-
-                <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="text-center max-w-xl"
-                    >
-                        {/* 3D Gummy Icon */}
-                        <motion.div
-                            className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                            style={{
-                                background: 'linear-gradient(135deg, #14B8A6 0%, #059669 100%)',
-                                boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                            }}
-                            animate={{ y: [0, -8, 0] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                            <Puzzle size={52} className="text-white drop-shadow-lg" />
-                        </motion.div>
-
-                        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
-                            🧩 Parça Bütün
-                        </h1>
-
-                        {/* Example */}
-                        <div
-                            className="rounded-2xl p-5 mb-6"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                border: '1px solid rgba(255,255,255,0.1)'
-                            }}
-                        >
-                            <p className="text-slate-400 text-sm mb-3">Örnek:</p>
-                            <div className="flex items-center justify-center gap-4 mb-3">
-                                <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center relative">
-                                    <div className="w-8 h-8 bg-white rounded-lg absolute" />
-                                </div>
-                                <span className="text-2xl">→</span>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {[0, 1, 2, 3].map(i => (
-                                        <div
-                                            key={i}
-                                            className="w-8 h-8 rounded-lg"
-                                            style={{
-                                                background: i === 1
-                                                    ? 'linear-gradient(135deg, #14B8A6 0%, #06B6D4 100%)'
-                                                    : 'rgba(255,255,255,0.1)',
-                                                border: i === 1 ? '2px solid #14B8A6' : '1px solid rgba(255,255,255,0.1)'
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                            <p className="text-slate-400 text-sm">Eksik parçanın desenini bul!</p>
-                        </div>
-
-                        {/* Instructions */}
-                        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
-                            <h3 className="text-lg font-bold text-teal-300 mb-3 flex items-center gap-2">
-                                <Eye size={20} /> Nasıl Oynanır?
-                            </h3>
-                            <ul className="space-y-2 text-slate-300 text-sm">
-                                <li className="flex items-center gap-2">
-                                    <Sparkles size={14} className="text-teal-400" />
-                                    <span>Desendeki <strong>beyaz boşluğa</strong> dikkat et</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <Sparkles size={14} className="text-teal-400" />
-                                    <span>Seçeneklerden <strong>doğru parçayı</strong> bul</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <Sparkles size={14} className="text-teal-400" />
-                                    <span>Renkler ve desenler aynı olmalı! 3 can!</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* TUZÖ Badge */}
-                        <div className="bg-teal-500/10 text-teal-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-teal-500/30">
-                            TUZÖ 4.2.1 Parça-Bütün İlişkileri
-                        </div>
-
-                        <motion.button
-                            whileHover={{ scale: 1.05, y: -4 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={startGame}
-                            className="px-8 py-4 rounded-2xl font-bold text-lg"
-                            style={{
-                                background: 'linear-gradient(135deg, #14B8A6 0%, #059669 100%)',
-                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(20, 184, 166, 0.4)'
-                            }}
-                        >
-                            <div className="flex items-center gap-3">
-                                <Play size={24} fill="currentColor" />
-                                <span>Oyuna Başla</span>
-                            </div>
-                        </motion.button>
-                    </motion.div>
-                </div>
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-emerald-950 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" /></div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-teal-400 to-emerald-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Puzzle size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-teal-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">Parça Bütün</h1>
+                    <p className="text-slate-300 mb-8 text-lg">Büyük desendeki eksik parçayı bul ve görsel algını test et. Renklerin ve desenlerin uyumuna dikkat et!</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-teal-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-teal-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Desendeki <strong>beyaz boşluğa</strong> odaklan</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-teal-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Aşağıdaki parçalardan <strong>uygun olanı</strong> seç</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-teal-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Hızlı ol, seviye ilerledikçe <strong>desenler karmaşıklaşır</strong>!</span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-teal-500/10 text-teal-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-teal-500/30 font-bold uppercase tracking-widest">TUZÖ 4.2.1 Parça-Bütün İlişkileri</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-teal-500 to-emerald-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-emerald-950 text-white">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-            </div>
-
-            {/* Header */}
-            <div className="relative z-10 p-4 pt-20">
-                <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-4">
-                    <Link
-                        to={backLink}
-                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft size={20} />
-                        <span>{backLabel}</span>
-                    </Link>
-
-                    <div className="flex items-center gap-4 flex-wrap">
-                        {/* Score */}
-                        <div
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(251, 191, 36, 0.3)'
-                            }}
-                        >
-                            <Star className="text-amber-400 fill-amber-400" size={18} />
-                            <span className="font-bold text-amber-400">{score}</span>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-emerald-950 text-white relative overflow-hidden flex flex-col">
+            <div className="relative z-10 p-4 pt-20 text-white">
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+                    {(phase !== 'game_over' && phase !== 'victory') && (
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(251, 191, 36, 0.3)' }}><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-950'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', border: '1px solid rgba(59, 130, 246, 0.3)' }}><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)', border: '1px solid rgba(20, 184, 166, 0.3)' }}><Zap className="text-teal-400" size={18} /><span className="font-bold text-teal-400">Seviye {level}/{MAX_LEVEL}</span></div>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={skipQuestion} className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-xl border border-white/20 hover:bg-white/20 transition-all font-bold text-sm text-teal-300"><RefreshCw size={16} /><span>Atla</span></motion.button>
                         </div>
-
-                        {/* Lives */}
-                        <div
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(239, 68, 68, 0.3)'
-                            }}
-                        >
-                            {[...Array(3)].map((_, i) => (
-                                <Heart
-                                    key={i}
-                                    size={18}
-                                    className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Level */}
-                        <div
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
-                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(20, 184, 166, 0.3)'
-                            }}
-                        >
-                            <Puzzle className="text-teal-400" size={18} />
-                            <span className="font-bold text-teal-400">{level}/{totalQuestions}</span>
-                        </div>
-
-                        {/* Timer */}
-                        <div
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                            style={{
-                                background: timeLeft <= 10
-                                    ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)'
-                                    : 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.1) 100%)',
-                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                border: timeLeft <= 10
-                                    ? '1px solid rgba(239, 68, 68, 0.5)'
-                                    : '1px solid rgba(6, 182, 212, 0.3)'
-                            }}
-                        >
-                            <Timer className={timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'} size={18} />
-                            <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-cyan-400'}`}>{timeLeft}s</span>
-                        </div>
-
-                        {/* Skip Button */}
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={skipQuestion}
-                            disabled={feedbackState !== null}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                                boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)',
-                                border: '1px solid rgba(251, 191, 36, 0.3)',
-                                opacity: feedbackState ? 0.5 : 1
-                            }}
-                        >
-                            <RefreshCw size={16} className="text-amber-400" />
-                            <span className="text-amber-400 text-sm font-bold">Atla</span>
-                        </motion.button>
-                    </div>
+                    )}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
                 <AnimatePresence mode="wait">
-                    {!gameOver && (
-                        <motion.div
-                            key="game"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-5xl"
-                        >
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                                {/* Main Pattern */}
-                                <div
-                                    className="rounded-3xl p-6 flex flex-col items-center"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                        border: '1px solid rgba(255,255,255,0.1)'
-                                    }}
-                                >
-                                    <div className="text-center mb-4">
-                                        <span className="text-sm font-bold text-teal-400 flex items-center justify-center gap-2">
-                                            <Puzzle size={16} />
-                                            Deseni İncele
-                                        </span>
-                                    </div>
-                                    <PatternSVG pattern={gamePattern} size={svgSize} isMain={true} />
-                                </div>
-
-                                {/* Options */}
-                                <div
-                                    className="rounded-3xl p-6 flex flex-col items-center"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                        border: '1px solid rgba(255,255,255,0.1)'
-                                    }}
-                                >
-                                    <h2 className="text-xl font-bold text-center mb-6 flex items-center justify-center gap-2">
-                                        Doğru Parçayı Bul! <Sparkles className="text-yellow-400" size={20} />
-                                    </h2>
-
-                                    <div className="grid grid-cols-2 gap-4 w-full">
-                                        {options.length > 0 && options.map((option, idx) => {
-                                            const showResult = feedbackState !== null;
-                                            const isCorrect = option.isCorrect;
-
-                                            return (
-                                                <motion.button
-                                                    key={idx}
-                                                    whileHover={!feedbackState ? { scale: 0.98, y: -2 } : {}}
-                                                    whileTap={!feedbackState ? { scale: 0.95 } : {}}
-                                                    onClick={() => handleOptionSelect(option)}
-                                                    disabled={feedbackState !== null}
-                                                    className="p-4 rounded-2xl transition-all flex items-center justify-center"
-                                                    style={{
-                                                        background: showResult && isCorrect
-                                                            ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                                                            : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-                                                        boxShadow: showResult && isCorrect
-                                                            ? '0 0 30px rgba(16, 185, 129, 0.5)'
-                                                            : 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.1)',
-                                                        border: showResult && isCorrect
-                                                            ? '2px solid #10B981'
-                                                            : '1px solid rgba(255,255,255,0.1)',
-                                                        cursor: feedbackState ? 'default' : 'pointer',
-                                                        opacity: showResult && !isCorrect ? 0.5 : 1
-                                                    }}
-                                                >
-                                                    <PatternSVG
-                                                        pattern={option.pattern}
-                                                        size={120}
-                                                        viewBox={`${targetPos.x} ${targetPos.y} ${pieceSize} ${pieceSize}`}
-                                                    />
-                                                </motion.button>
-                                            );
-                                        })}
-                                    </div>
+                    {(phase === 'playing' || phase === 'feedback') && (
+                        <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                            <div className="bg-white/5 backdrop-blur-2xl rounded-[40px] p-8 md:p-12 border border-white/10 shadow-3xl text-center">
+                                <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-6 flex items-center justify-center gap-2"><Eye size={16} /> Deseni İncele</p>
+                                <div className="inline-block p-4 bg-white/5 rounded-[40px] border border-white/5 shadow-inner"><PatternSVG pattern={gamePattern} size={svgSize} isMain={true} /></div>
+                            </div>
+                            <div className="bg-white/5 backdrop-blur-2xl rounded-[40px] p-8 md:p-12 border border-white/10 shadow-3xl">
+                                <h2 className="text-2xl font-black text-center mb-8 flex items-center justify-center gap-3">Eksik Parçayı Bul! <Sparkles size={24} className="text-yellow-400" /></h2>
+                                <div className="grid grid-cols-2 gap-6">
+                                    {options.map((opt, idx) => (
+                                        <motion.button key={idx} whileHover={{ scale: 1.02, y: -4 }} whileTap={{ scale: 0.98 }} onClick={() => handleAnswer(opt)} disabled={phase === 'feedback'} className="p-4 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all shadow-xl flex items-center justify-center relative overflow-hidden" style={{ borderColor: phase === 'feedback' && opt.isCorrect ? '#10b981' : 'rgba(255,255,255,0.1)' }}>
+                                            <PatternSVG pattern={opt.pattern} size={130} viewBox={`${targetPos.x} ${targetPos.y} ${pieceSize} ${pieceSize}`} />
+                                            {phase === 'feedback' && opt.isCorrect && <div className="absolute inset-0 bg-emerald-500/20 pointer-events-none" />}
+                                        </motion.button>
+                                    ))}
                                 </div>
                             </div>
                         </motion.div>
                     )}
-
-                    {/* Game Over */}
-                    {gameOver && (
-                        <motion.div
-                            key="gameover"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #14B8A6 0%, #EF4444 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                            >
-                                <Trophy size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <h2 className="text-3xl font-black text-teal-300 mb-2">
-                                {level >= 7 ? '🎉 Harika!' : 'Oyun Bitti!'}
-                            </h2>
-                            <p className="text-slate-400 mb-6">
-                                {level >= 7 ? 'Desen ustasısın!' : 'Tekrar deneyelim!'}
-                            </p>
-
-                            <div
-                                className="rounded-2xl p-6 mb-8"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Seviye</p>
-                                        <p className="text-3xl font-bold text-teal-400">{level}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
-                                style={{
-                                    background: 'linear-gradient(135deg, #14B8A6 0%, #059669 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(20, 184, 166, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center justify-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Oyna</span>
-                                </div>
-                            </motion.button>
-
-                            <Link
-                                to={backLink}
-                                className="block text-slate-500 hover:text-white transition-colors"
-                            >
-                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
-                            </Link>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-teal-500 to-emerald-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-black text-teal-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Desen Ustası!' : 'Tebrikler!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'Parça-bütün ilişkisini kavrama ve görsel tamamlama becerin harika!' : 'Daha fazla pratikle görsel zekanı ve dikkatini geliştirebilirsin.'}</p>
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-teal-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-teal-500 to-emerald-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Feedback Overlay */}
                 <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
@@ -723,4 +264,3 @@ const PartWholeGame: React.FC = () => {
 };
 
 export default PartWholeGame;
-

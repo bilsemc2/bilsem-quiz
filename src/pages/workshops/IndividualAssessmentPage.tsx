@@ -43,15 +43,25 @@ const IndividualAssessmentPage: React.FC = () => {
 
     const modules = [
         {
+            id: 'labirent',
+            title: "Labirent Koşusu",
+            desc: "Parmağınla yolu çiz, duvarlara değme! Uzamsal ilişki çözümleme ve görsel-motor koordinasyon.",
+            icon: <Compass />,
+            color: "violet",
+            difficulty: "Zor",
+            link: "/games/labirent",
+            isNew: true,
+            tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
+        },
+        {
             id: 'lazer-hafiza',
             title: "Lazer Hafıza",
-            desc: "Lazer yolunu dikkatlice izle, sonra aynı sırayla düğümlere tıkla! Kısa süreli görsel bellek.",
+            desc: "Noktalar arasındaki lazer yolunu izle ve hafızandan aynı yolu yeniden çiz!",
             icon: <Crosshair />,
-            color: "cyan",
-            difficulty: "Orta",
+            color: "emerald",
+            difficulty: "Zor",
             link: "/games/lazer-hafiza",
-            isNew: true,
-            tuzo: "5.4.1 Kısa Süreli Görsel Bellek"
+            tuzo: "5.4.2 Görsel Kısa Süreli Bellek"
         },
         {
             id: 'sekil-cebiri',
@@ -62,16 +72,6 @@ const IndividualAssessmentPage: React.FC = () => {
             difficulty: "Zor",
             link: "/games/sekil-cebiri",
             tuzo: "5.5.2 Kural Çıkarsama"
-        },
-        {
-            id: 'labirent',
-            title: "Labirent Koşusu",
-            desc: "Parmağınla yolu çiz, duvarlara değme! Uzamsal ilişki çözümleme ve görsel-motor koordinasyon.",
-            icon: <Compass />,
-            color: "teal",
-            difficulty: "Zor",
-            link: "/games/labirent",
-            tuzo: "5.3.3 Uzamsal İlişki Çözümleme"
         },
         {
             id: 'zaman-gezgini',

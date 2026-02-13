@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search, Eye, Timer, Trophy,
+    Search, Eye, Timer as TimerIcon, Trophy,
     RotateCcw, ChevronLeft, Play,
-    Circle, Square, Triangle, Hexagon, Star, Pentagon,
-    Cross, Moon, Heart, Sparkles, Zap
+    Circle, Square, Triangle, Star, Diamond,
+    Cross, Moon, Heart, Sparkles, Zap, Octagon
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../../hooks/useSound';
@@ -13,295 +13,151 @@ import GameFeedbackBanner from './shared/GameFeedbackBanner';
 import { useGamePersistence } from '../../hooks/useGamePersistence';
 import { useExam } from '../../contexts/ExamContext';
 
-// --- Şekil ve Renk Havuzu ---
-const SHAPE_ICONS = [Circle, Square, Triangle, Hexagon, Star, Pentagon, Cross, Moon, Heart];
+// ─── Constants ───────────────────────────────────────────────
+const INITIAL_LIVES = 5;
+const TIME_LIMIT = 180;
+const MAX_LEVEL = 20;
+const GAME_ID = 'golge-dedektifi';
 
-// High Contrast Candy Colors
-const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96F97B', '#FFEAA7', '#DDA0DD', '#FF9FF3', '#FFFFFF'];
+// Visually distinct shapes: Circle(0), Square(1), Triangle(2), Diamond(3), Star(4), Octagon(5), Cross(6), Moon(7), Heart(8)
+const SHAPE_ICONS = [Circle, Square, Triangle, Diamond, Star, Octagon, Cross, Moon, Heart];
+// High-contrast colors with good visual separation
+const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96F97B', '#FFEAA7', '#FF9FF3', '#FFA07A', '#FFFFFF'];
 
-// Child-friendly messages
-
-
-interface PatternItem {
-    id: string;
-    iconIdx: number;
-    color: string;
-    x: number;
-    y: number;
-    rotation: number;
-    scale: number;
-}
-
-type GameStatus = 'waiting' | 'preview' | 'deciding' | 'result' | 'gameover';
+interface PatternItem { id: string; iconIdx: number; color: string; x: number; y: number; rotation: number; scale: number; }
+type GameStatus = 'waiting' | 'preview' | 'deciding' | 'result' | 'gameover' | 'victory';
 
 const ShadowDetectiveGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
     const { submitResult } = useExam();
-    const { feedbackState, showFeedback } = useGameFeedback();
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
     const location = useLocation();
     const navigate = useNavigate();
+
     const [status, setStatus] = useState<GameStatus>('waiting');
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(3);
+    const [lives, setLives] = useState(INITIAL_LIVES);
     const [correctPattern, setCorrectPattern] = useState<PatternItem[]>([]);
     const [options, setOptions] = useState<PatternItem[][]>([]);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-    const [timeLeft, setTimeLeft] = useState(60);
+    const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
     const [previewTimer, setPreviewTimer] = useState(3);
 
-    const gameStartTimeRef = useRef<number>(0);
-    const hasSavedRef = useRef<boolean>(false);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const startTimeRef = useRef(0);
+    const hasSavedRef = useRef(false);
 
-    // Exam Mode Props
     const examMode = location.state?.examMode || false;
-    const examTimeLimit = location.state?.examTimeLimit || 60;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
-    // Back link
-    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
-    const backLabel = location.state?.arcadeMode ? "Bilsem Zeka" : "Geri";
+    const getSig = (p: PatternItem[]) => p.map(i => `${i.iconIdx}-${i.color}-${Math.round(i.x)}-${Math.round(i.y)}-${i.rotation}`).sort().join('|');
 
-    // --- Uniklik İmzası Üretme ---
-    const getPatternSignature = (items: PatternItem[]) => {
-        return items
-            .map(i => {
-                let normalizedRotation = i.rotation;
-                switch (i.iconIdx) {
-                    case 0: normalizedRotation = 0; break;
-                    case 1:
-                    case 6: normalizedRotation = i.rotation % 90; break;
-                    case 2: normalizedRotation = i.rotation % 120; break;
-                    case 3: normalizedRotation = i.rotation % 60; break;
-                    case 4:
-                    case 5: normalizedRotation = i.rotation % 72; break;
-                }
-                return `${i.iconIdx}-${i.color}-${Math.round(i.x)}-${Math.round(i.y)}-${normalizedRotation}`;
-            })
-            .sort()
-            .join('|');
-    };
-
-    // --- Desen Üretme Mantığı ---
-    const generatePattern = useCallback((count: number) => {
-        const pattern: PatternItem[] = [];
-        const MIN_DIST = 25;
-
+    const genPattern = useCallback((count: number) => {
+        const p: PatternItem[] = [];
         for (let i = 0; i < count; i++) {
-            let x: number, y: number, isTooClose: boolean, attempts = 0;
-            do {
-                x = Math.random() * 70 + 15;
-                y = Math.random() * 70 + 15;
-                isTooClose = pattern.some(p => Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2)) < MIN_DIST);
-                attempts++;
-            } while (isTooClose && attempts < 50);
-
-            pattern.push({
-                id: Math.random().toString(36).substr(2, 9),
-                iconIdx: Math.floor(Math.random() * SHAPE_ICONS.length),
-                color: COLORS[Math.floor(Math.random() * COLORS.length)],
-                x, y,
-                rotation: Math.floor(Math.random() * 8) * 45,
-                scale: 0.9 + Math.random() * 0.5
-            });
+            let x: number, y: number, tooClose: boolean, att = 0;
+            do { x = Math.random() * 70 + 15; y = Math.random() * 70 + 15; tooClose = p.some(curr => Math.sqrt(Math.pow(curr.x - x, 2) + Math.pow(curr.y - y, 2)) < 25); att++; } while (tooClose && att < 50);
+            p.push({ id: Math.random().toString(36).substr(2, 9), iconIdx: Math.floor(Math.random() * SHAPE_ICONS.length), color: COLORS[Math.floor(Math.random() * COLORS.length)], x, y, rotation: Math.floor(Math.random() * 8) * 45, scale: 0.9 + Math.random() * 0.5 });
         }
-        return pattern;
+        return p;
     }, []);
 
-    const generateDistractor = (base: PatternItem[]) => {
-        const distractor: PatternItem[] = JSON.parse(JSON.stringify(base));
-        const targetIdx = Math.floor(Math.random() * distractor.length);
-        const mutationType = Math.floor(Math.random() * 4);
+    // Shapes that look identical when rotated 90° (Circle, Square, Star, Octagon, Cross)
+    const SYMMETRIC_ICONS = new Set([0, 1, 4, 5, 6]);
 
-        switch (mutationType) {
-            case 0: {
-                const otherColors = COLORS.filter(c => c !== distractor[targetIdx].color);
-                distractor[targetIdx].color = otherColors[Math.floor(Math.random() * otherColors.length)];
-                break;
-            }
-            case 1:
-                if (distractor[targetIdx].iconIdx === 0) {
-                    distractor[targetIdx].iconIdx = (distractor[targetIdx].iconIdx + 2) % SHAPE_ICONS.length;
-                } else {
-                    distractor[targetIdx].rotation = (distractor[targetIdx].rotation + 180) % 360;
-                }
-                break;
-            case 2:
-                distractor[targetIdx].iconIdx = (distractor[targetIdx].iconIdx + 3) % SHAPE_ICONS.length;
-                break;
-            case 3: {
-                const moveX = distractor[targetIdx].x > 50 ? -25 : 25;
-                const moveY = distractor[targetIdx].y > 50 ? -25 : 25;
-                distractor[targetIdx].x = Math.max(15, Math.min(85, distractor[targetIdx].x + moveX));
-                distractor[targetIdx].y = Math.max(15, Math.min(85, distractor[targetIdx].y + moveY));
-                break;
-            }
+    const genDist = (base: PatternItem[]) => {
+        const d: PatternItem[] = JSON.parse(JSON.stringify(base));
+        const idx = Math.floor(Math.random() * d.length);
+        // Pick mutation type, but skip rotation for symmetric shapes
+        const types = [0, 1, 2, 3];
+        if (SYMMETRIC_ICONS.has(d[idx].iconIdx)) {
+            types.splice(types.indexOf(1), 1); // remove rotation option
         }
-        return distractor;
+        const type = types[Math.floor(Math.random() * types.length)];
+        if (type === 0) {
+            // Pick a distinctly different color
+            d[idx].color = COLORS.filter(c => c !== d[idx].color)[Math.floor(Math.random() * (COLORS.length - 1))];
+        } else if (type === 1) {
+            d[idx].rotation = (d[idx].rotation + 90) % 360;
+        } else if (type === 2) {
+            // Jump by 3-5 positions for visually distinct shape change
+            const jump = 3 + Math.floor(Math.random() * 3);
+            d[idx].iconIdx = (d[idx].iconIdx + jump) % SHAPE_ICONS.length;
+        } else {
+            // Larger position shift for noticeable difference
+            const shift = 25;
+            d[idx].x = Math.max(15, Math.min(85, d[idx].x + (d[idx].x > 50 ? -shift : shift)));
+            d[idx].y = Math.max(15, Math.min(85, d[idx].y + (d[idx].y > 50 ? -shift : shift)));
+        }
+        return d;
     };
 
-    const startNewLevel = useCallback(() => {
-        const shapeCount = Math.min(6, 2 + Math.floor(level / 3));
-        const correct = generatePattern(shapeCount);
-        const correctSig = getPatternSignature(correct);
-        const opts = [correct];
-        const sigs = new Set([correctSig]);
+    const startLevel = useCallback(() => {
+        const count = Math.min(6, 2 + Math.floor(level / 4));
+        const corr = genPattern(count), corrSig = getSig(corr), opts = [corr], sigs = new Set([corrSig]);
+        while (opts.length < 4) { const d = genDist(corr), s = getSig(d); if (!sigs.has(s)) { opts.push(d); sigs.add(s); } }
+        setCorrectPattern(corr); setOptions(opts.sort(() => Math.random() - 0.5));
+        setSelectedIndex(null); setPreviewTimer(3); setStatus('preview'); playSound('detective_click');
+    }, [level, genPattern, playSound]);
 
-        let attempts = 0;
-        while (opts.length < 4 && attempts < 20) {
-            const dist = generateDistractor(correct);
-            const sig = getPatternSignature(dist);
-            if (!sigs.has(sig)) {
-                opts.push(dist);
-                sigs.add(sig);
-            }
-            attempts++;
-        }
+    const handleStart = useCallback(() => {
+        window.scrollTo(0, 0); setStatus('waiting'); setLevel(1); setScore(0); setLives(INITIAL_LIVES); setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
+        startTimeRef.current = Date.now(); hasSavedRef.current = false; startLevel();
+    }, [startLevel, examMode, examTimeLimit]);
 
-        setCorrectPattern(correct);
-        setOptions(opts.sort(() => Math.random() - 0.5));
-        setSelectedIndex(null);
-        setPreviewTimer(3);
-        setStatus('preview');
-        playSound('detective_click');
-    }, [level, generatePattern, playSound]);
+    useEffect(() => { if ((location.state?.autoStart || examMode) && status === 'waiting') handleStart(); }, [location.state, status, handleStart, examMode]);
 
     useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (status === 'preview' && previewTimer > 0) {
-            interval = setInterval(() => setPreviewTimer(prev => prev - 1), 1000);
-        } else if (status === 'preview' && previewTimer === 0) {
-            setStatus('deciding');
-            playSound('detective_mystery');
-        }
-        return () => clearInterval(interval);
+        if (status === 'preview' && previewTimer > 0) { const itv = setInterval(() => setPreviewTimer(p => p - 1), 1000); return () => clearInterval(itv); }
+        else if (status === 'preview' && previewTimer === 0) { setStatus('deciding'); playSound('detective_mystery'); }
     }, [status, previewTimer, playSound]);
 
     useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (status === 'deciding' && timeLeft > 0) {
-            interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-        } else if (timeLeft === 0 && status === 'deciding') {
-            setStatus('gameover');
-        }
-        return () => clearInterval(interval);
+        if (status === 'deciding' && timeLeft > 0) { timerRef.current = setInterval(() => setTimeLeft(p => { if (p <= 1) { clearInterval(timerRef.current!); setStatus('gameover'); return 0; } return p - 1; }), 1000); return () => clearInterval(timerRef.current!); }
     }, [status, timeLeft]);
 
     const handleSelect = (idx: number) => {
-        if (status !== 'deciding') return;
-        setSelectedIndex(idx);
-        const isCorrect = getPatternSignature(options[idx]) === getPatternSignature(correctPattern);
-
-        if (isCorrect) {
-            showFeedback(true);
-            setScore(prev => prev + (level * 100));
-            playSound('detective_correct');
-            setStatus('result');
-            setTimeout(() => {
-                setLevel(prev => prev + 1);
-                startNewLevel();
-            }, 1500);
-        } else {
-            showFeedback(false);
-            playSound('detective_incorrect');
-            const newLives = lives - 1;
-            setLives(newLives);
-            setTimeout(() => {
-                if (newLives <= 0) {
-                    setStatus('gameover');
-                } else {
-                    startNewLevel();
-                }
-            }, 1500);
-        }
+        if (status !== 'deciding' || selectedIndex !== null) return;
+        setSelectedIndex(idx); const correct = getSig(options[idx]) === getSig(correctPattern);
+        showFeedback(correct); playSound(correct ? 'detective_correct' : 'detective_incorrect');
+        setTimeout(() => {
+            dismissFeedback();
+            if (correct) {
+                setScore(p => p + level * 10);
+                if (level >= MAX_LEVEL) setStatus('victory');
+                else { setLevel(p => p + 1); startLevel(); }
+            } else {
+                setLives(l => {
+                    const nl = l - 1;
+                    if (nl <= 0) setTimeout(() => setStatus('gameover'), 500);
+                    else startLevel();
+                    return nl;
+                });
+            }
+        }, 1500);
     };
 
-    const startApp = useCallback(async () => {
-        window.scrollTo(0, 0);
-        setLevel(1);
-        setScore(0);
-        setLives(3);
-        setTimeLeft(examMode ? examTimeLimit : 60);
-        hasSavedRef.current = false;
-        startNewLevel();
-    }, [startNewLevel, examMode, examTimeLimit]);
-
-    // Handle Auto Start from HUB or examMode
-    useEffect(() => {
-        if ((location.state?.autoStart || examMode) && status === 'waiting') {
-            startApp();
-        }
-    }, [location.state, status, startApp, examMode]);
-
-    // Oyun başladığında süre başlat
-    useEffect(() => {
-        if (status === 'preview') {
-            gameStartTimeRef.current = Date.now();
-        }
-    }, [status]);
-
-    // Oyun bittiğinde verileri kaydet
-    useEffect(() => {
-        if (status === 'gameover' && gameStartTimeRef.current > 0 && !hasSavedRef.current) {
-            hasSavedRef.current = true;
-            const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-
-            // Exam mode: submit result and redirect
-            if (examMode) {
-                (async () => {
-                    await submitResult(score > 200, score, 600, durationSeconds);
-                    navigate("/atolyeler/sinav-simulasyonu/devam");
-                })();
-                return;
-            }
-
-            saveGamePlay({
-                game_id: 'golge-dedektifi',
-                score_achieved: score,
-                duration_seconds: durationSeconds,
-                metadata: {
-                    level_reached: level,
-                    game_name: 'Gölge Dedektifi',
-                }
-            });
-        }
+    const handleFinish = useCallback(async () => {
+        if (hasSavedRef.current) return;
+        hasSavedRef.current = true;
+        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        if (examMode) { await submitResult(level >= 5 || status === 'victory', score, MAX_LEVEL * 100, duration); navigate("/atolyeler/sinav-simulasyonu/devam"); return; }
+        await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: duration, metadata: { level_reached: level, victory: status === 'victory' } });
     }, [status, score, level, saveGamePlay, examMode, submitResult, navigate]);
 
-    // Format Time
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+    useEffect(() => { if (status === 'gameover' || status === 'victory') handleFinish(); }, [status, handleFinish]);
+
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
 
     const renderPattern = (items: PatternItem[], size: number = 300) => (
-        <div
-            className="relative overflow-hidden rounded-[30%]"
-            style={{
-                width: size,
-                height: size,
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%)',
-                boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.1), 0 4px 16px rgba(0,0,0,0.3)',
-                border: '1px solid rgba(255,255,255,0.1)'
-            }}
-        >
-            {items.map((item) => {
-                const Icon = SHAPE_ICONS[item.iconIdx];
-                return (
-                    <motion.div
-                        key={item.id}
-                        initial={status === 'preview' ? { scale: 0, opacity: 0 } : false}
-                        animate={{ scale: item.scale, opacity: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                        style={{
-                            position: 'absolute',
-                            left: `${item.x}%`,
-                            top: `${item.y}%`,
-                            color: item.color,
-                            transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
-                            filter: `drop-shadow(0 2px 4px ${item.color}40)`
-                        }}
-                    >
+        <div className="relative overflow-hidden rounded-[40%] bg-indigo-950/20 border border-white/10 shadow-inner" style={{ width: size, height: size }}>
+            {items.map((it) => {
+                const Icon = SHAPE_ICONS[it.iconIdx]; return (
+                    <motion.div key={it.id} initial={{ scale: 0, opacity: 0 }} animate={{ scale: it.scale, opacity: 1 }} style={{ position: 'absolute', left: `${it.x}%`, top: `${it.y}%`, color: it.color, transform: `translate(-50%, -50%) rotate(${it.rotation}deg)`, filter: `drop-shadow(0 2px 4px ${it.color}40)` }}>
                         <Icon size={size / 8} strokeWidth={2.5} />
                     </motion.div>
                 );
@@ -309,351 +165,78 @@ const ShadowDetectiveGame: React.FC = () => {
         </div>
     );
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 text-white">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+    if (status === 'waiting') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 flex items-center justify-center p-6 text-white relative overflow-hidden">
+                <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" /></div>
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
+                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Search size={52} className="text-white drop-shadow-lg" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-indigo-300 via-purple-300 to-fuchsia-300 bg-clip-text text-transparent">Gölge Dedektifi</h1>
+                    <p className="text-slate-300 mb-8 text-lg">Şekilleri incele, zihninde kopyala ve benzerleri arasından gerçeği bul. Görsel analiz yeteneğini zirveye taşı!</p>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                        <h3 className="text-lg font-bold text-indigo-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3>
+                        <ul className="space-y-2 text-slate-300 text-sm">
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-indigo-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Ekrana gelen deseni <strong>3 saniye boyunca</strong> dikkatle incele</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-indigo-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Aşağıdaki 4 seçenek arasından <strong>tıpatıp aynısını</strong> bul</span></li>
+                            <li className="flex items-center gap-2"><span className="w-5 h-5 bg-indigo-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Renk, dönüş ve konum farklarını <strong>bir dedektif gibi</strong> yakala</span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-indigo-500/10 text-indigo-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30 font-bold uppercase tracking-widest">TUZÖ 5.3.2 Görsel Analiz</div>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                </motion.div>
             </div>
+        );
+    }
 
-            {/* Header */}
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 text-white relative overflow-hidden flex flex-col">
             <div className="relative z-10 p-4 pt-20">
-                <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
-                    <Link
-                        to={backLink}
-                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft size={20} />
-                        <span>{backLabel}</span>
-                    </Link>
-
+                <div className="max-w-5xl mx-auto flex items-center justify-between">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
                     {(status === 'preview' || status === 'deciding' || status === 'result') && (
                         <div className="flex items-center gap-4 flex-wrap">
-                            {/* Score */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(251, 191, 36, 0.3)'
-                                }}
-                            >
-                                <Star className="text-amber-400 fill-amber-400" size={18} />
-                                <span className="font-bold text-amber-400">{score}</span>
-                            </div>
-
-                            {/* Lives */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)'
-                                }}
-                            >
-                                {[...Array(3)].map((_, i) => (
-                                    <Heart
-                                        key={i}
-                                        size={18}
-                                        className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Timer */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: timeLeft <= 10
-                                        ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)'
-                                        : 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: `1px solid ${timeLeft <= 10 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
-                                }}
-                            >
-                                <Timer className={timeLeft <= 10 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} />
-                                <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-blue-400'}`}>
-                                    {formatTime(timeLeft)}
-                                </span>
-                            </div>
-
-                            {/* Level */}
-                            <div
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
-                                    boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(16, 185, 129, 0.3)'
-                                }}
-                            >
-                                <Zap className="text-emerald-400" size={18} />
-                                <span className="font-bold text-emerald-400">Seviye {level}</span>
-                            </div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(251, 191, 36, 0.3)' }}><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-950'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', border: '1px solid rgba(59, 130, 246, 0.3)' }}><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)', border: '1px solid rgba(16, 185, 129, 0.3)' }}><Zap className="text-emerald-400" size={18} /><span className="font-bold text-emerald-400">Seviye {level}/{MAX_LEVEL}</span></div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
                 <AnimatePresence mode="wait">
-                    {/* Welcome Screen */}
-                    {status === 'waiting' && (
-                        <motion.div
-                            key="welcome"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            {/* 3D Gummy Icon */}
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ y: [0, -8, 0] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                            >
-                                <Search size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                                🔍 Gölge Dedektifi
-                            </h1>
-
-                            {/* Instructions */}
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
-                                <h3 className="text-lg font-bold text-indigo-300 mb-3 flex items-center gap-2">
-                                    <Eye size={20} /> Nasıl Oynanır?
-                                </h3>
-                                <ul className="space-y-2 text-slate-300 text-sm">
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-purple-400" />
-                                        <span>Deseni 3 saniye incele</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-purple-400" />
-                                        <span>Tıpatıp aynısını bul</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Sparkles size={14} className="text-purple-400" />
-                                        <span>Dikkatli ol, şekiller çok benziyor!</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* TUZÖ Badge */}
-                            <div className="bg-indigo-500/10 text-indigo-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30">
-                                TUZÖ 5.3.2 Görsel Analiz
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05, y: -4 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startApp}
-                                className="px-8 py-4 rounded-2xl font-bold text-lg"
-                                style={{
-                                    background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(99, 102, 241, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Play size={24} fill="currentColor" />
-                                    <span>Başla</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* Preview Phase */}
                     {status === 'preview' && (
-                        <motion.div
-                            key="preview"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="text-center"
-                        >
-                            <div className="flex items-center justify-center gap-3 mb-6">
-                                <Eye className="text-purple-400 animate-pulse" size={24} />
-                                <span className="text-xl font-bold text-purple-300">
-                                    Deseni Ezberle: {previewTimer}s
-                                </span>
-                            </div>
-
-                            <motion.div
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="p-8 rounded-[3rem] mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)',
-                                    boxShadow: '0 0 60px rgba(99, 102, 241, 0.2)',
-                                    border: '2px solid rgba(99, 102, 241, 0.3)'
-                                }}
-                            >
-                                {renderPattern(correctPattern, 320)}
-                            </motion.div>
-
-                            {/* Progress Bar */}
-                            <div className="w-full bg-slate-800 h-2 rounded-full max-w-sm mx-auto overflow-hidden">
-                                <motion.div
-                                    className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full"
-                                    initial={{ width: "100%" }}
-                                    animate={{ width: "0%" }}
-                                    transition={{ duration: 3, ease: "linear" }}
-                                />
-                            </div>
+                        <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center space-y-8">
+                            <div className="flex items-center justify-center gap-3"><Eye className="text-purple-400 animate-pulse" size={32} /><span className="text-2xl font-black text-purple-300 uppercase tracking-widest">Ezberle: {previewTimer}s</span></div>
+                            <div className="p-8 bg-white/5 backdrop-blur-3xl rounded-[60px] border-2 border-white/10 shadow-3xl">{renderPattern(correctPattern, 320)}</div>
+                            <div className="w-full bg-slate-800/50 h-3 rounded-full max-w-sm mx-auto overflow-hidden border border-white/5"><motion.div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full" initial={{ width: "100%" }} animate={{ width: "0%" }} transition={{ duration: 3, ease: "linear" }} /></div>
                         </motion.div>
                     )}
-
-                    {/* Deciding Phase */}
                     {(status === 'deciding' || status === 'result') && (
-                        <motion.div
-                            key="deciding"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-4xl"
-                        >
-                            <h2 className="text-xl font-bold text-center text-slate-300 mb-6">
-                                Hangisi az önceki desenle aynıydı?
-                            </h2>
-
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                {options.map((item, idx) => {
-                                    const isSelected = selectedIndex === idx;
-                                    const isItemCorrect = getPatternSignature(item) === getPatternSignature(correctPattern);
-
-                                    let cardStyle: React.CSSProperties = {
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                        boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.05), 0 4px 16px rgba(0,0,0,0.2)',
-                                        border: '1px solid rgba(255,255,255,0.1)'
-                                    };
-
-                                    if (selectedIndex !== null) {
-                                        if (isSelected) {
-                                            cardStyle = isItemCorrect ? {
-                                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
-                                                boxShadow: '0 0 40px rgba(16, 185, 129, 0.4), inset 0 -4px 8px rgba(0,0,0,0.2)',
-                                                border: '2px solid rgba(16, 185, 129, 0.6)'
-                                            } : {
-                                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                                                boxShadow: '0 0 40px rgba(239, 68, 68, 0.4), inset 0 -4px 8px rgba(0,0,0,0.2)',
-                                                border: '2px solid rgba(239, 68, 68, 0.6)'
-                                            };
-                                        } else if (isItemCorrect && feedbackState?.correct === false) {
-                                            cardStyle = {
-                                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%)',
-                                                boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2)',
-                                                border: '2px solid rgba(16, 185, 129, 0.4)'
-                                            };
-                                        }
-                                    }
-
-                                    return (
-                                        <motion.button
-                                            key={idx}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.1 }}
-                                            whileHover={selectedIndex === null ? { scale: 1.02, y: -4 } : {}}
-                                            whileTap={selectedIndex === null ? { scale: 0.98 } : {}}
-                                            onClick={() => handleSelect(idx)}
-                                            disabled={selectedIndex !== null}
-                                            className="p-4 rounded-2xl transition-all"
-                                            style={cardStyle}
-                                        >
-                                            <div className="flex flex-col items-center">
-                                                {renderPattern(item, 160)}
-                                                <span className="mt-3 text-xs font-bold text-slate-500">
-                                                    Seçenek {idx + 1}
-                                                </span>
-                                            </div>
-                                        </motion.button>
-                                    );
-                                })}
+                        <motion.div key="deciding" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-5xl space-y-10">
+                            <h2 className="text-2xl font-black text-center text-slate-300 uppercase tracking-widest flex items-center justify-center gap-3">Hangi Desen Doğru? <Search size={24} className="text-indigo-400" /></h2>
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                {options.map((item, idx) => (
+                                    <motion.button key={idx} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.1 }} whileHover={selectedIndex === null ? { y: -8, scale: 1.02 } : {}} whileTap={selectedIndex === null ? { scale: 0.98 } : {}} onClick={() => handleSelect(idx)} disabled={selectedIndex !== null} className={`p-4 rounded-[40px] transition-all flex flex-col items-center gap-4 bg-white/5 border border-white/10 shadow-2xl relative overflow-hidden ${selectedIndex === idx && (getSig(options[idx]) === getSig(correctPattern) ? 'bg-emerald-500/20 border-emerald-500 animate-pulse' : 'bg-red-500/20 border-red-500')} ${selectedIndex !== null && getSig(options[idx]) === getSig(correctPattern) ? 'border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.3)]' : ''}`} style={{ boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.05)' }}>
+                                        {renderPattern(item, 180)}
+                                        <div className="px-4 py-1.5 bg-white/5 rounded-full text-[10px] font-black uppercase text-white/30 tracking-widest">Seçenek {idx + 1}</div>
+                                    </motion.button>
+                                ))}
                             </div>
                         </motion.div>
                     )}
-
-                    {/* Game Over Screen */}
-                    {status === 'gameover' && (
-                        <motion.div
-                            key="gameover"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <motion.div
-                                className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                                style={{
-                                    background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
-                                    boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-                                }}
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                            >
-                                <Trophy size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <h2 className="text-3xl font-black text-amber-300 mb-2">
-                                {score >= 500 ? '🎉 Süper Dedektif!' : 'Görev Tamamlandı!'}
-                            </h2>
-                            <p className="text-slate-400 mb-6">
-                                {score >= 500 ? 'Muhteşem bir gözlem yeteneğin var!' : 'Biraz daha pratik yap!'}
-                            </p>
-
-                            <div
-                                className="rounded-2xl p-6 mb-8"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}
-                            >
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-3xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Seviye</p>
-                                        <p className="text-3xl font-bold text-emerald-400">{level}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startApp}
-                                className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4"
-                                style={{
-                                    background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                                    boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(99, 102, 241, 0.4)'
-                                }}
-                            >
-                                <div className="flex items-center justify-center gap-3">
-                                    <RotateCcw size={24} />
-                                    <span>Tekrar Oyna</span>
-                                </div>
-                            </motion.button>
-
-                            <Link
-                                to={backLink}
-                                className="block text-slate-500 hover:text-white transition-colors"
-                            >
-                                {location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}
-                            </Link>
+                    {(status === 'gameover' || status === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-black text-indigo-400 mb-2">{status === 'victory' || level >= 5 ? '🎖️ Usta Dedektif!' : 'Harika!'}</h2>
+                            <p className="text-slate-400 mb-6">{status === 'victory' || level >= 5 ? 'Görsel analiz ve detay yakalama becerin tek kelimeyle kusursuz!' : 'Küçük farkları daha hızlı yakalamak için gözlerini eğitmeye devam et.'}</p>
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Feedback Overlay */}
                 <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
@@ -661,4 +244,3 @@ const ShadowDetectiveGame: React.FC = () => {
 };
 
 export default ShadowDetectiveGame;
-

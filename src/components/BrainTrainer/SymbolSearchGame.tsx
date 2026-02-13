@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, RotateCcw, Play, Star, Timer as TimerIcon, Target as TargetIcon,
-    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, ScanSearch,
-    // Icon pool (~160 icons)
+    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, ScanSearch, Eye, Sparkles,
+    // Icon pool
     Anchor, Aperture, Archive, Asterisk, Award,
     Backpack, BadgeCheck, Banana, Beaker, Bell,
     Binary, Bird, Bluetooth, Bomb, Bone,
@@ -13,7 +13,7 @@ import {
     Coffee, Coins, Compass, Cookie, Crown,
     Database, Diamond, Dice1, Disc, Dna,
     DollarSign, Droplet, Drum, Ear, Egg,
-    Eye, Feather, Figma, File, Film,
+    Feather, Figma, File, Film,
     Flag, Flame, Flashlight, Flower, Folder,
     Gamepad, Gem, Ghost, Gift, GitBranch,
     Glasses, Globe, Hammer, Hexagon,
@@ -50,8 +50,6 @@ import type { LucideIcon } from 'lucide-react';
 const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
-const FEEDBACK_DURATION = 1200;
-
 
 // ─── Icon Pool ──────────────────────────────────────
 interface GameIcon {
@@ -145,7 +143,6 @@ interface RoundData {
 }
 
 const generateRound = (level: number): RoundData => {
-    // Grid size scales with level
     let groupSize = 5;
     if (level > 5) groupSize = 9;
     if (level > 10) groupSize = 15;
@@ -170,21 +167,15 @@ const generateRound = (level: number): RoundData => {
 // ─── Types ──────────────────────────────────────────
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-interface SymbolSearchGameProps {
-    examMode?: boolean;
-    examLevel?: number;
-    examTimeLimit?: number;
-}
-
-// ─── Component ──────────────────────────────────────
 const SymbolSearchGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
-    const hasSavedRef = useRef(false);
     const location = useLocation();
     const navigate = useNavigate();
-    const examMode = location.state?.examMode || false;
     const { submitResult } = useExam();
-    const { feedbackState, showFeedback } = useGameFeedback();
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1000 });
+
+    const examMode = location.state?.examMode || false;
+    const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
@@ -197,8 +188,11 @@ const SymbolSearchGame: React.FC = () => {
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
+    const hasSavedRef = useRef(false);
 
-    // Timer
+    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+
     useEffect(() => {
         if (phase === 'playing' && timeLeft > 0) {
             timerRef.current = setTimeout(() => setTimeLeft(p => p - 1), 1000);
@@ -208,112 +202,92 @@ const SymbolSearchGame: React.FC = () => {
         return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     }, [phase, timeLeft]);
 
-    // Generate round on level change
     useEffect(() => {
-        if (phase === 'playing') {
-            setRound(generateRound(level));
-        }
+        if (phase === 'playing') setRound(generateRound(level));
     }, [phase, level]);
 
-    // Start
     const handleStart = useCallback(() => {
         window.scrollTo(0, 0);
         setPhase('playing');
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevel(1);
-        setTimeLeft(TIME_LIMIT);
+        setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
         setRound(generateRound(1));
         setTotalReactions([]);
         setAvgReaction(0);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
-    }, []);
+    }, [examMode, examTimeLimit]);
 
-    // Auto-start
     useEffect(() => {
         if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart();
     }, [location.state, examMode, phase, handleStart]);
 
-    // Game Over
     const handleGameOver = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
         setPhase('game_over');
-
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         const avg = totalReactions.length > 0 ? Math.round(totalReactions.reduce((a, b) => a + b, 0) / totalReactions.length) : 0;
         setAvgReaction(avg);
 
         if (examMode) {
-            const passed = level >= 5;
-            (async () => {
-                await submitResult(passed, score, 1000, duration);
-                navigate('/atolyeler/sinav-simulasyonu/devam');
-            })();
+            const passed = level >= 8;
+            await submitResult(passed, score, 1000, duration);
+            navigate('/atolyeler/sinav-simulasyonu/devam');
             return;
         }
-
         await saveGamePlay({
             game_id: 'sembol-arama',
             score_achieved: score,
             duration_seconds: duration,
-            metadata: { levels_completed: level, final_lives: lives, avg_reaction_ms: avg },
+            metadata: { levels_completed: level, final_lives: lives, avg_reaction_ms: avg, game_name: 'Sembol Arama' },
         });
     }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate, totalReactions]);
 
-    // Victory
     const handleVictory = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
         setPhase('victory');
-
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         const avg = totalReactions.length > 0 ? Math.round(totalReactions.reduce((a, b) => a + b, 0) / totalReactions.length) : 0;
         setAvgReaction(avg);
 
         if (examMode) {
-            (async () => {
-                await submitResult(true, score, 1000, duration);
-                navigate('/atolyeler/sinav-simulasyonu/devam');
-            })();
+            await submitResult(true, score, 1000, duration);
+            navigate('/atolyeler/sinav-simulasyonu/devam');
             return;
         }
-
         await saveGamePlay({
             game_id: 'sembol-arama',
             score_achieved: score,
             duration_seconds: duration,
-            metadata: { levels_completed: MAX_LEVEL, victory: true, avg_reaction_ms: avg },
+            metadata: { levels_completed: MAX_LEVEL, victory: true, avg_reaction_ms: avg, game_name: 'Sembol Arama' },
         });
     }, [saveGamePlay, score, examMode, submitResult, navigate, totalReactions]);
 
-    // Answer
     const handleAnswer = useCallback((userAnswer: boolean) => {
         if (!round || phase !== 'playing') return;
         const reaction = Date.now() - round.startTime;
         const correct = userAnswer === round.hasTarget;
-
         showFeedback(correct);
-
         setPhase('feedback');
         setTotalReactions(prev => [...prev, reaction]);
-
-        const newScore = correct ? score + 10 * level : score;
-        const newLives = correct ? lives : lives - 1;
-        if (correct) setScore(newScore);
-        else setLives(newLives);
+        if (correct) setScore(prev => prev + 10 * level);
+        else setLives(prev => prev - 1);
 
         setTimeout(() => {
+            dismissFeedback();
+            const newLives = correct ? lives : lives - 1;
             if (!correct && newLives <= 0) { handleGameOver(); return; }
             if (correct && level >= MAX_LEVEL) { handleVictory(); return; }
             if (correct) setLevel(l => l + 1);
             else { setRound(generateRound(level)); }
             setPhase('playing');
-        }, FEEDBACK_DURATION);
-    }, [round, phase, score, lives, level, handleGameOver, handleVictory]);
+        }, 1200);
+    }, [round, phase, lives, level, showFeedback, dismissFeedback, handleGameOver, handleVictory]);
 
-    // Keyboard controls
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if (phase !== 'playing') return;
@@ -328,226 +302,77 @@ const SymbolSearchGame: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white">
-            {/* Decorative */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
             </div>
-
-            {/* Header */}
-            <div className="relative z-10 p-4">
+            <div className="relative z-10 p-4 pt-20">
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
-                    <RouterLink to="/atolyeler/bireysel-degerlendirme" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-                        <ChevronLeft size={20} /><span>Geri</span>
-                    </RouterLink>
+                    <RouterLink to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></RouterLink>
                     {(phase === 'playing' || phase === 'feedback') && (
-                        <div className="flex items-center gap-3 sm:gap-6 flex-wrap justify-end">
-                            <div className="flex items-center gap-2 bg-amber-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-amber-500/30">
-                                <Star className="text-amber-400" size={18} />
-                                <span className="font-bold text-amber-400 text-sm">{score}</span>
-                            </div>
-                            <div className="flex items-center gap-1 bg-red-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-red-500/30">
-                                {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
-                                    <Heart key={i} size={14} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'} />
-                                ))}
-                            </div>
-                            <div className="flex items-center gap-2 bg-blue-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-blue-500/30">
-                                <TimerIcon className="text-blue-400" size={18} />
-                                <span className={`font-bold text-sm ${timeLeft <= 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-emerald-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-emerald-500/30">
-                                <Zap className="text-emerald-400" size={18} />
-                                <span className="font-bold text-emerald-400 text-sm">Seviye {level}</span>
-                            </div>
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(251, 191, 36, 0.3)' }}><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />))}</div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', border: '1px solid rgba(59, 130, 246, 0.3)' }}><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(8, 145, 178, 0.1) 100%)', border: '1px solid rgba(6, 182, 212, 0.3)' }}><Zap className="text-cyan-400" size={18} /><span className="font-bold text-cyan-400">{level}/{MAX_LEVEL}</span></div>
                         </div>
                     )}
                 </div>
             </div>
-
-            {/* Main */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
                 <AnimatePresence mode="wait">
-
-                    {/* ── Welcome ── */}
                     {phase === 'welcome' && (
                         <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-full">
-                                <span className="text-[9px] font-black text-cyan-300 uppercase tracking-wider">TUZÖ</span>
-                                <span className="text-[9px] font-bold text-cyan-400">5.7.1 Seçici Dikkat</span>
-                            </div>
-
-                            <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-cyan-400 to-indigo-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
-                                animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
-                                <ScanSearch size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
+                            <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-cyan-400 to-indigo-600 rounded-[40%] flex items-center justify-center" style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><ScanSearch size={52} className="text-white drop-shadow-lg" /></motion.div>
                             <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">Sembol Arama</h1>
                             <p className="text-slate-400 mb-6">Hedef sembolü incele, arama grubunda olup olmadığını <span className="font-bold text-white">en hızlı</span> şekilde bul!</p>
-
-                            <div className="grid grid-cols-3 gap-3 mb-8">
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-3 rounded-xl flex flex-col items-center gap-1 border border-white/10">
-                                    <Zap className="text-amber-400" size={18} />
-                                    <span className="text-xs font-bold text-slate-300">Hız</span>
-                                    <span className="text-[10px] text-slate-500">Tepki süren ölçülür</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-3 rounded-xl flex flex-col items-center gap-1 border border-white/10">
-                                    <Eye className="text-indigo-400" size={18} />
-                                    <span className="text-xs font-bold text-slate-300">Dikkat</span>
-                                    <span className="text-[10px] text-slate-500">Sembolleri ayırt et</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-3 rounded-xl flex flex-col items-center gap-1 border border-white/10">
-                                    <ScanSearch className="text-emerald-400" size={18} />
-                                    <span className="text-xs font-bold text-slate-300">Tarama</span>
-                                    <span className="text-[10px] text-slate-500">Görsel tarama hızı</span>
-                                </div>
+                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                                <h3 className="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2"><Eye size={20} /> Nasıl Oynanır?</h3>
+                                <ul className="space-y-2 text-slate-300 text-sm">
+                                    <li className="flex items-center gap-2"><Sparkles size={14} className="text-cyan-400" /><span>Hedef sembolü aklında tut</span></li>
+                                    <li className="flex items-center gap-2"><Sparkles size={14} className="text-cyan-400" /><span>Grupta varsa <strong>"VAR"</strong>, yoksa <strong>"YOK"</strong> butonuna tıkla</span></li>
+                                    <li className="flex items-center gap-2"><Sparkles size={14} className="text-cyan-400" /><span>Hızlı tepki vererek daha fazla puan kazan!</span></li>
+                                </ul>
                             </div>
-
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                <div className="bg-slate-800/50 px-4 py-2 rounded-xl flex items-center gap-2"><Heart className="text-red-400" size={16} /><span className="text-sm text-slate-300">{INITIAL_LIVES} Can</span></div>
-                                <div className="bg-slate-800/50 px-4 py-2 rounded-xl flex items-center gap-2"><TimerIcon className="text-blue-400" size={16} /><span className="text-sm text-slate-300">{TIME_LIMIT / 60} Dakika</span></div>
-                                <div className="bg-slate-800/50 px-4 py-2 rounded-xl flex items-center gap-2"><TargetIcon className="text-emerald-400" size={16} /><span className="text-sm text-slate-300">{MAX_LEVEL} Seviye</span></div>
-                            </div>
-
-                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-indigo-600 rounded-2xl font-bold text-xl"
-                                style={{ boxShadow: '0 8px 32px rgba(6,182,212,0.4)' }}>
-                                <div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div>
-                            </motion.button>
+                            <div className="bg-cyan-500/10 text-cyan-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-cyan-500/30 font-bold uppercase tracking-widest">TUZÖ 5.7.1 Seçici Dikkat</div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-indigo-600 rounded-2xl font-bold text-xl" style={{ boxShadow: '0 8px 32px rgba(6,182,212,0.4)' }}><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
                         </motion.div>
                     )}
-
-                    {/* ── Playing ── */}
                     {(phase === 'playing' || phase === 'feedback') && round && (
                         <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-5xl">
-                            {/* Progress */}
-                            <div className="w-full bg-white/10 h-3 rounded-full mb-6 overflow-hidden">
-                                <motion.div className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full"
-                                    initial={{ width: 0 }} animate={{ width: `${(level / MAX_LEVEL) * 100}%` }} transition={{ duration: 0.5 }} />
-                            </div>
-
-                            {/* Game Board */}
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-stretch mb-6">
-                                {/* Target Panel */}
                                 <div className="md:col-span-4">
-                                    <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-cyan-500/30 p-6 sm:p-8 flex flex-col items-center justify-center relative overflow-hidden h-full min-h-[200px]"
-                                        style={{ boxShadow: 'inset 0 -4px 12px rgba(0,0,0,0.15), 0 8px 32px rgba(6,182,212,0.15)' }}>
-                                        <div className="absolute top-3 left-0 w-full text-center">
-                                            <span className="bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-cyan-500/30">
-                                                HEDEF SEMBOL
-                                            </span>
-                                        </div>
+                                    <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-cyan-500/30 p-6 sm:p-8 flex flex-col items-center justify-center relative overflow-hidden h-full min-h-[200px]" style={{ boxShadow: 'inset 0 -4px 12px rgba(0,0,0,0.15), 0 8px 32px rgba(6,182,212,0.15)' }}>
+                                        <div className="absolute top-3 left-0 w-full text-center"><span className="bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-cyan-500/30">HEDEF SEMBOL</span></div>
                                         {(() => { const TargetIcon = round.target.component; return <TargetIcon className="w-24 h-24 sm:w-28 sm:h-28 text-cyan-400 drop-shadow-lg" />; })()}
                                         <p className="mt-4 text-lg font-bold text-slate-200">{round.target.name}</p>
                                     </div>
                                 </div>
-
-                                {/* Search Group Panel */}
                                 <div className="md:col-span-8">
-                                    <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-6 sm:p-8 flex items-center justify-center relative overflow-hidden min-h-[200px]"
-                                        style={{ boxShadow: 'inset 0 -4px 12px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.2)' }}>
-                                        <div className="absolute top-3 left-0 w-full text-center">
-                                            <span className="bg-white/10 text-slate-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">
-                                                ARAMA GRUBU
-                                            </span>
-                                        </div>
-
-                                        <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-4">
-                                            {round.group.map((icon) => {
-                                                const IconComp = icon.component;
-                                                return (
-                                                    <motion.div key={icon.id}
-                                                        initial={{ opacity: 0, scale: 0.8 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        className="p-3 sm:p-4 rounded-2xl border border-white/10"
-                                                        style={{
-                                                            background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
-                                                            boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)',
-                                                        }}>
-                                                        <IconComp className="w-10 h-10 sm:w-12 sm:h-12 text-slate-300" />
-                                                    </motion.div>
-                                                );
-                                            })}
-                                        </div>
+                                    <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-6 sm:p-8 flex items-center justify-center relative overflow-hidden min-h-[200px]" style={{ boxShadow: 'inset 0 -4px 12px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.2)' }}>
+                                        <div className="absolute top-3 left-0 w-full text-center"><span className="bg-white/10 text-slate-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">ARAMA GRUBU</span></div>
+                                        <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-4">{round.group.map((icon) => { const IconComp = icon.component; return (<motion.div key={icon.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} className="p-3 sm:p-4 rounded-2xl border border-white/10" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)', boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)' }}><IconComp className="w-10 h-10 sm:w-12 sm:h-12 text-slate-300" /></motion.div>); })}</div>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* VAR / YOK Buttons */}
                             {phase === 'playing' && (
                                 <div className="grid grid-cols-2 gap-4 sm:gap-6 max-w-xl mx-auto">
-                                    <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
-                                        onClick={() => handleAnswer(false)}
-                                        className="py-5 sm:py-6 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 font-bold text-xl sm:text-2xl text-white"
-                                        style={{ boxShadow: '0 6px 24px rgba(239,68,68,0.35)' }}>
-                                        <div className="flex flex-col items-center">
-                                            <XCircle size={28} className="mb-1 opacity-80" />
-                                            <span>YOK</span>
-                                            <span className="text-[10px] opacity-60 mt-1 hidden sm:block">← Sol Ok</span>
-                                        </div>
-                                    </motion.button>
-                                    <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
-                                        onClick={() => handleAnswer(true)}
-                                        className="py-5 sm:py-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 font-bold text-xl sm:text-2xl text-white"
-                                        style={{ boxShadow: '0 6px 24px rgba(16,185,129,0.35)' }}>
-                                        <div className="flex flex-col items-center">
-                                            <CheckCircle2 size={28} className="mb-1 opacity-80" />
-                                            <span>VAR</span>
-                                            <span className="text-[10px] opacity-60 mt-1 hidden sm:block">Sağ Ok →</span>
-                                        </div>
-                                    </motion.button>
+                                    <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => handleAnswer(false)} className="py-5 sm:py-6 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 font-bold text-xl sm:text-2xl text-white" style={{ boxShadow: '0 6px 24px rgba(239,68,68,0.35)' }}><div className="flex flex-col items-center"><XCircle size={28} className="mb-1 opacity-80" /><span>YOK</span><span className="text-[10px] opacity-60 mt-1 hidden sm:block">← Sol Ok</span></div></motion.button>
+                                    <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => handleAnswer(true)} className="py-5 sm:py-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 font-bold text-xl sm:text-2xl text-white" style={{ boxShadow: '0 6px 24px rgba(16,185,129,0.35)' }}><div className="flex flex-col items-center"><CheckCircle2 size={28} className="mb-1 opacity-80" /><span>VAR</span><span className="text-[10px] opacity-60 mt-1 hidden sm:block">Sağ Ok →</span></div></motion.button>
                                 </div>
                             )}
                         </motion.div>
                     )}
-
-                    {/* ── Game Over ── */}
-                    {phase === 'game_over' && (
-                        <motion.div key="game_over" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}>
-                                <XCircle size={48} className="text-white" />
-                            </div>
-                            <h2 className="text-3xl font-bold text-red-400 mb-4">Oyun Bitti!</h2>
-                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10">
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div>
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{level}</p></div>
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Ort. Tepki</p><p className="text-2xl font-bold text-cyan-400">{avgReaction}ms</p></div>
-                                </div>
-                            </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-indigo-600 rounded-2xl font-bold text-xl" style={{ boxShadow: '0 8px 32px rgba(6,182,212,0.4)' }}>
-                                <div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Dene</span></div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* ── Victory ── */}
-                    {phase === 'victory' && (
-                        <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3)' }}
-                                animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                                <Trophy size={48} className="text-white" />
-                            </motion.div>
-                            <h2 className="text-3xl font-bold text-amber-400 mb-4">🎉 Şampiyon!</h2>
-                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10">
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-3xl font-bold text-amber-400">{score}</p></div>
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Ort. Tepki</p><p className="text-3xl font-bold text-cyan-400">{avgReaction}ms</p></div>
-                                </div>
-                            </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl font-bold text-xl" style={{ boxShadow: '0 8px 32px rgba(245,158,11,0.4)' }}>
-                                <div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div>
-                            </motion.button>
+                    {(phase === 'game_over' || phase === 'victory') && (
+                        <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-[40%] flex items-center justify-center" style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3)' }} animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <h2 className="text-3xl font-bold text-amber-400 mb-2">{phase === 'victory' ? '🎖️ Muhteşem Zafer!' : 'Oyun Bitti!'}</h2>
+                            <p className="text-slate-400 mb-6">{phase === 'victory' ? 'Tüm seviyeleri başarıyla tamamladın!' : level >= 5 ? 'Harika seçici dikkat!' : 'Biraz daha pratik yap!'}</p>
+                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-3 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{level}/{MAX_LEVEL}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Ort. Tepki</p><p className="text-2xl font-bold text-cyan-400">{avgReaction}ms</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-indigo-600 rounded-2xl font-bold text-xl mb-4" style={{ boxShadow: '0 8px 32px rgba(6,182,212,0.4)' }}><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <RouterLink to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</RouterLink>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* Feedback Overlay */}
                 <GameFeedbackBanner feedback={feedbackState} />
             </div>
         </div>
@@ -555,4 +380,3 @@ const SymbolSearchGame: React.FC = () => {
 };
 
 export default SymbolSearchGame;
-
