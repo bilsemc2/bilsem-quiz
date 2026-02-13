@@ -77,14 +77,6 @@ const parseYetenekAlani = (value: unknown): string[] => {
     return [];
 };
 
-const TALENT_LABELS: Record<string, string> = {
-    'genel yetenek': 'Genel Yetenek',
-    'genel yetenek - tablet': 'Genel Yetenek',
-    'genel yetenek - bireysel': 'Genel Yetenek',
-    'resim': 'Resim',
-    'müzik': 'Müzik',
-};
-
 const QuickAccessSection: React.FC = () => {
     const { profile } = useAuth();
     const userTalents = useMemo(() => parseYetenekAlani(profile?.yetenek_alani), [profile?.yetenek_alani]);
@@ -101,8 +93,7 @@ const QuickAccessSection: React.FC = () => {
     // Build a user-friendly talent label for the header
     const sectionTitle = useMemo(() => {
         if (userTalents.length === 0) return 'Hızlı Erişim';
-        const uniqueLabels = [...new Set(userTalents.map(t => TALENT_LABELS[t] || t))];
-        return `${uniqueLabels.join(' & ')} Atölyem`;
+        return 'Yetkili Olduklarım';
     }, [userTalents]);
 
     return (
