@@ -37,7 +37,7 @@ const VerbalAnalogyGame: React.FC = () => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [score, setScore] = useState(0);
     const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0);    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const [wrongCount, setWrongCount] = useState(0); const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
     const [lives, setLives] = useState(3);
@@ -75,19 +75,27 @@ const VerbalAnalogyGame: React.FC = () => {
             const shuffled = data.sort(() => Math.random() - 0.5);
             const selected = shuffled.slice(0, Math.min(totalQuestions, shuffled.length));
 
-            // Veritabanı formatını oyun formatına dönüştür
-            const parsedQuestions: Question[] = selected.map(q => ({
-                id: q.id,
-                text: q.soru_metni,
-                options: [
-                    { id: 'a', text: q.secenek_a },
-                    { id: 'b', text: q.secenek_b },
-                    { id: 'c', text: q.secenek_c },
-                    { id: 'd', text: q.secenek_d },
-                ],
-                correct_option_id: q.dogru_cevap,
-                explanation: q.aciklama,
-            }));
+            // Veritabanı formatını oyun formatına dönüştür + seçenekleri karıştır
+            const optionLabels = ['a', 'b', 'c', 'd'];
+            const parsedQuestions: Question[] = selected.map(q => {
+                const rawOptions = [
+                    { origId: 'a', text: q.secenek_a },
+                    { origId: 'b', text: q.secenek_b },
+                    { origId: 'c', text: q.secenek_c },
+                    { origId: 'd', text: q.secenek_d },
+                ];
+                // Seçenekleri karıştır
+                const shuffledOptions = rawOptions.sort(() => Math.random() - 0.5);
+                // Doğru cevabın yeni konumunu bul
+                const correctNewIndex = shuffledOptions.findIndex(o => o.origId === q.dogru_cevap);
+                return {
+                    id: q.id,
+                    text: q.soru_metni,
+                    options: shuffledOptions.map((o, i) => ({ id: optionLabels[i], text: o.text })),
+                    correct_option_id: optionLabels[correctNewIndex],
+                    explanation: q.aciklama,
+                };
+            });
 
             setQuestions(parsedQuestions);
             setGameState('playing');
@@ -100,7 +108,7 @@ const VerbalAnalogyGame: React.FC = () => {
     }, []);
 
     // Oyunu başlat
-    const startGame = useCallback(() => {
+    const startGame = useCallback(async () => {
         window.scrollTo(0, 0);
         setScore(0);
         setCorrectCount(0);
@@ -130,8 +138,10 @@ const VerbalAnalogyGame: React.FC = () => {
 
             // Exam mode: submit result and redirect
             if (examMode) {
-                await submitResult(acc >= 0.6, score, totalQuestions * 100, durationSeconds).then(() => {
-                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                (async () => {
+                    await submitResult(acc >= 0.6, score, totalQuestions * 100, durationSeconds);
+                    navigate("/atolyeler/sinav-simulasyonu/devam");
+                })();
                 return;
             }
 
