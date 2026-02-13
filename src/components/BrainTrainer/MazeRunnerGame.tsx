@@ -589,7 +589,7 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
 
         if (examMode) {
             submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 
@@ -611,7 +611,7 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
 
         if (examMode) {
             submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 

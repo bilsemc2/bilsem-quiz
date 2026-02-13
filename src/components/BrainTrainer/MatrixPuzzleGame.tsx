@@ -189,7 +189,7 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
         if (examMode) {
             const passed = level >= 5;
             submitResult(passed, score, MAX_LEVEL * 10 * MAX_LEVEL, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 
@@ -215,7 +215,7 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
 
         if (examMode) {
             submitResult(true, score, MAX_LEVEL * 10 * MAX_LEVEL, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 

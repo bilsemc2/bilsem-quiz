@@ -82,6 +82,8 @@ Oncelikli tablolar:
 - [x] tepki-suresi migrate edildi (oynanabilir client component)
 - [x] sozel-analoji migrate edildi (oynanabilir client component)
 - [x] es-anlam migrate edildi (oynanabilir client component)
+- [x] cumle-ici-es-anlam migrate edildi (oynanabilir client component)
+- [x] simge-kodlama migrate edildi (oynanabilir client component)
 
 6. Faz 5 - Admin + Profile + Reporting
 - [x] Dashboard stats tabani (`profiles` + `game_plays`)

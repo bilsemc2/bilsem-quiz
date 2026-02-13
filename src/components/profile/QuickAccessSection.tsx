@@ -18,7 +18,7 @@ const QuickAccessSection: React.FC = () => (
                 <Gamepad2 className="w-7 h-7 text-white" />
             </div>
             <div className="flex-1">
-                <h3 className="font-bold text-white text-lg">BİLSEM Zeka</h3>
+                <h3 className="font-bold text-white text-lg">BİLSEM Zeka Oyunları</h3>
                 <p className="text-white/60 text-sm">Jeton at, oyununa başla!</p>
             </div>
             <ChevronRight className="w-6 h-6 text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all" />

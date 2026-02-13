@@ -280,7 +280,7 @@ const VisualMemoryGame: React.FC<VisualMemoryGameProps> = ({ examMode = false })
         if (examMode) {
             const passed = level >= 5;
             submitResult(passed, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 
@@ -306,7 +306,7 @@ const VisualMemoryGame: React.FC<VisualMemoryGameProps> = ({ examMode = false })
 
         if (examMode) {
             submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 

@@ -444,8 +444,8 @@ const PatternIQGame: React.FC<PatternIQGameProps> = ({ examMode = false }) => {
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            await submitResult(level >= 5, score, 1000, duration);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 
@@ -464,8 +464,8 @@ const PatternIQGame: React.FC<PatternIQGameProps> = ({ examMode = false }) => {
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            await submitResult(true, score, 1000, duration);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 

@@ -67,6 +67,16 @@ export const GAME_CATALOG: Record<string, GameCatalogItem> = {
     category: 'language',
     durationSeconds: 180,
   },
+  'cumle-ici-es-anlam': {
+    title: 'Cumle Ici Es Anlam',
+    category: 'language',
+    durationSeconds: 180,
+  },
+  'simge-kodlama': {
+    title: 'Simge Kodlama',
+    category: 'attention',
+    durationSeconds: 120,
+  },
   'sayi-sihirbazi': {
     title: 'Sayi Sihirbazi',
     category: 'logic',

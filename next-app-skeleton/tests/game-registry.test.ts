@@ -129,6 +129,34 @@ describe('game-registry', () => {
     expect(item?.migrated).toBe(true);
   });
 
+  it('marks cumle-ici-es-anlam as migrated', () => {
+    const item = getRegistryItem('cumle-ici-es-anlam');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks sentence-synonym as migrated', () => {
+    const item = getRegistryItem('sentence-synonym');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks simge-kodlama as migrated', () => {
+    const item = getRegistryItem('simge-kodlama');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks digit-symbol as migrated', () => {
+    const item = getRegistryItem('digit-symbol');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
   it('marks sayi-sihirbazi as migrated', () => {
     const item = getRegistryItem('sayi-sihirbazi');
 

@@ -202,7 +202,7 @@ const PerceptualSpeedGame: React.FC<PerceptualSpeedGameProps> = ({ examMode = fa
         if (examMode) {
             const passed = correctCount >= 10 && avgReaction < 2000;
             submitResult(passed, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 
@@ -233,7 +233,7 @@ const PerceptualSpeedGame: React.FC<PerceptualSpeedGameProps> = ({ examMode = fa
 
         if (examMode) {
             submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
 

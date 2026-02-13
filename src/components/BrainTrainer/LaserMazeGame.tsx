@@ -564,7 +564,7 @@ const LaserMazeGame: React.FC<LaserMazeGameProps> = ({ examMode = false }) => {
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         if (examMode) {
             submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
         await saveGamePlay({
@@ -580,7 +580,7 @@ const LaserMazeGame: React.FC<LaserMazeGameProps> = ({ examMode = false }) => {
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         if (examMode) {
             submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
         await saveGamePlay({
