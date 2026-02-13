@@ -151,7 +151,7 @@ const [SimulatorName]Game: React.FC<[SimulatorName]GameProps> = ({ examMode = fa
     // Exam Mode: Submit result and navigate back
     if (examMode) {
       const passed = level >= 5; // Oyuna özel geçme kriteri
-      await submitResult(passed, score, 1000, duration);
+      submitResult(passed, score, 1000, duration);
       setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
       return;
     }
@@ -178,7 +178,7 @@ const [SimulatorName]Game: React.FC<[SimulatorName]GameProps> = ({ examMode = fa
     
     // Exam Mode: Submit result and navigate back
     if (examMode) {
-      await submitResult(true, score, 1000, duration);
+      submitResult(true, score, 1000, duration);
       setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
       return;
     }
@@ -588,7 +588,7 @@ useEffect(() => {
 // 4. Oyun bitişinde sonuç gönder
 if (examMode) {
     const passed = /* oyuna özel geçme kriteri */;
-    await submitResult(passed, score, maxScore, durationSeconds);
+    submitResult(passed, score, maxScore, durationSeconds);
     setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
     return;
 }

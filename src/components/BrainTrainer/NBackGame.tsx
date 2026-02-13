@@ -119,7 +119,7 @@ const NBackGame: React.FC = () => {
         };
     }, [gameState, timeLeft]);
 
-    const handleGameOver = useCallback(() => {
+    const handleGameOver = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
 
@@ -130,9 +130,8 @@ const NBackGame: React.FC = () => {
 
         // Exam mode: submit result and redirect
         if (examMode) {
-            await submitResult(score > 200, score, 1000, durationSeconds).then(() => {
-                navigate("/atolyeler/sinav-simulasyonu/devam");
-            });
+            await submitResult(score > 200, score, 1000, durationSeconds);
+            navigate("/atolyeler/sinav-simulasyonu/devam");
             return;
         }
 

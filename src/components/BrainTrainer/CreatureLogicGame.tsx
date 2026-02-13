@@ -245,7 +245,7 @@ const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false 
         hasSavedRef.current = true;
         setPhase('game_over');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        if (examMode) { await submitResult(level >= 5, score, 1000, duration); setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500); return; }
+        if (examMode) { submitResult(level >= 5, score, 1000, duration); setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500); return; }
         await saveGamePlay({ game_id: 'yaratik-mantigi', score_achieved: score, duration_seconds: duration, metadata: { levels_completed: level, final_lives: lives } });
     }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate]);
 
@@ -255,7 +255,7 @@ const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false 
         hasSavedRef.current = true;
         setPhase('victory');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        if (examMode) { await submitResult(true, score, 1000, duration); setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500); return; }
+        if (examMode) { submitResult(true, score, 1000, duration); setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500); return; }
         await saveGamePlay({ game_id: 'yaratik-mantigi', score_achieved: score, duration_seconds: duration, metadata: { levels_completed: MAX_LEVEL, victory: true } });
     }, [saveGamePlay, score, examMode, submitResult, navigate]);
 
