@@ -184,7 +184,7 @@ const LazerHafizaGame: React.FC<LazerHafizaGameProps> = ({ examMode = false }) =
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            submitResult(level >= 5, score, 1000, duration);
+            await submitResult(level >= 5, score, 1000, duration);
             setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
@@ -205,7 +205,7 @@ const LazerHafizaGame: React.FC<LazerHafizaGameProps> = ({ examMode = false }) =
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            submitResult(true, score, 1000, duration);
+            await submitResult(true, score, 1000, duration);
             setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }

@@ -122,7 +122,7 @@ const StroopGame: React.FC<StroopGameProps> = ({ examMode: examModeProp = false 
                     ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
                     : 0;
                 const passed = accuracy >= 60 && correctCount >= 8;
-                submitResult(passed, score, 1000, durationSeconds).then(() => {
+                await submitResult(passed, score, 1000, durationSeconds).then(() => {
                     navigate('/atolyeler/sinav-simulasyonu/devam');
                 });
                 return;

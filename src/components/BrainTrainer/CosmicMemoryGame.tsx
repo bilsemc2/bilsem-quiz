@@ -228,7 +228,7 @@ const CosmicMemoryGame: React.FC = () => {
 
             // Exam mode: submit result and redirect
             if (examMode) {
-                submitResult(state.score > 500, state.score, 3000, durationSeconds).then(() => {
+                await submitResult(state.score > 500, state.score, 3000, durationSeconds).then(() => {
                     navigate("/atolyeler/sinav-simulasyonu/devam");
                 });
                 return;

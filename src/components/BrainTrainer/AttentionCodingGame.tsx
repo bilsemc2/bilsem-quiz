@@ -176,7 +176,7 @@ const AttentionCodingGame: React.FC<AttentionCodingGameProps> = ({ examMode = fa
 
         if (examMode) {
             const passed = level >= 5;
-            submitResult(passed, score, 1000, duration);
+            await submitResult(passed, score, 1000, duration);
             setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }
@@ -200,7 +200,7 @@ const AttentionCodingGame: React.FC<AttentionCodingGameProps> = ({ examMode = fa
         setAvgReaction(avg);
 
         if (examMode) {
-            submitResult(true, score, 1000, duration);
+            await submitResult(true, score, 1000, duration);
             setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
             return;
         }

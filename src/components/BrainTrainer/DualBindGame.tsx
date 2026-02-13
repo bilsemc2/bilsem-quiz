@@ -175,7 +175,7 @@ const DualBindGame = () => {
             // Exam mode: submit result and navigate
             if (examMode) {
                 const passed = round >= 3;
-                submitResult(passed, score, 1000, durationSeconds).then(() => {
+                await submitResult(passed, score, 1000, durationSeconds).then(() => {
                     navigate("/atolyeler/sinav-simulasyonu/devam");
                 });
                 return;

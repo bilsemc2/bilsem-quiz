@@ -106,7 +106,7 @@ const DigitSymbolGame: React.FC = () => {
 
             // Exam mode: submit result and redirect
             if (examMode) {
-                submitResult(acc >= 0.6, score, (correctCount + wrongCount) * 50, durationSeconds).then(() => {
+                await submitResult(acc >= 0.6, score, (correctCount + wrongCount) * 50, durationSeconds).then(() => {
                     navigate("/atolyeler/sinav-simulasyonu/devam");
                 });
                 return;

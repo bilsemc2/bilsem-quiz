@@ -248,7 +248,7 @@ const ShadowDetectiveGame: React.FC = () => {
 
             // Exam mode: submit result and redirect
             if (examMode) {
-                submitResult(score > 200, score, 600, durationSeconds).then(() => {
+                await submitResult(score > 200, score, 600, durationSeconds).then(() => {
                     navigate("/atolyeler/sinav-simulasyonu/devam");
                 });
                 return;

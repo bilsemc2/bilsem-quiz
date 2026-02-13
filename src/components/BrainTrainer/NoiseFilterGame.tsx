@@ -157,7 +157,7 @@ const NoiseFilterGame: React.FC<NoiseFilterGameProps> = ({ examMode: examModePro
         // Exam mode: submit result and navigate
         if (examMode) {
             const passed = score >= TARGET_SCORE / 2;
-            submitResult(passed, score, TARGET_SCORE, duration).then(() => {
+            await submitResult(passed, score, TARGET_SCORE, duration).then(() => {
                 navigate('/atolyeler/sinav-simulasyonu/devam');
             });
             return;
@@ -188,7 +188,7 @@ const NoiseFilterGame: React.FC<NoiseFilterGameProps> = ({ examMode: examModePro
 
         // Exam mode: submit result and navigate
         if (examMode) {
-            submitResult(true, score + 50, TARGET_SCORE, duration).then(() => {
+            await submitResult(true, score + 50, TARGET_SCORE, duration).then(() => {
                 navigate('/atolyeler/sinav-simulasyonu/devam');
             });
             return;

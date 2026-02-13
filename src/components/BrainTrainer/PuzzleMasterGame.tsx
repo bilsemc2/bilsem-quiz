@@ -206,7 +206,7 @@ const PuzzleMasterGame: React.FC = () => {
         // Exam mode: submit result and navigate
         if (examMode) {
             const passed = levelNumber >= 5;
-            submitResult(passed, score, 1000, duration).then(() => {
+            await submitResult(passed, score, 1000, duration).then(() => {
                 navigate('/atolyeler/sinav-simulasyonu/devam');
             });
             return;
@@ -228,7 +228,7 @@ const PuzzleMasterGame: React.FC = () => {
 
         // Exam mode: submit result and navigate
         if (examMode) {
-            submitResult(true, score, 1000, duration).then(() => {
+            await submitResult(true, score, 1000, duration).then(() => {
                 navigate('/atolyeler/sinav-simulasyonu/devam');
             });
             return;

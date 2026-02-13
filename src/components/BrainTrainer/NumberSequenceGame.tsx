@@ -195,7 +195,7 @@ const NumberSequenceGame: React.FC = () => {
             // Exam mode: submit result and redirect
             if (examMode) {
                 const passed = correctCount >= Math.floor(totalQuestions * 0.6);
-                submitResult(passed, score, totalQuestions * 150, durationSeconds).then(() => {
+                await submitResult(passed, score, totalQuestions * 150, durationSeconds).then(() => {
                 navigate("/atolyeler/sinav-simulasyonu/devam"); });
                 return;
             }

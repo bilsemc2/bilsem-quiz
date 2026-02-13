@@ -170,7 +170,7 @@ const SymbolMatchGame = () => {
 
             // Exam mode: submit result and redirect
             if (examMode) {
-                submitResult(lives > 0, score, totalRounds * 150, durationSeconds).then(() => {
+                await submitResult(lives > 0, score, totalRounds * 150, durationSeconds).then(() => {
                 navigate("/atolyeler/sinav-simulasyonu/devam"); });
                 return;
             }
