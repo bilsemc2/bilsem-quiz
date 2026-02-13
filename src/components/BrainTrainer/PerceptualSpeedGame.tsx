@@ -101,17 +101,13 @@ const createChallenge = (digitLength: number): Challenge => {
 };
 
 // ── Component ──
-interface PerceptualSpeedGameProps {
-    examMode?: boolean;
-    examLevel?: number;
-    examTimeLimit?: number;
-}
 
-const PerceptualSpeedGame: React.FC<PerceptualSpeedGameProps> = ({ examMode = false }) => {
+const PerceptualSpeedGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const hasSavedRef = useRef(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const examMode = location.state?.examMode || false;
     const { submitResult } = useExam();
     const { feedbackState, showFeedback } = useGameFeedback();
 
@@ -177,6 +173,7 @@ const PerceptualSpeedGame: React.FC<PerceptualSpeedGameProps> = ({ examMode = fa
         setCorrectCount(0);
         setTotalAttempts(0);
         reactionTimesRef.current = [];
+        correctInLevelRef.current = 0;
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
     }, []);
@@ -202,7 +199,7 @@ const PerceptualSpeedGame: React.FC<PerceptualSpeedGameProps> = ({ examMode = fa
         if (examMode) {
             const passed = correctCount >= 10 && avgReaction < 2000;
             submitResult(passed, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            navigate('/atolyeler/sinav-simulasyonu/devam');
             return;
         }
 
@@ -233,7 +230,7 @@ const PerceptualSpeedGame: React.FC<PerceptualSpeedGameProps> = ({ examMode = fa
 
         if (examMode) {
             submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            navigate('/atolyeler/sinav-simulasyonu/devam');
             return;
         }
 

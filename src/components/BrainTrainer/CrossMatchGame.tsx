@@ -120,7 +120,7 @@ const CrossMatchGame: React.FC = () => {
         }, 3000);
     }, [generateCards]);
 
-    const startApp = useCallback(() => {
+    const startApp = useCallback(async () => {
         window.scrollTo(0, 0);
         hasSavedRef.current = false;
         gameStartTimeRef.current = Date.now();
@@ -168,8 +168,10 @@ const CrossMatchGame: React.FC = () => {
 
             // Exam mode: submit result and redirect
             if (examMode) {
-                await submitResult(score > 500, score, 1000, durationSeconds).then(() => {
-                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                (async () => {
+                    await submitResult(score > 500, score, 1000, durationSeconds);
+                    navigate("/atolyeler/sinav-simulasyonu/devam");
+                })();
                 return;
             }
 

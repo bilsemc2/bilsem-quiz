@@ -178,18 +178,13 @@ const MonsterSVG: React.FC<{ creature: Creature; size?: number }> = ({ creature,
 // ─── Types ──────────────────────────────────────────
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-interface CreatureLogicGameProps {
-    examMode?: boolean;
-    examLevel?: number;
-    examTimeLimit?: number;
-}
-
 // ─── Component ──────────────────────────────────────
-const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false }) => {
+const CreatureLogicGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const hasSavedRef = useRef(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const examMode = location.state?.examMode || false;
     const { submitResult } = useExam();
     const { feedbackState, showFeedback } = useGameFeedback();
 
@@ -245,7 +240,7 @@ const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false 
         hasSavedRef.current = true;
         setPhase('game_over');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        if (examMode) { submitResult(level >= 5, score, 1000, duration); setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500); return; }
+        if (examMode) { submitResult(level >= 5, score, 1000, duration); navigate('/atolyeler/sinav-simulasyonu/devam'); return; }
         await saveGamePlay({ game_id: 'yaratik-mantigi', score_achieved: score, duration_seconds: duration, metadata: { levels_completed: level, final_lives: lives } });
     }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate]);
 
@@ -255,7 +250,7 @@ const CreatureLogicGame: React.FC<CreatureLogicGameProps> = ({ examMode = false 
         hasSavedRef.current = true;
         setPhase('victory');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        if (examMode) { submitResult(true, score, 1000, duration); setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500); return; }
+        if (examMode) { submitResult(true, score, 1000, duration); navigate('/atolyeler/sinav-simulasyonu/devam'); return; }
         await saveGamePlay({ game_id: 'yaratik-mantigi', score_achieved: score, duration_seconds: duration, metadata: { levels_completed: MAX_LEVEL, victory: true } });
     }, [saveGamePlay, score, examMode, submitResult, navigate]);
 

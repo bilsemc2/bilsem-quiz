@@ -147,7 +147,7 @@ const DualBindGame = () => {
     }, [generateSymbolColors, generateDualQuestions, level]);
 
     // Oyunu başlat
-    const startGame = useCallback(() => {
+    const startGame = useCallback(async () => {
         window.scrollTo(0, 0);
         setScore(0);
         setLives(3);
@@ -175,9 +175,10 @@ const DualBindGame = () => {
             // Exam mode: submit result and navigate
             if (examMode) {
                 const passed = round >= 3;
-                await submitResult(passed, score, 1000, durationSeconds).then(() => {
+                (async () => {
+                    await submitResult(passed, score, 1000, durationSeconds);
                     navigate("/atolyeler/sinav-simulasyonu/devam");
-                });
+                })();
                 return;
             }
 

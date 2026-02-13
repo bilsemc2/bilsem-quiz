@@ -66,9 +66,7 @@ interface PuzzleState {
 
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-interface PositionPuzzleGameProps {
-    examMode?: boolean;
-}
+
 
 // ============== FEEDBACK ==============
 // ============== GEOMETRY ENGINE ==============
@@ -296,10 +294,11 @@ const ShapeRendererView: React.FC<{
 };
 
 // ============== MAIN COMPONENT ==============
-const PositionPuzzleGame: React.FC<PositionPuzzleGameProps> = ({ examMode = false }) => {
+const PositionPuzzleGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
     const navigate = useNavigate();
     const { submitResult } = useExam();
 
@@ -370,8 +369,10 @@ const PositionPuzzleGame: React.FC<PositionPuzzleGameProps> = ({ examMode = fals
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(level >= 5, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -390,8 +391,10 @@ const PositionPuzzleGame: React.FC<PositionPuzzleGameProps> = ({ examMode = fals
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

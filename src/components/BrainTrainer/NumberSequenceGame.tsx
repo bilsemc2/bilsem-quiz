@@ -161,7 +161,7 @@ const NumberSequenceGame: React.FC = () => {
     }, [level, generatePattern]);
 
     // Oyunu başlat
-    const startGame = useCallback(() => {
+    const startGame = useCallback(async () => {
         window.scrollTo(0, 0);
         setGameState('playing');
         setQuestionNumber(1);
@@ -195,8 +195,10 @@ const NumberSequenceGame: React.FC = () => {
             // Exam mode: submit result and redirect
             if (examMode) {
                 const passed = correctCount >= Math.floor(totalQuestions * 0.6);
-                await submitResult(passed, score, totalQuestions * 150, durationSeconds).then(() => {
-                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                (async () => {
+                    await submitResult(passed, score, totalQuestions * 150, durationSeconds);
+                    navigate("/atolyeler/sinav-simulasyonu/devam");
+                })();
                 return;
             }
 

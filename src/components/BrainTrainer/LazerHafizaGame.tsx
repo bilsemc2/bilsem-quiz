@@ -77,17 +77,16 @@ const getLevelConfig = (level: number) => {
 };
 
 // ─── Component ───────────────────────────────────────────────
-interface LazerHafizaGameProps {
-    examMode?: boolean;
-}
 
-const LazerHafizaGame: React.FC<LazerHafizaGameProps> = ({ examMode = false }) => {
+
+const LazerHafizaGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const hasSavedRef = useRef(false);
     const location = useLocation();
     const navigate = useNavigate();
     const { submitResult } = useExam();
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
 
     // Core state
     const [phase, setPhase] = useState<Phase>('welcome');
@@ -184,8 +183,10 @@ const LazerHafizaGame: React.FC<LazerHafizaGameProps> = ({ examMode = false }) =
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(level >= 5, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -205,8 +206,10 @@ const LazerHafizaGame: React.FC<LazerHafizaGameProps> = ({ examMode = false }) =
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

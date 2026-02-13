@@ -280,7 +280,7 @@ interface ShapeAlgebraGameProps {
     examTimeLimit?: number;
 }
 
-const ShapeAlgebraGame: React.FC<ShapeAlgebraGameProps> = ({ examMode = false }) => {
+const ShapeAlgebraGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const hasSavedRef = useRef(false);
     const location = useLocation();
@@ -288,6 +288,7 @@ const ShapeAlgebraGame: React.FC<ShapeAlgebraGameProps> = ({ examMode = false })
     const { submitResult } = useExam();
 
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
 
     // State
     const [phase, setPhase] = useState<Phase>('welcome');
@@ -351,8 +352,10 @@ const ShapeAlgebraGame: React.FC<ShapeAlgebraGameProps> = ({ examMode = false })
 
         if (examMode) {
             const passed = level >= 5;
-            await submitResult(passed, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(passed, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -373,8 +376,10 @@ const ShapeAlgebraGame: React.FC<ShapeAlgebraGameProps> = ({ examMode = false })
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

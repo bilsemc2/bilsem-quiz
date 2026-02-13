@@ -216,7 +216,7 @@ const ShadowDetectiveGame: React.FC = () => {
         }
     };
 
-    const startApp = useCallback(() => {
+    const startApp = useCallback(async () => {
         window.scrollTo(0, 0);
         setLevel(1);
         setScore(0);
@@ -248,9 +248,10 @@ const ShadowDetectiveGame: React.FC = () => {
 
             // Exam mode: submit result and redirect
             if (examMode) {
-                await submitResult(score > 200, score, 600, durationSeconds).then(() => {
+                (async () => {
+                    await submitResult(score > 200, score, 600, durationSeconds);
                     navigate("/atolyeler/sinav-simulasyonu/devam");
-                });
+                })();
                 return;
             }
 

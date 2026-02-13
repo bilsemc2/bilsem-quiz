@@ -130,8 +130,10 @@ const NBackGame: React.FC = () => {
 
         // Exam mode: submit result and redirect
         if (examMode) {
-            await submitResult(score > 200, score, 1000, durationSeconds);
-            navigate("/atolyeler/sinav-simulasyonu/devam");
+            (async () => {
+                await submitResult(score > 200, score, 1000, durationSeconds);
+                navigate("/atolyeler/sinav-simulasyonu/devam");
+            })();
             return;
         }
 

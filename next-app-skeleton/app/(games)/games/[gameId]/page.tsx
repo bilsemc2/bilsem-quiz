@@ -4,10 +4,12 @@ import { notFound } from 'next/navigation';
 import { AttentionCodingGameClient } from '@/features/games/attention-coding/components/AttentionCodingGameClient';
 import { AuditoryMemoryGameClient } from '@/features/games/auditory-memory/components/AuditoryMemoryGameClient';
 import { ClockProblemGameClient } from '@/features/games/clock-problem/components/ClockProblemGameClient';
+import { ConditionalLogicGameClient } from '@/features/games/conditional-logic/components/ConditionalLogicGameClient';
 import { CosmicMemoryGameClient } from '@/features/games/cosmic-memory/components/CosmicMemoryGameClient';
 import { DigitSymbolGameClient } from '@/features/games/digit-symbol/components/DigitSymbolGameClient';
 import { getRegistryItem } from '@/features/games/game-registry';
 import { LaserMazeGameClient } from '@/features/games/laser-maze/components/LaserMazeGameClient';
+import { LogicPuzzleGameClient } from '@/features/games/logic-puzzle/components/LogicPuzzleGameClient';
 import { MathMagicGameClient } from '@/features/games/math-magic/components/MathMagicGameClient';
 import { MathGridGameClient } from '@/features/games/math-grid/components/MathGridGameClient';
 import { MazeGameClient } from '@/features/games/maze/components/MazeGameClient';
@@ -165,6 +167,26 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
     return (
       <DigitSymbolGameClient
         gameId="simge-kodlama"
+        gameTitle={resolvedGame.title}
+        durationSeconds={resolvedGame.durationSeconds}
+      />
+    );
+  }
+
+  if (resolvedGame.id === 'kosullu-yonerge' || resolvedGame.id === 'conditional-logic') {
+    return (
+      <ConditionalLogicGameClient
+        gameId="kosullu-yonerge"
+        gameTitle={resolvedGame.title}
+        durationSeconds={resolvedGame.durationSeconds}
+      />
+    );
+  }
+
+  if (resolvedGame.id === 'mantik-bulmacasi' || resolvedGame.id === 'logic-puzzle') {
+    return (
+      <LogicPuzzleGameClient
+        gameId="mantik-bulmacasi"
         gameTitle={resolvedGame.title}
         durationSeconds={resolvedGame.durationSeconds}
       />

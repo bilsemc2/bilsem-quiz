@@ -22,7 +22,7 @@ interface PuzzleData { category: string; description: string; items: PuzzleItem[
 
 type Phase = 'welcome' | 'playing' | 'checking' | 'feedback' | 'game_over' | 'victory';
 
-interface MindMatchGameProps { examMode?: boolean; }
+
 
 // ============== FEEDBACK ==============
 // ============== CATEGORIES (Türkçe) ==============
@@ -188,10 +188,11 @@ function generatePuzzle(level: number): PuzzleData {
 }
 
 // ============== MAIN COMPONENT ==============
-const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
+const MindMatchGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
     const navigate = useNavigate();
     const { submitResult } = useExam();
 
@@ -255,8 +256,10 @@ const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(level >= 5, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -275,8 +278,10 @@ const MindMatchGame: React.FC<MindMatchGameProps> = ({ examMode = false }) => {
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

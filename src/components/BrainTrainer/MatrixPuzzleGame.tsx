@@ -59,11 +59,12 @@ interface MatrixPuzzleGameProps {
     examTimeLimit?: number;
 }
 
-const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false }) => {
+const MatrixPuzzleGame: React.FC = () => {
     // Hooks
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const navigate = useNavigate();
+    const examMode = location.state?.examMode || false;
     const { submitResult } = useExam();
     const { feedbackState, showFeedback } = useGameFeedback();
     const { playSound } = useSound();
@@ -188,8 +189,10 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
 
         if (examMode) {
             const passed = level >= 5;
-            await submitResult(passed, score, MAX_LEVEL * 10 * MAX_LEVEL, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(passed, score, MAX_LEVEL * 10 * MAX_LEVEL, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -214,8 +217,10 @@ const MatrixPuzzleGame: React.FC<MatrixPuzzleGameProps> = ({ examMode = false })
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, MAX_LEVEL * 10 * MAX_LEVEL, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, MAX_LEVEL * 10 * MAX_LEVEL, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

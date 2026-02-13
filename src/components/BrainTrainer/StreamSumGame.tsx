@@ -225,8 +225,10 @@ const StreamSumGame: React.FC = () => {
         const duration = Math.floor((Date.now() - gameStartRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(score > 50, score, 300, duration).then(() => {
-            navigate("/atolyeler/sinav-simulasyonu/devam"); });
+            (async () => {
+                await submitResult(score > 50, score, 300, duration);
+                navigate("/atolyeler/sinav-simulasyonu/devam");
+            })();
             return;
         }
 

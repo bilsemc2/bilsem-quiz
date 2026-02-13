@@ -17,9 +17,7 @@ const MAX_LEVEL = 20;
 
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-interface MathGridGameProps {
-    examMode?: boolean;
-}
+
 
 // ──────────── Types ────────────
 interface CellData {
@@ -136,10 +134,11 @@ const generatePuzzle = (level: number): { grid: GridMatrix; ruleDescription: str
 // MathGridGame Component
 // ══════════════════════════════════════════════════
 
-const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
+const MathGridGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
     const navigate = useNavigate();
     const { submitResult } = useExam();
 
@@ -222,8 +221,10 @@ const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
 
         if (examMode) {
             const passed = level >= 5;
-            await submitResult(passed, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(passed, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -244,8 +245,10 @@ const MathGridGame: React.FC<MathGridGameProps> = ({ examMode = false }) => {
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

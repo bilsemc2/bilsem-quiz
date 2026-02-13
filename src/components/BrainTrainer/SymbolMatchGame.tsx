@@ -56,7 +56,7 @@ const SymbolMatchGame = () => {
     const [level, setLevel] = useState(1);
     const [memorizeTime, setMemorizeTime] = useState(5);
     const [countdown, setCountdown] = useState(5);
-    const [streak, setStreak] = useState(0);    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const [streak, setStreak] = useState(0); const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
 
@@ -141,7 +141,7 @@ const SymbolMatchGame = () => {
     }, [generateSymbolColors, level]);
 
     // Oyunu başlat
-    const startGame = useCallback(() => {
+    const startGame = useCallback(async () => {
         window.scrollTo(0, 0);
         setScore(0);
         setLives(3);
@@ -170,8 +170,10 @@ const SymbolMatchGame = () => {
 
             // Exam mode: submit result and redirect
             if (examMode) {
-                await submitResult(lives > 0, score, totalRounds * 150, durationSeconds).then(() => {
-                navigate("/atolyeler/sinav-simulasyonu/devam"); });
+                (async () => {
+                    await submitResult(lives > 0, score, totalRounds * 150, durationSeconds);
+                    navigate("/atolyeler/sinav-simulasyonu/devam");
+                })();
                 return;
             }
 

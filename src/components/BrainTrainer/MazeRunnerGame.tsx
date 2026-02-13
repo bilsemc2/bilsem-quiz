@@ -501,11 +501,9 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({ level, lives, onCrash, onWrongP
 };
 
 // ─── Main Component ──────────────────────────────────────────
-interface MazeRunnerGameProps {
-    examMode?: boolean;
-}
 
-const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => {
+
+const MazeRunnerGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const hasSavedRef = useRef(false);
     const location = useLocation();
@@ -513,6 +511,7 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
     const { submitResult } = useExam();
 
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
 
     // State
     const [phase, setPhase] = useState<Phase>('welcome');
@@ -588,8 +587,10 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(level >= 5, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -610,8 +611,10 @@ const MazeRunnerGame: React.FC<MazeRunnerGameProps> = ({ examMode = false }) => 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

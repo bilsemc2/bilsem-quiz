@@ -192,11 +192,12 @@ interface ConditionalLogicGameProps {
 }
 
 // ─── Component ──────────────────────────────────────
-const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = false }) => {
+const ConditionalLogicGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const hasSavedRef = useRef(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const examMode = location.state?.examMode || false;
     const { submitResult } = useExam();
     const { feedbackState, showFeedback } = useGameFeedback();
 
@@ -253,8 +254,10 @@ const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = 
         setPhase('game_over');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         if (examMode) {
-            await submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(level >= 5, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
         await saveGamePlay({
@@ -272,8 +275,10 @@ const ConditionalLogicGame: React.FC<ConditionalLogicGameProps> = ({ examMode = 
         setPhase('victory');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
         await saveGamePlay({

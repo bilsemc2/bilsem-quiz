@@ -169,10 +169,11 @@ const VisualScanningGame: React.FC<VisualScanningGameProps> = ({ examMode: examM
 
             // Exam mode: submit result and navigate
             if (examMode) {
-                const passed = correctCount > wrongCount && correctCount >= 5;
-                await submitResult(passed, score, 1000, durationSeconds).then(() => {
-                    navigate('/atolyeler/sinav-simulasyonu/devam');
-                });
+                (async () => {
+                    const passed = correctCount > wrongCount && correctCount >= 5;
+                    await submitResult(passed, score, 1000, durationSeconds);
+                        navigate('/atolyeler/sinav-simulasyonu/devam');
+                })();
                 return;
             }
 

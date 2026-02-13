@@ -263,7 +263,7 @@ const InlineClock: React.FC<InlineClockProps> = ({ hours, minutes, isInteractive
 
 // ─── Main Game Component ─────────────────────────────────────────────
 
-const TimeExplorerGame: React.FC<TimeExplorerGameProps> = ({ examMode = false }) => {
+const TimeExplorerGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const navigate = useNavigate();
@@ -271,6 +271,7 @@ const TimeExplorerGame: React.FC<TimeExplorerGameProps> = ({ examMode = false })
     const hasSavedRef = useRef(false);
 
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
 
     // Core State
     const [phase, setPhase] = useState<Phase>('welcome');
@@ -351,8 +352,10 @@ const TimeExplorerGame: React.FC<TimeExplorerGameProps> = ({ examMode = false })
 
         if (examMode) {
             const passed = level >= 5;
-            await submitResult(passed, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(passed, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -376,8 +379,10 @@ const TimeExplorerGame: React.FC<TimeExplorerGameProps> = ({ examMode = false })
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

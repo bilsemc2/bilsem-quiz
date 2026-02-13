@@ -346,10 +346,11 @@ const BalanceScaleView: React.FC<{
 };
 
 // ============== MAIN COMPONENT ==============
-const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false }) => {
+const VisualAlgebraGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
     const navigate = useNavigate();
     const { submitResult } = useExam();
 
@@ -430,8 +431,10 @@ const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false 
 
         if (examMode) {
             const passed = level >= 5;
-            await submitResult(passed, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(passed, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -456,8 +459,10 @@ const VisualAlgebraGame: React.FC<VisualAlgebraGameProps> = ({ examMode = false 
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

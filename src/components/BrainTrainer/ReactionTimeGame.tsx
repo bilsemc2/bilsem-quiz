@@ -241,10 +241,11 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
 
             // Exam mode: submit result and navigate
             if (examMode) {
-                const passed = reactionTimes.length >= 5 && avgReaction < 400;
-                await submitResult(passed, score, 1000, durationSeconds).then(() => {
-                    navigate('/atolyeler/sinav-simulasyonu/devam');
-                });
+                (async () => {
+                    const passed = reactionTimes.length >= 5 && avgReaction < 400;
+                    await submitResult(passed, score, 1000, durationSeconds);
+                        navigate('/atolyeler/sinav-simulasyonu/devam');
+                })();
                 return;
             }
 

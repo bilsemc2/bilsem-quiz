@@ -407,9 +407,10 @@ const SpotDifferenceGame: React.FC<SpotDifferenceGameProps> = ({ examMode: examM
 
         if (examMode) {
             const passed = level >= 5;
-            await submitResult(passed, score, 1000, duration).then(() => {
+            (async () => {
+                await submitResult(passed, score, 1000, duration);
                 navigate('/atolyeler/sinav-simulasyonu/devam');
-            });
+            })();
             return;
         }
 
@@ -430,9 +431,10 @@ const SpotDifferenceGame: React.FC<SpotDifferenceGameProps> = ({ examMode: examM
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score + 200, 1000, duration).then(() => {
+            (async () => {
+                await submitResult(true, score + 200, 1000, duration);
                 navigate('/atolyeler/sinav-simulasyonu/devam');
-            });
+            })();
             return;
         }
 

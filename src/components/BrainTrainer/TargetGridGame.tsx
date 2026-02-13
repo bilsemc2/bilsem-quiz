@@ -38,7 +38,7 @@ const TargetGridGame: React.FC = () => {
     const [targetSum, setTargetSum] = useState(0);
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
     const [currentSum, setCurrentSum] = useState(0);
-    const [previewTimer, setPreviewTimer] = useState(3);    const [lives, setLives] = useState(3);
+    const [previewTimer, setPreviewTimer] = useState(3); const [lives, setLives] = useState(3);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
     const totalRounds = 10;
@@ -85,7 +85,7 @@ const TargetGridGame: React.FC = () => {
         playSound('signal_appear');
     }, [generateGrid, playSound]);
 
-    const startGame = useCallback(() => {
+    const startGame = useCallback(async () => {
         window.scrollTo(0, 0);
         setLevel(1);
         setScore(0);
@@ -124,9 +124,10 @@ const TargetGridGame: React.FC = () => {
             // Exam mode: submit result and navigate
             if (examMode) {
                 const passed = level >= 5;
-                await submitResult(passed, score, 1000, durationSeconds).then(() => {
+                (async () => {
+                    await submitResult(passed, score, 1000, durationSeconds);
                     navigate("/atolyeler/sinav-simulasyonu/devam");
-                });
+                })();
                 return;
             }
 

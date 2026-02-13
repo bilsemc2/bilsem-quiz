@@ -93,11 +93,12 @@ interface AttentionCodingGameProps {
 }
 
 // ─── Component ──────────────────────────────────────
-const AttentionCodingGame: React.FC<AttentionCodingGameProps> = ({ examMode = false }) => {
+const AttentionCodingGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const hasSavedRef = useRef(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const examMode = location.state?.examMode || false;
     const { submitResult } = useExam();
     const { feedbackState, showFeedback } = useGameFeedback();
 
@@ -176,8 +177,10 @@ const AttentionCodingGame: React.FC<AttentionCodingGameProps> = ({ examMode = fa
 
         if (examMode) {
             const passed = level >= 5;
-            await submitResult(passed, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(passed, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -200,8 +203,10 @@ const AttentionCodingGame: React.FC<AttentionCodingGameProps> = ({ examMode = fa
         setAvgReaction(avg);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

@@ -59,7 +59,7 @@ const KnowledgeCardGame: React.FC<KnowledgeCardGameProps> = ({ examMode: examMod
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [score, setScore] = useState(0);
     const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0);    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+    const [wrongCount, setWrongCount] = useState(0); const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
     const [lives, setLives] = useState(3);
@@ -208,7 +208,7 @@ const KnowledgeCardGame: React.FC<KnowledgeCardGameProps> = ({ examMode: examMod
     }, [gameState]);
 
     // Oyunu başlat
-    const startGame = useCallback(() => {
+    const startGame = useCallback(async () => {
         window.scrollTo(0, 0);
         setScore(0);
         setCorrectCount(0);
@@ -239,9 +239,10 @@ const KnowledgeCardGame: React.FC<KnowledgeCardGameProps> = ({ examMode: examMod
             // Exam mode: submit result and navigate
             if (examMode) {
                 const passed = correctCount >= questions.length / 2;
-                await submitResult(passed, score, 1000, durationSeconds).then(() => {
+                (async () => {
+                    await submitResult(passed, score, 1000, durationSeconds);
                     navigate('/atolyeler/sinav-simulasyonu/devam');
-                });
+                })();
                 return;
             }
 

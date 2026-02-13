@@ -42,7 +42,7 @@ interface PuzzleData {
 
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-interface LogicPuzzleGameProps { examMode?: boolean; }
+
 
 // ============== FEEDBACK ==============
 // ============== SHAPE CONSTANTS ==============
@@ -330,10 +330,11 @@ const ShapeGroupView: React.FC<{
 };
 
 // ============== MAIN COMPONENT ==============
-const LogicPuzzleGame: React.FC<LogicPuzzleGameProps> = ({ examMode = false }) => {
+const LogicPuzzleGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
     const navigate = useNavigate();
     const { submitResult } = useExam();
 
@@ -391,8 +392,10 @@ const LogicPuzzleGame: React.FC<LogicPuzzleGameProps> = ({ examMode = false }) =
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(level >= 5, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 
@@ -411,8 +414,10 @@ const LogicPuzzleGame: React.FC<LogicPuzzleGameProps> = ({ examMode = false }) =
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
         if (examMode) {
-            await submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/atolyeler/sinav-simulasyonu/devam'), 1500);
+            (async () => {
+                await submitResult(true, score, 1000, duration);
+                navigate('/atolyeler/sinav-simulasyonu/devam');
+            })();
             return;
         }
 

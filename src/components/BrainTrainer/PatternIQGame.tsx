@@ -61,9 +61,7 @@ interface WagonState {
 
 type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
-interface PatternIQGameProps {
-    examMode?: boolean;
-}
+
 
 // ============== FEEDBACK ==============
 // ============== PATTERN ENGINE ==============
@@ -372,10 +370,11 @@ const WagonView: React.FC<{
 };
 
 // ============== MAIN COMPONENT ==============
-const PatternIQGame: React.FC<PatternIQGameProps> = ({ examMode = false }) => {
+const PatternIQGame: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+    const examMode = location.state?.examMode || false;
     const navigate = useNavigate();
     const { submitResult } = useExam();
 
@@ -445,7 +444,7 @@ const PatternIQGame: React.FC<PatternIQGameProps> = ({ examMode = false }) => {
 
         if (examMode) {
             submitResult(level >= 5, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            navigate('/atolyeler/sinav-simulasyonu/devam');
             return;
         }
 
@@ -465,7 +464,7 @@ const PatternIQGame: React.FC<PatternIQGameProps> = ({ examMode = false }) => {
 
         if (examMode) {
             submitResult(true, score, 1000, duration);
-            setTimeout(() => navigate('/sinav-simulasyonu'), 1500);
+            navigate('/atolyeler/sinav-simulasyonu/devam');
             return;
         }
 

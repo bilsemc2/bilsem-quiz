@@ -186,9 +186,10 @@ const PatternPainterGame: React.FC = () => {
 
         // Exam mode: submit result and redirect
         if (examMode) {
-            await submitResult(score > 0, score, MAX_LEVEL * 10 * MAX_LEVEL, duration).then(() => {
+            (async () => {
+                await submitResult(score > 0, score, MAX_LEVEL * 10 * MAX_LEVEL, duration);
                 navigate("/atolyeler/sinav-simulasyonu/devam");
-            });
+            })();
             return;
         }
 
@@ -211,9 +212,10 @@ const PatternPainterGame: React.FC = () => {
 
         // Exam mode: submit result and redirect
         if (examMode) {
-            await submitResult(true, score, MAX_LEVEL * 10 * MAX_LEVEL, duration).then(() => {
+            (async () => {
+                await submitResult(true, score, MAX_LEVEL * 10 * MAX_LEVEL, duration);
                 navigate("/atolyeler/sinav-simulasyonu/devam");
-            });
+            })();
             return;
         }
 

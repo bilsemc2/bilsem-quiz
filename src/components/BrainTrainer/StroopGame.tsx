@@ -51,7 +51,7 @@ const StroopGame: React.FC<StroopGameProps> = ({ examMode: examModeProp = false 
     const [correctCount, setCorrectCount] = useState(0);
     const [wrongCount, setWrongCount] = useState(0);
     const [roundStartTime, setRoundStartTime] = useState(0);
-    const [reactionTimes, setReactionTimes] = useState<number[]>([]);    const [streak, setStreak] = useState(0);
+    const [reactionTimes, setReactionTimes] = useState<number[]>([]); const [streak, setStreak] = useState(0);
     const [bestStreak, setBestStreak] = useState(0);
     const gameStartTimeRef = useRef<number>(0);
     const hasSavedRef = useRef<boolean>(false);
@@ -82,7 +82,7 @@ const StroopGame: React.FC<StroopGameProps> = ({ examMode: examModeProp = false 
     }, []);
 
     // Start game
-    const startGame = useCallback(() => {
+    const startGame = useCallback(async () => {
         window.scrollTo(0, 0);
         setGameState('playing');
         setRoundNumber(1);
@@ -122,9 +122,10 @@ const StroopGame: React.FC<StroopGameProps> = ({ examMode: examModeProp = false 
                     ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
                     : 0;
                 const passed = accuracy >= 60 && correctCount >= 8;
-                await submitResult(passed, score, 1000, durationSeconds).then(() => {
+                (async () => {
+                    await submitResult(passed, score, 1000, durationSeconds);
                     navigate('/atolyeler/sinav-simulasyonu/devam');
-                });
+                })();
                 return;
             }
 
