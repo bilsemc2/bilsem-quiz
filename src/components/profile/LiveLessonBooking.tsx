@@ -146,27 +146,27 @@ const LiveLessonBooking: React.FC = () => {
             </div>
 
             {/* Lesson Info Card */}
-            <div className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20 rounded-2xl p-4 mb-5">
+            <div className="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-5 mb-5 backdrop-blur-sm">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div>
                         <p className="text-2xl font-black text-emerald-400">2</p>
-                        <p className="text-white/50 text-[11px]">Haftalık Ders</p>
+                        <p className="text-white/70 text-xs font-medium">Haftalık Ders</p>
                     </div>
                     <div>
                         <p className="text-2xl font-black text-cyan-400">30<span className="text-sm">dk</span></p>
-                        <p className="text-white/50 text-[11px]">Ders Süresi</p>
+                        <p className="text-white/70 text-xs font-medium">Ders Süresi</p>
                     </div>
                     <div>
                         <p className="text-2xl font-black text-indigo-400">8</p>
-                        <p className="text-white/50 text-[11px]">Aylık Toplam</p>
+                        <p className="text-white/70 text-xs font-medium">Aylık Toplam</p>
                     </div>
                     <div>
                         <p className="text-2xl font-black text-amber-400">₺10.000</p>
-                        <p className="text-white/50 text-[11px]">Aylık Ücret</p>
+                        <p className="text-white/70 text-xs font-medium">Aylık Ücret</p>
                     </div>
                 </div>
-                <p className="text-center text-emerald-300/80 text-xs mt-3 font-medium">
-                    🎁 Ders aldığınız sürece <span className="font-bold text-emerald-300">PRO paket</span> ayrıcalıklarına ücretsiz sahip olursunuz!
+                <p className="text-center text-emerald-300 text-sm mt-4 font-medium">
+                    🎁 Ders aldığınız sürece <span className="font-bold text-white">PRO paket</span> ayrıcalıklarına ücretsiz sahip olursunuz!
                 </p>
             </div>
 
