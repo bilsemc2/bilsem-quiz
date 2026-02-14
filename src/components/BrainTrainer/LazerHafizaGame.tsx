@@ -25,48 +25,52 @@ interface Coordinate {
 
 // ─── Path Generation ────────────────────────────────
 const generateRandomPath = (size: number, length: number, allowDiagonals: boolean): Coordinate[] => {
-    const path: Coordinate[] = [];
-    let attempts = 0;
-    const maxAttempts = 50;
+    let targetLength = length;
+    const minLength = 2;
 
-    while (attempts < maxAttempts) {
-        path.length = 0;
-        let currentRow = Math.floor(Math.random() * size);
-        let currentCol = Math.floor(Math.random() * size);
-        path.push({ row: currentRow, col: currentCol });
+    // Try with decreasing target lengths if generation keeps failing
+    while (targetLength >= minLength) {
+        for (let attempts = 0; attempts < 200; attempts++) {
+            const path: Coordinate[] = [];
+            let currentRow = Math.floor(Math.random() * size);
+            let currentCol = Math.floor(Math.random() * size);
+            path.push({ row: currentRow, col: currentCol });
 
-        let stuck = false;
-        for (let i = 1; i < length; i++) {
-            const moves = [
-                { r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }
-            ];
-            if (allowDiagonals) {
-                moves.push(
-                    { r: -1, c: -1 }, { r: -1, c: 1 }, { r: 1, c: -1 }, { r: 1, c: 1 }
-                );
+            let stuck = false;
+            for (let i = 1; i < targetLength; i++) {
+                const moves = [
+                    { r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }
+                ];
+                if (allowDiagonals) {
+                    moves.push(
+                        { r: -1, c: -1 }, { r: -1, c: 1 }, { r: 1, c: -1 }, { r: 1, c: 1 }
+                    );
+                }
+                const validMoves = moves.filter(move => {
+                    const newR = currentRow + move.r;
+                    const newC = currentCol + move.c;
+                    if (newR < 0 || newR >= size || newC < 0 || newC >= size) return false;
+                    if (path.some(p => p.row === newR && p.col === newC)) return false;
+                    return true;
+                });
+
+                if (validMoves.length > 0) {
+                    const move = validMoves[Math.floor(Math.random() * validMoves.length)];
+                    currentRow += move.r;
+                    currentCol += move.c;
+                    path.push({ row: currentRow, col: currentCol });
+                } else {
+                    stuck = true;
+                    break;
+                }
             }
-            const validMoves = moves.filter(move => {
-                const newR = currentRow + move.r;
-                const newC = currentCol + move.c;
-                if (newR < 0 || newR >= size || newC < 0 || newC >= size) return false;
-                if (path.some(p => p.row === newR && p.col === newC)) return false;
-                return true;
-            });
-
-            if (validMoves.length > 0) {
-                const move = validMoves[Math.floor(Math.random() * validMoves.length)];
-                currentRow += move.r;
-                currentCol += move.c;
-                path.push({ row: currentRow, col: currentCol });
-            } else {
-                stuck = true;
-                break;
-            }
+            if (!stuck && path.length === targetLength) return path;
         }
-        if (!stuck && path.length === length) return path;
-        attempts++;
+        targetLength--; // Fallback: try a shorter path
     }
-    return path;
+
+    // Ultimate fallback: return a simple 2-cell path
+    return [{ row: 0, col: 0 }, { row: 0, col: 1 }];
 };
 
 // ─── Level Config ───────────────────────────────────
@@ -357,7 +361,7 @@ const LazerHafizaGame: React.FC = () => {
                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
                     <motion.div
                         className="w-28 h-28 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                       
+
                         animate={{ y: [0, -8, 0] }}
                         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
@@ -431,26 +435,26 @@ const LazerHafizaGame: React.FC = () => {
                         <div className="flex items-center gap-4 flex-wrap">
                             {/* Score */}
                             <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                               >
+                            >
                                 <Star className="text-amber-400 fill-amber-400" size={18} />
                                 <span className="font-bold text-amber-400">{score}</span>
                             </div>
                             {/* Lives */}
                             <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                               >
+                            >
                                 {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
                                     <Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />
                                 ))}
                             </div>
                             {/* Timer */}
                             <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                               >
+                            >
                                 <TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} />
                                 <span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span>
                             </div>
                             {/* Level */}
                             <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                               >
+                            >
                                 <Zap className="text-purple-400" size={18} />
                                 <span className="font-bold text-purple-400">{level}/{MAX_LEVEL}</span>
                             </div>
