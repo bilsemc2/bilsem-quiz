@@ -11,6 +11,7 @@ import AdminMessageNotification from './components/AdminMessageNotification';
 import GlobalXPTimer from './components/GlobalXPTimer';
 import PushNotificationPrompt from './components/PushNotificationPrompt';
 import ErrorBoundary from './components/ErrorBoundary';
+import UpdatePrompt from './components/UpdateNotification/UpdatePrompt';
 
 // Route Modules
 import {
@@ -101,6 +102,7 @@ function App() {
           <Router>
             <ExamProvider>
               <AdminMessageNotification />
+              <UpdatePrompt />
               <GlobalXPTimer />
               <PushNotificationPrompt />
               <LocationAwareRouter />
