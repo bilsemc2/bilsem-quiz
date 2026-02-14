@@ -312,25 +312,25 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
 
                     {phase === 'playing' && (
                         <div className="flex items-center gap-4 flex-wrap">
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.1)]">
                                 <Star className="text-amber-400 fill-amber-400" size={18} />
                                 <span className="font-bold text-amber-400">{score}</span>
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.1)]">
                                 {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
                                     <Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />
                                 ))}
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.1)]">
                                 <Timer className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} />
                                 <span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.1)]">
                                 <Target className="text-amber-400" size={18} />
                                 <span className="font-bold text-amber-400">{level}/{MAX_LEVEL}</span>
                             </div>
                             {streak > 1 && (
-                                <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)', boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2)', border: '1px solid rgba(251, 191, 36, 0.5)' }}>
+                                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/30 border border-amber-500/50 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2)]">
                                     <Zap className="text-amber-400" size={18} />
                                     <span className="font-bold text-amber-400">x{streak}</span>
                                 </div>
@@ -344,7 +344,7 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
                 <AnimatePresence mode="wait">
                     {phase === 'welcome' && (
                         <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
-                            <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6" style={{ background: 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
+                            <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)] bg-gradient-to-br from-amber-400 to-amber-500 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)]" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
                                 <Zap size={52} className="text-white drop-shadow-lg" />
                             </motion.div>
                             <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">⚡ Tepki Süresi</h1>
@@ -352,15 +352,15 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
                                 <h3 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2"><Eye size={20} /> Mod Seç</h3>
                             </div>
                             <div className="space-y-4 mb-6 text-left">
-                                <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={() => handleStart('simple')} className="w-full p-5 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)', boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2)', border: '2px solid rgba(16, 185, 129, 0.5)' }}>
+                                <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={() => handleStart('simple')} className="w-full p-5 rounded-2xl bg-emerald-500/20 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2)] border-2 border-emerald-500/50">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2)' }}><Zap size={28} className="text-white" /></div>
+                                        <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),inset_0_4px_8px_rgba(255,255,255,0.2)]"><Zap size={28} className="text-white" /></div>
                                         <div><h3 className="text-xl font-bold text-emerald-300">Basit Tepki</h3><p className="text-slate-400 text-sm">Yeşil görünce hemen tıkla!</p></div>
                                     </div>
                                 </motion.button>
-                                <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={() => handleStart('selective')} className="w-full p-5 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2)', border: '2px solid rgba(251, 191, 36, 0.5)' }}>
+                                <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={() => handleStart('selective')} className="w-full p-5 rounded-2xl bg-amber-500/20 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2)] border-2 border-amber-500/50">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)', boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2)' }}><Target size={28} className="text-white" /></div>
+                                        <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-amber-400 to-amber-500 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),inset_0_4px_8px_rgba(255,255,255,0.2)]"><Target size={28} className="text-white" /></div>
                                         <div><h3 className="text-xl font-bold text-amber-300">Seçmeli Tepki</h3><p className="text-slate-400 text-sm">Sadece yeşile tıkla, diğerlerinde bekle!</p></div>
                                     </div>
                                 </motion.button>
@@ -372,9 +372,9 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
                     {phase === 'playing' && (
                         <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-xl">
                             {gameMode === 'selective' && (
-                                <div className="rounded-2xl p-4 mb-4 flex items-center justify-center gap-3" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                                <div className="rounded-2xl p-4 mb-4 flex items-center justify-center gap-3 bg-emerald-500/20 border border-emerald-500/30">
                                     <span className="text-slate-400">Hedef:</span>
-                                    <div className="w-10 h-10 rounded-lg" style={{ backgroundColor: '#10b981' }} />
+                                    <div className="w-10 h-10 rounded-lg bg-emerald-500" />
                                     <span className="text-emerald-400 font-bold">YEŞİL</span>
                                 </div>
                             )}
@@ -398,10 +398,10 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
 
                     {(phase === 'game_over' || phase === 'victory') && (
                         <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6" style={{ background: phase === 'victory' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={phase === 'victory' ? { y: [0, -10, 0], rotate: [0, 5, -5, 0] } : { rotate: [0, 5, -5, 0] }} transition={{ duration: 2, repeat: Infinity }}><Trophy size={52} className="text-white drop-shadow-lg" /></motion.div>
+                            <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" style={{ background: phase === 'victory' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={phase === 'victory' ? { y: [0, -10, 0], rotate: [0, 5, -5, 0] } : { rotate: [0, 5, -5, 0] }} transition={{ duration: 2, repeat: Infinity }}><Trophy size={52} className="text-white drop-shadow-lg" /></motion.div>
                             <h2 className="text-3xl font-black text-amber-300 mb-2">{phase === 'victory' ? '🎖️ Muhteşem Zafer!' : 'Oyun Bitti!'}</h2>
                             <p className="text-slate-400 mb-6">{phase === 'victory' ? 'Tüm seviyeleri başarıyla tamamladın!' : accuracy >= 80 ? 'Harika tepki süresi!' : 'Biraz daha pratik yap!'}</p>
-                            <div className="rounded-2xl p-6 mb-8" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)', boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <div className="rounded-2xl p-6 mb-8 bg-white/5 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),0_4px_16px_rgba(0,0,0,0.2)] border border-white/10">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div>
                                     <div className="text-center"><p className="text-slate-400 text-sm">Ortalama</p><p className="text-2xl font-bold text-sky-400 font-mono">{averageReaction}ms</p></div>
@@ -409,7 +409,7 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeP
                                     <div className="text-center"><p className="text-slate-400 text-sm">Başarılı</p><p className="text-2xl font-bold text-purple-400">{correctCount}/{MAX_LEVEL}</p></div>
                                 </div>
                             </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setPhase('welcome')} className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4" style={{ background: 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)', boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2), 0 8px 24px rgba(251, 191, 36, 0.4)' }}>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setPhase('welcome')} className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4 bg-gradient-to-br from-amber-400 to-amber-500 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),inset_0_4px_8px_rgba(255,255,255,0.2),0_8px_24px_rgba(251,191,36,0.4)]">
                                 <div className="flex items-center justify-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div>
                             </motion.button>
                             <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link>

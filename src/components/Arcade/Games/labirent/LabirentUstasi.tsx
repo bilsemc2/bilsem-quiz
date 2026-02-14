@@ -249,7 +249,7 @@ const LabirentUstasi: React.FC = () => {
                 <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20 mx-4">
                     <div
                         className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                        style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                       
                     >
                         <Compass size={48} className="text-white" />
                     </div>
@@ -288,7 +288,7 @@ const LabirentUstasi: React.FC = () => {
                     <button
                         onClick={startGame}
                         className="w-full px-12 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-2xl font-black text-xl active:scale-95 transition-all flex items-center gap-3 justify-center mx-auto"
-                        style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+                       
                     >
                         <Play size={24} /> BAŞLA
                     </button>
@@ -322,7 +322,7 @@ const LabirentUstasi: React.FC = () => {
                     <button
                         onClick={startGame}
                         className="w-full mt-8 px-12 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-2xl font-black text-xl active:scale-95 transition-all"
-                        style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+                       
                     >
                         TEKRAR OYNA
                     </button>
@@ -417,7 +417,7 @@ const LabirentUstasi: React.FC = () => {
                         <div
                             ref={joystickRef}
                             className="relative w-32 h-32 sm:w-40 sm:h-40 xl:w-44 xl:h-44 rounded-full bg-slate-800/60 backdrop-blur-md border-2 border-slate-700/50 shadow-2xl touch-none cursor-pointer"
-                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                           
                             onTouchStart={(e) => {
                                 e.preventDefault();
                                 handleJoystickStart();

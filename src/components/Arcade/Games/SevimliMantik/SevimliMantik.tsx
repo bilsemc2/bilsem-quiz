@@ -337,7 +337,7 @@ const SevimliMantik: React.FC = () => {
                             </div>
 
                             <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                               
                                 animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
                                 <Bug size={52} className="text-white drop-shadow-lg" />
                             </motion.div>
@@ -353,7 +353,7 @@ const SevimliMantik: React.FC = () => {
 
                             <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
                                 className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl"
-                                style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}>
+                               >
                                 <div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div>
                             </motion.button>
                         </motion.div>
@@ -439,7 +439,7 @@ const SevimliMantik: React.FC = () => {
                     {phase === 'game_over' && (
                         <motion.div key="game_over" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
                             <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}>
+                               >
                                 <XCircle size={48} className="text-white" />
                             </div>
                             <h2 className="text-3xl font-bold text-red-400 mb-4">Oyun Bitti!</h2>
@@ -460,7 +460,7 @@ const SevimliMantik: React.FC = () => {
                     {phase === 'victory' && (
                         <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
                             <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3)' }}
+                               
                                 animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
                                 <Trophy size={48} className="text-white" />
                             </motion.div>

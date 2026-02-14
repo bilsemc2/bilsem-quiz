@@ -148,7 +148,7 @@ const KraftOrigami: React.FC = () => {
                 <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20 mx-4">
                     <div
                         className="w-24 h-24 bg-gradient-to-br from-amber-500 to-orange-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                        style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                       
                     >
                         <Scissors size={48} className="text-white" />
                     </div>

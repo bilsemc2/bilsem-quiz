@@ -73,7 +73,7 @@ const ArcadeHubPage: React.FC = () => {
                             {/* 3D Gummy Icon */}
                             <motion.div
                                 className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                               
                                 animate={{ y: [0, -6, 0] }}
                                 transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                             >

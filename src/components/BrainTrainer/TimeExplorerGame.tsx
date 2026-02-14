@@ -536,7 +536,7 @@ const TimeExplorerGame: React.FC = () => {
                             {/* 3D Gummy Icon */}
                             <motion.div
                                 className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                               
                                 animate={{ y: [0, -8, 0] }}
                                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                             >
@@ -578,7 +578,7 @@ const TimeExplorerGame: React.FC = () => {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={handleStart}
                                 className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl"
-                                style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+                               
                             >
                                 <div className="flex items-center gap-3">
                                     <Play size={28} className="fill-white" />
@@ -684,7 +684,7 @@ const TimeExplorerGame: React.FC = () => {
                         >
                             <div
                                 className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                               
                             >
                                 <XCircle size={48} className="text-white" />
                             </div>
@@ -729,7 +729,7 @@ const TimeExplorerGame: React.FC = () => {
                         >
                             <motion.div
                                 className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-[40%] flex items-center justify-center"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                               
                                 animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
                                 transition={{ duration: 1.5, repeat: Infinity }}
                             >

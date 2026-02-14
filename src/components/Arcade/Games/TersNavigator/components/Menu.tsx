@@ -34,7 +34,7 @@ const Menu: React.FC<MenuProps> = ({ onStart, highScore }) => {
                 <button
                     onClick={onStart}
                     className="w-full py-5 px-6 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-2xl font-bold text-xl flex items-center justify-center gap-3 transition-all transform active:scale-95"
-                    style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+                   
                 >
                     <Play className="fill-current" />
                     MEYDAN OKU

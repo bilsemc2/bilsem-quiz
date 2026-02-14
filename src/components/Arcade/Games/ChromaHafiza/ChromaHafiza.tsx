@@ -156,11 +156,11 @@ const ChromaHafiza: React.FC = () => {
     // Idle Screen
     if (gamePhase === 'idle') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-950 via-slate-950 to-purple-950 text-white pt-16 sm:pt-24 pb-8 sm:pb-12 flex flex-col items-center justify-center touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
+            <div className="min-h-screen bg-gradient-to-br from-blue-950 via-slate-950 to-purple-950 text-white pt-16 sm:pt-24 pb-8 sm:pb-12 flex flex-col items-center justify-center touch-none [-webkit-tap-highlight-color:transparent]">
                 <div className="bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-6 sm:p-10 max-w-md w-full text-center border border-white/20 mx-4">
                     <motion.div
                         className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-blue-400 to-purple-600 rounded-[40%] flex items-center justify-center"
-                        style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                       
                         animate={{ y: [0, -8, 0] }}
                         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
@@ -180,7 +180,7 @@ const ChromaHafiza: React.FC = () => {
                         whileTap={{ scale: 0.95 }}
                         onClick={startGame}
                         className="w-full px-12 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl font-black text-xl flex items-center gap-3 justify-center mx-auto"
-                        style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+                       
                     >
                         <Play size={24} className="fill-white" /> BAŞLA
                     </motion.button>
@@ -196,7 +196,7 @@ const ChromaHafiza: React.FC = () => {
     }
 
     return (
-        <div className="relative w-screen h-screen bg-[#0a0a0c] text-white overflow-hidden flex flex-col font-sans touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
+        <div className="relative w-screen h-screen bg-[#0a0a0c] text-white overflow-hidden flex flex-col font-sans touch-none [-webkit-tap-highlight-color:transparent]">
 
             {/* Background UI Accents */}
             <div className="absolute inset-0 pointer-events-none opacity-20">

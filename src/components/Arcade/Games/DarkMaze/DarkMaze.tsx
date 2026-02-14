@@ -412,7 +412,7 @@ const DarkMaze: React.FC = () => {
                             <div
                                 ref={joystickRef}
                                 className="relative w-32 h-32 sm:w-40 sm:h-40 xl:w-44 xl:h-44 rounded-full bg-slate-800/60 backdrop-blur-md border-2 border-slate-700/50 shadow-2xl touch-none cursor-pointer"
-                                style={{ WebkitTapHighlightColor: 'transparent' }}
+                               
                                 onTouchStart={(e) => {
                                     e.preventDefault();
                                     handleJoystickStart();

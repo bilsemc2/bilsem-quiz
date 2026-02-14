@@ -30,7 +30,7 @@ const Balloon: React.FC<BalloonProps> = ({ value, color, onClick, isPopping, isH
                         if (onClick) onClick(e as unknown as React.MouseEvent);
                     }}
                     className={`relative cursor-pointer flex flex-col items-center select-none touch-none ${className}`}
-                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                   
                 >
                     {isHighlighted && (
                         <motion.div

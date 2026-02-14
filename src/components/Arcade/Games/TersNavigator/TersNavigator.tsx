@@ -98,7 +98,7 @@ const TersNavigator: React.FC = () => {
     }, []);
 
     return (
-        <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-2 sm:p-4 pt-16 sm:pt-20 relative touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
+        <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-2 sm:p-4 pt-16 sm:pt-20 relative touch-none [-webkit-tap-highlight-color:transparent]">
             {/* Back to Arcade */}
             <div className="absolute top-16 sm:top-20 left-2 sm:left-4 z-50">
                 <Link to="/bilsem-zeka" className="flex items-center gap-1.5 sm:gap-2 text-slate-400 hover:text-white transition-colors bg-slate-900/50 backdrop-blur px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-slate-800">

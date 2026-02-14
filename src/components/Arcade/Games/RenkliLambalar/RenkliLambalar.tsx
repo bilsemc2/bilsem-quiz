@@ -196,7 +196,7 @@ const RenkliLambalar: React.FC = () => {
     }, [phase, targetColor, grid, foundTargets, totalTargets, level, lives, handleVictory, handleGameOver, startNextLevel]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 text-white touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 text-white touch-none [-webkit-tap-highlight-color:transparent]">
             {/* Decorative Background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-10 left-10 w-32 h-32 bg-yellow-400/10 blur-3xl rounded-full" />

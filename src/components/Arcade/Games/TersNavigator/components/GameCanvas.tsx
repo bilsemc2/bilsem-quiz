@@ -184,7 +184,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
                             className={`group h-16 sm:h-24 rounded-2xl sm:rounded-3xl border-2 transition-all flex items-center justify-center active:scale-90 shadow-xl touch-none
                 ${feedback === 'wrong' ? 'border-red-600 bg-red-600/10' : 'border-slate-800 bg-slate-900 hover:border-indigo-500 hover:bg-indigo-500/10'}
               `}
-                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                           
                         >
                             <div className={`transition-colors ${feedback === 'wrong' ? 'text-red-500' : 'text-slate-400 group-hover:text-indigo-400'}`}>
                                 {renderArrowIcon(btn.iconDirection)}

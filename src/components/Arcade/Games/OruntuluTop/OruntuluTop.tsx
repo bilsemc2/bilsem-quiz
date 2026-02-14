@@ -669,7 +669,7 @@ const OruntuluTop: React.FC = () => {
             <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20">
               <div
                 className="w-28 h-28 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
-                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+               
               >
                 <Target className="w-14 h-14 text-white" />
               </div>
@@ -685,7 +685,7 @@ const OruntuluTop: React.FC = () => {
               <button
                 onClick={startGame}
                 className="w-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-3xl py-5 rounded-2xl transform active:scale-95 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest"
-                style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+               
               >
                 <Play fill="white" className="w-8 h-8" /> BAŞLA!
               </button>

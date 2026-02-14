@@ -337,7 +337,7 @@ const NeseliBalonlar: React.FC = () => {
     const shouldHideRemaining = level >= 3;
 
     return (
-        <div className="flex flex-col items-center min-h-screen overflow-hidden bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 p-2 sm:p-4 md:p-10 select-none pt-16 sm:pt-20 touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
+        <div className="flex flex-col items-center min-h-screen overflow-hidden bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 p-2 sm:p-4 md:p-10 select-none pt-16 sm:pt-20 touch-none [-webkit-tap-highlight-color:transparent]">
             {/* HUD */}
             <div className="fixed top-16 sm:top-20 left-2 sm:left-4 right-2 sm:right-4 z-30 flex justify-between items-center pointer-events-none">
                 <div className="flex gap-2 sm:gap-4 pointer-events-auto">

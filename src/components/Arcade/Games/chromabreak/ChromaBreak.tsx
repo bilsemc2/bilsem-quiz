@@ -98,7 +98,7 @@ const ChromaBreak: React.FC = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
+        <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden touch-none [-webkit-tap-highlight-color:transparent]">
             {/* Background Effects */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600 rounded-full blur-[120px]" />
@@ -146,7 +146,7 @@ const ChromaBreak: React.FC = () => {
                         >
                             <div
                                 className="w-24 h-24 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                               
                             >
                                 <span className="text-5xl">🎮</span>
                             </div>
@@ -160,7 +160,7 @@ const ChromaBreak: React.FC = () => {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={startGame}
                                 className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-2xl text-xl font-bold"
-                                style={{ boxShadow: '0 8px 32px rgba(6, 182, 212, 0.4)' }}
+                               
                             >
                                 <Play size={24} />
                                 Başla

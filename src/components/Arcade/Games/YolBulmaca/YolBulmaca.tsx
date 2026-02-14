@@ -197,7 +197,7 @@ const YolBulmaca: React.FC = () => {
     };
 
     return (
-        <div className={`min-h-screen ${softColors.bg} flex flex-col items-center p-2 sm:p-4 md:p-6 lg:p-8 pt-16 sm:pt-20 touch-none`} style={{ WebkitTapHighlightColor: 'transparent' }}>
+        <div className={`min-h-screen ${softColors.bg} flex flex-col items-center p-2 sm:p-4 md:p-6 lg:p-8 pt-16 sm:pt-20 touch-none`}>
             {/* Soft background glow */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-[100px]" />

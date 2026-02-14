@@ -178,7 +178,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
             width={canvasSize.w}
             height={canvasSize.h}
             className="touch-none cursor-crosshair"
-            style={{ WebkitTapHighlightColor: 'transparent' }}
+           
             onMouseDown={handleStart}
             onMouseMove={handleMove}
             onMouseUp={handleEnd}

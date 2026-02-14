@@ -223,7 +223,7 @@ const VisualAlgebraGame: React.FC = () => {
                                 {renderScale(levelData.question.left, userRightPan, levelData.weights, true)}
                                 <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
                                     <div className="flex gap-2 bg-white/5 p-2 rounded-3xl border border-white/10">{getShapesForLevel(level).map(s => (
-                                        <motion.button key={s} whileHover={{ y: -4, scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => addToPan(s)} className="p-3 bg-white/10 rounded-2xl border border-white/10 hover:bg-white/20 transition-all flex items-center justify-center min-w-[56px]" style={{ boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2)' }}>
+                                        <motion.button key={s} whileHover={{ y: -4, scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => addToPan(s)} className="p-3 bg-white/10 rounded-2xl border border-white/10 hover:bg-white/20 transition-all flex items-center justify-center min-w-[56px] shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2)]">
                                             <ShapeIcon type={s} size={32} weight={showWeights ? levelData.weights[s] : undefined} />
                                         </motion.button>
                                     ))}</div>

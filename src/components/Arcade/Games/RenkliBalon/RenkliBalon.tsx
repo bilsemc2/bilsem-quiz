@@ -222,7 +222,7 @@ const RenkliBalon: React.FC = () => {
         <div
             ref={gameContainerRef}
             className="relative w-full h-screen overflow-hidden bg-gradient-to-br from-violet-950 via-indigo-950 to-slate-900 select-none flex flex-col items-center pt-16 touch-none"
-            style={{ WebkitTapHighlightColor: 'transparent' }}
+           
         >
             <Cloud top="10%" delay={0} duration={45} />
             <Cloud top="35%" delay={7} duration={60} />
@@ -363,7 +363,7 @@ const RenkliBalon: React.FC = () => {
                         <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20">
                             <div
                                 className="w-28 h-28 bg-gradient-to-br from-amber-500 to-orange-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
-                                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+                               
                             >
                                 <Target className="w-14 h-14 text-white" />
                             </div>

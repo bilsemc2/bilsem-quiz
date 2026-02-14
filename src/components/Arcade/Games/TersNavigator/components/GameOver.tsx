@@ -60,7 +60,7 @@ const GameOver: React.FC<GameOverProps> = ({ stats, onRestart, onMenu }) => {
                 <button
                     onClick={onRestart}
                     className="flex-1 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
-                    style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+                   
                 >
                     <RotateCcw className="w-5 h-5" />
                     YENİDEN BAŞLA

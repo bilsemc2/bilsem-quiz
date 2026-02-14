@@ -12,7 +12,7 @@ export const StartOverlay: React.FC<StartOverlayProps> = ({ onStart }) => (
         <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-sm w-full text-center border border-white/20 mx-4">
             <div
                 className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+               
             >
                 <Focus size={48} className="text-white" />
             </div>
@@ -24,7 +24,7 @@ export const StartOverlay: React.FC<StartOverlayProps> = ({ onStart }) => (
             <button
                 onClick={onStart}
                 className="w-full px-12 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
-                style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+               
             >
                 BAŞLA
             </button>
@@ -85,7 +85,7 @@ export const GameOverOverlay: React.FC<GameOverOverlayProps> = ({ score, level, 
                 <button
                     onClick={onRestart}
                     className="w-full px-12 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-black text-xl rounded-2xl transition-all active:scale-95"
-                    style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+                   
                 >
                     YENİDEN DENE
                 </button>

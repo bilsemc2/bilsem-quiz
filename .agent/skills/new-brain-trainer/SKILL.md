@@ -32,6 +32,15 @@ Tüm BrainTrainer simülatörleri şu standartları takip etmelidir:
 | **Canvas Max Genişlik** | `Math.min(window.innerWidth - 32, 480)` px |
 | **Body Scroll Lock** | Oyun sırasında `overflow: hidden` + `touch-action: none` |
 | **Responsive Yeniden Boyutlama** | `window.addEventListener('resize', ...)` zorunlu |
+| **CSS Kuralı** | Inline `style={{}}` yerine **Tailwind class** kullan |
+
+> **⚠️ Inline Style Yasağı:**
+> `style={{ backgroundColor: '...' }}` gibi inline style'lar **kullanmayın**. Tailwind class'larını tercih edin:
+> - `boxShadow` → `shadow-lg`, `shadow-2xl`, `shadow-[0_8px_32px_rgba(...)]`
+> - `background` → `bg-gradient-to-br from-X to-Y`
+> - `borderRadius` → `rounded-2xl`, `rounded-[24px]`
+>
+> **İstisna:** Yalnızca JavaScript ile dinamik hesaplanan değerler (canvas boyutu, pozisyon) inline olabilir.
 
 ---
 
@@ -496,8 +505,7 @@ Tüm BrainTrainer oyunları "yumuşak şeker" görsel stilini takip etmelidir.
 #### Ana İkon (Welcome Screen)
 ```tsx
 <motion.div 
-    className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center"
-    style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+    className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)]"
     animate={{ y: [0, -8, 0] }}
     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
 >
@@ -510,8 +518,7 @@ Tüm BrainTrainer oyunları "yumuşak şeker" görsel stilini takip etmelidir.
 <motion.button
     whileHover={{ scale: 1.05, y: -2 }}
     whileTap={{ scale: 0.95 }}
-    className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl"
-    style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)' }}
+    className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl shadow-[0_8px_32px_rgba(99,102,241,0.4)]"
 >
     <div className="flex items-center gap-3">
         <Play size={28} className="fill-white" />
@@ -522,15 +529,10 @@ Tüm BrainTrainer oyunları "yumuşak şeker" görsel stilini takip etmelidir.
 
 #### 3D Gummy Kartlar/Hücreler
 ```tsx
-style={{
-    background: isActive 
-        ? 'linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)' 
-        : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-    boxShadow: isActive 
-        ? 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.3), 0 0 30px rgba(129, 140, 248, 0.6)'
-        : 'inset 0 -3px 6px rgba(0,0,0,0.2), inset 0 3px 6px rgba(255,255,255,0.1)',
-    borderRadius: '24px',
-}}
+className={isActive 
+    ? 'bg-gradient-to-br from-indigo-400 to-violet-400 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),inset_0_4px_8px_rgba(255,255,255,0.3),0_0_30px_rgba(129,140,248,0.6)] rounded-[24px]'
+    : 'bg-gradient-to-br from-white/10 to-white/5 shadow-[inset_0_-3px_6px_rgba(0,0,0,0.2),inset_0_3px_6px_rgba(255,255,255,0.1)] rounded-[24px]'
+}
 ```
 
 ### 🎨 Renk Paleti

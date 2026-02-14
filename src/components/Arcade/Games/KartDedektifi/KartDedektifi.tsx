@@ -183,7 +183,7 @@ const KartDedektifi: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white overflow-hidden relative font-sans touch-none" style={{ WebkitTapHighlightColor: 'transparent' }}>
+    <div className="min-h-screen bg-[#0f172a] text-white overflow-hidden relative font-sans touch-none [-webkit-tap-highlight-color:transparent]">
       {/* Arcade HUD */}
       <div className="absolute top-16 sm:top-8 left-2 sm:left-4 right-2 sm:right-4 z-30 flex justify-between items-center pointer-events-none">
         <div className="flex flex-wrap gap-2 sm:gap-4 pointer-events-auto">
@@ -301,7 +301,7 @@ const KartDedektifi: React.FC = () => {
             >
               <div
                 className="w-28 h-28 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
-                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+               
               >
                 <Search className="w-14 h-14 text-white" />
               </div>
@@ -332,7 +332,7 @@ const KartDedektifi: React.FC = () => {
             >
               <div
                 className="w-24 h-24 bg-gradient-to-br from-rose-500 to-pink-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+               
               >
                 <GraduationCap className="w-12 h-12 text-white" />
               </div>

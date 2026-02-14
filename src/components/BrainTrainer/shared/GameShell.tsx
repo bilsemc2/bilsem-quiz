@@ -247,15 +247,15 @@ const GameShell: React.FC<GameShellProps> = ({ config, children }) => {
                     </Link>
                     {(phase !== 'game_over' && phase !== 'victory') && (
                         <div className="flex items-center gap-4 flex-wrap">
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30">
                                 <Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span>
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30">
                                 {Array.from({ length: initialLives }).map((_, i) => (
                                     <Heart key={`life-${i}`} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-950'} />
                                 ))}
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30">
                                 <TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} />
                                 <span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span>
                             </div>

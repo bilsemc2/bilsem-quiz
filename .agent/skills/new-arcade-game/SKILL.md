@@ -106,6 +106,16 @@ export const GAME_CONFIG = {
 
 ---
 
+> **⚠️ Inline Style Yasağı:**
+> `style={{ backgroundColor: '...' }}` gibi inline style'lar **kullanmayın**. Tailwind class'larını tercih edin:
+> - `boxShadow` → `shadow-lg`, `shadow-2xl`, `shadow-[0_8px_32px_rgba(...)]`
+> - `background` → `bg-gradient-to-br from-X to-Y`
+> - `borderRadius` → `rounded-2xl`, `rounded-[24px]`
+>
+> **İstisna:** Yalnızca JavaScript ile dinamik hesaplanan değerler (canvas boyutu, pozisyon) inline olabilir.
+
+---
+
 ## Adım 4: Route Ekle (App.tsx)
 
 ```tsx
@@ -156,8 +166,7 @@ Arcade oyunları "yumuşak şeker" görsel stilini takip etmelidir:
 #### Ana İkon (Welcome Screen)
 ```tsx
 <motion.div 
-    className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-[40%] flex items-center justify-center"
-    style={{ boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }}
+    className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-[40%] flex items-center justify-center shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)]"
     animate={{ y: [0, -8, 0] }}
     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
 >
@@ -170,8 +179,7 @@ Arcade oyunları "yumuşak şeker" görsel stilini takip etmelidir:
 <motion.button
     whileHover={{ scale: 1.05, y: -2 }}
     whileTap={{ scale: 0.95 }}
-    className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-bold text-xl"
-    style={{ boxShadow: '0 8px 32px rgba(6, 182, 212, 0.4)' }}
+    className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-bold text-xl shadow-[0_8px_32px_rgba(6,182,212,0.4)]"
 >
     <div className="flex items-center gap-3">
         <Play size={28} className="fill-white" />
@@ -202,7 +210,7 @@ const FAIL_MESSAGES = ["Tekrar dene! 💪", "Düşün ve bul! 🧐"];
                     isCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' 
                               : 'bg-gradient-to-br from-orange-500 to-amber-600'
                 }`}
-                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+                className="shadow-[0_16px_48px_rgba(0,0,0,0.4)]"
             >
                 {isCorrect ? <CheckCircle2 size={64} /> : <XCircle size={64} />}
                 <p className="text-3xl font-black text-white">{feedbackMessage}</p>
