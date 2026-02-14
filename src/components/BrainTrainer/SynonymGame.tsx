@@ -62,7 +62,7 @@ const SynonymGame: React.FC = () => {
                 return { id: q.id, kelime: q.kelime, options: shuffled.map((o, i) => ({ id: optLabels[i], text: o.text })), correct_option_id: optLabels[corrIdx], es_anlami: q.es_anlami };
             });
             setQuestions(parsed); setPhase('playing'); startTimeRef.current = Date.now();
-        } catch (e: any) { setErrorMessage(e.message || 'Hata oluştu.'); setPhase('error'); }
+        } catch (e: unknown) { setErrorMessage(e instanceof Error ? e.message : 'Hata oluştu.'); setPhase('error'); }
     }, []);
 
     const handleStart = useCallback(() => {

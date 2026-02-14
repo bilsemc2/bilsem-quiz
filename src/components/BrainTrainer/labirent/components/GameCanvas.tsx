@@ -16,6 +16,18 @@ const START_PADDING = 10;
 // Helper for random wobble
 const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 
+interface WallSeedSide {
+  midOffset: number;
+  thick: number;
+}
+
+interface WallSeed {
+  top: WallSeedSide;
+  right: WallSeedSide;
+  bottom: WallSeedSide;
+  left: WallSeedSide;
+}
+
 export const GameCanvas: React.FC<GameCanvasProps> = ({ level, lives, onCrash, onWrongPath, onWin, isPlaying }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wallCanvasRef = useRef<HTMLCanvasElement | null>(null); // Offscreen canvas for collision
@@ -33,7 +45,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ level, lives, onCrash, o
   const [lastLogicalCell, setLastLogicalCell] = useState<string>("0,0");
 
   // Seeds for wall randomness so they don't jitter every frame
-  const [wallSeeds, setWallSeeds] = useState<any[]>([]);
+  const [wallSeeds, setWallSeeds] = useState<WallSeed[]>([]);
 
   // Initialize Maze
   useEffect(() => {
@@ -50,7 +62,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ level, lives, onCrash, o
     setSolutionSet(solveMaze(newMaze));
 
     // Generate static random values for the "Hand drawn" look
-    const seeds: any[] = [];
+    const seeds: WallSeed[] = [];
     newMaze.forEach(row => {
       row.forEach(_cell => {
         seeds.push({
@@ -75,7 +87,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ level, lives, onCrash, o
   }, [level]);
 
   // Draw a "hand drawn" line
-  const drawWobblyLine = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, seed: any) => {
+  const drawWobblyLine = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, seed: WallSeedSide) => {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
 

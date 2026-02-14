@@ -379,7 +379,7 @@ const LaserMazeGame: React.FC = () => {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef(0);
     const canvasRef = useRef<HTMLDivElement | null>(null);
-    const engineRef = useRef<any>(null);
+    const engineRef = useRef<{ correctIndex: number; exitCount: number; guess: (idx: number) => boolean; dispose: () => void } | null>(null);
     const guessedRef = useRef(false);
     const hasSavedRef = useRef(false);
 

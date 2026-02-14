@@ -28,6 +28,18 @@ interface MazeCell {
     visited: boolean;
 }
 
+interface WallSeedSide {
+    midOffset: number;
+    thick: number;
+}
+
+interface WallSeed {
+    top: WallSeedSide;
+    right: WallSeedSide;
+    bottom: WallSeedSide;
+    left: WallSeedSide;
+}
+
 const generateMaze = (cols: number, rows: number): MazeCell[][] => {
     const grid: MazeCell[][] = [];
     for (let y = 0; y < rows; y++) {
@@ -129,7 +141,7 @@ const MazeRunnerGame: React.FC = () => {
     const [cols, setCols] = useState(5);
     const [rows, setRows] = useState(5);
     const [lastLogicalCell, setLastLogicalCell] = useState('0,0');
-    const [wallSeeds, setWallSeeds] = useState<any[]>([]);
+    const [wallSeeds, setWallSeeds] = useState<WallSeed[]>([]);
     const [wrongTurnsLeft, setWrongTurnsLeft] = useState(3);
     const [warning, setWarning] = useState<string | null>(null);
     const [shake, setShake] = useState(false);
@@ -183,7 +195,7 @@ const MazeRunnerGame: React.FC = () => {
         const newMaze = generateMaze(newCols, newRows);
         setMaze(newMaze);
         setSolutionSet(solveMaze(newMaze));
-        const seeds: any[] = [];
+        const seeds: WallSeed[] = [];
         newMaze.forEach(row => {
             row.forEach(() => {
                 seeds.push({
@@ -291,7 +303,7 @@ const MazeRunnerGame: React.FC = () => {
     }, [phase, triggerShake, handleGameOver]);
 
     // ============== CANVAS DRAWING ==============
-    const drawWobblyLine = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, seed: any) => {
+    const drawWobblyLine = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, seed: WallSeedSide) => {
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         const midX = (x1 + x2) / 2;

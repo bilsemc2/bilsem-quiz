@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import NavBar from './components/NavBar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
-import { AuthProvider } from './contexts/AuthContext';
 import { ExamProvider } from './contexts/ExamContext';
 import { SoundProvider } from './contexts/SoundContext';
 import { Toaster, toast } from 'sonner';
@@ -91,25 +90,23 @@ const LocationAwareRouter: React.FC = () => {
 function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <SoundProvider>
-          <Toaster
-            position="top-center"
-            duration={4000}
-            richColors
-            closeButton
-          />
-          <Router>
-            <ExamProvider>
-              <AdminMessageNotification />
-              <UpdatePrompt />
-              <GlobalXPTimer />
-              <PushNotificationPrompt />
-              <LocationAwareRouter />
-            </ExamProvider>
-          </Router>
-        </SoundProvider>
-      </AuthProvider>
+      <SoundProvider>
+        <Toaster
+          position="top-center"
+          duration={4000}
+          richColors
+          closeButton
+        />
+        <Router>
+          <ExamProvider>
+            <AdminMessageNotification />
+            <UpdatePrompt />
+            <GlobalXPTimer />
+            <PushNotificationPrompt />
+            <LocationAwareRouter />
+          </ExamProvider>
+        </Router>
+      </SoundProvider>
     </ErrorBoundary>
   );
 }

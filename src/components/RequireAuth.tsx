@@ -64,6 +64,7 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
                 setUserXP(profile.experience || 0);
 
                 // Admin veya öğretmen kontrolü
+                // Teacher rolü bilinçli olarak admin erişimine dahil (admin yardımcısı)
                 if (requireAdmin && !profile.is_admin && profile.role !== 'teacher') {
                     setHasAccess(false);
                     setAccessDeniedReason('role');
@@ -140,48 +141,39 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
                 setHasAccess(userHasAccess);
                 if (!userHasAccess) setAccessDeniedReason('xp');
 
-                // XP düşürme işlemi (sadece erişim varsa ve gereksinim > 0 ise)
+                // XP düşürme işlemi — Server-side Edge Function ile atomik
                 if (userHasAccess && requiredAmount > 0 && !xpDeductionAttemptedRef.current) {
                     xpDeductionAttemptedRef.current = true;
 
-                    // Son 5 dakika içinde bu sayfa için XP düşürülmüş mü kontrol et
-                    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-                    const reasonForVisit = `Sayfa ziyareti: ${location.pathname}`;
+                    try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (session?.access_token) {
+                            const response = await fetch(
+                                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xp-transaction`,
+                                {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${session.access_token}`,
+                                    },
+                                    body: JSON.stringify({
+                                        action: 'deduct',
+                                        amount: requiredAmount,
+                                        reason: `Sayfa ziyareti: ${location.pathname}`
+                                    }),
+                                }
+                            );
 
-                    const { count: recentLogCount, error: recentLogError } = await supabase
-                        .from('experience_log')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('user_id', user.id)
-                        .eq('change_reason', reasonForVisit)
-                        .gte('changed_at', fiveMinutesAgo);
-
-                    if (recentLogError) {
-                        console.warn('Recent log check failed:', recentLogError.message);
-                    } else if (recentLogCount === null || recentLogCount === 0) {
-                        // XP düşür
-                        const newExperience = profile.experience - requiredAmount;
-
-                        const { error: updateErr } = await supabase
-                            .from('profiles')
-                            .update({ experience: newExperience })
-                            .eq('id', user.id);
-
-                        if (!updateErr) {
-                            // Log kaydet
-                            await supabase.from('experience_log').insert({
-                                user_id: user.id,
-                                change_amount: -requiredAmount,
-                                old_experience: profile.experience,
-                                new_experience: newExperience,
-                                change_reason: reasonForVisit
-                            });
-
-                            // Modern toast göster
-                            showXPDeduct(requiredAmount, 'Oyun erişimi');
-                            setUserXP(newExperience);
-                        } else {
-                            console.error('XP güncelleme hatası:', updateErr);
+                            if (response.ok) {
+                                const result = await response.json();
+                                if (result.change !== 0) {
+                                    showXPDeduct(requiredAmount, 'Oyun erişimi');
+                                    setUserXP(result.newXP);
+                                }
+                            }
                         }
+                    } catch {
+                        // Edge Function erişim hatası — sessizce devam et
                     }
                 }
 

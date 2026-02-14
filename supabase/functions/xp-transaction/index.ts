@@ -48,7 +48,21 @@ serve(async (req) => {
 
         // Parse request body
         const body: XPTransactionRequest = await req.json();
-        const { action, amount = 1, reason = "Sistem" } = body;
+        const { action, reason = "Sistem" } = body;
+        let { amount = 1 } = body;
+
+        // Server-side amount validation
+        if (!amount || amount <= 0 || !Number.isFinite(amount)) {
+            return new Response(
+                JSON.stringify({ error: "Invalid amount" }),
+                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
+        amount = Math.floor(amount); // Ensure integer
+        const MAX_GAIN = 5;
+        const MAX_DEDUCT = 100;
+        if (action === "gain") amount = Math.min(amount, MAX_GAIN);
+        else if (action === "deduct") amount = Math.min(amount, MAX_DEDUCT);
 
         // Use service role client for database operations
         const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -96,6 +110,31 @@ serve(async (req) => {
                         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
                     );
                 }
+            }
+        }
+
+        // For XP deduct: Rate limiting check (same reason within 5 minutes)
+        if (action === "deduct" && reason) {
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+            const { count: recentCount, error: recentError } = await adminSupabase
+                .from("experience_log")
+                .select("*", { count: "exact", head: true })
+                .eq("user_id", user.id)
+                .eq("change_reason", reason)
+                .gte("changed_at", fiveMinutesAgo);
+
+            if (!recentError && recentCount && recentCount > 0) {
+                return new Response(
+                    JSON.stringify({
+                        success: true,
+                        oldXP: currentXP,
+                        newXP: currentXP,
+                        change: 0,
+                        throttled: true
+                    }),
+                    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
             }
         }
 

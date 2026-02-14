@@ -65,7 +65,7 @@ const NumberMemoryGame: React.FC = () => {
         }
         setCurrentPlayIndex(-1); await new Promise(r => setTimeout(r, 500));
 
-        const type = level <= 3 ? 'number' : pick(['number', 'order', 'sum', 'max']);
+        const type = level <= 3 ? 'number' as const : pick(['number', 'order', 'sum', 'max'] as const);
         let qText = '', qAns: number | string = 0, qOpts: (number | string)[] = [];
         if (type === 'number') { qText = 'Duyduğun rakamlardan hangisi dizide vardı?'; qAns = seq[Math.floor(Math.random() * seq.length)]; qOpts = [qAns]; while (qOpts.length < 4) { const r = Math.floor(Math.random() * 10); if (!qOpts.includes(r)) qOpts.push(r); } }
         else if (type === 'order') { const idx = Math.floor(Math.random() * seq.length); qText = `${idx + 1}. sırada hangi rakamı duydun?`; qAns = seq[idx]; qOpts = [qAns]; while (qOpts.length < 4) { const r = Math.floor(Math.random() * 10); if (!qOpts.includes(r)) qOpts.push(r); } }
@@ -76,7 +76,7 @@ const NumberMemoryGame: React.FC = () => {
         setPhase('question');
     }, [level]);
 
-    const pick = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
+    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
     const startLevel = useCallback((lvl: number) => {
         const len = Math.min(3 + Math.floor(lvl / 4), 7);

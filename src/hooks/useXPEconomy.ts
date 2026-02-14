@@ -32,57 +32,50 @@ export const useXPEconomy = () => {
 
         setLoading(true);
         try {
-            // 1. Get current balance
-            const { data: profile, error: fetchError } = await supabase
-                .from('profiles')
-                .select('experience')
-                .eq('id', user.id)
-                .single();
-
-            if (fetchError || !profile) {
-                throw new Error('Bakiye kontrol edilemedi');
+            // Get auth session for Edge Function call
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                throw new Error('Oturum bulunamadı');
             }
 
-            const currentXP = profile.experience || 0;
+            // Call secure Edge Function for atomic XP deduction
+            const response = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xp-transaction`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ action: 'deduct', amount, reason }),
+                }
+            );
 
-            if (currentXP < amount) {
-                showXPError('Yetersiz XP!');
-                return { success: false, error: 'Insufficient funds' };
+            if (!response.ok) {
+                const errorData = await response.json();
+                if (errorData.error === 'Insufficient XP') {
+                    showXPError('Yetersiz XP!');
+                    return { success: false, error: 'Insufficient funds' };
+                }
+                throw new Error(errorData.error || 'XP düşülemedi');
             }
 
-            // 2. Deduct XP
-            const newExperience = currentXP - amount;
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ experience: newExperience })
-                .eq('id', user.id);
+            const result = await response.json();
 
-            if (updateError) {
-                throw new Error('XP düşülemedi');
-            }
-
-            // 3. Log transaction
-            await supabase.from('experience_log').insert({
-                user_id: user.id,
-                change_amount: -amount,
-                old_experience: currentXP,
-                new_experience: newExperience,
-                change_reason: reason
-            });
-
-            // 4. Update Global State
+            // Update global state
             if (refreshProfile) {
                 await refreshProfile();
             }
 
-            // 5. Show Feedback
-            showXPDeduct(amount, reason);
+            // Show feedback (only if XP was actually deducted)
+            if (result.change !== 0) {
+                showXPDeduct(amount, reason);
+            }
 
-            return { success: true, newBalance: newExperience };
+            return { success: true, newBalance: result.newXP };
 
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Bir hata oluştu';
-            console.error('XP Transaction Error:', error);
             showXPError(message);
             return { success: false, error: message };
         } finally {

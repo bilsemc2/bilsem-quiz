@@ -7,8 +7,8 @@ const UpdatePrompt: React.FC = () => {
     const [updateFn, setUpdateFn] = useState<(() => void) | null>(null);
 
     useEffect(() => {
-        const handleUpdate = (e: any) => {
-            setUpdateFn(() => e.detail);
+        const handleUpdate = (e: Event) => {
+            setUpdateFn(() => (e as CustomEvent).detail);
             setShow(true);
         };
 
