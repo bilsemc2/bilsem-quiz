@@ -107,6 +107,7 @@ const LazerHafizaGame: React.FC = () => {
     const [path, setPath] = useState<Coordinate[]>([]);
     const [userPath, setUserPath] = useState<Coordinate[]>([]);
     const [visiblePathIndex, setVisiblePathIndex] = useState(-1);
+    const [showLaserLine, setShowLaserLine] = useState(false);
     const previewTimerRef = useRef<number | null>(null);
 
     // Responsive sizing
@@ -155,30 +156,39 @@ const LazerHafizaGame: React.FC = () => {
         setPath(newPath);
         setUserPath([]);
         setVisiblePathIndex(-1);
+        setShowLaserLine(false);
         setPhase('preview');
     }, []);
 
-    // ─── Preview Animation ──────────────────────────
+    // ─── Preview Animation (2-phase: dots first, then laser) ───
     useEffect(() => {
         if (phase === 'preview' && path.length > 0) {
             let step = 0;
             setVisiblePathIndex(-1);
+            setShowLaserLine(false);
 
             const previewSpeed = Math.max(350, 700 - level * 20);
 
-            const runPreview = () => {
+            // Phase 1: Light up dots one by one
+            const runDotPreview = () => {
                 setVisiblePathIndex(step);
                 step++;
                 if (step < path.length) {
-                    previewTimerRef.current = window.setTimeout(runPreview, previewSpeed);
+                    previewTimerRef.current = window.setTimeout(runDotPreview, previewSpeed);
                 } else {
+                    // Phase 2: All dots shown → now draw the laser line
                     previewTimerRef.current = window.setTimeout(() => {
-                        setVisiblePathIndex(-1);
-                        setPhase('playing');
-                    }, 800);
+                        setShowLaserLine(true);
+                        // Hold the laser visible, then transition to playing
+                        previewTimerRef.current = window.setTimeout(() => {
+                            setVisiblePathIndex(-1);
+                            setShowLaserLine(false);
+                            setPhase('playing');
+                        }, 1200);
+                    }, 400);
                 }
             };
-            previewTimerRef.current = window.setTimeout(runPreview, 400);
+            previewTimerRef.current = window.setTimeout(runDotPreview, 400);
         }
         return () => {
             if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
@@ -324,12 +334,12 @@ const LazerHafizaGame: React.FC = () => {
     };
 
     const previewSvgPath = useMemo(() => {
-        if (phase !== 'preview' || visiblePathIndex < 1) return '';
-        return path.slice(0, visiblePathIndex + 1).map((coord, i) => {
+        if (phase !== 'preview' || !showLaserLine || path.length < 2) return '';
+        return path.map((coord, i) => {
             const { x, y } = getCellCenter(coord.row, coord.col);
             return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
         }).join(' ');
-    }, [path, visiblePathIndex, phase, config.gridSize]);
+    }, [path, showLaserLine, phase, config.gridSize]);
 
     const userSvgPath = useMemo(() => {
         if (userPath.length < 2) return '';
