@@ -43,6 +43,7 @@ const VisualScanningGame: React.FC = () => {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef(0);
     const hasSavedRef = useRef(false);
+    const isTransitioning = useRef(false);
 
     const examMode = location.state?.examMode || false;
     const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
@@ -97,17 +98,19 @@ const VisualScanningGame: React.FC = () => {
         if (phase !== 'playing') return;
         const remaining = grid.filter(c => c.isTarget && !c.isClicked).length;
         if (remaining === 0 && grid.length > 0) {
+            isTransitioning.current = true;
             playSound('correct'); showFeedback(true);
             setTimeout(() => {
                 dismissFeedback();
                 if (level >= MAX_LEVEL) setPhase('victory');
                 else { const nl = level + 1; setLevel(nl); setTimeLeft(p => Math.min(p + 10, TIME_LIMIT)); startRound(nl); }
+                isTransitioning.current = false;
             }, 1000);
         }
     }, [grid, phase, level, startRound, playSound, showFeedback, dismissFeedback]);
 
     const handleCellClick = (idx: number) => {
-        if (phase !== 'playing' || !!feedbackState) return;
+        if (phase !== 'playing' || !!feedbackState || isTransitioning.current) return;
         const cell = grid[idx]; if (cell.isClicked || cell.isWrongClick) return;
         const newGrid = [...grid];
         if (cell.isTarget) {
@@ -171,7 +174,7 @@ const VisualScanningGame: React.FC = () => {
             <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
                 <AnimatePresence mode="wait">
                     {(phase === 'playing' || phase === 'feedback') && !feedbackState && (
-                        <motion.div key="game" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="w-full max-w-xl space-y-6">
+                        <motion.div key={`game-${level}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="w-full max-w-xl space-y-6">
                             <div className="bg-white/5 backdrop-blur-xl rounded-[40px] p-4 border border-white/10 shadow-2xl flex items-center justify-center gap-8 relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-r from-rose-500/5 via-transparent to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 <div className="flex items-center gap-3"><span className="text-xs font-black uppercase text-white/30 tracking-widest">HEDEF:</span><div className="w-16 h-16 bg-gradient-to-br from-rose-400 to-pink-600 rounded-3xl flex items-center justify-center shadow-lg border-2 border-white/20"><span className="text-3xl text-white drop-shadow-md">{targetSymbol}</span></div></div>

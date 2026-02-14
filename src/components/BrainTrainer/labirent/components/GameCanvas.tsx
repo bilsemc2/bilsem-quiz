@@ -276,7 +276,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ level, lives, onCrash, o
         }
         const pixel = ctx.getImageData(p.x, p.y, 1, 1).data;
         if (pixel[0] > 100) return true;
-      } catch (e) {
+      } catch {
         return false;
       }
     }

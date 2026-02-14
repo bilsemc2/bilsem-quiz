@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Download } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface Props {
     children: ReactNode;
@@ -40,12 +41,21 @@ class ErrorBoundary extends Component<Props, State> {
         this.setState({ errorInfo });
 
         // Log error to console in development
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
             console.error('ErrorBoundary caught an error:', error, errorInfo);
         }
 
-        // TODO: Send error to monitoring service in production
-        // e.g., Sentry, LogRocket, etc.
+        // Production: log error to Supabase
+        if (!import.meta.env.DEV) {
+            Promise.resolve(supabase.from('error_logs').insert({
+                error_message: error.message,
+                error_stack: error.stack?.substring(0, 2000),
+                component_stack: errorInfo.componentStack?.substring(0, 2000),
+                url: window.location.href,
+                user_agent: navigator.userAgent,
+                created_at: new Date().toISOString()
+            })).catch(() => { }); // Fire-and-forget
+        }
     }
 
     handleReset = () => {

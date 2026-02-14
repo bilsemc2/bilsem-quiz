@@ -65,7 +65,7 @@ const VerbalAnalogyGame: React.FC = () => {
             });
             setQuestions(parsed);
             setGameState('playing');
-        } catch (e) { setErrorMessage('Yükleme hatası.'); setGameState('error'); }
+        } catch { setErrorMessage('Yükleme hatası.'); setGameState('error'); }
     }, []);
 
     const startGame = useCallback(() => {

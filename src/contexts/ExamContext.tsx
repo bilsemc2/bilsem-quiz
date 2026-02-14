@@ -46,8 +46,8 @@ export const ExamProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (parsed && parsed.modules && parsed.currentIndex !== undefined) {
                     return parsed;
                 }
-            } catch (e) {
-                console.error('Failed to parse exam session:', e);
+            } catch {
+                console.error('Failed to parse exam session');
             }
         }
         return null;
@@ -62,8 +62,8 @@ export const ExamProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (parsed && parsed.modules && parsed.currentIndex !== undefined) {
                     setSession(parsed);
                 }
-            } catch (e) {
-                console.error('Failed to parse exam session:', e);
+            } catch {
+                console.error('Failed to parse exam session');
             }
         } else {
             setSession(null);
@@ -135,9 +135,7 @@ export const ExamProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // localStorage'a önce yaz, sonra state güncelle
             localStorage.setItem('exam_session', JSON.stringify(updatedSession));
             setSession(updatedSession);
-
-            // Kısa bir gecikme ile resolve et - React state'in yerleşmesi için
-            setTimeout(() => resolve(), 50);
+            resolve();
         });
     }, [session]);
 

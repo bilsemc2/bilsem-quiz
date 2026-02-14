@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchProfile = async (userId: string) => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id, email, name, experience, is_admin, is_vip, role, avatar_url, yetenek_alani, grade, school, last_seen')
             .eq('id', userId)
             .single();
 
@@ -106,22 +106,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
 
-    useEffect(() => {
-        if (user?.id) {
-            updateLastSeen();
-            const interval = setInterval(updateLastSeen, 60000); // Update every minute
-            return () => clearInterval(interval);
-        }
-    }, [user]);
-
-    const updateLastSeen = async () => {
+    const updateLastSeen = useCallback(async () => {
         if (user?.id) {
             await supabase
                 .from('profiles')
                 .update({ last_seen: new Date().toISOString() })
                 .eq('id', user.id);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        if (user?.id) {
+            updateLastSeen();
+            const interval = setInterval(updateLastSeen, 60000); // Update every minute
+            return () => clearInterval(interval);
+        }
+    }, [user, updateLastSeen]);
 
     const signOut = async () => {
         const { error } = await supabase.auth.signOut();

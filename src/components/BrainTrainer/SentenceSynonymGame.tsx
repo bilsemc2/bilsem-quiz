@@ -61,7 +61,7 @@ const SentenceSynonymGame: React.FC = () => {
                 return { id: q.id, cumle: q.cumle, options: shuf.map((o, i) => ({ id: labels[i], text: o.t })), correct_option_id: labels[corrIdx], dogru_kelime: q.dogru_kelime };
             });
             setQuestions(parsed); setGameState('playing');
-        } catch (e) { setErrorMessage('Sorular yüklenirken hata oluştu.'); setGameState('error'); }
+        } catch { setErrorMessage('Sorular yüklenirken hata oluştu.'); setGameState('error'); }
     }, []);
 
     const handleStart = useCallback(() => {

@@ -11,6 +11,7 @@ import GlobalXPTimer from './components/GlobalXPTimer';
 import PushNotificationPrompt from './components/PushNotificationPrompt';
 import ErrorBoundary from './components/ErrorBoundary';
 import UpdatePrompt from './components/UpdateNotification/UpdatePrompt';
+import ScrollToTop from './components/ScrollToTop';
 
 // Route Modules
 import {
@@ -98,6 +99,7 @@ function App() {
           closeButton
         />
         <Router>
+          <ScrollToTop />
           <ExamProvider>
             <AdminMessageNotification />
             <UpdatePrompt />

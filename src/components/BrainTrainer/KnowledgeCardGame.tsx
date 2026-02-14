@@ -107,7 +107,7 @@ const KnowledgeCardGame: React.FC = () => {
             });
             setQuestions(finalQuestions);
             setPhase('playing');
-        } catch (e) {
+        } catch {
             setErrorMessage('Yükleme hatası.');
             setPhase('error');
         }

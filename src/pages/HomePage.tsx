@@ -1,13 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Rocket, Star, Users, Palette, Music, Lightbulb, Brain, Sparkles, Target, TrendingUp, Zap, MessageSquare } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const HomePage: React.FC = () => {
+  const [studentCount, setStudentCount] = useState('1000+');
+  const [activityCount] = useState('50+');
+  const [rating] = useState('4.9');
+
+  useEffect(() => {
+    supabase.from('profiles').select('id', { count: 'exact', head: true })
+      .then(({ count }) => {
+        if (count) setStudentCount(`${count}+`);
+      });
+  }, []);
+
   const stats = [
-    { label: "Aktif Öğrenci", value: "1000+", color: "text-purple-600", icon: <Users size={20} /> },
-    { label: "Eğlenceli Aktivite", value: "50+", color: "text-purple-600", icon: <Star size={20} /> },
-    { label: "Kullanıcı Puanı", value: "4.9", color: "text-purple-600", icon: <Rocket size={20} /> },
+    { id: 'students', label: "Aktif Öğrenci", value: studentCount, color: "text-purple-600", icon: <Users size={20} /> },
+    { id: 'activities', label: "Eğlenceli Aktivite", value: activityCount, color: "text-purple-600", icon: <Star size={20} /> },
+    { id: 'rating', label: "Kullanıcı Puanı", value: rating, color: "text-purple-600", icon: <Rocket size={20} /> },
   ];
 
   const workshops = [
@@ -338,9 +350,9 @@ const HomePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {workshops.map((workshop, index) => (
+            {workshops.map((workshop) => (
               <motion.div
-                key={index}
+                key={workshop.link}
                 whileHover={{ y: -15 }}
                 className="group bg-white dark:bg-gray-800 rounded-[3rem] overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col h-full border-4 border-transparent hover:border-purple-brand/20"
               >
