@@ -83,15 +83,23 @@ const NBackGame: React.FC = () => {
 
     useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, phase, handleStart, examMode]);
 
+    // Auto-advance shapes during data collection phase
     useEffect(() => {
-        if (phase === 'playing' && timeLeft > 0) {
+        if (phase === 'playing' && history.length > 0 && history.length <= nValue) {
+            const autoTimer = setTimeout(() => generateShape(), 1500);
+            return () => clearTimeout(autoTimer);
+        }
+    }, [phase, history.length, nValue, generateShape]);
+
+    useEffect(() => {
+        if (phase === 'playing') {
             timerRef.current = setInterval(() => setTimeLeft(p => {
                 if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
                 return p - 1;
             }), 1000);
             return () => clearInterval(timerRef.current!);
         }
-    }, [phase, timeLeft]);
+    }, [phase]);
 
     const handleFinish = useCallback(async () => {
         if (hasSavedRef.current) return;
