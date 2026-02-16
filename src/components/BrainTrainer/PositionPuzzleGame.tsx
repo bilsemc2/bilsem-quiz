@@ -15,7 +15,6 @@ import { useSound } from '../../hooks/useSound';
 const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
-const CANVAS_SIZE = 300;
 const GAME_ID = 'konum-bulmaca';
 
 type ShapeType = 'circle' | 'rect' | 'triangle';
@@ -51,14 +50,16 @@ const isPointInShape = (p: Point, s: Shape): boolean => {
     const c = 1 - a - b; return a >= 0 && a <= 1 && b >= 0 && b <= 1 && c >= 0 && c <= 1;
 };
 
+const INTERNAL_SIZE = 300;
+
 const generatePuzzle = (lvl: number): PuzzleState | null => {
     const shapeCount = lvl <= 8 ? 2 : 3;
     for (let attempts = 0; attempts < 30; attempts++) {
         const shapes: Shape[] = []; const padding = 60; const minSize = 80; const maxSize = 140;
         for (let i = 0; i < shapeCount; i++) {
             const t = Math.floor(Math.random() * 3); const color = SHAPE_COLORS_DARK[i % SHAPE_COLORS_DARK.length];
-            const rot = Math.floor(Math.random() * 360); const cx = Math.floor(Math.random() * (CANVAS_SIZE - 2 * padding)) + padding;
-            const cy = Math.floor(Math.random() * (CANVAS_SIZE - 2 * padding)) + padding;
+            const rot = Math.floor(Math.random() * 360); const cx = Math.floor(Math.random() * (INTERNAL_SIZE - 2 * padding)) + padding;
+            const cy = Math.floor(Math.random() * (INTERNAL_SIZE - 2 * padding)) + padding;
             if (t === 0) shapes.push({ id: `s-${i}`, type: 'circle', color, rotation: 0, cx, cy, r: Math.floor(Math.random() * (maxSize / 2 - minSize / 2)) + minSize / 2 });
             else if (t === 1) { const w = Math.floor(Math.random() * (maxSize - minSize)) + minSize; const h = Math.floor(Math.random() * (maxSize - minSize)) + minSize; shapes.push({ id: `s-${i}`, type: 'rect', color, rotation: rot, x: cx - w / 2, y: cy - h / 2, w, h }); }
             else {
@@ -69,7 +70,7 @@ const generatePuzzle = (lvl: number): PuzzleState | null => {
         }
         const regionMap = new Map<string, Point[]>();
         for (let i = 0; i < 600; i++) {
-            const p = { x: Math.floor(Math.random() * CANVAS_SIZE), y: Math.floor(Math.random() * CANVAS_SIZE) };
+            const p = { x: Math.floor(Math.random() * INTERNAL_SIZE), y: Math.floor(Math.random() * INTERNAL_SIZE) };
             const sig = shapes.map(s => isPointInShape(p, s) ? '1' : '0').join('');
             if (!sig.includes('1')) continue;
             if (!regionMap.has(sig)) regionMap.set(sig, []); regionMap.get(sig)?.push(p);
@@ -94,7 +95,7 @@ const generatePuzzle = (lvl: number): PuzzleState | null => {
 
 const ShapeRenderer: React.FC<{ shapes: Shape[]; dot?: Point; rotation?: number; size?: number; showDot?: boolean; }> = ({ shapes, dot, rotation = 0, size = 300, showDot = true }) => (
     <div className="relative" style={{ width: size, height: size }}>
-        <svg viewBox="0 0 300 300" width="100%" height="100%" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.5s ease-in-out' }}>
+        <svg viewBox={`0 0 ${INTERNAL_SIZE} ${INTERNAL_SIZE}`} width="100%" height="100%" className="transition-transform duration-500 ease-in-out" style={{ transform: `rotate(${rotation}deg)` }}>
             {shapes.map(s => {
                 const p = { key: s.id, fill: s.color, fillOpacity: 0.25, stroke: s.color, strokeWidth: 2.5 };
                 if (s.type === 'circle') return <circle {...p} cx={s.cx} cy={s.cy} r={s.r} />;
@@ -121,6 +122,7 @@ const PositionPuzzleGame: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
     const [puzzle, setPuzzle] = useState<PuzzleState | null>(null);
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
+    const [canvasSize, setCanvasSize] = useState(0);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef(0);
@@ -147,15 +149,39 @@ const PositionPuzzleGame: React.FC = () => {
 
     useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, phase, handleStart, examMode]);
 
+    // Responsive canvas sizing
     useEffect(() => {
-        if (phase === 'playing' && timeLeft > 0) {
+        const updateSize = () => setCanvasSize(Math.min(window.innerWidth - 32, 480));
+        updateSize();
+        window.addEventListener('resize', updateSize);
+        return () => window.removeEventListener('resize', updateSize);
+    }, []);
+
+    // Body scroll lock during gameplay
+    useEffect(() => {
+        const isActive = phase === 'playing' || phase === 'feedback';
+        if (isActive) {
+            window.scrollTo(0, 0);
+            document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none';
+            document.documentElement.style.overflow = 'hidden';
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+            document.documentElement.style.overflow = '';
+        };
+    }, [phase]);
+
+    useEffect(() => {
+        if (phase === 'playing') {
             timerRef.current = setInterval(() => setTimeLeft(p => {
                 if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
                 return p - 1;
             }), 1000);
             return () => clearInterval(timerRef.current!);
         }
-    }, [phase, timeLeft]);
+    }, [phase]);
 
     const handleFinish = useCallback(async () => {
         if (hasSavedRef.current) return;
@@ -227,7 +253,7 @@ const PositionPuzzleGame: React.FC = () => {
                             <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30"><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
                             <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />))}</div>
                             <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30"><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(8, 145, 178, 0.1) 100%)', border: '1px solid rgba(34, 211, 238, 0.3)' }}><Zap className="text-cyan-400" size={18} /><span className="font-bold text-cyan-400">Seviye {level}/{MAX_LEVEL}</span></div>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-500/30"><Zap className="text-cyan-400" size={18} /><span className="font-bold text-cyan-400">Seviye {level}/{MAX_LEVEL}</span></div>
                         </div>
                     )}
                 </div>
@@ -239,15 +265,15 @@ const PositionPuzzleGame: React.FC = () => {
                         <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-8 w-full max-w-4xl">
                             <div className="bg-white/5 backdrop-blur-2xl rounded-[40px] p-8 border border-white/10 shadow-3xl text-center">
                                 <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-4 block">Analiz Edilecek Konum</span>
-                                <div className="bg-slate-900/50 rounded-3xl p-4 border border-white/5 shadow-inner inline-block"><ShapeRenderer shapes={puzzle.shapes} dot={puzzle.targetPoint} size={220} /></div>
+                                <div className="bg-slate-900/50 rounded-3xl p-4 border border-white/5 shadow-inner inline-block"><ShapeRenderer shapes={puzzle.shapes} dot={puzzle.targetPoint} size={Math.min(canvasSize * 0.6, 220)} /></div>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
                                 {puzzle.options.map((opt) => {
                                     const isSel = opt.id === selectedOption; const isCorr = opt.id === puzzle.correctOptionId;
                                     const showOk = phase === 'feedback' && isCorr; const showErr = phase === 'feedback' && isSel && !isCorr;
                                     return (
-                                        <motion.button key={opt.id} whileHover={phase === 'playing' ? { scale: 1.05, y: -4 } : {}} whileTap={phase === 'playing' ? { scale: 0.95 } : {}} onClick={() => handleOption(opt.id)} disabled={phase !== 'playing'} className="relative aspect-square rounded-[32px] overflow-hidden border-4 transition-all p-3" style={{ background: 'rgba(255,255,255,0.05)', borderColor: showOk ? '#22c55e' : showErr ? '#ef4444' : isSel ? '#06b6d4' : 'rgba(255,255,255,0.1)', boxShadow: isSel ? '0 0 20px rgba(6, 182, 212, 0.4)' : 'none' }}>
-                                            <ShapeRenderer shapes={puzzle.shapes} dot={opt.point} rotation={opt.rotation} size={150} />
+                                        <motion.button key={opt.id} whileHover={phase === 'playing' ? { scale: 1.05, y: -4 } : {}} whileTap={phase === 'playing' ? { scale: 0.95 } : {}} onClick={() => handleOption(opt.id)} disabled={phase !== 'playing'} className={`relative aspect-square rounded-[32px] overflow-hidden border-4 transition-all p-3 bg-white/5 ${showOk ? 'border-emerald-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]' : showErr ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : isSel ? 'border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.4)]' : 'border-white/10'}`}>
+                                            <ShapeRenderer shapes={puzzle.shapes} dot={opt.point} rotation={opt.rotation} size={Math.min(canvasSize * 0.4, 150)} />
                                             {phase === 'feedback' && isCorr && <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center"><CheckCircle2 size={48} className="text-emerald-400 drop-shadow-lg" /></div>}
                                             <div className="absolute top-2 left-2 w-6 h-6 bg-black/40 rounded-full flex items-center justify-center text-[10px] font-bold">{String.fromCharCode(65 + opt.id)}</div>
                                         </motion.button>
