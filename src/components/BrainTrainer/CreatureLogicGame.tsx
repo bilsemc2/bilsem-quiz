@@ -158,7 +158,7 @@ type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory';
 const CreatureLogicGame: React.FC = () => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
-    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1000 });
+    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 });
     const { submitResult } = useExam();
     const location = useLocation();
     const navigate = useNavigate();
@@ -177,15 +177,6 @@ const CreatureLogicGame: React.FC = () => {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
     const hasSavedRef = useRef(false);
-
-    useEffect(() => {
-        if (phase === 'playing' && timeLeft > 0) {
-            timerRef.current = setTimeout(() => setTimeLeft(p => p - 1), 1000);
-        } else if (timeLeft === 0 && phase === 'playing') {
-            handleGameOver();
-        }
-        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-    }, [phase, timeLeft]);
 
     useEffect(() => {
         if (phase === 'playing' && selectedIds.length === 0) {
@@ -244,6 +235,39 @@ const CreatureLogicGame: React.FC = () => {
             metadata: { levels_completed: MAX_LEVEL, victory: true, game_name: 'Yaratık Mantığı' },
         });
     }, [saveGamePlay, score, examMode, submitResult, navigate]);
+
+    // Timer — uses setInterval, depends only on [phase]
+    useEffect(() => {
+        if (phase === 'playing') {
+            timerRef.current = setInterval(() => setTimeLeft(p => {
+                if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
+                return p - 1;
+            }), 1000);
+            return () => clearInterval(timerRef.current!);
+        }
+    }, [phase]);
+
+    // Body scroll lock during gameplay
+    useEffect(() => {
+        const isActive = phase === 'playing' || phase === 'feedback';
+        if (isActive) {
+            window.scrollTo(0, 0);
+            document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none';
+            document.documentElement.style.overflow = 'hidden';
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+            document.documentElement.style.overflow = '';
+        };
+    }, [phase]);
+
+    // Game over when timer reaches 0 is handled inside setInterval above
+    useEffect(() => {
+        if (phase === 'game_over') handleGameOver();
+        if (phase === 'victory') handleVictory();
+    }, [phase, handleGameOver, handleVictory]);
 
     const handleCreatureClick = (id: number) => {
         if (phase !== 'playing') return;
@@ -305,7 +329,7 @@ const CreatureLogicGame: React.FC = () => {
                 <AnimatePresence mode="wait">
                     {phase === 'welcome' && (
                         <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><Sparkles size={52} className="text-white drop-shadow-lg" /></motion.div>
+                            <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)]" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><Sparkles size={52} className="text-white drop-shadow-lg" /></motion.div>
                             <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Yaratık Mantığı</h1>
                             <p className="text-slate-400 mb-8">Yaramaz yaratıkları özelliklerine göre Grupla! Mantık yönergesini oku ve şartları sağlayan tüm yaratıkları seç.</p>
                             <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
@@ -317,7 +341,7 @@ const CreatureLogicGame: React.FC = () => {
                                 </ul>
                             </div>
                             <div className="bg-emerald-500/10 text-emerald-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-emerald-500/30 font-bold uppercase tracking-widest">TUZÖ 5.5.3 Yönerge Takibi</div>
-                            <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 rounded-2xl font-bold text-xl" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)' }}><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                            <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 rounded-2xl font-bold text-xl bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-[0_8px_32px_rgba(16,185,129,0.4)]"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
                         </motion.div>
                     )}
                     {(phase === 'playing' || phase === 'feedback') && round && (
@@ -334,7 +358,9 @@ const CreatureLogicGame: React.FC = () => {
                                     const isSelected = selectedIds.includes(creature.id);
                                     const showResults = phase === 'feedback';
                                     const isTarget = round.targetIds.includes(creature.id);
-                                    return (<motion.button key={creature.id} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: idx * 0.05 }} disabled={phase !== 'playing'} onClick={() => handleCreatureClick(creature.id)} className={`aspect-square rounded-[32px] border-2 flex flex-col items-center justify-center relative transition-all duration-300 ${isSelected ? 'ring-4 ring-white shadow-[0_0_30px_rgba(255,255,255,0.4)] scale-105' : 'shadow-xl'} ${showResults && isTarget && !isSelected ? 'ring-4 ring-emerald-400/50 scale-105' : ''}`} style={{ background: isSelected ? (showResults ? (isTarget ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)') : 'rgba(16, 185, 129, 0.15)') : 'rgba(255,255,255,0.05)', borderColor: isSelected ? (showResults ? (isTarget ? '#10B981' : '#EF4444') : '#10B981') : 'rgba(255,255,255,0.1)' }} whileHover={phase === 'playing' ? { scale: 1.05, y: -4 } : {}} whileTap={phase === 'playing' ? { scale: 0.95 } : {}}><MonsterSVG creature={creature} size={round.creatures.length > 9 ? 60 : 80} />{showResults && isSelected && (<div className="absolute top-3 right-3">{isTarget ? <CheckCircle2 className="text-emerald-400" size={24} /> : <XCircle className="text-red-400" size={24} />}</div>)}</motion.button>);
+                                    const cardBg = isSelected ? (showResults ? (isTarget ? 'bg-emerald-500/20' : 'bg-red-500/20') : 'bg-emerald-500/15') : 'bg-white/5';
+                                    const cardBorder = isSelected ? (showResults ? (isTarget ? 'border-emerald-500' : 'border-red-500') : 'border-emerald-500') : 'border-white/10';
+                                    return (<motion.button key={creature.id} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: idx * 0.05 }} disabled={phase !== 'playing'} onClick={() => handleCreatureClick(creature.id)} className={`aspect-square rounded-[32px] border-2 flex flex-col items-center justify-center relative transition-all duration-300 ${cardBg} ${cardBorder} ${isSelected ? 'ring-4 ring-white shadow-[0_0_30px_rgba(255,255,255,0.4)] scale-105' : 'shadow-xl'} ${showResults && isTarget && !isSelected ? 'ring-4 ring-emerald-400/50 scale-105' : ''}`} whileHover={phase === 'playing' ? { scale: 1.05, y: -4 } : {}} whileTap={phase === 'playing' ? { scale: 0.95 } : {}}><MonsterSVG creature={creature} size={round.creatures.length > 9 ? 60 : 80} />{showResults && isSelected && (<div className="absolute top-3 right-3">{isTarget ? <CheckCircle2 className="text-emerald-400" size={24} /> : <XCircle className="text-red-400" size={24} />}</div>)}</motion.button>);
                                 })}
                             </div>
                             {phase === 'playing' && (
@@ -348,7 +374,7 @@ const CreatureLogicGame: React.FC = () => {
                             <h2 className="text-3xl font-bold text-amber-400 mb-2">{phase === 'victory' ? '🎖️ Doğa Dostu!' : 'Harika Bir İş Çıkardın!'}</h2>
                             <p className="text-slate-400 mb-6">{phase === 'victory' ? 'Tüm yaratıkları türlerine göre kusursuz ayırdın!' : 'Yeni rekorlar kırmak için tekrar deneyebilirsin!'}</p>
                             <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
-                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl font-bold text-xl mb-4" style={{ boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)' }}><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl font-bold text-xl mb-4 shadow-[0_8px_32px_rgba(16,185,129,0.4)]"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
                             <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link>
                         </motion.div>
                     )}
