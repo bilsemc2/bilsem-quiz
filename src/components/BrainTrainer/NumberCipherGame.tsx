@@ -75,10 +75,12 @@ const NumberCipherGame: React.FC = () => {
         const answer = selected.fn(e, f);
 
         const options = [answer];
-        while (options.length < 4) {
-            const fake = Math.max(0, answer + Math.floor(Math.random() * 11) - 5);
-            if (!options.includes(fake)) options.push(fake);
+        let safety = 0;
+        while (options.length < 4 && safety++ < 100) {
+            const fake = answer + Math.floor(Math.random() * 11) - 5;
+            if (fake !== answer && !options.includes(fake)) options.push(fake);
         }
+        while (options.length < 4) options.push(answer + options.length * 2);
         return {
             type: 'hidden_operator',
             display: [`${a} ? ${b} = ${res1}`, `${c} ? ${d} = ${res2}`],
@@ -105,10 +107,12 @@ const NumberCipherGame: React.FC = () => {
         const qb = Math.floor(Math.random() * 7) + 1;
         const answer = selected.fn(qa, qb);
         const options = [answer];
-        while (options.length < 4) {
-            const fake = Math.max(0, answer + Math.floor(Math.random() * 11) - 5);
-            if (!options.includes(fake)) options.push(fake);
+        let safety = 0;
+        while (options.length < 4 && safety++ < 100) {
+            const fake = answer + Math.floor(Math.random() * 11) - 5;
+            if (fake !== answer && !options.includes(fake)) options.push(fake);
         }
+        while (options.length < 4) options.push(answer + options.length * 2);
         return {
             type: 'pair_relation',
             display: pairs.map(p => `(${p.a}, ${p.b}) → ${p.res}`),
@@ -130,10 +134,12 @@ const NumberCipherGame: React.FC = () => {
         const qNum = [1, 4, 6, 7, 9].sort(() => Math.random() - 0.5)[0];
         const answer = selected.fn(qNum);
         const options = [answer];
-        while (options.length < 4) {
-            const fake = Math.max(0, answer + Math.floor(Math.random() * 7) - 3);
-            if (!options.includes(fake)) options.push(fake);
+        let safety = 0;
+        while (options.length < 4 && safety++ < 100) {
+            const fake = answer + Math.floor(Math.random() * 7) - 3;
+            if (fake !== answer && !options.includes(fake)) options.push(fake);
         }
+        while (options.length < 4) options.push(answer + options.length * 2);
         return {
             type: 'conditional',
             display: examples.map(e => `${e.input} → ${e.output}`),
@@ -160,10 +166,12 @@ const NumberCipherGame: React.FC = () => {
         const qb = Math.floor(Math.random() * 5) + 1;
         const answer = selected.fn(qa, qb);
         const options = [answer];
-        while (options.length < 4) {
-            const fake = Math.max(0, answer + Math.floor(Math.random() * 11) - 5);
-            if (!options.includes(fake)) options.push(fake);
+        let safety = 0;
+        while (options.length < 4 && safety++ < 100) {
+            const fake = answer + Math.floor(Math.random() * 11) - 5;
+            if (fake !== answer && !options.includes(fake)) options.push(fake);
         }
+        while (options.length < 4) options.push(answer + options.length * 2);
         return {
             type: 'multi_rule',
             display: examples.map(e => `A=${e.a}, B=${e.b} → ${e.res}`),
@@ -194,14 +202,14 @@ const NumberCipherGame: React.FC = () => {
     useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, phase, handleStart, examMode]);
 
     useEffect(() => {
-        if (phase === 'playing' && timeLeft > 0) {
+        if (phase === 'playing') {
             timerRef.current = setInterval(() => setTimeLeft(p => {
                 if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; }
                 return p - 1;
             }), 1000);
             return () => clearInterval(timerRef.current!);
         }
-    }, [phase, timeLeft]);
+    }, [phase]);
 
     const handleAnswer = (val: number | string) => {
         if (phase !== 'playing' || selectedAnswer !== null || !currentQuestion) return;
