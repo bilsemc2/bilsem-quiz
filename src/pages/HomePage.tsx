@@ -339,6 +339,88 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* BEYNİNİ KULLAN SECTION */}
+      <section className="py-24 bg-gradient-to-br from-indigo-50 via-purple-50 to-violet-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-10 left-10 w-40 h-40 bg-indigo-300 rounded-full opacity-30 blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-56 h-56 bg-purple-300 rounded-full opacity-30 blur-3xl" />
+
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-2xl overflow-hidden border border-indigo-100 dark:border-gray-700">
+            <div className="flex flex-col lg:flex-row items-center">
+              {/* Left - Logo and branding */}
+              <div className="lg:w-1/3 p-12 bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center">
+                <motion.img
+                  src="/images/beyninikullan.webp"
+                  alt="BeyniniKullan.com"
+                  width={256}
+                  height={256}
+                  loading="lazy"
+                  className="w-48 lg:w-64 drop-shadow-2xl"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                />
+              </div>
+
+              {/* Right - Content */}
+              <div className="lg:w-2/3 p-10 lg:p-16 space-y-6 text-center lg:text-left">
+                <div className="space-y-3">
+                  <span className="inline-flex items-center gap-2 px-4 py-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 text-sm font-bold rounded-full uppercase tracking-wider">
+                    🧠 Yapay Zeka Destekli
+                  </span>
+                  <h3 className="text-3xl lg:text-4xl font-poppins font-black text-gray-900 dark:text-white">
+                    Çocuğunuza Özel <span className="text-indigo-600 dark:text-indigo-400">Zeka Kitabı</span> Oluşturun
+                  </h3>
+                </div>
+
+                <p className="text-lg text-gray-600 dark:text-gray-400 font-medium max-w-xl">
+                  Gemini AI ile çocuğunuza özel, benzersiz mantık bulmacaları üretin. Kapağında çocuğunuzun adı yazan, baskıya hazır PDF kitabını saniyeler içinde oluşturun. <strong className="text-indigo-600 dark:text-indigo-400">beyninikullan.com</strong>
+                </p>
+
+                {/* Stats */}
+                <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+                  {[
+                    { value: '100', label: 'Temel Kural' },
+                    { value: '1.5M+', label: 'Mantık İskeleti' },
+                    { value: '3', label: 'Zorluk Seviyesi' },
+                  ].map((stat, i) => (
+                    <div key={i} className="bg-indigo-50 dark:bg-indigo-900/20 px-4 py-2 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
+                      <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{stat.value}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-1.5 font-bold">{stat.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-center lg:justify-start">
+                  <a
+                    href="https://beyninikullan.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-10 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-poppins font-bold text-lg rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center gap-3"
+                  >
+                    Hemen Dene
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+
+                <div className="pt-4 flex items-center gap-6 text-sm text-gray-500 justify-center lg:justify-start">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
+                    <span>Kişiselleştirilmiş Sorular</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
+                    <span>PDF & Baskıya Hazır</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ATÖLYELER SECTION */}
       <section className="py-32 relative">
         <div className="container mx-auto px-6">
