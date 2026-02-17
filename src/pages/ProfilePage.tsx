@@ -339,6 +339,43 @@ export const ProfilePage: React.FC = () => {
                     </div>
                 </motion.div>
 
+                {/* BeyniniKullan.com Reklam */}
+                <motion.a
+                    href="https://beyninikullan.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.02 }}
+                    className="block mb-8 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 rounded-2xl p-6 relative overflow-hidden group cursor-pointer shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-shadow"
+                >
+                    <div className="absolute inset-0 overflow-hidden">
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl" />
+                    </div>
+                    <div className="relative z-10 flex items-center gap-5">
+                        <img
+                            src="/images/beyninikullan.webp"
+                            alt="BeyniniKullan.com"
+                            className="w-16 h-16 rounded-2xl object-contain bg-white/10 p-2 flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full">🧠 Yapay Zeka</span>
+                            </div>
+                            <h3 className="text-lg font-bold text-white mb-0.5">Çocuğunuza Özel Zeka Kitabı Oluşturun</h3>
+                            <p className="text-white/60 text-sm truncate">AI ile benzersiz mantık bulmacaları üretin, baskıya hazır PDF kitap oluşturun</p>
+                        </div>
+                        <div className="flex-shrink-0 hidden sm:flex items-center gap-2 bg-white/20 text-white font-bold px-5 py-2.5 rounded-xl group-hover:bg-white/30 transition-colors">
+                            Keşfet
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </div>
+                    </div>
+                </motion.a>
+
                 {/* Extracted Sections */}
                 <LiveLessonBooking />
                 <QuickAccessSection />
