@@ -167,7 +167,7 @@ const ColorPerception: React.FC = () => {
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-fuchsia-950 to-purple-950 text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black text-white">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
@@ -188,10 +188,10 @@ const ColorPerception: React.FC = () => {
         <AnimatePresence mode="wait">
           {phase === 'welcome' && (
             <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-              <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" style={{ background: 'linear-gradient(135deg, #E879F9 0%, #C026D3 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><Palette size={52} className="text-white drop-shadow-lg" /></motion.div>
-              <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-fuchsia-400 to-purple-400 bg-clip-text text-transparent">Renk Algılama</h1>
+              <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" style={{ background: 'linear-gradient(135deg, #E879F9 0%, #C026D3 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><Palette size={52} className="text-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" /></motion.div>
+              <h1 className="text-4xl font-bold mb-4 bg-slate-50 dark:bg-slate-800 border-4 border-black bg-clip-text text-transparent">Renk Algılama</h1>
               <p className="text-slate-400 mb-8">Ekranda beliren renkleri hızla ezberle ve doğru seç! Görsel işlem hızını ve belleğini geliştir.</p>
-              <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 mb-6 text-left border border-2 border-black">
                 <h3 className="text-lg font-bold text-fuchsia-300 mb-3 flex items-center gap-2"><Eye size={20} /> Nasıl Oynanır?</h3>
                 <ul className="space-y-2 text-slate-300 text-sm">
                   <li className="flex items-center gap-2"><Sparkles size={14} className="text-fuchsia-400" /><span>Ekranda bir grup rengi göreceksin, onları aklında tut</span></li>
@@ -205,7 +205,7 @@ const ColorPerception: React.FC = () => {
           )}
           {(phase === 'playing' || phase === 'showing' || phase === 'feedback') && (
             <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-md">
-              <div className="rounded-[40px] overflow-hidden mb-8 aspect-square relative shadow-2xl border-4 border-white/10 bg-slate-900/50 backdrop-blur-xl">
+              <div className="rounded-[40px] overflow-hidden mb-8 aspect-square relative shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] border-4 border-2 border-black bg-slate-800 ">
                 <AnimatePresence>
                   {phase === 'showing' && (
                     <motion.div key="colors" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 flex flex-col">
@@ -215,29 +215,29 @@ const ColorPerception: React.FC = () => {
                 </AnimatePresence>
                 {phase === 'playing' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-8 space-y-6">
-                    <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1, repeat: Infinity }} className="w-20 h-20 rounded-3xl flex items-center justify-center bg-gradient-to-br from-fuchsia-400 to-purple-600 shadow-lg shadow-fuchsia-500/40"><Target size={40} className="text-white" /></motion.div>
+                    <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1, repeat: Infinity }} className="w-20 h-20 rounded-3xl flex items-center justify-center bg-slate-50 dark:bg-slate-800 border-4 border-black shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a] shadow-fuchsia-500/40"><Target size={40} className="text-white" /></motion.div>
                     <h4 className="text-2xl font-black text-white">Renkleri Seç!</h4>
                     <div className="flex gap-4">
                       {currentColors.map((_, i) => (<div key={i} className="w-16 h-16 rounded-2xl transition-all duration-300" style={{ background: userSelections[i] ? COLORS[userSelections[i]] : 'rgba(255,255,255,0.05)', border: userSelections[i] ? '4px solid white' : '4px dashed rgba(255,255,255,0.2)' }} />))}
                     </div>
                   </div>
                 )}
-                {phase === 'showing' && (<div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/40 backdrop-blur-md rounded-full text-xs font-black tracking-widest text-fuchsia-300 border border-white/10 uppercase animate-pulse">Ezberle!</div>)}
+                {phase === 'showing' && (<div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/40 rounded-full text-xs font-black tracking-widest text-fuchsia-300 border border-2 border-black uppercase animate-pulse">Ezberle!</div>)}
               </div>
               <div className={`grid grid-cols-2 gap-4 transition-all duration-500 ${phase === 'playing' ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>
                 {Object.entries(COLORS).map(([name, code]) => (
-                  <motion.button key={name} whileHover={{ scale: 0.98, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => handleColorSelect(name)} className="p-6 rounded-2xl font-black text-white uppercase shadow-lg border border-white/10 transition-shadow hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]" style={{ backgroundColor: code }}>{name}</motion.button>
+                  <motion.button key={name} whileHover={{ scale: 0.98, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => handleColorSelect(name)} className="p-6 rounded-2xl font-black text-white uppercase shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a] border border-2 border-black transition-shadow-[4px_4px_0_#000] dark:shadow-[4px_4px_0_#0f172a] hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]" style={{ backgroundColor: code }}>{name}</motion.button>
                 ))}
               </div>
             </motion.div>
           )}
           {(phase === 'game_over' || phase === 'victory') && (
             <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-              <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-fuchsia-400 to-purple-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+              <motion.div className="w-24 h-24 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
               <h2 className="text-3xl font-bold text-amber-400 mb-2">{phase === 'victory' ? '🎖️ Renklerin Efendisi!' : 'Tebrikler!'}</h2>
               <p className="text-slate-400 mb-6">{phase === 'victory' ? 'Bütün renkleri kusursuz algıladın!' : 'Harika bir performans sergiledin!'}</p>
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
-              <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-fuchsia-500 to-purple-600 rounded-2xl font-bold text-xl mb-4" style={{ boxShadow: '0 8px 32px rgba(232, 121, 249, 0.4)' }}><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-6 border border-2 border-black"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
+              <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl mb-4" style={{ boxShadow: '0 8px 32px rgba(232, 121, 249, 0.4)' }}><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
               <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link>
             </motion.div>
           )}

@@ -134,13 +134,13 @@ const AuditoryMemoryGame: React.FC = () => {
 
     if (phase === 'welcome') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-pink-950 to-rose-950 flex items-center justify-center p-6 text-white relative overflow-hidden">
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black flex items-center justify-center p-6 text-white relative overflow-hidden">
                 <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl" /></div>
                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
-                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-pink-400 to-rose-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Music size={52} className="text-white drop-shadow-lg" /></motion.div>
-                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-pink-300 via-rose-300 to-red-300 bg-clip-text text-transparent">İşitsel Hafıza</h1>
+                    <motion.div className="w-28 h-28 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Music size={52} className="text-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-slate-50 dark:bg-slate-800 border-4 border-black bg-clip-text text-transparent">İşitsel Hafıza</h1>
                     <p className="text-slate-300 mb-8 text-lg">Melodileri dikkatle dinle, notaların sırasını aklında tut ve aynı müziği tekrar çalarak hafızanı kanıtla!</p>
-                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 mb-6 text-left border border-2 border-black">
                         <h3 className="text-lg font-bold text-pink-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3>
                         <ul className="space-y-2 text-slate-300 text-sm">
                             <li className="flex items-center gap-2"><span className="w-5 h-5 bg-pink-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Çalınan <strong>nota dizisini</strong> pür dikkat dinle</span></li>
@@ -149,14 +149,14 @@ const AuditoryMemoryGame: React.FC = () => {
                         </ul>
                     </div>
                     <div className="bg-pink-500/10 text-pink-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-pink-500/30 font-bold uppercase tracking-widest">TUZÖ 5.4.2 İşitsel Melodi Dizisi & Çalışma Belleği</div>
-                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-pink-500 to-rose-600 rounded-2xl font-bold text-xl shadow-2xl"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
                 </motion.div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-pink-950 to-rose-950 text-white relative overflow-hidden flex flex-col">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black text-white relative overflow-hidden flex flex-col">
             <div className="relative z-10 p-4 pt-20">
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
                     <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
@@ -175,7 +175,7 @@ const AuditoryMemoryGame: React.FC = () => {
                 <AnimatePresence mode="wait">
                     {phase === 'listening' && (
                         <motion.div key="listening" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }} className="flex flex-col items-center gap-8">
-                            <motion.div animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }} className="w-24 h-24 bg-pink-500/20 rounded-full flex items-center justify-center border-4 border-pink-400/50 shadow-2xl text-pink-400"><Volume2 size={40} /></motion.div>
+                            <motion.div animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }} className="w-24 h-24 bg-pink-500/20 rounded-full flex items-center justify-center border-4 border-pink-400/50 shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] text-pink-400"><Volume2 size={40} /></motion.div>
                             <h2 className="text-3xl font-black text-pink-300">DİKKATLE DİNLE!</h2>
                             {/* Active Note Display */}
                             <AnimatePresence mode="wait">
@@ -191,7 +191,7 @@ const AuditoryMemoryGame: React.FC = () => {
                                         <motion.div
                                             animate={{ scale: [1, 1.15, 1] }}
                                             transition={{ duration: 0.4, repeat: Infinity }}
-                                            className="w-20 h-20 rounded-[35%] flex items-center justify-center text-white text-2xl font-black shadow-2xl border-2 border-white/30"
+                                            className="w-20 h-20 rounded-[35%] flex items-center justify-center text-white text-2xl font-black shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] border-2 border-white/30"
                                             style={{
                                                 backgroundColor: NOTES[sequence[currentPlayIndex]].color,
                                                 boxShadow: `0 0 30px ${NOTES[sequence[currentPlayIndex]].color}60, inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.2)`
@@ -209,10 +209,10 @@ const AuditoryMemoryGame: React.FC = () => {
                                         key={i}
                                         animate={i === currentPlayIndex ? { scale: 1.3 } : { scale: 1 }}
                                         className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black border-2 transition-all duration-300 ${i === currentPlayIndex
-                                            ? 'border-white/50 text-white shadow-lg'
+                                            ? 'border-white/50 text-white shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]'
                                             : i < currentPlayIndex
-                                                ? 'border-white/20 text-white/80'
-                                                : 'border-white/10 text-white/20'
+                                                ? 'border-2 border-black text-white/80'
+                                                : 'border-2 border-black text-white/20'
                                             }`}
                                         style={{
                                             backgroundColor: i <= currentPlayIndex ? `${NOTES[noteIdx].color}${i === currentPlayIndex ? '' : '80'}` : 'rgba(255,255,255,0.05)',
@@ -231,32 +231,32 @@ const AuditoryMemoryGame: React.FC = () => {
                             <h2 className="text-3xl font-black text-white/50 tracking-widest uppercase">SIRAYLA ÇAL</h2>
                             <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-4 w-full">
                                 {NOTES.map((note, idx) => (
-                                    <motion.button key={idx} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={() => handleNoteClick(idx)} className={`aspect-square sm:aspect-[3/4] rounded-2xl border-2 transition-all shadow-xl flex flex-col items-center justify-between p-4 group ${activeNote === idx ? 'scale-110 shadow-3xl' : 'hover:shadow-2xl'}`} style={{ backgroundColor: activeNote === idx ? note.color : `${note.color}15`, borderColor: activeNote === idx ? 'white' : `${note.color}40`, color: activeNote === idx ? 'white' : note.color }}>
-                                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform"><Music size={16} /></div>
+                                    <motion.button key={idx} whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={() => handleNoteClick(idx)} className={`aspect-square sm:aspect-[3/4] rounded-2xl border-2 transition-all shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a] flex flex-col items-center justify-between p-4 group ${activeNote === idx ? 'scale-110 shadow-[16px_16px_0_#000] dark:shadow-[16px_16px_0_#0f172a]' : 'hover:shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]'}`} style={{ backgroundColor: activeNote === idx ? note.color : `${note.color}15`, borderColor: activeNote === idx ? 'white' : `${note.color}40`, color: activeNote === idx ? 'white' : note.color }}>
+                                        <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform"><Music size={16} /></div>
                                         <span className="text-xl font-black font-mono">{note.name}</span>
-                                        <div className="w-full h-1 rounded-full bg-white/20 mt-2" />
+                                        <div className="w-full h-1 rounded-full bg-white dark:bg-slate-800 mt-2" />
                                     </motion.button>
                                 ))}
                             </div>
                             <div className="flex gap-3 mt-4">
                                 {sequence.map((_, i) => (
-                                    <div key={i} className={`w-4 h-4 rounded-full border border-white/20 ${i < playerSequence.length ? 'bg-emerald-500' : 'bg-white/5'}`} />
+                                    <div key={i} className={`w-4 h-4 rounded-full border border-2 border-black ${i < playerSequence.length ? 'bg-emerald-500' : 'bg-white dark:bg-slate-800'}`} />
                                 ))}
                             </div>
                         </motion.div>
                     )}
 
                     {feedbackState && (
-                        <motion.div key="feed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center"><h2 className={`text-5xl font-black ${feedbackState.correct ? 'text-emerald-400' : 'text-red-400'} drop-shadow-2xl italic tracking-tighter`}>{feedbackState.correct ? 'HARİKA MELODİ! 🎵' : 'DİKKAT!'}</h2><GameFeedbackBanner feedback={feedbackState} /></motion.div>
+                        <motion.div key="feed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center"><h2 className={`text-5xl font-black ${feedbackState.correct ? 'text-emerald-400' : 'text-red-400'} drop-shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] italic tracking-tighter`}>{feedbackState.correct ? 'HARİKA MELODİ! 🎵' : 'DİKKAT!'}</h2><GameFeedbackBanner feedback={feedbackState} /></motion.div>
                     )}
 
                     {(phase === 'game_over' || phase === 'victory') && (
                         <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl">
-                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-pink-500 to-rose-700 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
                             <h2 className="text-3xl font-black text-pink-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Melodi Dehası!' : 'Harika!'}</h2>
                             <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'İşitsel hafıza ve melodi işleme becerin tek kelimeyle mükemmel!' : 'Duyduğun notaları zihninde daha iyi tutmak için melodiye odaklanmalısın!'}</p>
-                            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
-                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-pink-500 to-rose-600 rounded-2xl font-bold text-xl mb-4 shadow-2xl"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-6 border border-2 border-black"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl mb-4 shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
                             <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link>
                         </motion.div>
                     )}

@@ -237,15 +237,15 @@ const CosmicMemoryGame: React.FC = () => {
 
     if (!gameStarted) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center p-6 text-white relative overflow-hidden">
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black flex items-center justify-center p-6 text-white relative overflow-hidden">
                 <div className="fixed inset-0 overflow-hidden pointer-events-none">
                     <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl" />
                 </div>
                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
-                    <motion.div className="w-28 h-28 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><Star size={52} className="text-white fill-white drop-shadow-lg" /></motion.div>
-                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">Kozmik Hafıza</h1>
+                    <motion.div className="w-28 h-28 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><Star size={52} className="text-white fill-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" /></motion.div>
+                    <h1 className="text-4xl font-black mb-4 bg-slate-50 dark:bg-slate-800 border-4 border-black bg-clip-text text-transparent">Kozmik Hafıza</h1>
                     <p className="text-slate-300 mb-8 text-lg">Yıldızların sırasını hatırla! Parlayan ışıkları takip et ve hafızanı kanıtla.</p>
-                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 mb-6 text-left border border-2 border-black">
                         <h3 className="text-lg font-bold text-indigo-300 mb-3 flex items-center gap-2"><Eye size={20} /> Nasıl Oynanır?</h3>
                         <ul className="space-y-2 text-slate-300 text-sm">
                             <li className="flex items-center gap-2"><Sparkles size={14} className="text-indigo-400" /><span>Parlayan yıldızların sırasını dikkatle izle</span></li>
@@ -254,14 +254,14 @@ const CosmicMemoryGame: React.FC = () => {
                         </ul>
                     </div>
                     <div className="bg-indigo-500/10 text-indigo-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30 font-bold uppercase tracking-widest">TUZÖ 5.4.2 Görsel Kısa Süreli Bellek</div>
-                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl shadow-[0_8px_32px_rgba(99,102,241,0.4)]"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
+                    <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl shadow-[0_8px_32px_rgba(99,102,241,0.4)]"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
                 </motion.div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white relative overflow-hidden">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black text-white relative overflow-hidden">
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl" />
             </div>
@@ -282,12 +282,12 @@ const CosmicMemoryGame: React.FC = () => {
                 <AnimatePresence mode="wait">
                     {(state.status !== 'GAMEOVER' && state.status !== 'VICTORY') && (
                         <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full flex flex-col items-center">
-                            <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className={`mb-8 flex items-center gap-3 px-8 py-4 rounded-3xl font-black text-xl shadow-2xl ${state.status === 'DISPLAYING' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>{state.status === 'DISPLAYING' ? <><Eye size={24} /> TAKİP ET!</> : <><Brain size={24} /> {state.mode === 'REVERSE' ? 'TERS SIRAYLA TIKLA!' : 'AYNI SIRAYLA TIKLA!'}</>}</motion.div>
-                            <div className="grid gap-4 p-8 bg-white/5 backdrop-blur-2xl rounded-[48px] border border-white/10 shadow-[0_32px_64px_rgba(0,0,0,0.4)]" style={{ gridTemplateColumns: `repeat(${state.gridSize}, 1fr)`, width: 'min(90vw, 450px)' }}>
+                            <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className={`mb-8 flex items-center gap-3 px-8 py-4 rounded-3xl font-black text-xl shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] ${state.status === 'DISPLAYING' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>{state.status === 'DISPLAYING' ? <><Eye size={24} /> TAKİP ET!</> : <><Brain size={24} /> {state.mode === 'REVERSE' ? 'TERS SIRAYLA TIKLA!' : 'AYNI SIRAYLA TIKLA!'}</>}</motion.div>
+                            <div className="grid gap-4 p-8 bg-white dark:bg-slate-800 rounded-[48px] border border-2 border-black shadow-[0_32px_64px_rgba(0,0,0,0.4)]" style={{ gridTemplateColumns: `repeat(${state.gridSize}, 1fr)`, width: 'min(90vw, 450px)' }}>
                                 {Array.from({ length: state.gridSize * state.gridSize }).map((_, idx) => {
                                     const isActive = state.isDisplaying === idx;
                                     const isClicked = state.userSequence.includes(idx);
-                                    return (<motion.button key={idx} whileHover={state.status === 'INPUT' ? { scale: 1.05 } : {}} whileTap={state.status === 'INPUT' ? { scale: 0.95 } : {}} onClick={() => handleCellClick(idx)} className="aspect-square rounded-2xl relative overflow-hidden transition-all duration-300" style={{ background: isActive ? 'linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)' : isClicked ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255,255,255,0.05)', boxShadow: isActive ? 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.4), 0 0 40px rgba(129, 140, 248, 0.6)' : 'inset 0 4px 8px rgba(255,255,255,0.05), inset 0 -4px 8px rgba(0,0,0,0.2)', border: isActive ? '2px solid rgba(255,255,255,0.5)' : '1px solid rgba(255,255,255,0.1)' }}><AnimatePresence>{(isActive || isClicked) && (<motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} className="flex items-center justify-center w-full h-full"><Star size={state.gridSize === 3 ? 48 : 32} className={isActive ? "text-white fill-white drop-shadow-lg" : "text-indigo-400/40"} /></motion.div>)}</AnimatePresence></motion.button>);
+                                    return (<motion.button key={idx} whileHover={state.status === 'INPUT' ? { scale: 1.05 } : {}} whileTap={state.status === 'INPUT' ? { scale: 0.95 } : {}} onClick={() => handleCellClick(idx)} className="aspect-square rounded-2xl relative overflow-hidden transition-all duration-300" style={{ background: isActive ? 'linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)' : isClicked ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255,255,255,0.05)', boxShadow: isActive ? 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.4), 0 0 40px rgba(129, 140, 248, 0.6)' : 'inset 0 4px 8px rgba(255,255,255,0.05), inset 0 -4px 8px rgba(0,0,0,0.2)', border: isActive ? '2px solid rgba(255,255,255,0.5)' : '1px solid rgba(255,255,255,0.1)' }}><AnimatePresence>{(isActive || isClicked) && (<motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} className="flex items-center justify-center w-full h-full"><Star size={state.gridSize === 3 ? 48 : 32} className={isActive ? "text-white fill-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" : "text-indigo-400/40"} /></motion.div>)}</AnimatePresence></motion.button>);
                                 })}
                             </div>
                             <div className="mt-8 px-6 py-2 rounded-full border border-pink-500/30 bg-pink-500/10 text-pink-300 font-bold text-sm tracking-widest">{state.mode} MODU</div>
@@ -295,11 +295,11 @@ const CosmicMemoryGame: React.FC = () => {
                     )}
                     {(state.status === 'GAMEOVER' || state.status === 'VICTORY') && (
                         <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[40%] flex items-center justify-center shadow-2xl" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
+                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
                             <h2 className="text-3xl font-bold text-amber-400 mb-2">{state.status === 'VICTORY' ? '🎖️ Kozmik Şampiyon!' : 'Tebrikler!'}</h2>
                             <p className="text-slate-400 mb-6">{state.status === 'VICTORY' ? 'Tüm hafıza görevlerini kusursuz tamamladın!' : 'Hafızan uzay kadar derin ve güçlü!'}</p>
-                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{state.score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{state.level}/{MAX_LEVEL}</p></div></div></div>
-                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl mb-4 shadow-[0_8px_32px_rgba(99,102,241,0.4)]"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
+                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-6 border border-2 border-black"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{state.score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{state.level}/{MAX_LEVEL}</p></div></div></div>
+                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl mb-4 shadow-[0_8px_32px_rgba(99,102,241,0.4)]"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
                             <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link>
                         </motion.div>
                     )}

@@ -494,33 +494,62 @@ const MazeRunnerGame: React.FC = () => {
     // ============== JSX ==============
     if (phase === 'welcome') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white flex flex-col">
-                <div className="relative z-10 p-4 pt-20">
-                    <div className="max-w-5xl mx-auto">
-                        <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
+            <div className="min-h-screen bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 flex flex-col items-center justify-center p-4 sm:p-6 overflow-hidden relative">
+                <div className="relative z-10 w-full max-w-xl">
+                    <div className="w-full flex items-center justify-start mb-6 -ml-2">
+                        <Link to={backLink} className="flex items-center gap-2 text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white transition-colors bg-white dark:bg-slate-800 border-2 border-black px-4 py-2 rounded-xl shadow-[4px_4px_0_#000] active:translate-y-1 active:translate-x-1 active:shadow-none">
+                            <ChevronLeft size={20} /><span>{backLabel}</span>
+                        </Link>
                     </div>
-                </div>
-                <div className="flex-1 flex items-center justify-center p-4">
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-md">
-                        <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-violet-400 to-purple-600 rounded-[40%] flex items-center justify-center shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
-                            <Compass size={52} className="text-white drop-shadow-lg" />
+
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center bg-white dark:bg-slate-800 p-8 rounded-[3rem] border-4 border-black shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] rotate-1">
+                        <motion.div
+                            className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 bg-cyber-pink border-8 border-black shadow-[8px_8px_0_#000] rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center -rotate-3"
+                            animate={{ y: [0, -8, 0] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                        >
+                            <Compass size={56} className="text-black" strokeWidth={2.5} />
                         </motion.div>
-                        <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">Labirent Koşusu</h1>
-                        <p className="text-slate-400 mb-8 text-lg">Parmağınla yolu çiz, duvarlara dokunmadan çıkışa ulaş! Uzamsal ilişki çözümleme ve görsel-motor koordinasyon.</p>
-                        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-8 border border-white/10 text-left">
-                            <ul className="space-y-3 text-sm text-slate-300">
-                                <li className="flex items-center gap-2"><span className="w-5 h-5 bg-violet-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Yeşil noktadan <strong>başla</strong></span></li>
-                                <li className="flex items-center gap-2"><span className="w-5 h-5 bg-violet-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Duvarlara <strong>dokunmadan</strong> çiz</span></li>
-                                <li className="flex items-center gap-2"><span className="w-5 h-5 bg-violet-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Pembe noktaya <strong>ulaş</strong></span></li>
+
+                        <h1 className="text-4xl sm:text-5xl font-syne font-black mb-4 uppercase text-black dark:text-white tracking-tight drop-shadow-sm">
+                            Labirent Koşusu
+                        </h1>
+
+                        <p className="text-slate-600 dark:text-slate-300 font-chivo font-medium mb-8 text-base sm:text-lg">
+                            Parmağınla yolu çiz, duvarlara dokunmadan çıkışa ulaş! Uzamsal ilişki çözümleme ve görsel-motor koordinasyon.
+                        </p>
+
+                        <div className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-5 mb-8 border-2 border-slate-200 dark:border-slate-600 text-left -rotate-1">
+                            <ul className="space-y-3 text-sm sm:text-base font-chivo font-bold text-slate-700 dark:text-slate-300">
+                                <li className="flex items-center gap-3">
+                                    <span className="flex-shrink-0 w-8 h-8 bg-cyber-green text-black border-2 border-black rounded-full flex items-center justify-center text-sm shadow-[2px_2px_0_#000]">1</span>
+                                    <span>Yeşil noktadan <strong>başla</strong></span>
+                                </li>
+                                <li className="flex items-center gap-3">
+                                    <span className="flex-shrink-0 w-8 h-8 bg-cyber-yellow text-black border-2 border-black rounded-full flex items-center justify-center text-sm shadow-[2px_2px_0_#000]">2</span>
+                                    <span>Duvarlara <strong>dokunmadan</strong> çiz</span>
+                                </li>
+                                <li className="flex items-center gap-3">
+                                    <span className="flex-shrink-0 w-8 h-8 bg-cyber-pink text-black border-2 border-black rounded-full flex items-center justify-center text-sm shadow-[2px_2px_0_#000]">3</span>
+                                    <span>Pembe noktaya <strong>ulaş</strong></span>
+                                </li>
                             </ul>
                         </div>
-                        <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full">
-                            <span className="text-[9px] font-black text-violet-300 uppercase tracking-wider">TUZÖ</span>
-                            <span className="text-[9px] font-bold text-violet-400">5.3.3 Uzamsal İlişki Çözümleme</span>
+
+                        <div className="mb-8 inline-flex items-center gap-2 px-4 py-2 bg-cyber-blue/10 dark:bg-cyber-blue/20 border-2 border-cyber-blue text-cyber-blue rounded-xl shadow-[2px_2px_0_#000] dark:shadow-[2px_2px_0_#0f172a] rotate-2">
+                            <span className="text-xs font-black uppercase tracking-widest">TUZÖ</span>
+                            <span className="text-xs font-bold">5.3.3 Uzamsal İlişki Çözümleme</span>
                         </div>
+
                         <div>
-                            <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-gradient-to-r from-violet-500 to-purple-600 rounded-2xl font-bold text-xl shadow-2xl" style={{ boxShadow: '0 8px 32px rgba(139, 92, 246, 0.4)' }}>
-                                <div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div>
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleStart}
+                                className="w-full sm:w-auto px-10 py-5 bg-cyber-green text-black font-syne font-black text-xl uppercase tracking-widest border-4 border-black shadow-[8px_8px_0_#000] rounded-2xl hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] active:translate-y-2 active:translate-x-1 active:shadow-none transition-all flex items-center justify-center gap-3 mx-auto group"
+                            >
+                                <Play size={24} className="fill-black group-hover:scale-110 transition-transform" />
+                                <span>Başla</span>
                             </motion.button>
                         </div>
                     </motion.div>
@@ -530,40 +559,57 @@ const MazeRunnerGame: React.FC = () => {
     }
 
     return (
-        <div className={`min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white relative overflow-hidden flex flex-col ${phase === 'playing' || phase === 'feedback' ? 'overflow-hidden h-screen' : ''} ${shake ? 'animate-pulse' : ''}`} style={phase === 'playing' || phase === 'feedback' ? { touchAction: 'none', overscrollBehavior: 'none' } : {}}>
+        <div className={`min-h-[100dvh] bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 flex flex-col items-center p-4 sm:p-6 ${(phase === 'playing' || phase === 'feedback') ? 'overflow-hidden' : 'overflow-auto'} ${shake ? 'animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]' : ''}`} style={(phase === 'playing' || phase === 'feedback') ? { touchAction: 'none', overscrollBehavior: 'none' } : {}}>
             {/* Header */}
-            <div className="relative z-10 p-4 pt-20">
-                <div className="max-w-5xl mx-auto flex items-center justify-between">
-                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
-                    {(phase !== 'game_over' && phase !== 'victory') && (
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30"><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={14} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'} />))}</div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30"><Timer className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30"><Zap className="text-emerald-400" size={18} /><span className="font-bold text-emerald-400">Seviye {level}/{MAX_LEVEL}</span></div>
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/15 border border-amber-500/20"><Compass className={wrongTurnsLeft === 0 ? 'text-red-500 animate-pulse' : 'text-amber-400'} size={16} /><span className={`font-bold text-sm ${wrongTurnsLeft < 2 ? 'text-red-400' : 'text-amber-400'}`}>{wrongTurnsLeft}</span></div>
+            <div className="w-full max-w-5xl flex items-center justify-between mb-4 mt-2">
+                <Link to={backLink} className="flex items-center gap-2 text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white transition-colors bg-white dark:bg-slate-800 border-2 border-black px-4 py-2 rounded-xl shadow-[4px_4px_0_#000] active:translate-y-1 active:translate-x-1 active:shadow-none">
+                    <ChevronLeft size={20} /><span>{backLabel}</span>
+                </Link>
+                {(phase !== 'game_over' && phase !== 'victory') && (
+                    <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
+                        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-cyber-yellow border-4 border-black rounded-xl shadow-[4px_4px_0_#000] rotate-1">
+                            <Star className="text-black fill-black drop-shadow-sm" size={18} />
+                            <span className="font-syne font-black text-black">{score}</span>
                         </div>
-                    )}
-                </div>
+                        <div className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-cyber-pink border-4 border-black rounded-xl shadow-[4px_4px_0_#000] -rotate-1">
+                            {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
+                                <Heart key={i} size={18} className={i < lives ? 'text-black fill-black' : 'text-black/20 fill-black/20'} strokeWidth={2.5} />
+                            ))}
+                        </div>
+                        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-cyber-blue border-4 border-black rounded-xl shadow-[4px_4px_0_#000] rotate-2">
+                            <Timer className={timeLeft < 30 ? 'text-white animate-pulse' : 'text-white'} size={18} />
+                            <span className={`font-syne font-black ${timeLeft < 30 ? 'text-white drop-shadow-[0_0_8px_white]' : 'text-white'}`}>{formatTime(timeLeft)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-cyber-green border-4 border-black rounded-xl shadow-[4px_4px_0_#000] -rotate-2">
+                            <Zap className="text-black fill-black" size={18} />
+                            <span className="font-syne font-black text-black text-sm whitespace-nowrap">Seviye {level}/{MAX_LEVEL}</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white dark:bg-slate-800 border-4 border-black rounded-xl shadow-[4px_4px_0_#000] rotate-1">
+                            <Compass className={wrongTurnsLeft === 0 ? 'text-red-500 animate-pulse' : 'text-slate-800 dark:text-slate-200'} size={18} strokeWidth={2.5} />
+                            <span className={`font-syne font-black ${wrongTurnsLeft < 2 ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}`}>{wrongTurnsLeft} Hata Payı</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Game Area */}
-            <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
+            <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-lg flex-1 mt-2">
                 <AnimatePresence mode="wait">
                     {(phase === 'playing' || phase === 'feedback') && maze && (
-                        <motion.div key="game" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex flex-col items-center">
+                        <motion.div key="game" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex flex-col items-center w-full relative">
                             {/* Warning popup */}
                             {warning && (
-                                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="absolute top-4 z-40">
-                                    <span className="text-2xl font-black text-red-500 px-4 py-2 bg-red-500/20 rounded-xl border border-red-500/30">{warning}</span>
+                                <motion.div initial={{ opacity: 0, y: -20, rotate: -2 }} animate={{ opacity: 1, y: 0, rotate: 2 }} className="absolute -top-12 z-40 pointer-events-none">
+                                    <span className="text-2xl font-syne font-black text-white px-6 py-3 bg-cyber-pink border-4 border-black rounded-2xl shadow-[6px_6px_0_#000] uppercase tracking-widest">{warning}</span>
                                 </motion.div>
                             )}
 
-                            <div ref={containerRef} className="relative touch-none" style={{ width: canvasSize, height: canvasSize }}>
+                            <div ref={containerRef} className="relative touch-none mt-4 bg-white dark:bg-slate-800 p-2 sm:p-4 rounded-[2rem] border-4 border-black shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a]" style={{ width: canvasSize + 32, height: canvasSize + 32 }}>
                                 <canvas
                                     ref={canvasRef}
-                                    className="cursor-crosshair rounded-2xl border-2 border-white/10"
-                                    style={{ background: 'linear-gradient(135deg, rgba(15,10,40,0.95) 0%, rgba(30,15,60,0.95) 100%)', boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.3), 0 0 30px rgba(139, 92, 246, 0.2)' }}
+                                    className="cursor-crosshair rounded-xl"
+                                    onClick={() => { }} // prevents default click behaviors causing issues
+                                    style={{ background: 'transparent' }}
                                     onMouseDown={(e) => handleInputStart(e.clientX, e.clientY)}
                                     onMouseMove={(e) => handleInputMove(e.clientX, e.clientY)}
                                     onMouseUp={handleInputEnd}
@@ -577,31 +623,73 @@ const MazeRunnerGame: React.FC = () => {
                     )}
 
                     {phase === 'game_over' && (
-                        <motion.div key="gameover" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-400 to-rose-600 rounded-[40%] flex items-center justify-center shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]">
-                                <Trophy size={42} className="text-white" />
+                        <motion.div key="gameover" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl w-full">
+                            <motion.div
+                                className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 bg-cyber-pink border-8 border-black shadow-[12px_12px_0_#000] rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center rotate-3"
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                            >
+                                <Trophy size={56} className="text-black" strokeWidth={2.5} />
+                            </motion.div>
+                            <h2 className="text-4xl sm:text-5xl font-syne font-black text-black dark:text-white mb-4 uppercase tracking-tight">Oyun Bitti</h2>
+                            <p className="text-slate-600 dark:text-slate-300 font-chivo font-medium text-lg mb-8">Uzamsal zekanı geliştirmek için labirentleri çözmeye devam et.</p>
+
+                            <div className="bg-white dark:bg-slate-800 border-4 border-black shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a] p-6 sm:p-8 rounded-2xl sm:rounded-3xl mb-8 -rotate-1">
+                                <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                                    <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                        <p className="text-slate-500 dark:text-slate-400 font-syne font-bold uppercase tracking-widest text-sm mb-2">Skor</p>
+                                        <p className="text-4xl font-black text-cyber-blue drop-shadow-sm">{score}</p>
+                                    </div>
+                                    <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                        <p className="text-slate-500 dark:text-slate-400 font-syne font-bold uppercase tracking-widest text-sm mb-2">Seviye</p>
+                                        <p className="text-4xl font-black text-cyber-pink drop-shadow-sm">{level}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <h2 className="text-3xl font-bold text-red-400 mb-2">Oyun Bitti</h2>
-                            <p className="text-slate-400 mb-4">Seviye {level} • Puan: {score}</p>
-                            <p className="text-slate-500 mb-8">Uzamsal zekanı geliştirmek için labirentleri çözmeye devam et.</p>
-                            <div className="flex gap-4 justify-center">
-                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-600 rounded-2xl font-bold text-lg"><RotateCcw size={20} />Tekrar Dene</motion.button>
-                                <Link to={backLink} className="flex items-center gap-2 px-6 py-4 bg-white/10 rounded-2xl font-bold"><ChevronLeft size={20} />Geri Dön</Link>
+
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                                <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="w-full sm:w-auto px-10 py-5 bg-cyber-blue text-white font-syne font-black text-xl uppercase tracking-widest border-4 border-black shadow-[8px_8px_0_#000] hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] active:translate-y-2 active:translate-x-1 active:shadow-none transition-all flex items-center justify-center gap-3">
+                                    <RotateCcw size={24} />Tekrar Dene
+                                </motion.button>
+                                <Link to={backLink} className="w-full sm:w-auto px-10 py-5 bg-white dark:bg-slate-800 text-black dark:text-white font-syne font-black text-xl uppercase tracking-widest border-4 border-black shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a] hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] dark:hover:shadow-[12px_12px_0_#0f172a] active:translate-y-2 active:translate-x-1 active:shadow-none transition-all text-center">
+                                    Geri Dön
+                                </Link>
                             </div>
                         </motion.div>
                     )}
 
                     {phase === 'victory' && (
-                        <motion.div key="victory" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
-                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-400 to-yellow-600 rounded-[40%] flex items-center justify-center shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                                <Trophy size={42} className="text-white" />
+                        <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl w-full">
+                            <motion.div
+                                className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 bg-cyber-yellow border-8 border-black shadow-[12px_12px_0_#000] rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center -rotate-3"
+                                animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                            >
+                                <Trophy size={56} className="text-black" strokeWidth={2.5} />
                             </motion.div>
-                            <h2 className="text-3xl font-bold text-amber-400 mb-2">🎖️ Labirent Fatihi!</h2>
-                            <p className="text-slate-400 mb-4">Tüm {MAX_LEVEL} seviyeyi tamamladın!</p>
-                            <p className="text-2xl font-black text-amber-300 mb-8">{score} Puan</p>
-                            <div className="flex gap-4 justify-center">
-                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl font-bold text-lg text-black"><Sparkles size={20} />Tekrar Oyna</motion.button>
-                                <Link to={backLink} className="flex items-center gap-2 px-6 py-4 bg-white/10 rounded-2xl font-bold"><ChevronLeft size={20} />Geri Dön</Link>
+                            <h2 className="text-4xl sm:text-5xl font-syne font-black text-black dark:text-white mb-4 uppercase tracking-tight">🎖️ Labirent Fatihi!</h2>
+                            <p className="text-slate-600 dark:text-slate-300 font-chivo font-medium text-lg mb-8">Tüm {MAX_LEVEL} seviyeyi tamamladın!</p>
+
+                            <div className="bg-white dark:bg-slate-800 border-4 border-black shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a] p-6 sm:p-8 rounded-2xl sm:rounded-3xl mb-8 rotate-1">
+                                <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                                    <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                        <p className="text-slate-500 dark:text-slate-400 font-syne font-bold uppercase tracking-widest text-sm mb-2">Skor</p>
+                                        <p className="text-4xl font-black text-cyber-yellow drop-shadow-sm">{score}</p>
+                                    </div>
+                                    <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                        <p className="text-slate-500 dark:text-slate-400 font-syne font-bold uppercase tracking-widest text-sm mb-2">Seviye</p>
+                                        <p className="text-4xl font-black text-cyber-green drop-shadow-sm">{level}/{MAX_LEVEL}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                                <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="w-full sm:w-auto px-10 py-5 bg-cyber-green text-black font-syne font-black text-xl uppercase tracking-widest border-4 border-black shadow-[8px_8px_0_#000] hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] active:translate-y-2 active:translate-x-1 active:shadow-none transition-all flex items-center justify-center gap-3">
+                                    <Sparkles size={24} className="fill-black" />Tekrar Oyna
+                                </motion.button>
+                                <Link to={backLink} className="w-full sm:w-auto px-10 py-5 bg-white dark:bg-slate-800 text-black dark:text-white font-syne font-black text-xl uppercase tracking-widest border-4 border-black shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a] hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] dark:hover:shadow-[12px_12px_0_#0f172a] active:translate-y-2 active:translate-x-1 active:shadow-none transition-all text-center">
+                                    Geri Dön
+                                </Link>
                             </div>
                         </motion.div>
                     )}
