@@ -354,61 +354,54 @@ const LazerHafizaGame: React.FC = () => {
     // Welcome Screen
     if (phase === 'welcome') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 flex items-center justify-center p-6 text-white relative overflow-hidden">
-                <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
-                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl" />
-                </div>
+            <div className="min-h-screen bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 flex items-center justify-center p-6 text-black dark:text-white relative overflow-hidden">
                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10">
                     <motion.div
-                        className="w-28 h-28 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
+                        className="w-24 h-24 sm:w-32 sm:h-32 bg-cyber-green border-8 border-black shadow-[8px_8px_0_#000] rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 -rotate-3"
 
                         animate={{ y: [0, -8, 0] }}
                         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
-                        <Crosshair size={52} className="text-white drop-shadow-lg" />
+                        <Crosshair size={52} className="text-black" strokeWidth={2.5} />
                     </motion.div>
-                    <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 bg-clip-text text-transparent">
+                    <h1 className="text-4xl sm:text-5xl font-syne font-black mb-4 uppercase tracking-tight drop-shadow-sm">
                         Lazer Hafıza
                     </h1>
-                    <p className="text-slate-300 mb-8 text-lg">
+                    <p className="text-slate-600 dark:text-slate-300 font-chivo font-medium mb-8 text-base sm:text-lg">
                         Noktalar arasındaki lazer yolunu izle ve hafızandan aynı yolu yeniden çiz!
                     </p>
-                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 mb-6 text-left border border-white/20">
-                        <h3 className="text-lg font-bold text-emerald-300 mb-3 flex items-center gap-2">
+                    <div className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-5 mb-6 text-left border-2 border-slate-200 dark:border-slate-600 -rotate-1">
+                        <h3 className="text-lg font-syne font-black tracking-widest uppercase mb-3 flex items-center gap-2">
                             <Eye size={20} /> Nasıl Oynanır?
                         </h3>
-                        <ul className="space-y-2 text-slate-300 text-sm">
-                            <li className="flex items-center gap-2">
-                                <Sparkles size={14} className="text-emerald-400 shrink-0" />
+                        <ul className="space-y-3 text-sm sm:text-base font-chivo font-bold text-slate-700 dark:text-slate-300">
+                            <li className="flex items-center gap-3">
+                                <Sparkles size={20} className="text-cyber-green shrink-0" />
                                 <span>Lazer ışını noktalar arasında bir yol çizer — dikkatle izle</span>
                             </li>
-                            <li className="flex items-center gap-2">
-                                <Sparkles size={14} className="text-emerald-400 shrink-0" />
+                            <li className="flex items-center gap-3">
+                                <Sparkles size={20} className="text-cyber-green shrink-0" />
                                 <span>Işın kaybolunca noktaları sırasıyla tıklayarak yolu yeniden oluştur</span>
                             </li>
-                            <li className="flex items-center gap-2">
-                                <Sparkles size={14} className="text-emerald-400 shrink-0" />
+                            <li className="flex items-center gap-3">
+                                <Sparkles size={20} className="text-cyber-green shrink-0" />
                                 <span>Seviye ilerledikçe grid büyür, yol uzar, çapraz geçişler eklenir!</span>
                             </li>
                         </ul>
                     </div>
-                    <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full">
-                        <span className="text-[9px] font-black text-violet-300 uppercase tracking-wider">TUZÖ</span>
-                        <span className="text-[9px] font-bold text-violet-400">5.4.2 Görsel Kısa Süreli Bellek</span>
+                    <div className="mb-8 inline-flex items-center gap-2 px-4 py-2 bg-cyber-blue/10 dark:bg-cyber-blue/20 border-2 border-cyber-blue text-cyber-blue rounded-xl shadow-[2px_2px_0_#000] dark:shadow-[2px_2px_0_#0f172a] rotate-2">
+                        <span className="text-xs font-black uppercase tracking-widest">TUZÖ</span>
+                        <span className="text-xs font-bold">5.4.2 Görsel Kısa Süreli Bellek</span>
                     </div>
                     <div>
                         <motion.button
                             whileHover={{ scale: 1.05, y: -4 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={handleStart}
-                            className="px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl font-bold text-xl"
-                            style={{ boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)' }}
+                            className="w-full sm:w-auto px-10 py-5 bg-cyber-green text-black font-syne font-black text-xl uppercase tracking-widest border-4 border-black shadow-[8px_8px_0_#000] rounded-2xl hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] active:translate-y-2 active:translate-x-1 active:shadow-none transition-all flex items-center justify-center gap-3 mx-auto group"
                         >
-                            <div className="flex items-center gap-3">
-                                <Play size={28} className="fill-white" />
-                                <span>Başla</span>
-                            </div>
+                            <Play size={24} className="fill-black group-hover:scale-110 transition-transform" />
+                            <span>Başla</span>
                         </motion.button>
                     </div>
                 </motion.div>
@@ -417,47 +410,41 @@ const LazerHafizaGame: React.FC = () => {
     }
 
     return (
-        <div className={`min-h-screen bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900 text-white relative overflow-hidden ${(phase === 'preview' || phase === 'playing' || phase === 'feedback') ? 'overflow-hidden h-screen' : ''}`}
+        <div className={`min-h-screen bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 text-black dark:text-white relative overflow-hidden ${(phase === 'preview' || phase === 'playing' || phase === 'feedback') ? 'overflow-hidden h-screen' : ''}`}
             style={(phase === 'preview' || phase === 'playing' || phase === 'feedback') ? { touchAction: 'none', overscrollBehavior: 'none' } : {}}
         >
-            {/* Background Decoration */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl" />
-            </div>
-
             {/* Header HUD */}
-            <div className="relative z-10 p-4 pt-20">
+            <div className="relative z-10 p-4 mt-2">
                 <div className="max-w-5xl mx-auto flex items-center justify-between">
-                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                    <Link to={backLink} className="flex items-center gap-2 text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white transition-colors bg-white dark:bg-slate-800 border-2 border-black px-4 py-2 rounded-xl shadow-[4px_4px_0_#000] active:translate-y-1 active:translate-x-1 active:shadow-none">
                         <ChevronLeft size={20} /><span>{backLabel}</span>
                     </Link>
                     {(phase !== 'game_over' && phase !== 'victory') && (
-                        <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
                             {/* Score */}
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-cyber-yellow border-4 border-black rounded-xl shadow-[4px_4px_0_#000] rotate-1"
                             >
-                                <Star className="text-amber-400 fill-amber-400" size={18} />
-                                <span className="font-bold text-amber-400">{score}</span>
+                                <Star className="text-black fill-black drop-shadow-sm" size={18} />
+                                <span className="font-syne font-black text-black">{score}</span>
                             </div>
                             {/* Lives */}
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            <div className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-cyber-pink border-4 border-black rounded-xl shadow-[4px_4px_0_#000] -rotate-1"
                             >
                                 {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
-                                    <Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />
+                                    <Heart key={i} size={18} className={i < lives ? 'text-black fill-black' : 'text-black/20 fill-black/20'} strokeWidth={2.5} />
                                 ))}
                             </div>
                             {/* Timer */}
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-cyber-blue border-4 border-black rounded-xl shadow-[4px_4px_0_#000] rotate-2"
                             >
-                                <TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} />
-                                <span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span>
+                                <TimerIcon className={timeLeft < 30 ? 'text-white animate-pulse' : 'text-white'} size={18} />
+                                <span className={`font-syne font-black ${timeLeft < 30 ? 'text-white drop-shadow-[0_0_8px_white]' : 'text-white'}`}>{formatTime(timeLeft)}</span>
                             </div>
                             {/* Level */}
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                            <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-cyber-green border-4 border-black rounded-xl shadow-[4px_4px_0_#000] -rotate-2"
                             >
-                                <Zap className="text-purple-400" size={18} />
-                                <span className="font-bold text-purple-400">{level}/{MAX_LEVEL}</span>
+                                <Zap className="text-black fill-black" size={18} />
+                                <span className="font-syne font-black text-black text-sm whitespace-nowrap">Seviye {level}/{MAX_LEVEL}</span>
                             </div>
                         </div>
                     )}
@@ -474,21 +461,21 @@ const LazerHafizaGame: React.FC = () => {
                             <motion.div
                                 animate={{ scale: [1, 1.05, 1] }}
                                 transition={{ duration: 1.5, repeat: Infinity }}
-                                className={`mb-6 flex items-center gap-3 px-6 py-3 rounded-3xl font-black text-lg shadow-2xl ${phase === 'preview'
-                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                className={`mb-6 flex items-center gap-3 px-6 py-3 rounded-2xl font-syne font-black uppercase tracking-widest text-sm border-4 border-black shadow-[6px_6px_0_#000] rotate-1 ${phase === 'preview'
+                                    ? 'bg-cyber-yellow text-black'
                                     : phase === 'feedback'
-                                        ? feedbackState?.correct ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                        ? feedbackState?.correct ? 'bg-cyber-green text-black' : 'bg-cyber-pink text-black'
+                                        : 'bg-white dark:bg-slate-800 text-black dark:text-white'
                                     }`}
                             >
-                                {phase === 'preview' ? <><Eye size={22} /> Lazer Yolunu İzle!</> :
-                                    phase === 'feedback' ? (feedbackState?.correct ? <><Star size={22} /> Doğru!</> : <><Brain size={22} /> Yanlış Sıra!</>) :
-                                        <><Brain size={22} /> Yolu Yeniden Çiz!</>}
+                                {phase === 'preview' ? <><Eye size={22} className="text-black" /> Lazer Yolunu İzle!</> :
+                                    phase === 'feedback' ? (feedbackState?.correct ? <><Star size={22} className="text-black fill-black" /> Doğru!</> : <><Brain size={22} className="text-black" /> Yanlış Sıra!</>) :
+                                        <><Brain size={22} className="text-black dark:text-white" /> Yolu Yeniden Çiz!</>}
                             </motion.div>
 
                             {/* Grid Container */}
                             <div
-                                className="relative bg-white/5 backdrop-blur-2xl rounded-[32px] border border-white/10 shadow-[0_32px_64px_rgba(0,0,0,0.4)] p-6"
+                                className="relative bg-[#FAF9F6] dark:bg-slate-800 rounded-3xl border-4 border-black shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a] p-4 sm:p-6"
                                 style={{ width: canvasSize, height: canvasSize }}
                             >
                                 {/* SVG Overlay for Laser Lines */}
@@ -545,20 +532,23 @@ const LazerHafizaGame: React.FC = () => {
                                         const dotSize = config.gridSize <= 4 ? 'w-5 h-5' : 'w-4 h-4';
 
                                         let nodeStyle: React.CSSProperties = {
-                                            background: 'rgba(255,255,255,0.15)',
-                                            boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1)'
+                                            background: '#cbd5e1', // slate-300
+                                            border: '4px solid #000',
+                                            boxShadow: '4px 4px 0 #000'
                                         };
 
                                         if (active) {
                                             if (isWrongFeedback) {
                                                 nodeStyle = {
-                                                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                                                    boxShadow: '0 0 12px rgba(239, 68, 68, 0.8), inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.3)'
+                                                    background: '#ff2745', // cyber-pink
+                                                    border: '4px solid #000',
+                                                    boxShadow: '6px 6px 0 #000'
                                                 };
                                             } else {
                                                 nodeStyle = {
-                                                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                                                    boxShadow: '0 0 12px rgba(16, 185, 129, 0.8), inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.3)'
+                                                    background: '#14f195', // cyber-green
+                                                    border: '4px solid #000',
+                                                    boxShadow: '6px 6px 0 #000'
                                                 };
                                             }
                                         }
@@ -567,11 +557,9 @@ const LazerHafizaGame: React.FC = () => {
                                             nodeStyle = {
                                                 ...nodeStyle,
                                                 background: isWrongFeedback
-                                                    ? 'linear-gradient(135deg, #f87171, #ef4444)'
-                                                    : 'linear-gradient(135deg, #ffffff, #d1fae5)',
-                                                boxShadow: isWrongFeedback
-                                                    ? '0 0 24px rgba(239, 68, 68, 1), 0 0 48px rgba(239, 68, 68, 0.5)'
-                                                    : '0 0 24px rgba(16, 185, 129, 1), 0 0 48px rgba(16, 185, 129, 0.5)',
+                                                    ? '#ff2745'
+                                                    : '#fff',
+                                                boxShadow: '8px 8px 0 #000',
                                                 transform: 'scale(1.3)'
                                             };
                                         }
@@ -605,55 +593,75 @@ const LazerHafizaGame: React.FC = () => {
 
                     {/* Game Over */}
                     {phase === 'game_over' && (
-                        <motion.div key="gameover" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
+                        <motion.div key="gameover" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl w-full">
                             <motion.div
-                                className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[40%] flex items-center justify-center shadow-2xl"
-                                animate={{ y: [0, -10, 0] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
+                                className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 bg-cyber-pink border-8 border-black shadow-[12px_12px_0_#000] rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center rotate-3"
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <Trophy size={48} className="text-white" />
+                                <Trophy size={56} className="text-black" strokeWidth={2.5} />
                             </motion.div>
-                            <h2 className="text-3xl font-bold text-amber-400 mb-2">Tebrikler!</h2>
-                            <p className="text-slate-400 mb-6">Lazer hafızan güçleniyor, tekrar dene!</p>
-                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div>
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{level}/{MAX_LEVEL}</p></div>
+                            <h2 className="text-4xl sm:text-5xl font-syne font-black text-black dark:text-white mb-4 uppercase tracking-tight">Oyun Bitti</h2>
+                            <p className="text-slate-600 dark:text-slate-300 font-chivo font-medium text-lg mb-8">Lazer hafızan güçleniyor, tekrar dene!</p>
+
+                            <div className="bg-white dark:bg-slate-800 border-4 border-black shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a] p-6 sm:p-8 rounded-2xl sm:rounded-3xl mb-8 -rotate-1">
+                                <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                                    <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                        <p className="text-slate-500 dark:text-slate-400 font-syne font-bold uppercase tracking-widest text-sm mb-2">Skor</p>
+                                        <p className="text-4xl font-black text-cyber-blue drop-shadow-sm">{score}</p>
+                                    </div>
+                                    <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                        <p className="text-slate-500 dark:text-slate-400 font-syne font-bold uppercase tracking-widest text-sm mb-2">Seviye</p>
+                                        <p className="text-4xl font-black text-cyber-green drop-shadow-sm">{level}/{MAX_LEVEL}</p>
+                                    </div>
                                 </div>
                             </div>
-                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl font-bold text-xl mb-4"
-                                style={{ boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)' }}>
-                                <div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div>
+
+                            <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
+                                className="w-full sm:w-auto px-10 py-5 bg-cyber-green text-black font-syne font-black text-xl uppercase tracking-widest border-4 border-black shadow-[8px_8px_0_#000] rounded-2xl hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] active:translate-y-2 active:translate-x-1 active:shadow-none transition-all flex items-center justify-center gap-3 mx-auto mb-6 group"
+                            >
+                                <RotateCcw size={24} className="text-black group-hover:-rotate-90 transition-transform duration-300" />
+                                <span>Tekrar Oyna</span>
                             </motion.button>
-                            <div><Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link></div>
+
+                            <div><Link to={backLink} className="block font-chivo font-bold text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white transition-colors underline decoration-2 underline-offset-4">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link></div>
                         </motion.div>
                     )}
 
                     {/* Victory */}
                     {phase === 'victory' && (
-                        <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
+                        <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl w-full">
                             <motion.div
-                                className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-400 to-orange-500 rounded-[40%] flex items-center justify-center shadow-2xl"
-                                animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
+                                className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 bg-cyber-yellow border-8 border-black shadow-[12px_12px_0_#000] rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center -rotate-3"
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <Trophy size={48} className="text-white" />
+                                <Trophy size={56} className="text-black" strokeWidth={2.5} />
                             </motion.div>
-                            <h2 className="text-3xl font-bold text-amber-400 mb-2">🎖️ Lazer Ustası!</h2>
-                            <p className="text-slate-400 mb-6">20 seviyeyi tamamladın! Hafızan müthiş!</p>
-                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div>
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{MAX_LEVEL}/{MAX_LEVEL}</p></div>
+                            <h2 className="text-4xl sm:text-5xl font-syne font-black text-black dark:text-white mb-4 uppercase tracking-tight">🎖️ Lazer Ustası!</h2>
+                            <p className="text-slate-600 dark:text-slate-300 font-chivo font-medium text-lg mb-8">20 seviyeyi tamamladın! Hafızan müthiş!</p>
+
+                            <div className="bg-white dark:bg-slate-800 border-4 border-black shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a] p-6 sm:p-8 rounded-2xl sm:rounded-3xl mb-8 rotate-1">
+                                <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                                    <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                        <p className="text-slate-500 dark:text-slate-400 font-syne font-bold uppercase tracking-widest text-sm mb-2">Skor</p>
+                                        <p className="text-4xl font-black text-cyber-blue drop-shadow-sm">{score}</p>
+                                    </div>
+                                    <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                        <p className="text-slate-500 dark:text-slate-400 font-syne font-bold uppercase tracking-widest text-sm mb-2">Seviye</p>
+                                        <p className="text-4xl font-black text-cyber-green drop-shadow-sm">{MAX_LEVEL}/{MAX_LEVEL}</p>
+                                    </div>
                                 </div>
                             </div>
-                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl font-bold text-xl mb-4"
-                                style={{ boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)' }}>
-                                <div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div>
+
+                            <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
+                                className="w-full sm:w-auto px-10 py-5 bg-cyber-green text-black font-syne font-black text-xl uppercase tracking-widest border-4 border-black shadow-[8px_8px_0_#000] rounded-2xl hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] active:translate-y-2 active:translate-x-1 active:shadow-none transition-all flex items-center justify-center gap-3 mx-auto mb-6 group"
+                            >
+                                <RotateCcw size={24} className="text-black group-hover:-rotate-90 transition-transform duration-300" />
+                                <span>Tekrar Oyna</span>
                             </motion.button>
-                            <div><Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link></div>
+
+                            <div><Link to={backLink} className="block font-chivo font-bold text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white transition-colors underline decoration-2 underline-offset-4">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link></div>
                         </motion.div>
                     )}
                 </AnimatePresence>

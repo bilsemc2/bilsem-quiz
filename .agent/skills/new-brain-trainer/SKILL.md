@@ -34,11 +34,11 @@ Tüm BrainTrainer simülatörleri şu standartları takip etmelidir:
 | **Responsive Yeniden Boyutlama** | `window.addEventListener('resize', ...)` zorunlu |
 | **CSS Kuralı** | Inline `style={{}}` yerine **Tailwind class** kullan |
 
-> **⚠️ Inline Style Yasağı:**
-> `style={{ backgroundColor: '...' }}` gibi inline style'lar **kullanmayın**. Tailwind class'larını tercih edin:
-> - `boxShadow` → `shadow-lg`, `shadow-2xl`, `shadow-[0_8px_32px_rgba(...)]`
-> - `background` → `bg-gradient-to-br from-X to-Y`
-> - `borderRadius` → `rounded-2xl`, `rounded-[24px]`
+> **⚠️ Inline Style ve Tasarım Yasağı:**
+> `style={{ backgroundColor: '...' }}` gibi inline style'lar **kullanmayın**. Tüm oyunlar **Tactile Cyber-Pop** estetiğine uygun olmalıdır.
+> - **KULLANMA:** Gradient (`bg-gradient-to...`), Soft Shadow (`shadow-xl`), Glassmorphism (`backdrop-blur`).
+> - **KULLAN:** Kalın border (`border-4 border-black`), Hard Shadow (`shadow-[8px_8px_0_#000]`), Solid Renkler (`bg-cyber-blue`, `bg-[#FAF9F6]`).
+> - **Dark Mode:** `dark:bg-slate-900`, `dark:shadow-[8px_8px_0_#0f172a]` gibi varyantları unutmayın.
 >
 > **İstisna:** Yalnızca JavaScript ile dinamik hesaplanan değerler (canvas boyutu, pozisyon) inline olabilir.
 
@@ -260,10 +260,13 @@ Daha karmaşık oyunlarda (çok fazlı, animasyonlu) `useGameFeedback` hook'una 
 
 ```tsx
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white">
-      {/* Decorative Background */}
-      {/* Header: Skor, Can, Timer, Level */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
+    <div className="min-h-screen bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 text-black dark:text-white flex flex-col items-center">
+      {/* Header: Skor, Can, Timer, Level - Cyber-Pop Styled */}
+      <div className="w-full max-w-5xl flex items-center justify-between mb-4 mt-2 px-4">
+        {/* Header Elements with border-4 border-black shadow-[4px_4px_0_#000] */}
+      </div>
+
+      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-lg flex-1 px-4">
         <AnimatePresence mode="wait">
           {phase === 'welcome' && ( /* Welcome Screen */ )}
           {(phase === 'playing' || phase === 'feedback') && ( /* Game Board */ )}
@@ -307,7 +310,7 @@ const modules = [
         title: '[Simülatör Adı]',
         desc: 'Kısa açıklama',
         icon: <Brain />, // veya uygun ikon
-        color: 'violet',
+        color: 'cyber-green', // cyber-blue, cyber-pink, cyber-green, cyber-yellow
         difficulty: 'Zor', // Kolay/Orta/Zor/Uzman
         link: '/games/[simulator-slug]',
         isNew: true,  // 🆕 YENİ badge gösterir
@@ -476,108 +479,108 @@ Bu simülatör, BİLSEM 2. Aşama Bireysel Değerlendirme sınavına hazırlık 
 3 farklı thumbnail istemi üret:
 
 **İstem 1 — Oyun Mekaniği Odaklı:**
-```
-YouTube thumbnail, [renk paleti] gradient background, [oyunun ana görselini tanımla],
-bold Turkish text "[KISA BAŞLIK]" in [renk] with glow effect, child-friendly cartoon style,
-clean modern design, 1280x720
+```text
+YouTube thumbnail, solid [renk] background with extremely thick black border, [oyunun ana görselini tanımla - örneğin neo-brutalist brain icon with hard black shadow],
+bold Turkish text "[KISA BAŞLIK]" in black with solid white shadow, child-friendly tactile cyber-pop style,
+clean neo-brutalist design, 1280x720
 ```
 
 **İstem 2 — Beyin/Hız Odaklı:**
-```
-YouTube thumbnail, vibrant [renk] gradient, brain icon with [efekt], [oyun elementleri],
-bold Turkish text "[KANCA]" in white, energetic dynamic composition, 1280x720
+```text
+YouTube thumbnail, vibrant solid [renk] background, brain icon with thick black outlines and hard black drop shadow, [oyun elementleri],
+bold Turkish text "[KANCA]" in white with heavy black shadow, energetic neo-brutalist composition, 1280x720
 ```
 
 **İstem 3 — Tuzak/Zorluk Odaklı:**
-```
-YouTube thumbnail, dark [renk] background with neon accents, [zorluk elementleri],
-bold red Turkish text "[UYARI MESAJI]" at top, warning symbols, dramatic lighting, 1280x720
+```text
+YouTube thumbnail, solid dark slate background with neon cyber-pink accents, [zorluk elementleri],
+bold red Turkish text "[UYARI MESAJI]" at top with thick black border, warning symbols, high contrast tactile POP style, 1280x720
 ```
 
 ---
 
-## Ek A: Tasarım Standartları — 3D Gummy Candy Stili
+## Ek A: Tasarım Standartları — Tactile Cyber-Pop Estetiği
 
-### 🍬 3D Gummy Candy Estetiği
-
-Tüm BrainTrainer oyunları "yumuşak şeker" görsel stilini takip etmelidir.
+### � Tactile Cyber-Pop 
+Tüm BrainTrainer oyunları "Tactile Cyber-Pop" görsel stilini takip etmelidir. (Soft gradientler, blur efektleri ve ince gölgeler **YASAKTIR**).
 
 #### Ana İkon (Welcome Screen)
 ```tsx
 <motion.div 
-    className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)]"
+    className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 bg-cyber-pink border-8 border-black shadow-[8px_8px_0_#000] rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center -rotate-3"
     animate={{ y: [0, -8, 0] }}
-    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
 >
-    <IconComponent size={52} className="text-white drop-shadow-lg" />
+    <IconComponent size={56} className="text-black" strokeWidth={2.5} />
 </motion.div>
 ```
 
-#### 3D Gummy Butonlar
+#### Cyber-Pop Butonlar
 ```tsx
-<motion.button
-    whileHover={{ scale: 1.05, y: -2 }}
-    whileTap={{ scale: 0.95 }}
-    className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl shadow-[0_8px_32px_rgba(99,102,241,0.4)]"
+<motion.button 
+    whileHover={{ scale: 1.05, y: -4 }} 
+    whileTap={{ scale: 0.95 }} 
+    onClick={handleStart} 
+    className="w-full sm:w-auto px-10 py-5 bg-cyber-green text-black font-syne font-black text-xl uppercase tracking-widest border-4 border-black shadow-[8px_8px_0_#000] rounded-2xl hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] active:translate-y-2 active:translate-x-1 active:shadow-none transition-all flex items-center justify-center gap-3 mx-auto"
 >
-    <div className="flex items-center gap-3">
-        <Play size={28} className="fill-white" />
-        <span>Başla</span>
-    </div>
+    <Play size={24} className="fill-black" />
+    <span>Başla</span>
 </motion.button>
 ```
 
-#### 3D Gummy Kartlar/Hücreler
+#### Cyber-Pop Oyun Kartları/Hücreler (Matrisler için)
 ```tsx
-className={isActive 
-    ? 'bg-gradient-to-br from-indigo-400 to-violet-400 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),inset_0_4px_8px_rgba(255,255,255,0.3),0_0_30px_rgba(129,140,248,0.6)] rounded-[24px]'
-    : 'bg-gradient-to-br from-white/10 to-white/5 shadow-[inset_0_-3px_6px_rgba(0,0,0,0.2),inset_0_3px_6px_rgba(255,255,255,0.1)] rounded-[24px]'
-}
+<button
+    className={`w-full aspect-square border-4 shadow-[4px_4px_0_#000] rounded-xl flex items-center justify-center transition-all ${
+        isActive 
+            ? 'bg-cyber-blue border-black' 
+            : 'bg-white dark:bg-slate-800 border-black dark:shadow-[4px_4px_0_#0f172a]'
+    }`}
+>
 ```
 
-### 🎨 Renk Paleti
+### 🎨 Renk Paleti ve Tipografi
 
 ```css
-/* Arka Plan - Koyu Gradient */
-bg-gradient-to-br from-violet-950 via-purple-950 to-slate-900
+/* Arka Plan */
+bg-[#FAF9F6] dark:bg-slate-900
 
-/* Glassmorphism Paneller */
-bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20
+/* Element Renkleri (tailwind.config.js'de tanımlı) */
+bg-cyber-yellow, bg-cyber-pink, bg-cyber-blue, bg-cyber-green
 
-/* HUD Elementleri */
-bg-amber-500/20 border-amber-500/30    /* Skor */
-bg-red-500/20 border-red-500/30        /* Can */
-bg-blue-500/20 border-blue-500/30      /* Süre */
-bg-emerald-500/20 border-emerald-500/30 /* Seviye */
+/* Tipografi */
+font-syne font-black    /* Başlıklar ve Vurgular */
+font-chivo              /* Gövde Metni (Paragraflar vs.) */
+uppercase tracking-widest /* Buton / Badge Textleri */
 ```
 
-#### Kalp İkonlu Can Gösterimi
+#### Kalp İkonlu Can Gösterimi (Cyber Style)
 ```tsx
-<div className="flex items-center gap-1">
+<div className="flex items-center gap-1 px-3 py-2 bg-cyber-pink border-4 border-black rounded-xl shadow-[4px_4px_0_#000] -rotate-1">
     {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
-        <Heart key={i} size={14} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'} />
+        <Heart key={i} size={18} className={i < lives ? 'text-black fill-black' : 'text-black/20 fill-black/20'} strokeWidth={2.5} />
     ))}
 </div>
 ```
 
-### 📍 TUZÖ Badge
+### 📍 TUZÖ Badge (Cyber Style)
 
 ```tsx
-<div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full">
-    <span className="text-[9px] font-black text-violet-300 uppercase tracking-wider">TUZÖ</span>
-    <span className="text-[9px] font-bold text-violet-400">5.X.X Beceri Adı</span>
+<div className="mb-8 inline-flex items-center gap-2 px-4 py-2 bg-cyber-blue/10 dark:bg-cyber-blue/20 border-2 border-cyber-blue text-cyber-blue rounded-xl shadow-[2px_2px_0_#000] dark:shadow-[2px_2px_0_#0f172a] rotate-2">
+    <span className="text-xs font-black uppercase tracking-widest">TUZÖ</span>
+    <span className="text-xs font-bold">5.X.X Beceri Adı</span>
 </div>
 ```
 
 ### 🎭 Animasyonlar
 ```tsx
-// Hover efekti (3D float)
-whileHover={{ scale: 1.05, y: -4 }}
-whileTap={{ scale: 0.95 }}
+// Hover efekti (Fiziksel basma hissi)
+hover:-translate-y-1 hover:shadow-[12px_12px_0_#000]
+active:translate-y-2 active:translate-x-1 active:shadow-none
 
 // Bounce animasyonu (ikon)
 animate={{ y: [0, -8, 0] }}
-transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
 
 // Zafer animasyonu
 animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
@@ -688,7 +691,8 @@ Canvas container'da `touch-none` class'ı zorunlu:
 - [ ] Touch-first hedefler (80px min)
 - [ ] Responsive canvas boyutlandırma (canvas oyunlarında)
 - [ ] Body scroll lock (playing/feedback fazında)
-- [ ] Glassmorphism / Gummy Candy tasarım
+- [ ] Tactile Cyber-Pop Tasarım (`border-4 border-black`, `shadow-[8px_8px_0_#000]`)
+- [ ] Dark Mode Uyumluluğu (Bkz. `dark:bg-slate-900`, `dark:shadow-[]`)
 - [ ] Welcome / Playing / Feedback / GameOver / Victory ekranları
 - [ ] `src/routes/gameRoutes.tsx`'e route eklendi
 - [ ] `IndividualAssessmentPage`'e **EN ÜSTE** eklendi + `isNew: true`
