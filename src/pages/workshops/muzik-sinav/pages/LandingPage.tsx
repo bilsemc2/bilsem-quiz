@@ -9,7 +9,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Music, Headphones, Mic, Sparkles, Shield, ChevronRight, ChevronLeft, AlertTriangle, Zap, Play } from 'lucide-react';
 
 // 🎬 YouTube Video ID — buraya kendi video ID'ni yapıştır
-const YOUTUBE_VIDEO_ID = 'BURAYA_VIDEO_ID';
+const YOUTUBE_VIDEO_ID = 'G-wMP3NRU4M';
 
 const sections = [
     {
