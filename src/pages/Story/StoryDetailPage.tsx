@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStories } from './services/stories';
+import { getStories, saveStoryQuestions, shuffleQuestionOptions } from './services/stories';
+import { generateQuestions } from './services/gpt';
 import { Story } from './types';
 import { StoryViewer } from './components/StoryViewer';
 import { QuizSection } from './components/QuizSection';
+import { toast } from 'sonner';
 
 export default function StoryDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -12,13 +14,14 @@ export default function StoryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
 
   useEffect(() => {
     async function loadStory() {
       try {
         const stories = await getStories();
         const foundStory = stories.find(s => s.id === id);
-        
+
         if (foundStory) {
           setStory(foundStory);
         } else {
@@ -38,6 +41,49 @@ export default function StoryDetailPage() {
       setLoading(false);
     }
   }, [id]);
+
+  const handleStartQuiz = useCallback(async () => {
+    if (!story) return;
+
+    // Sorular zaten varsa direkt göster
+    if (story.questions.length > 0) {
+      setShowQuiz(true);
+      return;
+    }
+
+    // Sorular yoksa oluştur
+    try {
+      setGeneratingQuestions(true);
+      toast.info('Sorular oluşturuluyor...', { duration: 3000, icon: '🧠' });
+
+      const questions = await generateQuestions({
+        title: story.title,
+        content: story.content,
+        theme: story.theme,
+        locale: 'tr',
+        questionCount: 5
+      });
+
+      if (!questions || questions.length === 0) {
+        toast.error('Sorular oluşturulamadı. Lütfen tekrar deneyin.');
+        return;
+      }
+
+      // Supabase'e kaydet (orijinal sıra ile)
+      await saveStoryQuestions(story.id, questions);
+
+      // Seçenekleri karıştırarak göster
+      const shuffled = questions.map(shuffleQuestionOptions);
+      setStory({ ...story, questions: shuffled });
+      setShowQuiz(true);
+      toast.success('Sorular hazır!', { icon: '✅' });
+    } catch (err) {
+      console.error('Soru oluşturma hatası:', err);
+      toast.error('Sorular oluşturulurken bir hata oluştu.');
+    } finally {
+      setGeneratingQuestions(false);
+    }
+  }, [story]);
 
   if (loading) {
     return (
@@ -65,16 +111,17 @@ export default function StoryDetailPage() {
 
   return (
     <div className="container mx-auto py-8">
-      {showQuiz ? (
-        <QuizSection 
-          questions={story.questions} 
+      {showQuiz && story.questions.length > 0 ? (
+        <QuizSection
+          questions={story.questions}
           onBackToStory={() => setShowQuiz(false)}
-          onComplete={() => {}}
+          onComplete={() => { }}
         />
       ) : (
         <StoryViewer
           story={story}
-          onNext={() => setShowQuiz(true)}
+          onNext={handleStartQuiz}
+          isLoading={generatingQuestions}
         />
       )}
     </div>

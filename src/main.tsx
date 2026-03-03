@@ -52,6 +52,6 @@ const updateSW = registerSW({
     }));
   },
   onOfflineReady() {
-    console.log('Uygulama çevrimdışı kullanıma hazır!');
+
   }
 });

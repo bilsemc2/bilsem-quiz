@@ -1,18 +1,44 @@
+@import '@fontsource/syne/700.css';
+@import '@fontsource/syne/800.css';
+@import '@fontsource/chivo/400.css';
+@import '@fontsource/chivo/700.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-color: #FAF9F6;
+    --text-color: #0f172a;
+    --border-color: #0f172a;
+    --accent-red: #f43f5e;
+    --accent-blue: #1e40af;
+    --accent-yellow: #dcf126;
+  }
+
+  .dark {
+    --bg-color: #0B0C10;
+    --text-color: #f8fafc;
+    --border-color: #334155;
+    --accent-red: #ff3366;
+    --accent-blue: #3b82f6;
+    --accent-yellow: #eab308;
+  }
+
   html {
     @apply h-full;
   }
 
   body {
-    @apply bg-background text-gray-800 antialiased font-sans min-h-full;
+    @apply antialiased min-h-full font-sans selection:bg-cyber-yellow selection:text-black;
+    background-color: var(--bg-color);
+    color: var(--text-color);
   }
 
   .dark body {
-    @apply bg-gray-900 text-gray-100;
+    background-color: var(--bg-color);
+    color: var(--text-color);
   }
 
   #root {
@@ -25,7 +51,18 @@
   h4,
   h5,
   h6 {
-    @apply font-bold tracking-tight text-gray-900;
+    @apply font-syne font-bold tracking-tight;
+    color: var(--text-color);
+  }
+
+  /* Arcade bölümünde heading'ler Nunito'yu miras alsın */
+  .font-nunito h1,
+  .font-nunito h2,
+  .font-nunito h3,
+  .font-nunito h4,
+  .font-nunito h5,
+  .font-nunito h6 {
+    font-family: inherit;
   }
 
   main {
@@ -56,6 +93,43 @@
 
   .btn-primary {
     @apply bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg hover:bg-primary-700 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  /* Tactile Cyber-Pop Buttons */
+  .btn-cyber {
+    @apply relative inline-flex items-center justify-center px-8 py-4 font-syne font-bold text-lg uppercase tracking-wider transition-all duration-200;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 3px solid var(--border-color);
+    box-shadow: 6px 6px 0px var(--border-color);
+  }
+
+  .btn-cyber:hover {
+    @apply -translate-y-1;
+    box-shadow: 8px 8px 0px var(--border-color);
+  }
+
+  .btn-cyber:active {
+    @apply translate-y-2 translate-x-2;
+    box-shadow: 0px 0px 0px var(--border-color);
+  }
+
+  .btn-cyber-primary {
+    @apply btn-cyber bg-cyber-pink text-white border-cyber-obsidian;
+    box-shadow: 6px 6px 0px var(--border-color);
+  }
+
+  .dark .btn-cyber-primary {
+    @apply border-white;
+    box-shadow: 6px 6px 0px rgba(244, 63, 94, 0.4); /* Glowing shadow */
+  }
+  
+  .dark .btn-cyber-primary:hover {
+    box-shadow: 8px 8px 0px rgba(244, 63, 94, 0.6);
+  }
+
+  .dark .btn-cyber-primary:active {
+     box-shadow: 0px 0px 0px transparent;
   }
 
   .card {

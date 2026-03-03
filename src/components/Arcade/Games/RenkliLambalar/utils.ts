@@ -1,7 +1,7 @@
 import { ColorType, Cell } from './types';
 import { COLORS } from './constants';
 
-const COLOR_TYPES: ColorType[] = ['RED', 'BLUE', 'YELLOW', 'GREEN'];
+const COLOR_TYPES: ColorType[] = ['red', 'blue', 'yellow', 'green'];
 
 export const generateGrid = (gridSize: number): Cell[] => {
     const size = gridSize;

@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import XPWarning from './XPWarning';
 import { showXPDeduct } from './XPToast';
+import { checkUserAccessForPath, deductXPForPageVisit } from '@/features/auth/model/accessGateUseCases';
 
 interface RequireAuthProps {
     children: React.ReactNode;
@@ -17,6 +17,7 @@ interface RequireAuthProps {
 export default function RequireAuth({ children, requireAdmin = false, requireTeacher = false, skipXPCheck = false, requiredTalent }: RequireAuthProps) {
     const { user, loading: authLoading } = useAuth();
     const location = useLocation();
+    const isArcadeMode = Boolean((location.state as { arcadeMode?: boolean } | null)?.arcadeMode);
     const [loading, setLoading] = useState(true);
     const [userXP, setUserXP] = useState(0);
     const [requiredXP, setRequiredXP] = useState(0);
@@ -42,135 +43,39 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
             }
 
             try {
-                // Kullanıcının XP'sini, rolünü ve yetenek alanını al
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('experience, is_admin, role, yetenek_alani')
-                    .eq('id', user.id)
-                    .maybeSingle();
+                const accessResult = await checkUserAccessForPath({
+                    userId: user.id,
+                    pagePath: location.pathname,
+                    requireAdmin,
+                    requireTeacher,
+                    requiredTalent,
+                    skipXPCheck: skipXPCheck || isArcadeMode
+                });
 
-                if (profileError) {
-                    console.error('Profil bilgisi alınırken hata:', profileError);
-                    setLoading(false);
-                    return;
+                setUserXP(accessResult.userXP);
+                setRequiredXP(accessResult.requiredXP);
+                setHasAccess(accessResult.hasAccess);
+                setAccessDeniedReason(accessResult.reason);
+
+                if (accessResult.reason === 'talent') {
+                    setUserTalent(accessResult.userTalent);
+                } else {
+                    setUserTalent(null);
                 }
-
-                if (!profile) {
-                    console.error('Profil bulunamadı');
-                    setLoading(false);
-                    return;
-                }
-
-                setUserXP(profile.experience || 0);
-
-                // Admin veya öğretmen kontrolü
-                // Teacher rolü bilinçli olarak admin erişimine dahil (admin yardımcısı)
-                if (requireAdmin && !profile.is_admin && profile.role !== 'teacher') {
-                    setHasAccess(false);
-                    setAccessDeniedReason('role');
-                    setLoading(false);
-                    return;
-                }
-
-                // Sadece öğretmen gerektiren sayfalar için kontrol
-                if (requireTeacher && !profile.is_admin && profile.role !== 'teacher') {
-                    setHasAccess(false);
-                    setAccessDeniedReason('role');
-                    setLoading(false);
-                    return;
-                }
-
-                // Admin ise veya XP kontrolü atlanacaksa direkt erişim ver
-                if (profile.is_admin || profile.role === 'teacher') {
-                    setHasAccess(true);
-                    setLoading(false);
-                    return;
-                }
-
-                // Yetenek alanı kontrolü
-                if (requiredTalent) {
-                    const talentsInput = profile.yetenek_alani;
-                    let talents: string[] = [];
-
-                    if (Array.isArray(talentsInput)) {
-                        talents = talentsInput;
-                    } else if (typeof talentsInput === 'string') {
-                        // Virgül veya noktalı virgül ile ayrılmış olabilir
-                        talents = talentsInput.split(/[,,;]/).map(t => t.trim()).filter(Boolean);
-                    }
-
-                    const hasRequiredTalent = talents.some(t =>
-                        t.toLowerCase() === requiredTalent.toLowerCase()
-                    );
-
-                    if (!hasRequiredTalent) {
-                        setHasAccess(false);
-                        setAccessDeniedReason('talent');
-                        setUserTalent(talents.length > 0 ? talents : (talentsInput || null));
-                        setLoading(false);
-                        return;
-                    }
-                }
-
-                if (skipXPCheck || location.state?.arcadeMode) {
-                    setHasAccess(true);
-                    setLoading(false);
-                    return;
-                }
-
-                // Sayfa için gereken XP'yi kontrol et
-                const { data: xpRequirement, error: xpError } = await supabase
-                    .from('xp_requirements')
-                    .select('required_xp')
-                    .eq('page_path', location.pathname)
-                    .maybeSingle();
-
-                if (xpError) {
-                    console.error('XP gereksinimi kontrol edilirken hata:', xpError);
-                    // XP gereksinimi yoksa erişime izin ver
-                    setHasAccess(true);
-                    setLoading(false);
-                    return;
-                }
-
-                const requiredAmount = xpRequirement?.required_xp || 0;
-                setRequiredXP(requiredAmount);
-
-                // XP kontrolü
-                const userHasAccess = profile.experience >= requiredAmount;
-                setHasAccess(userHasAccess);
-                if (!userHasAccess) setAccessDeniedReason('xp');
 
                 // XP düşürme işlemi — Server-side Edge Function ile atomik
-                if (userHasAccess && requiredAmount > 0 && !xpDeductionAttemptedRef.current) {
+                if (accessResult.hasAccess && accessResult.requiredXP > 0 && !xpDeductionAttemptedRef.current) {
                     xpDeductionAttemptedRef.current = true;
 
                     try {
-                        const { data: { session } } = await supabase.auth.getSession();
-                        if (session?.access_token) {
-                            const response = await fetch(
-                                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xp-transaction`,
-                                {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${session.access_token}`,
-                                    },
-                                    body: JSON.stringify({
-                                        action: 'deduct',
-                                        amount: requiredAmount,
-                                        reason: `Sayfa ziyareti: ${location.pathname}`
-                                    }),
-                                }
-                            );
+                        const result = await deductXPForPageVisit({
+                            pagePath: location.pathname,
+                            requiredXP: accessResult.requiredXP
+                        });
 
-                            if (response.ok) {
-                                const result = await response.json();
-                                if (result.change !== 0) {
-                                    showXPDeduct(requiredAmount, 'Oyun erişimi');
-                                    setUserXP(result.newXP);
-                                }
-                            }
+                        if (result.success && result.change !== 0) {
+                            showXPDeduct(accessResult.requiredXP, 'Oyun erişimi');
+                            setUserXP(result.newXP);
                         }
                     } catch {
                         // Edge Function erişim hatası — sessizce devam et
@@ -186,7 +91,7 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
         };
 
         checkAccess();
-    }, [user, location.pathname, requireAdmin, requireTeacher, skipXPCheck, authLoading]);
+    }, [user, location.pathname, requireAdmin, requireTeacher, skipXPCheck, requiredTalent, isArcadeMode, authLoading]);
 
     // Auth yükleniyorsa bekle
     if (authLoading || loading) {
@@ -237,4 +142,3 @@ export default function RequireAuth({ children, requireAdmin = false, requireTea
 
     return <>{children}</>;
 }
-

@@ -1,19 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-import {
-    Trophy, RotateCcw, Play, Star, Timer, Target,
-    CheckCircle2, XCircle, ChevronLeft, Zap, Heart, Bug
-} from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { motion, useAnimation } from 'framer-motion';
+import { RotateCcw, Timer, Bug } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
+import ArcadeGameShell from '../../Shared/ArcadeGameShell';
+import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
+import { ARCADE_SCORE_FORMULA, ARCADE_SCORE_BASE } from '../../Shared/ArcadeConstants';
 
 // ─── Constants ──────────────────────────────────────
-const INITIAL_LIVES = 5;
+const INITIAL_LIVES = 3;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
-
-const CORRECT_MESSAGES = ["Harikasın! 🎉", "Süpersin! ⭐", "Muhteşem! 🌟", "Bravo! 🎯"];
-const WRONG_MESSAGES = ["Tekrar dene! 💪", "Düşün ve bul! 🧐", "Dikkatli bak! 🎯"];
 
 // ─── Creature Data ──────────────────────────────────
 type CreatureAction = 'jump' | 'spin' | 'move_right' | 'move_left' | 'shake' | 'idle' | 'grow';
@@ -50,14 +47,14 @@ const COLORS = [
     { label: "Turuncu", bgColor: "from-orange-500 to-orange-600", id: "orange" },
 ];
 
-const ACTIONS: { key: CreatureAction; text: string; past: string; negPast: string }[] = [
-    { key: 'jump', text: 'zıplarsa', past: 'zıpladı', negPast: 'zıplamadı' },
-    { key: 'spin', text: 'dönerse', past: 'döndü', negPast: 'dönmedi' },
-    { key: 'move_right', text: 'sağa giderse', past: 'sağa gitti', negPast: 'sağa gitmedi' },
-    { key: 'move_left', text: 'sola giderse', past: 'sola gitti', negPast: 'sola gitmedi' },
-    { key: 'shake', text: 'sallanırsa', past: 'sallandı', negPast: 'sallanmadı' },
-    { key: 'grow', text: 'büyürse', past: 'büyüdü', negPast: 'büyümedi' },
-    { key: 'idle', text: 'hareket etmezse', past: 'hareket etmedi', negPast: 'hareket etti' },
+const ACTIONS: { key: CreatureAction; text: string }[] = [
+    { key: 'jump', text: 'zıplarsa' },
+    { key: 'spin', text: 'dönerse' },
+    { key: 'move_right', text: 'sağa giderse' },
+    { key: 'move_left', text: 'sola giderse' },
+    { key: 'shake', text: 'sallanırsa' },
+    { key: 'grow', text: 'büyürse' },
+    { key: 'idle', text: 'hareket etmezse' },
 ];
 
 // ─── Helpers ────────────────────────────────────────
@@ -90,12 +87,10 @@ const generateRound = (level: number): RoundData => {
     let correctOptionId: string;
 
     if (diff === 'easy' || (diff === 'medium' && Math.random() > 0.4)) {
-        // Simple IF/ELSE
         instruction = `Eğer ${subjectCreature.name} ${conditionAction.text}, ${option1.label} rengine tıkla. Aksi takdirde ${option2.label} rengine tıkla.`;
         const isMatch = subjectCreature.action === conditionAction.key;
         correctOptionId = isMatch ? option1.id : option2.id;
     } else {
-        // Complex AND/OR
         const conditionAction2 = pick(ACTIONS);
         const isAnd = Math.random() > 0.5;
         const operatorText = isAnd ? "VE" : "VEYA";
@@ -123,41 +118,46 @@ const CREATURE_BG: Record<string, string> = {
     grey: 'from-stone-300 to-stone-400 border-stone-500',
 };
 
-const AnimatedCreature: React.FC<{ data: CreatureData; isPlaying: boolean; onAnimationEnd?: () => void }> = ({ data, isPlaying, onAnimationEnd }) => {
+const AnimatedCreature: React.FC<{ data: CreatureData; isPlaying: boolean; onAnimationEnd?: (id: string) => void }> = ({ data, isPlaying, onAnimationEnd }) => {
     const controls = useAnimation();
 
     useEffect(() => {
+        let cancelled = false;
         const run = async () => {
             if (isPlaying) {
-                switch (data.action) {
-                    case 'jump': await controls.start({ y: [0, -60, 0, -30, 0], scale: [1, 1.1, 0.9, 1.05, 1], transition: { duration: 0.8 } }); break;
-                    case 'spin': await controls.start({ rotate: 360, scale: [1, 1.2, 1], transition: { duration: 0.8 } }); break;
-                    case 'shake': await controls.start({ x: [-10, 10, -10, 10, -5, 5, 0], transition: { duration: 0.6 } }); break;
-                    case 'move_right': await controls.start({ x: 80, rotate: [0, 10, -10, 0], transition: { duration: 1 } }); break;
-                    case 'move_left': await controls.start({ x: -80, rotate: [0, -10, 10, 0], transition: { duration: 1 } }); break;
-                    case 'grow': await controls.start({ scale: [1, 1.5, 1.5, 1], transition: { duration: 1.2 } }); break;
-                    case 'idle': default: await controls.start({ scale: [1, 1.05, 1], transition: { duration: 1.5, repeat: Infinity } }); break;
+                try {
+                    switch (data.action) {
+                        case 'jump': await controls.start({ y: [0, -60, 0, -30, 0], scale: [1, 1.1, 0.9, 1.05, 1], transition: { duration: 0.8 } }); break;
+                        case 'spin': await controls.start({ rotate: 360, scale: [1, 1.2, 1], transition: { duration: 0.8 } }); break;
+                        case 'shake': await controls.start({ x: [-10, 10, -10, 10, -5, 5, 0], transition: { duration: 0.6 } }); break;
+                        case 'move_right': await controls.start({ x: 80, rotate: [0, 10, -10, 0], transition: { duration: 1 } }); break;
+                        case 'move_left': await controls.start({ x: -80, rotate: [0, -10, 10, 0], transition: { duration: 1 } }); break;
+                        case 'grow': await controls.start({ scale: [1, 1.5, 1.5, 1], transition: { duration: 1.2 } }); break;
+                        case 'idle': default: await controls.start({ scale: [1, 1.05, 1], transition: { duration: 1 } }); break;
+                    }
+                } catch {
+                    // No-op: animation can be interrupted when phase changes.
                 }
-                if (onAnimationEnd) onAnimationEnd();
+                if (!cancelled && onAnimationEnd) onAnimationEnd(data.id);
             } else {
                 controls.set({ x: 0, y: 0, rotate: 0, scale: 1 });
             }
         };
         run();
-    }, [isPlaying, data.action, onAnimationEnd, controls]);
+        return () => { cancelled = true; };
+    }, [isPlaying, data.id, data.action, onAnimationEnd, controls]);
 
-    const bg = CREATURE_BG[data.color] || 'from-gray-300 to-gray-400 border-gray-500';
+    const bg = CREATURE_BG[data.color] || 'bg-slate-300 border-slate-500';
 
     return (
         <div className="flex flex-col items-center justify-end">
-            <div className="w-20 h-3 bg-black/10 rounded-full blur-sm mb-1" />
+            <div className="w-20 h-3 bg-black/20 rounded-full blur-sm mb-1" />
             <motion.div animate={controls}
-                className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-[2rem] bg-gradient-to-br ${bg} border-b-4 border-r-2 flex items-center justify-center overflow-hidden`}
-                style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.15), inset 0 6px 12px rgba(255,255,255,0.25), 0 6px 20px rgba(0,0,0,0.2)' }}>
+                className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-3xl sm:rounded-[2rem] bg-gradient-to-br ${bg} border-2 border-black/10 dark:border-slate-800 flex items-center justify-center overflow-hidden shadow-neo-sm transition-colors duration-300`}>
                 <img src={data.imageUrl} alt={data.name} className="w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-md z-10" />
-                <div className="absolute top-2 left-2 w-6 h-6 bg-white/30 rounded-full blur-[2px]" />
+                <div className="absolute top-2 left-2 w-4 h-6 bg-white/60 rounded-full rotate-12" />
             </motion.div>
-            <div className="mt-2 bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-slate-300 border border-white/10 whitespace-nowrap">
+            <div className="mt-4 bg-white dark:bg-slate-700 px-4 py-1.5 rounded-xl border-2 border-black/10 dark:border-slate-800 shadow-neo-sm text-xs sm:text-sm font-black text-black dark:text-white whitespace-nowrap rotate-2 transition-colors duration-300">
                 {data.name}
             </div>
         </div>
@@ -167,12 +167,18 @@ const AnimatedCreature: React.FC<{ data: CreatureData; isPlaying: boolean; onAni
 // ─── Types ──────────────────────────────────────────
 type Phase = 'welcome' | 'animating' | 'playing' | 'feedback' | 'game_over' | 'victory';
 
+// ─── Action Labels ──────────────────────────────────
+const actionLabels: Record<CreatureAction, string> = {
+    jump: '⬆️ Zıpladı', spin: '🔄 Döndü', move_right: '➡️ Sağa gitti',
+    move_left: '⬅️ Sola gitti', shake: '↔️ Sallandı', idle: '🧘 Durdu', grow: '📏 Büyüdü',
+};
+
 // ─── Component ──────────────────────────────────────
 const SevimliMantik: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const hasSavedRef = useRef(false);
+    const isResolvingRef = useRef(false);
     const location = useLocation();
-    const isArcadeMode = location.state?.arcadeMode === true;
 
     const [phase, setPhase] = useState<Phase>('welcome');
     const [score, setScore] = useState(0);
@@ -180,11 +186,13 @@ const SevimliMantik: React.FC = () => {
     const [level, setLevel] = useState(1);
     const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
     const [round, setRound] = useState<RoundData | null>(null);
-    const [feedbackCorrect, setFeedbackCorrect] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
+    const animationDoneRef = useRef<Set<string>>(new Set());
+
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
     // Timer
     useEffect(() => {
@@ -215,19 +223,31 @@ const SevimliMantik: React.FC = () => {
         setLives(INITIAL_LIVES);
         setLevel(1);
         setTimeLeft(TIME_LIMIT);
+        setFeedback(null);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
+        isResolvingRef.current = false;
     }, []);
 
     // Auto-start for arcade mode
     useEffect(() => {
-        if ((location.state?.autoStart || isArcadeMode) && phase === 'welcome') handleStart();
-    }, [location.state, isArcadeMode, phase, handleStart]);
+        if (location.state?.autoStart && phase === 'welcome') handleStart();
+    }, [location.state, phase, handleStart]);
 
     // Animation end handler
-    const handleAnimationEnd = useCallback(() => {
-        if (phase === 'animating') setPhase('playing');
-    }, [phase]);
+    const handleAnimationEnd = useCallback((creatureId: string) => {
+        if (phase !== 'animating' || !round) return;
+        animationDoneRef.current.add(creatureId);
+        if (animationDoneRef.current.size >= round.creatures.length) {
+            setPhase('playing');
+        }
+    }, [phase, round]);
+
+    useEffect(() => {
+        if (phase === 'animating') {
+            animationDoneRef.current.clear();
+        }
+    }, [phase, round]);
 
     // Replay animation
     const handleReplay = useCallback(() => {
@@ -238,6 +258,7 @@ const SevimliMantik: React.FC = () => {
     const handleGameOver = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
+        isResolvingRef.current = true;
         setPhase('game_over');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         await saveGamePlay({ game_id: 'arcade-sevimli-mantik', score_achieved: score, duration_seconds: duration, metadata: { levels_completed: level, final_lives: lives } });
@@ -247,6 +268,7 @@ const SevimliMantik: React.FC = () => {
     const handleVictory = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
+        isResolvingRef.current = true;
         setPhase('victory');
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         await saveGamePlay({ game_id: 'arcade-sevimli-mantik', score_achieved: score, duration_seconds: duration, metadata: { levels_completed: MAX_LEVEL, victory: true } });
@@ -254,247 +276,147 @@ const SevimliMantik: React.FC = () => {
 
     // Select option
     const handleOptionSelect = useCallback((optionId: string) => {
-        if (!round || phase !== 'playing') return;
-        const correct = optionId === round.correctOptionId;
-        setFeedbackCorrect(correct);
-        setFeedbackMessage(correct
-            ? CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
-            : WRONG_MESSAGES[Math.floor(Math.random() * WRONG_MESSAGES.length)]
-        );
-        setPhase('feedback');
+        if (!round || phase !== 'playing' || isResolvingRef.current) return;
+        isResolvingRef.current = true;
 
-        const newScore = correct ? score + 10 * level : score;
-        const newLives = correct ? lives : lives - 1;
-        if (correct) setScore(newScore);
-        else setLives(newLives);
+        const correct = optionId === round.correctOptionId;
+
+        if (correct) {
+            setScore(s => s + ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, level));
+            setFeedback({ message: 'Harikasın! 🎉', type: 'success' });
+        } else {
+            setLives(l => l - 1);
+            setFeedback({ message: 'Tekrar dene! 💪', type: 'error' });
+        }
 
         setTimeout(() => {
+            setFeedback(null);
+            const newLives = correct ? lives : lives - 1;
             if (!correct && newLives <= 0) { handleGameOver(); return; }
             if (correct && level >= MAX_LEVEL) { handleVictory(); return; }
             if (correct) setLevel(l => l + 1);
             else { setRound(generateRound(level)); setPhase('animating'); }
             if (correct) setPhase('animating');
-        }, 2000);
+            isResolvingRef.current = false;
+        }, 1500);
     }, [round, phase, score, lives, level, handleGameOver, handleVictory]);
 
-    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-    const backLink = isArcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
+    // Shell status mapping
+    const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' =
+        phase === 'welcome' ? 'START' :
+            (phase === 'game_over' || phase === 'victory') ? 'GAME_OVER' : 'PLAYING';
 
-    // Action label in Turkish
-    const actionLabels: Record<CreatureAction, string> = {
-        jump: '⬆️ Zıpladı', spin: '🔄 Döndü', move_right: '➡️ Sağa gitti',
-        move_left: '⬅️ Sola gitti', shake: '↔️ Sallandı', idle: '🧘 Durdu', grow: '📏 Büyüdü',
-    };
+    // Timer HUD extra
+    const timerHudExtra = (
+        <div className={`bg-blue-300 px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl shadow-neo-sm flex items-center gap-1.5 sm:gap-2 border-2 border-black/10`}>
+            <Timer className="text-black w-4 h-4 sm:w-6 sm:h-6" strokeWidth={3} />
+            <span className={`text-base sm:text-xl font-black text-black leading-none ${timeLeft <= 30 ? 'text-red-500 animate-pulse' : ''}`}>{formatTime(timeLeft)}</span>
+        </div>
+    );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white">
-            {/* Decorative */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-            </div>
+        <ArcadeGameShell
+            gameState={{ score, level, lives, status: shellStatus }}
+            gameMetadata={{
+                id: 'sevimli-mantik',
+                title: 'SEVİMLİ MANTIK',
+                description: (
+                    <>
+                        <p>1. Robotların <span className="bg-yellow-300 text-black px-1.5 rounded font-black border-2 border-black/10 rotate-1 inline-block text-xs">hareketlerini</span> izle.</p>
+                        <p>2. Koşulları değerlendir, doğru <span className="bg-emerald-300 text-black px-1.5 rounded font-black border-2 border-black/10 -rotate-1 inline-block text-xs">renge</span> tıkla!</p>
+                        <p>3. <span className="text-rose-500 font-black">{INITIAL_LIVES} can, {TIME_LIMIT / 60} dakika, {MAX_LEVEL} seviye!</span></p>
+                    </>
+                ),
+                tuzoCode: '5.2.1 Mantıksal Düşünce / Koşullu Çıkarım',
+                icon: <Bug className="w-14 h-14 text-black" strokeWidth={3} />,
+                iconBgColor: 'bg-purple-400',
+                containerBgColor: 'bg-sky-200 dark:bg-slate-900'
+            }}
+            onStart={handleStart}
+            onRestart={handleStart}
+            showLevel={true}
+            showLives={true}
+            hudExtras={shellStatus === 'PLAYING' ? timerHudExtra : undefined}
+        >
+            {/* Game content — only visible during active phases */}
+            {(phase === 'playing' || phase === 'animating' || phase === 'feedback') && round && (
+                <div className="w-full max-w-3xl mx-auto pt-20 sm:pt-24 px-4 flex flex-col items-center">
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-4 rounded-full mb-6 border-2 border-black/10 dark:border-slate-800 overflow-hidden shadow-neo-sm transition-colors duration-300">
+                        <motion.div className="h-full bg-emerald-400 border-r-4 border-black/10 dark:border-slate-800"
+                            initial={{ width: 0 }} animate={{ width: `${(level / MAX_LEVEL) * 100}%` }} transition={{ duration: 0.5 }} />
+                    </div>
 
-            {/* Header */}
-            <div className="relative z-10 p-4">
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-                        <ChevronLeft size={20} /><span>Geri</span>
-                    </Link>
-                    {(phase === 'playing' || phase === 'animating' || phase === 'feedback') && (
-                        <div className="flex items-center gap-3 sm:gap-6 flex-wrap justify-end">
-                            <div className="flex items-center gap-2 bg-amber-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-amber-500/30">
-                                <Star className="text-amber-400" size={18} />
-                                <span className="font-bold text-amber-400 text-sm">{score}</span>
-                            </div>
-                            <div className="flex items-center gap-1 bg-red-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-red-500/30">
-                                {Array.from({ length: INITIAL_LIVES }).map((_, i) => (
-                                    <Heart key={i} size={14} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'} />
+                    {/* Instruction */}
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                        className="bg-yellow-100 dark:bg-slate-800 rounded-3xl p-5 sm:p-6 mb-6 border-2 border-black/10 dark:border-slate-700 shadow-neo-sm dark:shadow-[12px_12px_0_#0f172a] -rotate-1 relative w-full transition-colors duration-300"
+                    >
+                        <div className="absolute -top-4 -left-4 bg-indigo-400 px-3 py-1 rounded-xl border-2 border-black/10 dark:border-slate-800 shadow-neo-sm transform -rotate-12 flex items-center gap-1 transition-colors duration-300">
+                            <span className="text-sm font-black uppercase text-black tracking-widest">Görev</span>
+                        </div>
+                        <p className="text-lg sm:text-2xl font-black leading-relaxed mt-2 text-black dark:text-white uppercase transition-colors duration-300">{round.instruction}</p>
+                    </motion.div>
+
+                    {/* Stage — Creatures */}
+                    <div className="bg-sky-100 dark:bg-slate-800 rounded-3xl p-6 sm:p-8 mb-6 border-2 border-black/10 dark:border-slate-700 shadow-neo-sm dark:shadow-[12px_12px_0_#0f172a] rotate-1 relative w-full transition-colors duration-300">
+                        <div className="flex justify-center items-end gap-8 sm:gap-16 min-h-[200px]">
+                            {round.creatures.map((creature) => (
+                                <AnimatedCreature
+                                    key={creature.id}
+                                    data={creature}
+                                    isPlaying={phase === 'animating'}
+                                    onAnimationEnd={handleAnimationEnd}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Action Labels (shown after animation) */}
+                        {phase === 'playing' && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center gap-6 mt-6">
+                                {round.creatures.map(c => (
+                                    <div key={c.id} className="text-sm sm:text-base font-black text-black dark:text-white bg-white dark:bg-slate-700 px-4 py-2 rounded-xl border-2 border-black/10 dark:border-slate-800 shadow-neo-sm -rotate-2 transition-colors duration-300">
+                                        {c.name.split(' ').pop()}: {actionLabels[c.action]}
+                                    </div>
                                 ))}
-                            </div>
-                            <div className="flex items-center gap-2 bg-blue-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-blue-500/30">
-                                <Timer className="text-blue-400" size={18} />
-                                <span className={`font-bold text-sm ${timeLeft <= 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-indigo-500/20 backdrop-blur-sm px-3 py-2 rounded-xl border border-indigo-500/30">
-                                <Zap className="text-indigo-400" size={18} />
-                                <span className="font-bold text-indigo-400 text-sm">Seviye {level}</span>
-                            </div>
+                            </motion.div>
+                        )}
+                    </div>
+
+                    {/* Options */}
+                    {phase === 'playing' && (
+                        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-4">
+                            {round.options.map(opt => (
+                                <motion.button key={opt.id} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleOptionSelect(opt.id)}
+                                    disabled={isResolvingRef.current}
+                                    className={`py-5 rounded-2xl bg-gradient-to-br ${opt.bgColor} font-black text-xl text-white border-2 border-black/10 dark:border-slate-800 shadow-neo-sm hover:shadow-neo-sm active:translate-y-1 active:shadow-none transition-all`}
+                                >
+                                    <span className="bg-white/30 px-3 py-1 rounded-lg">{opt.label}</span>
+                                </motion.button>
+                            ))}
                         </div>
                     )}
+
+                    {phase === 'animating' && (
+                        <div className="text-center">
+                            <p className="text-black dark:text-white font-black text-lg bg-yellow-300 dark:bg-yellow-500 inline-block px-4 py-2 rounded-xl border-2 border-black/10 dark:border-slate-800 shadow-neo-sm animate-bounce -rotate-2 transition-colors duration-300">🎬 Animasyonu izle...</p>
+                        </div>
+                    )}
+
+                    {phase === 'playing' && (
+                        <div className="text-center mt-6">
+                            <button onClick={handleReplay}
+                                className="bg-purple-400 hover:bg-purple-300 px-6 py-3 rounded-2xl text-black dark:text-white font-black text-base border-2 border-black/10 dark:border-slate-800 shadow-neo-sm hover:-translate-y-1 active:translate-y-1 hover:shadow-neo-sm active:shadow-none transition-all inline-flex items-center gap-2">
+                                <RotateCcw size={18} strokeWidth={3} /> Tekrar İzle
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Feedback Banner */}
+                    <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
                 </div>
-            </div>
-
-            {/* Main */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
-                <AnimatePresence mode="wait">
-
-                    {/* ── Welcome ── */}
-                    {phase === 'welcome' && (
-                        <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
-                                <span className="text-[9px] font-black text-indigo-300 uppercase tracking-wider">TUZÖ</span>
-                                <span className="text-[9px] font-bold text-indigo-400">5.5.2 Koşullu Çıkarım</span>
-                            </div>
-
-                            <motion.div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-[40%] flex items-center justify-center"
-                               
-                                animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
-                                <Bug size={52} className="text-white drop-shadow-lg" />
-                            </motion.div>
-
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Sevimli Mantık</h1>
-                            <p className="text-slate-400 mb-6">Robotların hareketlerini izle, koşulları değerlendir ve <span className="font-bold text-white">doğru renge</span> tıkla!</p>
-
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                <div className="bg-slate-800/50 px-4 py-2 rounded-xl flex items-center gap-2"><Heart className="text-red-400" size={16} /><span className="text-sm text-slate-300">{INITIAL_LIVES} Can</span></div>
-                                <div className="bg-slate-800/50 px-4 py-2 rounded-xl flex items-center gap-2"><Timer className="text-blue-400" size={16} /><span className="text-sm text-slate-300">{TIME_LIMIT / 60} Dakika</span></div>
-                                <div className="bg-slate-800/50 px-4 py-2 rounded-xl flex items-center gap-2"><Target className="text-indigo-400" size={16} /><span className="text-sm text-slate-300">{MAX_LEVEL} Seviye</span></div>
-                            </div>
-
-                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl"
-                               >
-                                <div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* ── Playing / Animating ── */}
-                    {(phase === 'playing' || phase === 'animating' || phase === 'feedback') && round && (
-                        <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-3xl">
-                            {/* Progress */}
-                            <div className="w-full bg-white/10 h-3 rounded-full mb-6 overflow-hidden">
-                                <motion.div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
-                                    initial={{ width: 0 }} animate={{ width: `${(level / MAX_LEVEL) * 100}%` }} transition={{ duration: 0.5 }} />
-                            </div>
-
-                            {/* Instruction */}
-                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                                className="bg-gradient-to-r from-indigo-600/80 to-purple-600/80 backdrop-blur-xl rounded-2xl p-5 sm:p-6 mb-6 border border-indigo-400/20"
-                                style={{ boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)' }}>
-                                <div className="flex items-center gap-2 mb-2 opacity-80">
-                                    <Zap size={14} /><p className="text-xs font-bold uppercase tracking-wider">Görev</p>
-                                </div>
-                                <p className="text-lg sm:text-xl font-medium leading-relaxed">{round.instruction}</p>
-                            </motion.div>
-
-                            {/* Stage */}
-                            <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 sm:p-8 mb-6 border border-white/10"
-                                style={{ boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.2)' }}>
-                                <div className="flex justify-center items-end gap-8 sm:gap-16 min-h-[200px]">
-                                    {round.creatures.map((creature) => (
-                                        <AnimatedCreature
-                                            key={creature.id}
-                                            data={creature}
-                                            isPlaying={phase === 'animating'}
-                                            onAnimationEnd={handleAnimationEnd}
-                                        />
-                                    ))}
-                                </div>
-
-                                {/* Action Labels (shown after animation) */}
-                                {phase === 'playing' && (
-                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center gap-6 mt-4">
-                                        {round.creatures.map(c => (
-                                            <div key={c.id} className="text-xs font-bold text-slate-400 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                                                {c.name.split(' ').pop()}: {actionLabels[c.action]}
-                                            </div>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </div>
-
-                            {/* Options / Replay */}
-                            {phase === 'playing' && (
-                                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-4">
-                                    {round.options.map(opt => (
-                                        <motion.button key={opt.id} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
-                                            onClick={() => handleOptionSelect(opt.id)}
-                                            className={`py-5 rounded-2xl bg-gradient-to-r ${opt.bgColor} font-bold text-xl text-white`}
-                                            style={{ boxShadow: '0 6px 20px rgba(0,0,0,0.3)' }}>
-                                            {opt.label}
-                                        </motion.button>
-                                    ))}
-                                </div>
-                            )}
-
-                            {phase === 'animating' && (
-                                <div className="text-center">
-                                    <p className="text-slate-400 font-bold text-sm animate-pulse">🎬 Animasyonu izle...</p>
-                                </div>
-                            )}
-
-                            {phase === 'playing' && (
-                                <div className="text-center mt-2">
-                                    <button onClick={handleReplay}
-                                        className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full text-slate-400 font-bold text-sm transition-all inline-flex items-center gap-2">
-                                        <RotateCcw size={14} /> Tekrar İzle
-                                    </button>
-                                </div>
-                            )}
-                        </motion.div>
-                    )}
-
-                    {/* ── Game Over ── */}
-                    {phase === 'game_over' && (
-                        <motion.div key="game_over" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-[40%] flex items-center justify-center"
-                               >
-                                <XCircle size={48} className="text-white" />
-                            </div>
-                            <h2 className="text-3xl font-bold text-red-400 mb-4">Oyun Bitti!</h2>
-                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div>
-                                    <div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-indigo-400">{level}</p></div>
-                                </div>
-                            </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl font-bold text-xl" style={{ boxShadow: '0 8px 32px rgba(99,102,241,0.4)' }}>
-                                <div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Dene</span></div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* ── Victory ── */}
-                    {phase === 'victory' && (
-                        <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-[40%] flex items-center justify-center"
-                               
-                                animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                                <Trophy size={48} className="text-white" />
-                            </motion.div>
-                            <h2 className="text-3xl font-bold text-amber-400 mb-4">🎉 Şampiyon!</h2>
-                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/10">
-                                <p className="text-4xl font-bold text-amber-400">{score}</p>
-                                <p className="text-slate-400">Toplam Puan</p>
-                            </div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart}
-                                className="px-10 py-5 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl font-bold text-xl" style={{ boxShadow: '0 8px 32px rgba(245,158,11,0.4)' }}>
-                                <div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* ── Feedback Overlay ── */}
-                <AnimatePresence>
-                    {phase === 'feedback' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-                            <motion.div initial={{ y: 50 }} animate={{ y: 0 }}
-                                className={`px-12 py-8 rounded-3xl text-center ${feedbackCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}
-                                style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                                <motion.div animate={{ scale: [1, 1.2, 1], rotate: feedbackCorrect ? [0, 10, -10, 0] : [0, -5, 5, 0] }} transition={{ duration: 0.5 }}>
-                                    {feedbackCorrect ? <CheckCircle2 size={64} className="mx-auto mb-4 text-white" /> : <XCircle size={64} className="mx-auto mb-4 text-white" />}
-                                </motion.div>
-                                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </div>
+            )}
+        </ArcadeGameShell>
     );
 };
 

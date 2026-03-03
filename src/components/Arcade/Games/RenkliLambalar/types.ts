@@ -1,4 +1,7 @@
-export type ColorType = 'RED' | 'BLUE' | 'YELLOW' | 'GREEN';
+import { ArcadeColorId } from '../../Shared/ArcadeConstants';
+
+// ColorType artık ArcadeColorId'den türetilir (sadece oyunun kullandığı 4 renk)
+export type ColorType = Extract<ArcadeColorId, 'red' | 'blue' | 'yellow' | 'green'>;
 
 export interface Cell {
     id: number;

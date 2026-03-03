@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Drawer,
@@ -30,9 +30,9 @@ import {
   Inventory as PackageIcon,
   NotificationsActive as NotifIcon,
   CalendarMonth as CalendarIcon,
+  Tune as TuneIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { useTheme, useMediaQuery } from '@mui/material';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserManagement from '../components/admin/UserManagement';
@@ -47,14 +47,11 @@ import StoryGeneratorPage from './Story/StoryGeneratorPage';
 import PackageManagement from '../components/admin/PackageManagement';
 import PushNotificationAdmin from '../components/admin/PushNotificationAdmin';
 import DersPlanla from '../components/admin/DersPlanla';
+import AIQuestionPoolSettingsManagement from '../components/admin/AIQuestionPoolSettingsManagement';
+import { authRepository } from '@/server/repositories/authRepository';
+import { notificationRepository } from '@/server/repositories/notificationRepository';
+import { applyNotificationBadges } from '@/features/admin/model/adminPageUseCases';
 import { toast } from 'sonner';
-
-interface Notification {
-  id: string;
-  type: string;
-  message: string;
-  created_at: string;
-}
 
 interface MenuItem {
   id: string;
@@ -133,6 +130,13 @@ const AdminPage: React.FC = () => {
       path: '/admin/talent-analytics',
     },
     {
+      id: 'ai-question-pool-settings',
+      title: 'AI Soru Havuzu',
+      icon: <TuneIcon />,
+      component: <AIQuestionPoolSettingsManagement />,
+      path: '/admin/ai-question-pool-settings',
+    },
+    {
       id: 'student-statistics',
       title: 'Öğrenci İstatistikleri',
       icon: <PeopleIcon />,
@@ -162,18 +166,29 @@ const AdminPage: React.FC = () => {
     },
   ]);
 
-  useEffect(() => {
-    checkAdminStatus();
-  }, []);
+  const checkNotifications = useCallback(async () => {
+    if (!auth.user?.id) return;
 
-  const checkAdminStatus = async () => {
+    try {
+      const notifications = await notificationRepository.listUnreadByUserId(auth.user.id);
+      setMenuItems((prev) => applyNotificationBadges(prev, notifications));
+    } catch (err) {
+      console.error('Bildirimler kontrol edilirken hata:', err);
+      toast.error('Bildirimler yüklenirken bir hata oluştu');
+    }
+  }, [auth.user?.id]);
+
+  const checkAdminStatus = useCallback(async () => {
+    if (!auth.user?.id) {
+      setError('Bu sayfaya erişim yetkiniz yok');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', auth.user?.id)
-        .single();
+      setError(null);
+      const profile = await authRepository.getProfileByUserId(auth.user.id);
 
       if (!profile?.is_admin) {
         setError('Bu sayfaya erişim yetkiniz yok');
@@ -181,35 +196,17 @@ const AdminPage: React.FC = () => {
       }
 
       await checkNotifications();
-      setLoading(false);
     } catch (err) {
       console.error('Admin kontrolü yapılırken hata:', err);
       setError('Yetkilendirme kontrolü yapılırken bir hata oluştu');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [auth.user?.id, checkNotifications]);
 
-  const checkNotifications = async () => {
-    try {
-      const { data: notifications, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', auth.user?.id)
-        .eq('read', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const menuItemsWithNotifications = menuItems.map((item: MenuItem) => ({
-        ...item,
-        badge: notifications?.filter((n: Notification) => n.type === item.id).length || 0,
-      }));
-
-      setMenuItems(menuItemsWithNotifications);
-    } catch (err) {
-      console.error('Bildirimler kontrol edilirken hata:', err);
-      toast.error('Bildirimler yüklenirken bir hata oluştu');
-    }
-  };
+  useEffect(() => {
+    void checkAdminStatus();
+  }, [checkAdminStatus]);
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -330,10 +327,10 @@ const AdminPage: React.FC = () => {
               <Route
                 key={item.id}
                 path={item.path.replace('/admin', '')}
-                Component={() => item.component as JSX.Element}
+                element={<>{item.component}</>}
               />
             ))}
-          <Route path="*" Component={() => <Navigate to="/admin" replace />} />
+          <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
       </Box>
     </Box>

@@ -281,27 +281,27 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
     ctx.rect(state.paddleX, canvas.height - PADDLE_HEIGHT - 10, state.paddleWidth, PADDLE_HEIGHT);
     if (state.activePowerUps.extend > 0) {
       ctx.fillStyle = '#22c55e'; // Yeşil - uzatılmış
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = '#22c55e';
     } else if (state.activePowerUps.slow > 0) {
       ctx.fillStyle = '#3b82f6'; // Mavi - yavaşlatılmış
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = '#3b82f6';
     } else {
-      ctx.fillStyle = '#94a3b8';
+      ctx.fillStyle = '#94a3b8'; // Varsayılan
     }
     ctx.fill();
-    ctx.shadowBlur = 0;
+    // Kalın siyah çerçeve (Toy-Box)
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#000000';
+    ctx.stroke();
     ctx.closePath();
 
     // Topu çiz
     ctx.beginPath();
     ctx.arc(state.ballX, state.ballY, BALL_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = state.activePowerUps.slow > 0 ? '#3b82f6' : '#f8fafc';
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = state.activePowerUps.slow > 0 ? '#3b82f6' : '#fff';
+    ctx.fillStyle = state.activePowerUps.slow > 0 ? '#3b82f6' : '#ef4444'; // Mavi veya Kırmızı (Toy-Box)
     ctx.fill();
-    ctx.shadowBlur = 0;
+    // Kalın siyah çerçeve
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000000';
+    ctx.stroke();
     ctx.closePath();
 
     // Aktif power-up göstergesi
@@ -390,7 +390,7 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
   }, [update]);
 
   const handleStart = () => {
-      window.scrollTo(0, 0);
+    window.scrollTo(0, 0);
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -416,14 +416,18 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center">
-      <div className="mb-4 flex gap-8 font-orbitron text-cyan-400">
-        <div className="text-xl">SKOR: {gameStateRef.current.score}</div>
-        <div className="text-xl">SEVİYE: {level}</div>
+    <div className="relative w-full h-full flex flex-col items-center justify-center font-black">
+      <div className="mb-6 flex gap-4 sm:gap-8 text-black">
+        <div className="bg-amber-300 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm -rotate-1 text-sm sm:text-xl uppercase tracking-widest">
+          SKOR: <span className="text-white drop-shadow-neo-sm ml-2 text-xl sm:text-2xl">{gameStateRef.current.score}</span>
+        </div>
+        <div className="bg-sky-300 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm rotate-1 text-sm sm:text-xl uppercase tracking-widest">
+          SEVİYE: <span className="text-white drop-shadow-neo-sm ml-2 text-xl sm:text-2xl">{level}</span>
+        </div>
       </div>
 
       <div
-        className="relative bg-slate-900/50 p-2 rounded-xl border border-slate-700 shadow-2xl backdrop-blur-sm cursor-pointer"
+        className="relative bg-white p-2 sm:p-4 rounded-3xl border-2 border-black/10 shadow-neo-sm cursor-pointer"
         onClick={handleStart}
       >
         <canvas
@@ -436,13 +440,13 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
         />
 
         {!isStarted && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg transition-opacity duration-300">
-            <div className="text-center p-8 border-2 border-cyan-500/30 rounded-2xl bg-slate-900/80 backdrop-blur-md shadow-[0_0_50px_rgba(6,182,212,0.2)]">
-              <p className="text-white text-4xl font-orbitron mb-4 tracking-widest">HAZIR MISIN?</p>
-              <button className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-orbitron rounded-lg animate-bounce shadow-lg">
-                TOPU FIRLATMAK İÇİN TIKLA
+          <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-[1.2rem] transition-opacity duration-300 backdrop-blur-sm z-10 m-2 sm:m-4">
+            <div className="text-center p-6 sm:p-8 border-2 border-black/10 rounded-3xl bg-yellow-300 shadow-neo-sm -rotate-2 max-w-[90%]">
+              <p className="text-black text-3xl sm:text-4xl font-black mb-6 uppercase tracking-tighter drop-shadow-[2px_2px_0_#fff] rotate-1">HAZIR MISIN?</p>
+              <button className="w-full px-6 py-4 sm:py-5 bg-rose-400 hover:bg-rose-500 text-black font-black text-lg sm:text-xl rounded-2xl border-2 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-2 active:shadow-none transition-all uppercase tracking-widest">
+                TOPU FIRLAT!
               </button>
-              <p className="text-slate-400 text-sm mt-4">
+              <p className="text-black text-sm sm:text-base font-black mt-6 bg-white px-4 py-2 rounded-xl border-2 border-black/10 rotate-1 inline-block shadow-neo-sm">
                 🧠 Logolu blokları kır ve güç topla!
               </p>
             </div>
@@ -450,9 +454,15 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
         )}
       </div>
 
-      <div className="mt-6 text-slate-400 text-sm max-w-lg text-center">
-        <span className="text-green-400">🟢 UZAT</span> = Paddle büyür |
-        <span className="text-blue-400"> 🔵 YAVAŞ</span> = Top yavaşlar
+      <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-6 text-black text-xs sm:text-sm font-black uppercase tracking-widest text-center w-full max-w-lg">
+        <div className="bg-emerald-100 flex-1 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm -rotate-1">
+          <span className="text-emerald-500 drop-shadow-neo-sm">🟢 UZAT</span>
+          <div className="mt-1">Paddle büyür</div>
+        </div>
+        <div className="bg-sky-100 flex-1 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm rotate-1">
+          <span className="text-sky-500 drop-shadow-neo-sm">🔵 YAVAŞ</span>
+          <div className="mt-1">Top yavaşlar</div>
+        </div>
       </div>
     </div>
   );

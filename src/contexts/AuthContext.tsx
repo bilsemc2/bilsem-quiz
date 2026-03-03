@@ -1,6 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import {
+    gainXPForCurrentSession,
+    loadSessionUser,
+    loadUserProfile,
+    signOutUser,
+    subscribeAuthState,
+    touchUserLastSeen
+} from '@/features/auth/model/authUseCases';
 
 export interface Profile {
     id: string;
@@ -8,11 +15,11 @@ export interface Profile {
     email: string;
     experience: number;
     is_admin?: boolean;
-    grade?: number;
-    school?: string;
+    grade?: number | string | null;
+    school?: string | null;
     avatar_url?: string;
-    last_seen?: string;
-    yetenek_alani?: string | string[];
+    last_seen?: string | null;
+    yetenek_alani?: string | string[] | null;
     [key: string]: unknown;
 }
 
@@ -41,14 +48,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
     const fetchProfile = async (userId: string) => {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('id, email, name, experience, is_admin, is_vip, role, avatar_url, yetenek_alani, grade, school, last_seen')
-            .eq('id', userId)
-            .single();
-
-        if (!error && data) {
-            setProfile(data);
+        const data = await loadUserProfile(userId);
+        if (data) {
+            setProfile({
+                ...data,
+                experience: Number(data.experience) || 0
+            });
         }
     };
 
@@ -56,29 +61,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!user) return;
 
         try {
-            // Call secure Edge Function for XP gain
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) return;
+            const result = await gainXPForCurrentSession(1, 'Zaman bazlı XP');
 
-            const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xp-transaction`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session.access_token}`,
-                    },
-                    body: JSON.stringify({ action: 'gain', amount: 1 }),
-                }
-            );
-
-            if (response.ok) {
-                const result = await response.json();
-                // Update local state with new XP from server
+            if (result.success) {
                 setProfile((prev) => prev ? { ...prev, experience: result.newXP } : null);
-            } else if (response.status === 429) {
+            } else if (result.status === 429) {
                 // Rate limited - silently ignore
-                console.log('[XP] Rate limited by server');
             }
         } catch (err) {
             console.error('Error in XP gain:', err);
@@ -86,32 +74,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     useEffect(() => {
-        // Check active sessions and sets the user
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            const currentUser = session?.user ?? null;
+        let isActive = true;
+
+        const loadInitialState = async () => {
+            const currentUser = await loadSessionUser();
+            if (!isActive) return;
+
             setUser(currentUser);
-            if (currentUser) fetchProfile(currentUser.id);
-            setLoading(false);
+            if (currentUser) {
+                await fetchProfile(currentUser.id);
+            } else {
+                setProfile(null);
+            }
+            if (isActive) {
+                setLoading(false);
+            }
+        };
+
+        loadInitialState();
+
+        const subscription = subscribeAuthState(async (currentUser) => {
+            if (!isActive) return;
+
+            setUser(currentUser);
+            if (currentUser) {
+                await fetchProfile(currentUser.id);
+            } else {
+                setProfile(null);
+            }
+
+            if (isActive) {
+                setLoading(false);
+            }
         });
 
-        // Listen for changes on auth state (sign in, sign out, etc.)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            const currentUser = session?.user ?? null;
-            setUser(currentUser);
-            if (currentUser) fetchProfile(currentUser.id);
-            setLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
+        return () => {
+            isActive = false;
+            subscription.unsubscribe();
+        };
     }, []);
 
 
     const updateLastSeen = useCallback(async () => {
         if (user?.id) {
-            await supabase
-                .from('profiles')
-                .update({ last_seen: new Date().toISOString() })
-                .eq('id', user.id);
+            await touchUserLastSeen(user.id);
         }
     }, [user]);
 
@@ -124,10 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user, updateLastSeen]);
 
     const signOut = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-            throw error;
-        }
+        await signOutUser();
         setProfile(null);
     };
 

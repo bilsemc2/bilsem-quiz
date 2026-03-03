@@ -4,6 +4,26 @@ import { supabase } from '../../../lib/supabase';
 // Yerel depolama için anahtar
 const STORIES_KEY = 'local_stories';
 
+
+
+/** Fisher-Yates shuffle: seçenekleri karıştırıp correctAnswer indeksini günceller */
+export function shuffleQuestionOptions<T extends { options: string[]; correctAnswer: number }>(question: T): T {
+  const options = [...question.options];
+  const correctOption = options[question.correctAnswer];
+
+  // Fisher-Yates shuffle
+  for (let i = options.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [options[i], options[j]] = [options[j], options[i]];
+  }
+
+  return {
+    ...question,
+    options,
+    correctAnswer: options.indexOf(correctOption)
+  };
+}
+
 export async function saveStory(story: {
   title: string;
   content: string;
@@ -12,6 +32,8 @@ export async function saveStory(story: {
   theme: StoryTheme;
   image_url: string;
   questions: Array<{
+    id?: string;
+    aiGeneratedQuestionId?: string;
     text: string;
     options: string[];
     correctAnswer: number;
@@ -26,91 +48,54 @@ export async function saveStory(story: {
     const currentUser = supabase.auth.getUser();
     const userData = await currentUser;
 
-    console.log('Hikaye kaydediliyor:', story);
-    console.log('Tema:', story.theme);
 
-    // Hikayeyi Supabase'e kaydet ve ID dönmesini gerektirmeden kayıt yapalım
-    const { error: insertError } = await supabase
+    // Hikayeyi Supabase'e kaydet ve ID'sini al
+    const { data: insertedStory, error: insertError } = await supabase
       .from('story')
       .insert({
         title: story.title,
         content: story.content,
         theme: story.theme,
-        age_range: '7-12', // Varsayılan yaş aralığı
+        age_range: '7-12',
         is_active: true,
         image_path: story.image_url,
-        // Oturum açıldığında user ID'si ekle
         created_by: userData.data?.user?.id || null
-      });
-
-    if (insertError) {
-      console.error('Supabase hikaye kayıt hatası:', insertError);
-      throw insertError;
-    }
-
-    // İnsert işlemi başarılı olduktan sonra son eklenen hikayeyi sorgula
-    const { data: latestStory, error: selectError } = await supabase
-      .from('story')
-      .select('*')
-      .eq('title', story.title)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      })
+      .select()
       .single();
 
-    if (selectError) {
-      console.error('Kaydedilen hikaye bulunamadı:', selectError);
-      // Bu noktada hikaye kaydedildi ama ID bulunamadı, geçici bir ID döndürebiliriz
-      // Kullanıcı deneyimini bozmamak için geçici bir ID oluşturup devam ediyoruz
-      return {
-        id: `temp-${Date.now()}`,
-        title: story.title,
-        content: story.content,
-        summary: story.summary,
-        theme: story.theme,
-        image_url: story.image_url,
-        questions: story.questions,
-        created_at: new Date().toISOString()
-      };
+    if (insertError || !insertedStory) {
+      console.error('Supabase hikaye kayıt hatası:', insertError);
+      throw insertError || new Error('Hikaye kaydedilemedi');
     }
 
-    if (!latestStory) {
-      console.error('Kaydedilen hikaye verisi bulunamadı');
-      // Geçici ID oluşturup devam edelim
-      return {
-        id: `temp-${Date.now()}`,
-        title: story.title,
-        content: story.content,
-        summary: story.summary,
-        theme: story.theme,
-        image_url: story.image_url,
-        questions: story.questions,
-        created_at: new Date().toISOString()
-      };
-    }
-
-    console.log('Kaydedilen hikaye bulundu:', latestStory);
-    const storyId = latestStory.id;
+    const storyId = insertedStory.id;
 
     // Soruları kaydet
     if (story.questions && story.questions.length > 0) {
-      // Tüm soruları hazırla
-      const questionInserts = story.questions.map(question => ({
-        story_id: storyId,
-        question_text: question.text,
-        options: question.options, // JSONB olarak kabul edecek
-        correct_option: question.options[question.correctAnswer], // Doğru cevabı indeks yerine string olarak saklıyoruz
-        difficulty_level: 'normal' // Varsayılan zorluk seviyesi
-      }));
 
-      // Soruları toplu olarak ekle
+      const questionInserts = story.questions.map((question) => {
+        return {
+          story_id: storyId,
+          question_text: question.text,
+          options: question.options,
+          correct_option: question.options[question.correctAnswer],
+          difficulty_level: 'normal'
+        };
+      });
+
+
       const { error: questionsError } = await supabase
-        .from('story_questions') // Çoğul: story_questions
-        .insert(questionInserts);
+        .from('story_questions')
+        .insert(questionInserts)
+        .select();
 
       if (questionsError) {
-        console.error('Supabase soru kayıt hatası:', questionsError);
-        // Sorular kaydedilemese bile hikaye kaydedildi
+        console.error('[saveStory] Soru kayıt HATASI:', questionsError);
+        throw new Error(`Sorular kaydedilemedi: ${questionsError.message}`);
       }
+
+    } else {
     }
 
     // Tam nesneyi oluştur
@@ -123,7 +108,7 @@ export async function saveStory(story: {
       image_url: story.image_url,
       animalInfo: story.animalInfo,
       questions: story.questions,
-      created_at: latestStory?.created_at || new Date().toISOString()
+      created_at: insertedStory.created_at || new Date().toISOString()
     };
 
     // Local storage'a yedek olarak kaydet
@@ -186,7 +171,9 @@ export async function getStories(): Promise<Story[]> {
               // Doğru cevabın indeksini bul
               const correctAnswer: number = options.findIndex((option: string) => option === q.correct_option);
 
-              return {
+              return shuffleQuestionOptions({
+                id: q.id,
+                aiGeneratedQuestionId: q.ai_generated_question_id || undefined,
                 text: q.question_text,
                 options: options,
                 correctAnswer: correctAnswer >= 0 ? correctAnswer : 0,
@@ -194,7 +181,7 @@ export async function getStories(): Promise<Story[]> {
                   correct: 'Doğru cevap!',
                   incorrect: 'Tekrar deneyin.'
                 }
-              };
+              });
             });
           }
 
@@ -238,3 +225,37 @@ function getStoriesFromLocalStorage(): Story[] {
     return [];
   }
 }
+
+export async function saveStoryQuestions(storyId: string, questions: Array<{
+  id?: string;
+  aiGeneratedQuestionId?: string;
+  text: string;
+  options: string[];
+  correctAnswer: number;
+  feedback: { correct: string; incorrect: string; };
+}>): Promise<void> {
+  if (!questions || questions.length === 0) return;
+
+  try {
+    const questionInserts = questions.map((question) => {
+      return {
+        story_id: storyId,
+        question_text: question.text,
+        options: question.options,
+        correct_option: question.options[question.correctAnswer],
+        difficulty_level: 'normal'
+      };
+    });
+
+    const { error } = await supabase
+      .from('story_questions')
+      .insert(questionInserts);
+
+    if (error) {
+      console.error('Soru kayıt hatası:', error);
+    }
+  } catch (error) {
+    console.error('Sorular kaydedilirken hata:', error);
+  }
+}
+

@@ -4,6 +4,10 @@ import { X, RefreshCw, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
+// ═══════════════════════════════════════════════
+// ✏️ EditProfileModal — Kid-UI Çocuk Dostu Tasarım
+// ═══════════════════════════════════════════════
+
 interface EditProfileModalProps {
   open?: boolean;
   onClose: () => void;
@@ -76,7 +80,6 @@ const EditProfileModal = ({
         .update({
           name: formData.name,
           school: formData.school,
-          // grade alanı kullanıcı tarafından düzenlenmez, sadece öğretmen/admin değiştirebilir
         })
         .eq('id', user.id);
 
@@ -101,90 +104,112 @@ const EditProfileModal = ({
     toast.success('Yeni avatar oluşturuldu! Kaydetmek için "Kaydet" butonuna tıklayın.');
   };
 
+  const inputCls =
+    "w-full px-4 py-3 bg-gray-50 dark:bg-slate-700/50 border-2 border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyber-blue/30 focus:border-cyber-blue/30 font-nunito font-bold text-sm text-black dark:text-white transition-all";
+
   return (
     <Dialog.Root open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md z-50">
-          <div className="flex items-center justify-between mb-6">
-            <Dialog.Title className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <User className="w-5 h-5 text-indigo-500" />
-              Profili Düzenle
-            </Dialog.Title>
-            <Dialog.Close asChild>
-              <button className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </Dialog.Close>
-          </div>
+        <Dialog.Overlay className="fixed inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-50" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-lg w-[90%] max-w-md z-50 transition-colors duration-300">
+          {/* Accent Strip */}
+          <div className="h-2 bg-cyber-pink" />
 
-          <div className="space-y-5">
-            {/* Avatar */}
-            <div className="flex items-center gap-4">
-              <img
-                src={formData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=default`}
-                alt="Avatar"
-                className="w-20 h-20 rounded-full border-4 border-indigo-100"
-              />
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="font-nunito text-lg font-extrabold text-black dark:text-white flex items-center gap-2.5 uppercase tracking-tight">
+                <div className="w-8 h-8 bg-cyber-pink/10 border-2 border-cyber-pink/20 rounded-xl flex items-center justify-center">
+                  <User className="w-4 h-4 text-cyber-pink" />
+                </div>
+                Profili Düzenle
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button className="p-1.5 border-2 border-black/10 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-all text-black dark:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </Dialog.Close>
+            </div>
+
+            <div className="space-y-5">
+              {/* Avatar */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 bg-gray-50 dark:bg-slate-700/30 border-2 border-black/5 dark:border-white/5 rounded-xl p-4 transition-colors">
+                <img
+                  src={formData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=default`}
+                  alt="Avatar"
+                  className="w-20 h-20 rounded-2xl border-3 border-black/10 shadow-neo-sm bg-white object-cover"
+                />
+                <div className="flex flex-col gap-1.5 items-center sm:items-start">
+                  <button
+                    onClick={generateNewAvatar}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-black/10 bg-cyber-gold text-black rounded-lg font-nunito font-extrabold text-xs shadow-neo-sm hover:shadow-neo-md transition-all uppercase tracking-wider"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Zar At
+                  </button>
+                  <p className="text-[9px] text-slate-400 font-nunito font-bold uppercase tracking-widest">Rastgele Avatar Üret</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block font-nunito font-extrabold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">
+                    İsim
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className={inputCls}
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-nunito font-extrabold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">
+                    Okul
+                  </label>
+                  <input
+                    type="text"
+                    name="school"
+                    value={formData.school}
+                    onChange={handleChange}
+                    className={inputCls}
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-nunito font-extrabold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">
+                    Sınıf 🔒
+                  </label>
+                  <input
+                    type="text"
+                    name="grade"
+                    value={formData.grade}
+                    disabled
+                    className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-700 text-slate-400 border-2 border-black/5 dark:border-white/5 border-dashed rounded-xl cursor-not-allowed font-nunito font-bold text-sm"
+                  />
+                  <p className="text-[9px] uppercase font-nunito font-bold text-slate-400 mt-1.5">
+                    Sınıf bilgisi sadece öğretmen tarafından değiştirilebilir
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-end gap-2.5 mt-6">
               <button
-                onClick={generateNewAvatar}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-medium hover:bg-indigo-100 transition-colors"
+                onClick={onClose}
+                className="px-5 py-2.5 bg-gray-100 dark:bg-slate-700 text-black dark:text-white border-3 border-black/10 font-nunito font-extrabold rounded-xl shadow-neo-sm hover:shadow-neo-md transition-all uppercase text-xs tracking-wider"
               >
-                <RefreshCw className="w-4 h-4" />
-                Yeni Avatar
+                Vazgeç
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="px-6 py-2.5 bg-cyber-emerald text-black border-3 border-black/10 font-nunito font-extrabold rounded-xl shadow-neo-sm hover:shadow-neo-md transition-all disabled:opacity-50 uppercase text-xs tracking-wider"
+              >
+                {loading ? 'Yükleniyor...' : 'Değişiklikleri Uygula'}
               </button>
             </div>
-
-            {/* Form Fields */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">İsim</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Okul</label>
-              <input
-                type="text"
-                name="school"
-                value={formData.school}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Sınıf</label>
-              <input
-                type="text"
-                name="grade"
-                value={formData.grade}
-                disabled
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed"
-              />
-              <p className="text-xs text-slate-400 mt-1">Sınıf bilgisi sadece öğretmen tarafından değiştirilebilir</p>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              onClick={onClose}
-              className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-            >
-              İptal
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="px-6 py-2.5 bg-indigo-500 text-white font-medium rounded-xl hover:bg-indigo-600 transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Kaydediliyor...' : 'Kaydet'}
-            </button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

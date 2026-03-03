@@ -465,7 +465,7 @@ export function applySingleTransformation(
         case 'colorSwap':
             return step % 2 === 1 ? applyColorSwap(shape) : shape;
 
-        case 'strokeIncrease':
+        case 'strokeIncrease': {
             // İlk sütunda 1px, sonra her sütunda step kadar artar
             const baseStrokeWidth = 1;
             return {
@@ -473,20 +473,23 @@ export function applySingleTransformation(
                 strokeWidth: Math.min(baseStrokeWidth + transformation.step * step, 8),
                 strokeColor: shape.strokeColor || '#333333',
             };
+        }
 
-        case 'gridRowShift':
+        case 'gridRowShift': {
             let rowResult = shape;
             for (let i = 0; i < step; i++) {
                 rowResult = applyGridRowShift(rowResult, transformation.direction);
             }
             return rowResult;
+        }
 
-        case 'gridColShift':
+        case 'gridColShift': {
             let colResult = shape;
             for (let i = 0; i < step; i++) {
                 colResult = applyGridColShift(colResult, transformation.direction);
             }
             return colResult;
+        }
 
         case 'gridCellToggle':
             return step % 2 === 1
@@ -923,4 +926,3 @@ export function generateWrongOption(
 
     return wrongShape;
 }
-

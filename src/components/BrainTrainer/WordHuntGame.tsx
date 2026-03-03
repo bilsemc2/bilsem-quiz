@@ -1,26 +1,422 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Play, Star, Timer as TimerIcon, ChevronLeft, Zap, Heart, Search, Sparkles, CheckCircle2
-} from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useGamePersistence } from '../../hooks/useGamePersistence';
-import { useExam } from '../../contexts/ExamContext';
-import { useGameFeedback } from '../../hooks/useGameFeedback';
-import GameFeedbackBanner from './shared/GameFeedbackBanner';
-import { useSound } from '../../hooks/useSound'; // ─── Constants ───────────────────────────────────────────────
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { motion } from "framer-motion";
+import { Search, CheckCircle2, AlertCircle } from "lucide-react";
+import { useGameEngine } from "./shared/useGameEngine";
+import BrainTrainerShell from "./shared/BrainTrainerShell";
+import { useGameFeedback } from "../../hooks/useGameFeedback";
+import { useSound } from "../../hooks/useSound";
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
+import { GAME_COLORS } from './shared/gameColors';
+
 const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
-const GAME_ID = 'kelime-avi'; type Phase = 'welcome' | 'playing' | 'exposure' | 'feedback' | 'game_over' | 'victory';
-const ALPHABET = [...'ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ'];
-const VOWELS = [...'AEIİOÖUÜ'];
-const CONSONANTS = [...'BCÇDFGĞHJKLMNPRSŞTVYZ'];
-const BIGRAMS = ['AR', 'ER', 'AN', 'AL', 'LA', 'RA', 'TE', 'SE', 'İN', 'IN', 'DE', 'DA', 'EN', 'EL', 'MA', 'ME', 'TA', 'SA', 'YA', 'YE', 'UR', 'UN', 'US', 'UT', 'AK', 'EK', 'IL', 'İL', 'OL'];
-// const TRAP_MAP: Record<string, string[]> = { A: ['E'], E: ['A'], I: ['İ'], 'İ': ['I'], O: ['Ö'], 'Ö': ['O'], U: ['Ü'], 'Ü': ['U'], S: ['Ş'], 'Ş': ['S'], C: ['Ç'], 'Ç': ['C'], G: ['Ğ'], 'Ğ': ['G'] };
-const CARD_COLORS = ['from-violet-500 to-purple-600', 'from-rose-500 to-pink-600', 'from-amber-500 to-orange-600', 'from-teal-500 to-emerald-600', 'from-indigo-500 to-blue-600', 'from-fuchsia-500 to-pink-600', 'from-cyan-500 to-teal-600', 'from-lime-500 to-green-600']; const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-const getLevelCfg = (lvl: number) => { if (lvl <= 5) return { wordLen: 5, items: 8, roundDur: 4.5 - (lvl - 1) * 0.1, flash: 0.6, useBig: false }; if (lvl <= 10) return { wordLen: 6, items: 9, roundDur: 3.8 - (lvl - 6) * 0.1, flash: 0.55, useBig: lvl >= 8 }; if (lvl <= 15) return { wordLen: 7, items: 10, roundDur: 3.2 - (lvl - 11) * 0.1, flash: 0.5, useBig: true }; return { wordLen: 8, items: 12, roundDur: 2.6 - (lvl - 16) * 0.05, flash: 0.4, useBig: true };
-}; const makeWord = (len: number) => { let w = ''; let v = Math.random() > 0.45; for (let i = 0; i < len; i++) { w += v ? pick(VOWELS) : pick(CONSONANTS); v = !v; if (Math.random() < 0.18) v = !v; } return w;
-}; const insertT = (w: string, t: string) => { if (w.length < t.length) return t; const s = Math.floor(Math.random() * (w.length - t.length + 1)); return w.slice(0, s) + t + w.slice(s + t.length);
-}; const genItems = (t: string, len: number, count: number) => { const tc = Math.min(count - 2, Math.max(2, Math.round(count * 0.5) + (Math.floor(Math.random() * 3) - 1))); const items = []; for (let i = 0; i < count; i++) { const has = i < tc; const base = makeWord(len); let text = has ? insertT(base, t) : base; if (!has && text.includes(t)) text = text.replace(t, t.split('').reverse().join('')); items.push({ id: `${i}-${text}-${Math.random()}`, text, hasTarget: has }); } return items.sort(() => Math.random() - 0.5);
-}; const WordHuntGame: React.FC = () => { const { playSound } = useSound(); const { saveGamePlay } = useGamePersistence(); const { submitResult } = useExam(); const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 }); const location = useLocation(); const navigate = useNavigate(); const [phase, setPhase] = useState<Phase>('welcome'); const [score, setScore] = useState(0); const [lives, setLives] = useState(INITIAL_LIVES); const [level, setLevel] = useState(1); const [timeLeft, setTimeLeft] = useState(TIME_LIMIT); const [target, setTarget] = useState('—'); const [items, setItems] = useState<any[]>([]); const [selected, setSelected] = useState<Set<string>>(new Set()); const [roundTime, setRoundTime] = useState(0); const [isExp, setIsExp] = useState(false); const timerRef = useRef<NodeJS.Timeout | null>(null); const roundRef = useRef(0); const startTimeRef = useRef(0); const hasSavedRef = useRef(false); const examMode = location.state?.examMode || false; const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT; const startLevel = useCallback((lvl: number) => { const cfg = getLevelCfg(lvl); const t = cfg.useBig ? pick(BIGRAMS) : pick(ALPHABET); setTarget(t); setItems(genItems(t, cfg.wordLen, cfg.items)); setSelected(new Set()); setRoundTime(cfg.roundDur); setIsExp(true); setPhase('exposure'); playSound('slide'); setTimeout(() => { setIsExp(false); setPhase('playing'); }, cfg.flash * 1000); }, [playSound]); const handleStart = useCallback(() => { window.scrollTo(0, 0); setPhase('playing'); setScore(0); setLives(INITIAL_LIVES); setLevel(1); setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT); startTimeRef.current = Date.now(); hasSavedRef.current = false; startLevel(1); }, [startLevel, examMode, examTimeLimit]); useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, examMode, phase, handleStart]); useEffect(() => { if (phase === 'playing' && timeLeft > 0) { timerRef.current = setInterval(() => setTimeLeft(p => { if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; } return p - 1; }), 1000); return () => clearInterval(timerRef.current!); } }, [phase, timeLeft]); const finishRound = useCallback(() => { cancelAnimationFrame(roundRef.current); const total = items.filter(i => i.hasTarget).length; const correct = items.filter(i => i.hasTarget && selected.has(i.id)).length; const acc = total ? correct / total : 0; const isGood = acc >= 0.5; playSound(isGood ? 'correct' : 'incorrect'); showFeedback(isGood); setTimeout(() => { dismissFeedback(); if (isGood) { setScore(s => s + level * 10); if (level >= MAX_LEVEL) setPhase('victory'); else { const nl = level + 1; setLevel(nl); startLevel(nl); } } else { setLives(l => { const nl = l - 1; if (nl <= 0) setPhase('game_over'); else startLevel(level); return nl; }); } }, 1500); }, [items, selected, level, lives, startLevel, playSound, showFeedback, dismissFeedback]); useEffect(() => { if (phase !== 'playing') return; const start = performance.now(); const dur = getLevelCfg(level).roundDur; const tick = (now: number) => { const el = (now - start) / 1000; const rem = Math.max(0, dur - el); setRoundTime(rem); if (rem <= 0) finishRound(); else roundRef.current = requestAnimationFrame(tick); }; roundRef.current = requestAnimationFrame(tick); return () => cancelAnimationFrame(roundRef.current); }, [phase, level, items, finishRound]); const handleFinish = useCallback(async (v: boolean) => { if (hasSavedRef.current) return; hasSavedRef.current = true; const dur = Math.floor((Date.now() - startTimeRef.current) / 1000); if (examMode) { await submitResult(v || level >= 5, score, MAX_LEVEL * 100, dur); navigate('/atolyeler/sinav-simulasyonu/devam'); return; } await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: dur, metadata: { level: level, victory: v } }); }, [score, level, examMode, submitResult, navigate, saveGamePlay]); useEffect(() => { if (phase === 'game_over' || phase === 'victory') handleFinish(phase === 'victory'); }, [phase, handleFinish]); const toggle = (id: string) => { if (phase !== 'playing' || !!feedbackState) return; setSelected(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else if (next.size < items.filter(i => i.hasTarget).length) { next.add(id); playSound('pop'); } return next; }); }; const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`; const cfg = getLevelCfg(level); const prog = Math.max(0, Math.min(100, (roundTime / cfg.roundDur) * 100)); const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme"; const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri"; if (phase === 'welcome') { return ( <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black flex items-center justify-center p-6 text-white relative overflow-hidden"> <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" /></div> <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10"> <motion.div className="w-28 h-28 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Search size={52} className="text-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" /></motion.div> <h1 className="text-4xl font-black mb-4 bg-slate-50 dark:bg-slate-800 border-4 border-black bg-clip-text text-transparent">Kelime Avı</h1> <p className="text-slate-300 mb-8 text-lg">Hızlı akan harfler arasında gizli hedefleri yakala, algısal işlem hızınla kelime ormanında fark yarat!</p> <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 mb-6 text-left border border-2 border-black"> <h3 className="text-lg font-bold text-violet-300 mb-3 flex items-center gap-2"><Sparkles size={18} /> Nasıl Oynanır?</h3> <ul className="space-y-2 text-slate-300 text-sm"> <li className="flex items-center gap-2"><span className="w-5 h-5 bg-violet-500/30 rounded-full flex items-center justify-center text-[10px]">1</span><span>Ekranda kısa süre beliren <strong>kelimeleri hızla tara</strong></span></li> <li className="flex items-center gap-2"><span className="w-5 h-5 bg-violet-500/30 rounded-full flex items-center justify-center text-[10px]">2</span><span>Gösterilen <strong>hedef harfi</strong> (veya harf grubunu) içeren kelimeleri seç</span></li> <li className="flex items-center gap-2"><span className="w-5 h-5 bg-violet-500/30 rounded-full flex items-center justify-center text-[10px]">3</span><span>Süre bitmeden hedefleri yakala, <strong>kombo puanları</strong> topla!</span></li> </ul> </div> <div className="bg-violet-500/10 text-violet-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-violet-500/30 font-bold uppercase tracking-widest">TUZÖ 5.6.1 Algısal İşlem Hızı</div> <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button> </motion.div> </div> ); } return ( <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black text-white relative overflow-hidden flex flex-col"> <div className="relative z-10 p-4 pt-20"> <div className="max-w-5xl mx-auto flex items-center justify-between"> <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link> {(phase === 'playing' || phase === 'exposure' || phase === 'feedback') && ( <div className="flex items-center gap-3 flex-wrap"> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20"><Star className="text-amber-400 fill-amber-400" size={16} /><span className="font-bold text-amber-400">{score}</span></div> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={16} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-950'} />))}</div> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20"><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={16} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20"><Zap className="text-emerald-400" size={16} /><span className="font-bold text-emerald-400">Puan x{level}</span></div> </div> )} </div> </div> <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1"> <AnimatePresence mode="wait"> {(phase === 'playing' || phase === 'exposure') && ( <motion.div key="game" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-2xl flex flex-col items-center"> <div className="flex items-center gap-6 mb-8 w-full transition-all duration-500"> <div className="bg-slate-50 dark:bg-slate-800 border-4 border-black p-4 rounded-[2rem] shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] border-2 border-2 border-black transform hover:scale-110 transition-transform"> <span className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">HEDEF</span> <span className="text-4xl font-black text-white drop-shadow-[4px_4px_0_#000] dark:shadow-[4px_4px_0_#0f172a] tracking-widest">{target}</span> </div> <div className="flex-1 h-3 bg-white dark:bg-slate-800 rounded-full overflow-hidden border border-2 border-black shadow-inner relative"> <motion.div className={`h-full ${prog < 30 ? 'bg-red-500' : 'bg-slate-50 dark:bg-slate-800 border-4 border-black'}`} style={{ width: `${prog}%` }} transition={{ duration: 0.1, ease: 'linear' }} /> <div className="absolute top-full mt-1 left-0 right-0 flex justify-between px-1"><span className="text-[10px] font-bold text-white/30 tracking-widest uppercase">Zaman</span><span className="text-[10px] font-black text-white/50">{roundTime.toFixed(1)}s</span></div> </div> </div> <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full p-6 bg-white dark:bg-slate-800 rounded-[3rem] border border-2 border-black shadow-[16px_16px_0_#000] dark:shadow-[16px_16px_0_#0f172a]"> {items.map((item, id) => { const sel = selected.has(item.id); return ( <motion.button key={item.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: id * 0.03 }} whileHover={phase === 'playing' ? { scale: 1.05, y: -4 } : {}} whileTap={phase === 'playing' ? { scale: 0.95 } : {}} onClick={() => toggle(item.id)} className={`relative py-5 px-4 rounded-2xl font-black text-xl tracking-[0.2em] transition-all duration-300 shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a] overflow-hidden ${isExp ? `bg-gradient-to-br ${CARD_COLORS[id % CARD_COLORS.length]} text-white` : sel ? 'bg-emerald-500 text-white border-2 border-white/40 shadow-emerald-500/40' : 'bg-white dark:bg-slate-800 text-slate-400 border border-2 border-black hover:bg-white dark:bg-slate-800 hover:text-white'}`}> {item.text} {sel && !isExp && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2 right-2"><CheckCircle2 size={16} className="text-white drop-shadow-[4px_4px_0_#000] dark:shadow-[4px_4px_0_#0f172a]" /></motion.div>} </motion.button> ); })} </div> <div className="mt-8 flex items-center gap-2 px-6 py-2 bg-white dark:bg-slate-800 rounded-full border border-2 border-black"><Sparkles size={14} className="text-violet-400" /><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{isExp ? 'DİKKATLE İNCELE!' : `İÇİNDE "${target}" OLANLARI SEÇ!`}</p></div> </motion.div> )} {feedbackState && ( <motion.div key="feed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center"><h2 className={`text-5xl font-black ${feedbackState.correct ? 'text-emerald-400' : 'text-red-400'} drop-shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] italic tracking-tighter`}>{feedbackState.correct ? 'HARİKA HIZ!' : 'DAHA HIZLI!'}</h2><GameFeedbackBanner feedback={feedbackState} /></motion.div> )} {(phase === 'game_over' || phase === 'victory') && ( <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl"> <motion.div className="w-24 h-24 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div> <h2 className="text-3xl font-black text-violet-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Kelime Avcısı!' : 'Güzel Deneme!'}</h2> <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'Hızlı tarama ve ortografik farkındalık becerin tek kelimeyle muazzam!' : 'Harfleri daha hızlı taramak için odaklanmanı artırmalısın!'}</p> <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-6 border border-2 border-black"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm font-bold">Skor</p><p className="text-3xl font-black text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm font-bold">Seviye</p><p className="text-3xl font-black text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div> <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl mb-4 shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button> <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link> </motion.div> )} </AnimatePresence> </div> </div> );
-}; export default WordHuntGame;
+const GAME_ID = "kelime-avi";
+
+type InternalPhase =
+  | "exposure"
+  | "playing";
+
+const ALPHABET = [..."ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ"];
+const VOWELS = [..."AEIİOÖUÜ"];
+const CONSONANTS = [..."BCÇDFGĞHJKLMNPRSŞTVYZ"];
+
+/** Seviyeye göre n uzunluklu rastgele hece üretir (ör. 2→"AR", 3→"KAL", 4→"ANLI") */
+const makeNGram = (len: number): string => {
+  let s = "";
+  let useVowel = Math.random() > 0.5;
+  for (let i = 0; i < len; i++) {
+    s += useVowel ? pick(VOWELS) : pick(CONSONANTS);
+    useVowel = !useVowel;
+  }
+  return s;
+};
+
+const CARD_COLORS = [
+  GAME_COLORS.emerald, // cyber-green
+  GAME_COLORS.pink, // cyber-pink
+  GAME_COLORS.blue, // cyber-blue
+  GAME_COLORS.yellow, // cyber-yellow
+  GAME_COLORS.orange, // cyber-orange
+  GAME_COLORS.purple, // cyber-magenta
+];
+
+const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+const getLevelCfg = (lvl: number) => {
+  if (lvl <= 5)
+    return {
+      wordLen: 5,
+      items: 8,
+      roundDur: 4.5 - (lvl - 1) * 0.1,
+      flash: 0.6,
+      targetLen: 1, // tek harf
+    };
+  if (lvl <= 10)
+    return {
+      wordLen: 6,
+      items: 9,
+      roundDur: 3.8 - (lvl - 6) * 0.1,
+      flash: 0.55,
+      targetLen: lvl >= 8 ? 2 : 1, // 2-gram
+    };
+  if (lvl <= 15)
+    return {
+      wordLen: 7,
+      items: 10,
+      roundDur: 3.2 - (lvl - 11) * 0.1,
+      flash: 0.5,
+      targetLen: Math.min(3, 2 + Math.floor((lvl - 11) / 3)), // 2-3 gram
+    };
+  return {
+    wordLen: 8,
+    items: 12,
+    roundDur: 2.6 - (lvl - 16) * 0.05,
+    flash: 0.4,
+    targetLen: Math.min(4, 3 + Math.floor((lvl - 16) / 3)), // 3-4 gram
+  };
+};
+
+const makeWord = (len: number) => {
+  let w = "";
+  let v = Math.random() > 0.45;
+  for (let i = 0; i < len; i++) {
+    w += v ? pick(VOWELS) : pick(CONSONANTS);
+    v = !v;
+    if (Math.random() < 0.18) v = !v;
+  }
+  return w;
+};
+
+const insertT = (w: string, t: string) => {
+  if (w.length < t.length) return t;
+  const s = Math.floor(Math.random() * (w.length - t.length + 1));
+  return w.slice(0, s) + t + w.slice(s + t.length);
+};
+
+const genItems = (t: string, len: number, count: number) => {
+  const tc = Math.min(
+    count - 2,
+    Math.max(2, Math.round(count * 0.5) + (Math.floor(Math.random() * 3) - 1)),
+  );
+  const items = [];
+  for (let i = 0; i < count; i++) {
+    const has = i < tc;
+    let text = "";
+    if (has) {
+      text = insertT(makeWord(len), t);
+    } else {
+      text = makeWord(len);
+      while (text.includes(t)) {
+        text = makeWord(len);
+      }
+    }
+    items.push({ id: `${i}-${text}-${Math.random()}`, text, hasTarget: has });
+  }
+  return items.sort(() => Math.random() - 0.5);
+};
+
+const WordHuntGame: React.FC = () => {
+  const { playSound } = useSound();
+  const safeTimeout = useSafeTimeout();
+  const engine = useGameEngine({
+    gameId: GAME_ID,
+    maxLevel: MAX_LEVEL,
+    timeLimit: TIME_LIMIT,
+    initialLives: INITIAL_LIVES,
+  });
+
+  const feedback = useGameFeedback({
+    duration: 1500,
+  });
+  const { feedbackState, showFeedback, dismissFeedback } = feedback;
+
+  const [internalPhase, setInternalPhase] = useState<InternalPhase>("exposure");
+  const [target, setTarget] = useState("—");
+  const [items, setItems] = useState<{ id: string; text: string; hasTarget: boolean }[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [roundTime, setRoundTime] = useState(0);
+
+  const roundRef = useRef(0);
+  const startTimeRef = useRef<number | null>(null);
+
+  const startLevel = useCallback(
+    (lvl: number) => {
+      const cfg = getLevelCfg(lvl);
+      const t = cfg.targetLen <= 1 ? pick(ALPHABET) : makeNGram(cfg.targetLen);
+      setTarget(t);
+      setItems(genItems(t, cfg.wordLen, cfg.items));
+      setSelected(new Set());
+      setRoundTime(cfg.roundDur);
+      setInternalPhase("exposure");
+      playSound("slide");
+
+      safeTimeout(() => {
+        setInternalPhase("playing");
+        playSound("pop");
+      }, cfg.flash * 1000);
+    },
+    [playSound, safeTimeout],
+  );
+
+  const prevPhaseRef = useRef<string>("");
+  useEffect(() => {
+    if (engine.phase === "playing" && prevPhaseRef.current !== "playing") {
+      startLevel(engine.level);
+    } else if (engine.phase === "welcome") {
+      setItems([]);
+      setSelected(new Set());
+      setInternalPhase("exposure");
+    }
+    prevPhaseRef.current = engine.phase;
+  }, [engine.phase, engine.level, startLevel]);
+
+  const finishRound = useCallback(() => {
+    cancelAnimationFrame(roundRef.current);
+    if (!items || items.length === 0 || engine.phase !== "playing") return;
+
+    const total = items.filter((i) => i.hasTarget).length;
+    const correct = items.filter(
+      (i) => i.hasTarget && selected.has(i.id),
+    ).length;
+
+    // Penalize for wrong selections too
+    const incorrect = selected.size - correct;
+
+    // Must find ALL targets with at most 1 wrong pick
+    const isGood = total > 0 ? correct === total && incorrect <= 1 : false;
+
+    playSound(isGood ? "correct" : "incorrect");
+    showFeedback(isGood);
+
+    if (isGood) {
+      engine.addScore(engine.level * 10 + correct * 5 - incorrect * 5);
+    } else {
+      engine.loseLife();
+    }
+
+    safeTimeout(() => {
+      dismissFeedback();
+      if (isGood) {
+        if (engine.level >= MAX_LEVEL) {
+          engine.setGamePhase("victory");
+          playSound("success");
+        } else {
+          engine.nextLevel();
+          startLevel(engine.level + 1);
+        }
+      } else if (engine.lives > 1) {
+        startLevel(engine.level);
+      }
+    }, 1500);
+  }, [
+    items,
+    selected,
+    engine,
+    startLevel,
+    showFeedback,
+    dismissFeedback,
+    playSound,
+    safeTimeout,
+  ]);
+
+  useEffect(() => {
+    if (engine.phase !== "playing" || internalPhase !== "playing" || !!feedbackState) {
+      startTimeRef.current = null;
+      return;
+    }
+
+    if (startTimeRef.current === null) {
+      startTimeRef.current = performance.now();
+    }
+
+    const start = startTimeRef.current;
+    const dur = getLevelCfg(engine.level).roundDur;
+
+    const tick = (now: number) => {
+      const el = (now - start) / 1000;
+      const rem = Math.max(0, dur - el);
+      setRoundTime(rem);
+
+      if (rem <= 0) finishRound();
+      else roundRef.current = requestAnimationFrame(tick);
+    };
+
+    roundRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(roundRef.current);
+  }, [engine.phase, internalPhase, engine.level, items, finishRound, feedbackState]);
+
+  const toggle = (id: string) => {
+    if (engine.phase !== "playing" || internalPhase !== "playing" || !!feedbackState) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        playSound("pop");
+      } else if (next.size < items.filter((i) => i.hasTarget).length + 2) {
+        next.add(id);
+        playSound("pop");
+      }
+      return next;
+    });
+  };
+
+  const cfg = getLevelCfg(engine.level);
+  const prog = Math.max(0, Math.min(100, (roundTime / cfg.roundDur) * 100));
+
+  const gridCss = useMemo(() => `.pattern-grid {
+    background-image: 
+      linear-gradient(to right, #000 1px, transparent 1px),
+      linear-gradient(to bottom, #000 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .dark .pattern-grid {
+    background-image: 
+      linear-gradient(to right, #fff 1px, transparent 1px),
+      linear-gradient(to bottom, #fff 1px, transparent 1px);
+  }`, []);
+
+  return (
+    <BrainTrainerShell
+      engine={engine}
+      feedback={feedback}
+      config={{
+        title: "Kelime Avı",
+        icon: Search,
+        description:
+          "Hızlı akan harfler arasında gizli hedefleri yakala, algısal işlem hızınla fark yarat!",
+        howToPlay: [
+          "Ortada beliren hedef harfi hızla öğren",
+          "Ekranda kelimeler belirdiğinde hedefi içerenleri hemen seç",
+          "Süre bitmeden hızlı kararlar ver!",
+        ],
+        tuzoCode: "5.6.1 Algısal İşlem Hızı",
+        accentColor: "cyber-pink",
+        maxLevel: MAX_LEVEL,
+      }}
+    >
+      {() => (
+        <div className="w-full flex-1 flex justify-center items-center p-2 sm:p-4">
+          {engine.phase === "playing" && (
+            <motion.div
+              key="game"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-4xl flex flex-col items-center"
+            >
+              {/* Target & Timer Header */}
+              <div className="flex items-center gap-3 sm:gap-6 mb-4 sm:mb-6 w-full">
+                <div className="bg-white dark:bg-slate-800 border-2 border-black/10 px-5 sm:px-8 py-3 sm:py-5 rounded-2xl shadow-neo-sm flex flex-col items-center shrink-0">
+                  <span className="text-[10px] sm:text-xs font-nunito font-black text-black/50 dark:text-white/50 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                    <Search size={12} /> HEDEF
+                  </span>
+                  <span className="text-4xl sm:text-5xl font-black font-nunito text-cyber-blue tracking-widest">
+                    {target}
+                  </span>
+                </div>
+
+                <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl p-2.5 sm:p-3 border-2 border-black/10 shadow-neo-sm">
+                  <div className="w-full h-3 sm:h-5 bg-slate-100 dark:bg-slate-700 rounded-xl overflow-hidden relative">
+                    <motion.div
+                      className={`h-full ${prog < 30 ? "bg-cyber-pink" : "bg-cyber-green"} transition-colors`}
+                      style={{ width: `${prog}%`, transformOrigin: "left" }}
+                      transition={{ duration: 0.1, ease: "linear" }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/30" />
+                    </motion.div>
+                  </div>
+                  <div className="flex justify-between items-center px-1 mt-1">
+                    <span className="text-[10px] sm:text-xs font-nunito font-black text-slate-400 uppercase tracking-widest">
+                      Zaman
+                    </span>
+                    <span
+                      className={`text-xs sm:text-sm font-nunito font-black ${prog < 30 ? "text-cyber-pink animate-pulse" : "text-black dark:text-white"}`}
+                    >
+                      {roundTime.toFixed(1)}s
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid */}
+              <div className="w-full bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-2 border-black/10 shadow-neo-sm relative overflow-hidden">
+                <div className="absolute inset-0 pattern-grid opacity-10 dark:opacity-5 pointer-events-none" />
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 relative z-10">
+                  {items.map((item, id) => {
+                    const sel = selected.has(item.id);
+                    return (
+                      <motion.button
+                        key={item.id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{
+                          delay: id * 0.03,
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 20,
+                        }}
+                        whileTap={
+                          internalPhase === "playing" && !feedbackState ? { scale: 0.95 } : {}
+                        }
+                        onClick={() => toggle(item.id)}
+                        disabled={internalPhase === "exposure" || !!feedbackState}
+                        className={`relative py-3.5 sm:py-5 px-3 rounded-xl sm:rounded-2xl font-nunito font-black text-lg sm:text-xl tracking-[0.08em] sm:tracking-[0.12em] transition-all duration-200 border-2 border-black/10 flex items-center justify-center overflow-hidden break-all
+                        ${internalPhase === "exposure"
+                            ? `text-black`
+                            : sel
+                              ? "bg-cyber-green text-black shadow-neo-sm"
+                              : "bg-[#FAF9F6] dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 shadow-neo-sm"
+                          }
+                        `}
+                        style={
+                          internalPhase === "exposure"
+                            ? {
+                              backgroundColor:
+                                CARD_COLORS[id % CARD_COLORS.length],
+                            }
+                            : {}
+                        }
+                      >
+                        <span className="relative z-10">
+                          {item.text}
+                        </span>
+
+                        {sel && internalPhase === "playing" && (
+                          <motion.div
+                            initial={{ scale: 0, rotate: -45 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            className="absolute -top-1 -right-1 w-7 h-7 bg-black rounded-bl-xl rounded-tr-xl flex items-center justify-center pointer-events-none z-20"
+                          >
+                            <CheckCircle2
+                              size={16}
+                              strokeWidth={3}
+                              className="text-cyber-green"
+                            />
+                          </motion.div>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Hint Bar */}
+              <div className="mt-3 sm:mt-4 flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-cyber-pink border-2 border-black/10 rounded-2xl shadow-neo-sm">
+                <AlertCircle size={18} className="text-black fill-white shrink-0" />
+                <p className="text-xs sm:text-sm font-nunito font-black text-black uppercase tracking-widest">
+                  {internalPhase === "exposure"
+                    ? "DİKKATLE İNCELE!"
+                    : `İÇİNDE "${target}" OLANLARI SEÇ!`}
+                </p>
+              </div>
+            </motion.div>
+          )}
+          <style>{gridCss}</style>
+        </div>
+      )}
+    </BrainTrainerShell>
+  );
+};
+
+export default WordHuntGame;

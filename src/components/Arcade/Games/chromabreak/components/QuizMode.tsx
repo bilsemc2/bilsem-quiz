@@ -126,9 +126,9 @@ const QuizMode: React.FC<QuizModeProps> = ({ history, level, onQuizComplete }) =
   if (!question) return null;
 
   return (
-    <div className="max-w-2xl mx-auto p-8 bg-slate-800/80 rounded-2xl border border-slate-700 shadow-2xl backdrop-blur-md">
-      <div className="text-cyan-500 font-orbitron text-sm mb-2 uppercase tracking-widest">Hafıza Protokolü</div>
-      <h2 className="text-2xl font-semibold mb-8 text-white leading-tight">
+    <div className="max-w-2xl mx-auto p-6 sm:p-10 bg-amber-100 dark:bg-slate-800 rounded-[3rem] border-2 border-black/10 dark:border-slate-700 shadow-neo-sm dark:shadow-[16px_16px_0_#0f172a] font-black -rotate-1 relative mt-8 transition-colors duration-300">
+      <div className="bg-white dark:bg-slate-700 inline-block px-4 py-2 rounded-xl border-2 border-black/10 dark:border-slate-800 shadow-neo-sm rotate-2 text-black dark:text-white text-xs sm:text-sm mb-6 uppercase tracking-widest transition-colors duration-300">Hafıza Protokolü</div>
+      <h2 className="text-2xl sm:text-3xl font-black mb-8 text-black dark:text-white leading-tight uppercase drop-shadow-[2px_2px_0_#fff] dark:drop-shadow-neo-sm transition-colors duration-300">
         {question.question}
       </h2>
 
@@ -137,13 +137,13 @@ const QuizMode: React.FC<QuizModeProps> = ({ history, level, onQuizComplete }) =
           const isCorrect = option === question.correctAnswer;
           const isSelected = option === selectedOption;
 
-          let buttonClass = "p-4 text-left rounded-xl border transition-all duration-300 transform active:scale-95 ";
+          let buttonClass = "p-4 sm:p-5 text-left rounded-3xl border-4 transition-all duration-300 transform font-black text-lg sm:text-xl uppercase tracking-wider ";
           if (showResult) {
-            if (isCorrect) buttonClass += "bg-green-500/20 border-green-500 text-green-400 ring-2 ring-green-500/50";
-            else if (isSelected) buttonClass += "bg-red-500/20 border-red-500 text-red-400 opacity-80";
-            else buttonClass += "bg-slate-900/50 border-slate-700 text-slate-500 opacity-40";
+            if (isCorrect) buttonClass += "bg-emerald-400 border-black/10 text-black shadow-neo-sm";
+            else if (isSelected) buttonClass += "bg-rose-400 border-black/10 text-black shadow-none translate-y-2 opacity-80";
+            else buttonClass += "bg-slate-300 dark:bg-slate-600 border-black/10 dark:border-slate-800 text-slate-500 dark:text-slate-400 shadow-none opacity-50";
           } else {
-            buttonClass += "bg-slate-700/50 border-slate-600 hover:border-cyan-400 text-slate-200 hover:bg-slate-700";
+            buttonClass += "bg-white dark:bg-slate-700 border-black/10 dark:border-slate-900 text-black dark:text-white shadow-neo-sm dark:shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm dark:hover:shadow-neo-sm hover:bg-sky-100 dark:hover:bg-slate-600 active:translate-y-2 active:shadow-none";
           }
 
           return (
@@ -153,8 +153,8 @@ const QuizMode: React.FC<QuizModeProps> = ({ history, level, onQuizComplete }) =
               onClick={() => handleOptionClick(option)}
               className={buttonClass}
             >
-              <div className="flex items-center gap-3">
-                <span className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-slate-400 border border-slate-600">
+              <div className="flex items-center gap-4">
+                <span className="w-10 h-10 flex flex-shrink-0 items-center justify-center rounded-xl bg-yellow-300 text-black text-sm font-black border-2 border-black/10 shadow-neo-sm">
                   {String.fromCharCode(65 + idx)}
                 </span>
                 {option}
@@ -165,11 +165,11 @@ const QuizMode: React.FC<QuizModeProps> = ({ history, level, onQuizComplete }) =
       </div>
 
       {showResult && (
-        <div className={`p-4 rounded-xl animate-fade-in ${selectedOption === question.correctAnswer ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-          <p className="font-bold text-lg mb-1">
-            {selectedOption === question.correctAnswer ? 'HARİKA HATIRLAMA!' : 'HAFIZA HATASI TESPİT EDİLDİ!'}
+        <div className={`mt-8 p-4 sm:p-6 rounded-3xl border-2 border-black/10 shadow-neo-sm animate-in slide-in-from-bottom-4 rotate-1 ${selectedOption === question.correctAnswer ? 'bg-emerald-200' : 'bg-rose-200'}`}>
+          <p className="font-black text-xl sm:text-2xl mb-2 uppercase drop-shadow-[1px_1px_0_#fff] text-black">
+            {selectedOption === question.correctAnswer ? 'HARİKA HATIRLAMA!' : 'HAFIZA HATASI!'}
           </p>
-          <p className="text-sm opacity-90">{question.explanation}</p>
+          <p className="text-black font-bold text-sm sm:text-base leading-relaxed bg-white/50 px-3 py-2 rounded-xl">{question.explanation}</p>
         </div>
       )}
     </div>

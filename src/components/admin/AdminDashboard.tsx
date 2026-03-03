@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, TrendingUp, User, Check, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { adminDashboardRepository } from '@/server/repositories/adminDashboardRepository';
+import { buildDashboardStatsResult } from '@/features/admin/model/adminDashboardUseCases';
 
 interface RecentUser {
   id: string;
   name: string | null;
-  email: string;
+  email: string | null;
   created_at: string;
   is_active: boolean;
 }
@@ -33,24 +34,13 @@ const AdminDashboard = () => {
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
+      const [totalUsers, activeUsers, recentUsers] = await Promise.all([
+        adminDashboardRepository.getTotalUsersCount(),
+        adminDashboardRepository.getActiveUsersCount(),
+        adminDashboardRepository.listRecentUsers(5)
+      ]);
 
-      const { data: users, error: usersError } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (usersError) throw usersError;
-
-      const activeUsers = users?.filter(user => user.is_active).length || 0;
-
-      const recentUsers = users
-        ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5) || [];
-
-      setStats({
-        totalUsers: users?.length || 0,
-        activeUsers,
-        recentUsers,
-      });
+      setStats(buildDashboardStatsResult(totalUsers, activeUsers, recentUsers));
 
       setError(null);
     } catch (err) {
@@ -140,4 +130,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

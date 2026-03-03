@@ -19,8 +19,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
 
   useEffect(() => {
     const updateSize = () => {
-      const width = Math.min(window.innerWidth / 2.3, 400);
-      const height = Math.min(window.innerHeight * 0.5, 500);
+      const isMobile = window.innerWidth < 768;
+      const width = isMobile
+        ? Math.min(window.innerWidth - 64, 340)
+        : Math.min(window.innerWidth / 2.3, 400);
+      const height = isMobile
+        ? Math.min(window.innerHeight * 0.28, 280)
+        : Math.min(window.innerHeight * 0.5, 500);
       setCanvasSize({ w: width, h: height });
     };
     updateSize();
@@ -34,8 +39,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
   }, [resetTrigger]);
 
   const drawGrid = (ctx: CanvasRenderingContext2D) => {
-    ctx.strokeStyle = '#1e293b'; // Subtle slate grid
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#cbd5e1'; // slate-300 grid
+    ctx.lineWidth = 2;
     const gridSize = 40;
     for (let i = 0; i <= canvasSize.w; i += gridSize) {
       ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvasSize.h); ctx.stroke();
@@ -60,7 +65,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
       if (pathPoints.length < 2) return;
       ctx.beginPath();
       ctx.strokeStyle = color;
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 8;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
@@ -72,16 +77,30 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
         ctx.lineTo(x, p.y);
       });
       ctx.stroke();
+
+      // Draw a black outline for tactile look
+      ctx.beginPath();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 14;
+      ctx.globalCompositeOperation = 'destination-over';
+      const startXOutline = isMirrored ? canvasSize.w - pathPoints[0].x : pathPoints[0].x;
+      ctx.moveTo(startXOutline, pathPoints[0].y);
+      pathPoints.forEach(p => {
+        const x = isMirrored ? canvasSize.w - p.x : p.x;
+        ctx.lineTo(x, p.y);
+      });
+      ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
     };
 
-    // Current Drawing - Bright colors for dark mode
-    drawPathSet(lCtx, currentPath, '#60a5fa', false); // Light Blue
-    drawPathSet(rCtx, currentPath, '#fb7185', true);  // Light Rose
+    // Current Drawing - Solid solid colors
+    drawPathSet(lCtx, currentPath, '#38bdf8', false); // sky-400
+    drawPathSet(rCtx, currentPath, '#fb7185', true);  // rose-400
 
-    // Old Paths - Dimmed colors
+    // Old Paths - Dimmed solid colors
     paths.forEach(p => {
-      drawPathSet(lCtx, p.points, '#334155', false);
-      drawPathSet(rCtx, p.points, '#4c0519', true);
+      drawPathSet(lCtx, p.points, '#e2e8f0', false); // slate-200
+      drawPathSet(rCtx, p.points, '#e2e8f0', true);
     });
 
     // Draw Targets on Right
@@ -92,24 +111,29 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
       const ty = target.y * scaleY;
 
       rCtx.beginPath();
-      rCtx.arc(tx, ty, 18, 0, Math.PI * 2);
-      rCtx.fillStyle = target.hit ? 'rgba(34, 197, 94, 0.2)' : 'rgba(244, 63, 94, 0.1)';
+      rCtx.arc(tx, ty, 20, 0, Math.PI * 2);
+      rCtx.fillStyle = target.hit ? '#bbf7d0' : '#fecdd3'; // green-200 / rose-200 target background
       rCtx.fill();
+      rCtx.lineWidth = 4;
+      rCtx.strokeStyle = '#000000';
+      rCtx.stroke();
 
       if (!target.hit) {
         rCtx.beginPath();
         rCtx.arc(tx, ty, 10, 0, Math.PI * 2);
         rCtx.fillStyle = '#f43f5e'; // Bright Rose
-        rCtx.shadowBlur = 15;
-        rCtx.shadowColor = '#f43f5e';
         rCtx.fill();
-        rCtx.shadowBlur = 0;
+        rCtx.stroke(); // black stroke for inner circle
       } else {
         rCtx.fillStyle = "#22c55e"; // Bright Green
-        rCtx.font = "bold 20px Fredoka";
+        rCtx.font = "900 24px 'Nunito', sans-serif";
         rCtx.textAlign = "center";
         rCtx.textBaseline = "middle";
-        rCtx.fillText("✓", tx, ty);
+        // black border around text
+        rCtx.strokeStyle = "#000000";
+        rCtx.lineWidth = 4;
+        rCtx.strokeText("✓", tx, ty + 2);
+        rCtx.fillText("✓", tx, ty + 2);
       }
     });
   }, [paths, currentPath, targets, canvasSize]);
@@ -169,16 +193,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
   };
 
   return (
-    <div className="flex flex-row gap-2 md:gap-8 items-center justify-center p-2 select-none">
-      <div className="flex flex-col items-center">
-        <span className="text-xs md:text-sm font-bold text-blue-400 mb-2 bg-blue-950/50 px-3 py-1 rounded-full border border-blue-900">SİZİN ALANINIZ</span>
-        <div className="relative border-4 border-blue-900 rounded-2xl overflow-hidden bg-[#020617] shadow-2xl shadow-blue-950/20">
+    <div className="flex flex-col md:flex-row gap-8 items-center justify-center p-4 sm:p-8 select-none bg-sky-100 rounded-[2rem] border-2 border-black/10 shadow-neo-sm transform -rotate-1">
+      <div className="flex flex-col items-center transform rotate-1">
+        <span className="text-sm sm:text-base font-black text-black mb-3 bg-sky-300 px-5 py-2 rounded-xl border-2 border-black/10 uppercase tracking-widest shadow-neo-sm">SİZİN ALANINIZ</span>
+        <div className="relative border-2 border-black/10 rounded-[2rem] overflow-hidden bg-white shadow-neo-sm">
           <canvas
             ref={leftCanvasRef}
             width={canvasSize.w}
             height={canvasSize.h}
             className="touch-none cursor-crosshair"
-           
+
             onMouseDown={handleStart}
             onMouseMove={handleMove}
             onMouseUp={handleEnd}
@@ -190,11 +214,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
         </div>
       </div>
 
-      <div className="w-1 h-32 md:h-64 bg-slate-800 rounded-full" />
+      <div className="w-16 h-2 md:w-2 md:h-64 bg-black rounded-full shadow-[2px_2px_0_#fff]" />
 
-      <div className="flex flex-col items-center">
-        <span className="text-xs md:text-sm font-bold text-rose-400 mb-2 bg-rose-950/50 px-3 py-1 rounded-full border border-rose-900">AYNA DÜNYASI</span>
-        <div className="relative border-4 border-rose-900 rounded-2xl overflow-hidden bg-[#020617] shadow-2xl shadow-rose-950/20">
+      <div className="flex flex-col items-center transform rotate-1">
+        <span className="text-sm sm:text-base font-black text-black mb-3 bg-rose-300 px-5 py-2 rounded-xl border-2 border-black/10 uppercase tracking-widest shadow-neo-sm">AYNA DÜNYASI</span>
+        <div className="relative border-2 border-black/10 rounded-[2rem] overflow-hidden bg-white shadow-neo-sm">
           <canvas
             ref={rightCanvasRef}
             width={canvasSize.w}

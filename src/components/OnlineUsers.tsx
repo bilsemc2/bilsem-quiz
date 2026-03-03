@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Box, Typography, Chip, Paper, List, ListItem, ListItemText, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import MessageIcon from '@mui/icons-material/Message';
 import { toast } from 'sonner';
-
-interface OnlineUser {
-  id: string;
-  name: string;
-  last_seen: string;
-  online: boolean;
-}
+import { authRepository } from '@/server/repositories/authRepository';
+import { adminMessageRepository } from '@/server/repositories/adminMessageRepository';
+import { presenceRepository } from '@/server/repositories/presenceRepository';
+import { toOnlineUsers, type OnlineUser } from '@/features/content/model/onlinePresenceUseCases';
 
 interface MessageDialogProps {
   open: boolean;
@@ -58,105 +54,53 @@ const MessageDialog = ({ open, onClose, user, onSend }: MessageDialogProps) => {
   );
 };
 
-const ONLINE_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds
-
 const OnlineUsers = () => {
   const [users, setUsers] = useState<OnlineUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<OnlineUser | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
 
   useEffect(() => {
-    updateOnlineStatus();
+    void updateOnlineStatus();
     const interval = setInterval(updateOnlineStatus, 30000);
 
-    const channel = supabase
-      .channel('online-users')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles'
-        },
-        (payload) => {
-          // Ignore payload - just trigger refresh on any change
-          void payload;
-          updateOnlineStatus();
-        }
-      )
-      .subscribe();
+    const subscription = presenceRepository.subscribeProfilesChanges(() => {
+      void updateOnlineStatus();
+    });
 
     return () => {
       clearInterval(interval);
-      channel.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
   const updateOnlineStatus = async () => {
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('id, name, last_seen')
-      .order('name');
-
-    if (error) {
-      console.error('Profil bilgileri alınamadı:', error);
-      return;
-    }
-
-    if (profiles) {
-      const now = new Date().getTime();
-      const onlineUsers = profiles.map(profile => ({
-        id: profile.id,
-        name: profile.name,
-        last_seen: profile.last_seen,
-        online: profile.last_seen && (now - new Date(profile.last_seen).getTime()) < ONLINE_THRESHOLD
-      }));
-      setUsers(onlineUsers);
-    }
+    const profiles = await presenceRepository.listProfilesPresence();
+    setUsers(toOnlineUsers(profiles));
   };
 
   const handleSendMessage = async (message: string) => {
     if (!selectedUser) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authRepository.getSessionUser();
     if (!user) return;
 
-    // Admin kontrolü
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
+    const profile = await authRepository.getProfileByUserId(user.id);
 
     if (!profile?.is_admin) {
       toast.error('Sadece adminler mesaj gönderebilir');
       return;
     }
 
-    console.log('Sending message:', {
-      sender_id: user.id,
-      receiver_id: selectedUser.id,
-      message
-    });
-
-    const { data, error } = await supabase
-      .from('admin_messages')
-      .insert([
-        {
-          sender_id: user.id,
-          receiver_id: selectedUser.id,
-          message
-        }
-      ])
-      .select();
-
-    console.log('Insert result:', { data, error });
-
-    if (error) {
+    try {
+      await adminMessageRepository.sendAdminMessage({
+        senderId: user.id,
+        receiverId: selectedUser.id,
+        message
+      });
+      toast.success('Mesaj gönderildi');
+    } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Mesaj gönderilemedi');
-    } else {
-      toast.success('Mesaj gönderildi');
     }
   };
 

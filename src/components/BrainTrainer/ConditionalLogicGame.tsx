@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+
 import { BrainCircuit } from "lucide-react";
 import { useSound } from "../../hooks/useSound";
 import { useGameFeedback } from "../../hooks/useGameFeedback";
 import { useGameEngine } from "./shared/useGameEngine";
 import BrainTrainerShell from "./shared/BrainTrainerShell";
+import { GAME_COLORS } from './shared/gameColors';
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 
 const GAME_ID = "kosullu-yonerge";
 const GAME_TITLE = "Koşullu Yönerge";
@@ -41,11 +43,11 @@ const COLOR_NAMES: Record<ColorType, string> = {
 };
 
 const COLOR_VALUES: Record<ColorType, string> = {
-  Red: "#ef4444",
-  Blue: "#3b82f6",
-  Green: "#22c55e",
-  Yellow: "#eab308",
-  Purple: "#8b5cf6",
+  Red: GAME_COLORS.incorrect,
+  Blue: GAME_COLORS.blue,
+  Green: GAME_COLORS.emerald,
+  Yellow: GAME_COLORS.yellow,
+  Purple: GAME_COLORS.purple,
 };
 
 interface RoundData {
@@ -57,7 +59,7 @@ interface RoundData {
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const uid = () => Math.random().toString(36).substring(2, 8);
 
-const generateRound = (level: number): RoundData => {
+const generateRound = (level: number, attempt = 0): RoundData => {
   const count = level <= 5 ? 4 : level <= 12 ? 6 : 8;
   const objects: GameObject[] = [];
   for (let i = 0; i < count; i++) {
@@ -71,7 +73,13 @@ const generateRound = (level: number): RoundData => {
   const singletons = objects.filter(
     (o) => comboCounts[`${o.color}-${o.shape}`] === 1,
   );
-  if (singletons.length < 2) return generateRound(level);
+  if (singletons.length < 2 && attempt < 20) return generateRound(level, attempt + 1);
+  if (singletons.length < 2) {
+    // Fallback: force two unique objects
+    objects[0] = { id: uid(), shape: "Circle", color: "Red" };
+    objects[1] = { id: uid(), shape: "Square", color: "Blue" };
+    return generateRound(level, 0);
+  }
 
   const targetA = pick(singletons);
   let targetB = pick(singletons);
@@ -87,7 +95,6 @@ const generateRound = (level: number): RoundData => {
         Math.random() > 0.5
           ? pick(objects)
           : { color: pick(COLORS), shape: pick(SHAPES) };
-      // Note: Object identity or partial identity. Test is partial, need to cast back nicely.
       condTrue = objects.some(
         (o) => o.color === test.color && o.shape === test.shape,
       );
@@ -240,25 +247,20 @@ const ShapeIcon: React.FC<{
 };
 
 
+const MAX_LEVEL = 20;
+
 const ConditionalLogicGame: React.FC = () => {
   const engine = useGameEngine({
     gameId: GAME_ID,
-    maxLevel: 20,
+    maxLevel: MAX_LEVEL,
     initialLives: 5,
     timeLimit: 180,
   });
 
   const { playSound } = useSound();
+  const safeTimeout = useSafeTimeout();
   const feedback = useGameFeedback({ duration: 1000 });
   const { feedbackState, showFeedback, dismissFeedback } = feedback;
-
-  const {
-    phase,
-    level,
-    addScore,
-    loseLife,
-    nextLevel,
-  } = engine;
 
   const [round, setRound] = useState<RoundData | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -270,36 +272,41 @@ const ConditionalLogicGame: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (phase === "playing" && !selectedId) {
-      setRound(generateRound(level));
-    } else if (phase === "welcome") {
+    if (engine.phase === "playing" && !selectedId) {
+      setRound(generateRound(engine.level));
+    } else if (engine.phase === "welcome") {
       setRound(null);
       setSelectedId(null);
     }
-  }, [phase, level, selectedId]);
+  }, [engine.phase, engine.level, selectedId]);
 
   const handleObjectClick = useCallback(
     (id: string) => {
-      if (!round || phase !== "playing" || selectedId || !!feedbackState) return;
+      if (!round || engine.phase !== "playing" || selectedId || !!feedbackState) return;
 
       const correct = id === round.targetId;
       setSelectedId(id);
       showFeedback(correct);
       playSound(correct ? "correct" : "incorrect");
 
-      const t = setTimeout(() => {
+      const t = safeTimeout(() => {
         dismissFeedback();
         if (correct) {
-          addScore(10 * level);
-          nextLevel();
+          engine.addScore(10 * engine.level);
+          if (engine.level >= MAX_LEVEL) {
+            engine.setGamePhase("victory");
+            playSound("success");
+          } else {
+            engine.nextLevel();
+          }
         } else {
-          loseLife();
+          engine.loseLife();
         }
         setSelectedId(null);
       }, 1200);
       timeoutsRef.current.push(t);
     },
-    [round, phase, selectedId, feedbackState, showFeedback, playSound, dismissFeedback, addScore, level, nextLevel, loseLife],
+    [round, engine, selectedId, feedbackState, showFeedback, playSound, dismissFeedback, safeTimeout],
   );
 
   const gameConfig = {
@@ -320,99 +327,83 @@ const ConditionalLogicGame: React.FC = () => {
   return (
     <BrainTrainerShell config={gameConfig} engine={engine} feedback={feedback}>
       {() => (
-        <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1">
-          <AnimatePresence mode="wait">
-            {phase === "playing" && round && (
-              <motion.div
-                key={`level-${level}-${round.instruction}`} // Force unmount/remount on level change for entrance animation
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.05 }}
-                transition={{ duration: 0.3 }}
-                className="w-full max-w-4xl flex flex-col items-center gap-8"
+        <div className="relative z-10 flex flex-col items-center justify-center p-2 flex-1">
+          {engine.phase === "playing" && round && (
+            <div
+              className="w-full max-w-3xl flex flex-col items-center gap-4"
+            >
+              {/* Instruction Card */}
+              <div
+                className="bg-white dark:bg-slate-800 border-2 border-black/10 p-4 sm:p-5 rounded-2xl shadow-neo-sm text-center max-w-xl w-full relative"
               >
-                {/* Instruction Card */}
-                <motion.div
-                  initial={{ y: -20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="bg-white dark:bg-slate-800 border-4 border-black p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-[8px_8px_0_#000] text-center max-w-2xl w-full -rotate-1 relative"
-                >
-                  <div className="absolute -top-4 -left-4 w-12 h-12 bg-cyber-pink border-4 border-black rounded-full flex items-center justify-center rotate-12 shadow-[4px_4px_0_#000]">
-                    <span className="font-syne font-black text-black">!</span>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-syne font-black text-slate-800 dark:text-slate-100 leading-relaxed italic">
-                    "{round.instruction}"
-                  </h3>
-                </motion.div>
-
-                {/* Objects Grid */}
-                <div className="bg-slate-100 dark:bg-slate-800/80 border-4 border-black p-6 sm:p-8 rounded-2xl w-full shadow-[inset_4px_4px_8px_rgba(0,0,0,0.1)]">
-                  <div
-                    className={`grid gap-4 sm:gap-6 justify-center ${round.objects.length <= 4
-                        ? "grid-cols-2 sm:grid-cols-4"
-                        : round.objects.length <= 6
-                          ? "grid-cols-3 sm:grid-cols-3"
-                          : "grid-cols-3 sm:grid-cols-4"
-                      }`}
-                  >
-                    {round.objects.map((obj, i) => {
-                      const isSelected = selectedId === obj.id;
-                      const isRevealedTarget =
-                        selectedId && obj.id === round.targetId;
-                      const isMissedTarget =
-                        selectedId &&
-                        selectedId !== obj.id &&
-                        obj.id === round.targetId;
-
-                      let borderClass = "border-black";
-                      let bgClass = "bg-white dark:bg-slate-700";
-                      let opacityClass =
-                        selectedId && !isSelected && !isRevealedTarget
-                          ? "opacity-40"
-                          : "opacity-100";
-                      let animClass = "";
-
-                      if (isSelected) {
-                        if (obj.id === round.targetId) {
-                          borderClass = "border-cyber-green";
-                          bgClass = "bg-green-100 dark:bg-green-900";
-                          animClass = "animate-bounce";
-                        } else {
-                          borderClass = "border-cyber-pink";
-                          bgClass = "bg-red-100 dark:bg-red-900";
-                        }
-                      } else if (isMissedTarget) {
-                        borderClass = "border-cyber-green border-dashed";
-                        opacityClass = "opacity-70";
-                      }
-
-                      return (
-                        <motion.button
-                          key={obj.id}
-                          initial={{ scale: 0, rotate: Math.random() * 40 - 20 }}
-                          animate={{ scale: 1, rotate: 0 }}
-                          transition={{ delay: 0.3 + i * 0.05, type: "spring", stiffness: 200, damping: 15 }}
-                          whileHover={!selectedId ? { scale: 1.1, y: -5 } : {}}
-                          whileTap={!selectedId ? { scale: 0.95 } : {}}
-                          onClick={() => handleObjectClick(obj.id)}
-                          disabled={!!selectedId}
-                          className={`aspect-square rounded-2xl sm:rounded-[2rem] border-4 flex items-center justify-center p-4 transition-all duration-300 ${borderClass} ${bgClass} ${opacityClass} ${animClass} relative group shadow-[4px_4px_0_#000] hover:shadow-[8px_8px_0_#000]`}
-                        >
-                          <ShapeIcon
-                            shape={obj.shape}
-                            color={obj.color}
-                            size={72}
-                          />
-                        </motion.button>
-                      );
-                    })}
-                  </div>
+                <div className="absolute -top-3 -left-3 w-10 h-10 bg-cyber-pink border-2 border-black/10 rounded-full flex items-center justify-center shadow-neo-sm">
+                  <span className="font-nunito font-black text-black">!</span>
                 </div>
-              </motion.div>
-            )}
-            {/* General game over feedback is handled by shell */}
-          </AnimatePresence>
+                <h3 className="text-lg sm:text-xl font-nunito font-black text-slate-800 dark:text-slate-100 leading-relaxed italic">
+                  "{round.instruction}"
+                </h3>
+              </div>
+
+              {/* Objects Grid */}
+              <div className="bg-slate-100 dark:bg-slate-800/80 border-2 border-black/10 p-4 sm:p-5 rounded-2xl w-full shadow-[inset_4px_4px_8px_rgba(0,0,0,0.1)]">
+                <div
+                  className={`grid gap-3 sm:gap-4 justify-center ${round.objects.length <= 4
+                    ? "grid-cols-2 sm:grid-cols-4"
+                    : round.objects.length <= 6
+                      ? "grid-cols-3 sm:grid-cols-3"
+                      : "grid-cols-3 sm:grid-cols-4"
+                    }`}
+                >
+                  {round.objects.map((obj, _i) => {
+                    const isSelected = selectedId === obj.id;
+                    const isRevealedTarget =
+                      selectedId && obj.id === round.targetId;
+                    const isMissedTarget =
+                      selectedId &&
+                      selectedId !== obj.id &&
+                      obj.id === round.targetId;
+
+                    let borderClass = "border-black";
+                    let bgClass = "bg-white dark:bg-slate-700";
+                    let opacityClass =
+                      selectedId && !isSelected && !isRevealedTarget
+                        ? "opacity-40"
+                        : "opacity-100";
+                    let animClass = "";
+
+                    if (isSelected) {
+                      if (obj.id === round.targetId) {
+                        borderClass = "border-cyber-green";
+                        bgClass = "bg-green-100 dark:bg-green-900";
+                        animClass = "animate-bounce";
+                      } else {
+                        borderClass = "border-cyber-pink";
+                        bgClass = "bg-red-100 dark:bg-red-900";
+                      }
+                    } else if (isMissedTarget) {
+                      borderClass = "border-cyber-green border-dashed";
+                      opacityClass = "opacity-70";
+                    }
+
+                    return (
+                      <button
+                        key={obj.id}
+                        onClick={() => handleObjectClick(obj.id)}
+                        disabled={!!selectedId}
+                        className={`aspect-square rounded-xl sm:rounded-2xl border-4 flex items-center justify-center p-3 transition-all duration-300 ${borderClass} ${bgClass} ${opacityClass} ${animClass} relative shadow-neo-sm active:scale-95`}
+                      >
+                        <ShapeIcon
+                          shape={obj.shape}
+                          color={obj.color}
+                          size={64}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </BrainTrainerShell>

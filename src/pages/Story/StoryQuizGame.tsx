@@ -1,49 +1,108 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle2, XCircle, Clock, Sparkles, Home, BookOpenCheck, ChevronLeft } from 'lucide-react';
 import { getStories } from './services/stories';
 import { Story } from './types';
-import { CheckCircle2, XCircle, Clock, Trophy, BookOpen, Sparkles, RotateCcw, Home } from 'lucide-react';
-import { useGamePersistence } from '../../hooks/useGamePersistence';
+import BrainTrainerShell from '../../components/BrainTrainer/shared/BrainTrainerShell';
+import { useGameEngine } from '../../components/BrainTrainer/shared/useGameEngine';
+import { useGameFeedback } from '../../hooks/useGameFeedback';
+import { useSound } from '../../hooks/useSound';
+import { supabase } from '../../lib/supabase';
+import { aiQuestionPoolRepository } from '@/server/repositories/aiQuestionPoolRepository';
+import { aiLearningRepository } from '@/server/repositories/aiLearningRepository';
+import {
+    createDefaultAbilitySnapshot,
+    updateAbilitySnapshotFromSession
+} from '@/features/ai/adaptive-difficulty/model/abilitySnapshotUpdateUseCase';
 
-type GamePhase = 'welcome' | 'reading' | 'quiz' | 'results';
+const GAME_ID = 'hikaye-quiz';
+const MAX_LEVEL = 10;
+const TIME_LIMIT = 180;
+const INITIAL_LIVES = 3;
+const SESSION_TARGET_RESPONSE_MS = 4500;
 
-interface QuizResult {
-    questionText: string;
-    userAnswer: number;
-    correctAnswer: number;
-    isCorrect: boolean;
+interface SessionTrackingState {
+    answered: number;
+    correct: number;
+    responseMsTotal: number;
+    streakCorrect: number;
+    consecutiveWrong: number;
 }
+
+const INITIAL_SESSION_TRACKING: SessionTrackingState = {
+    answered: 0,
+    correct: 0,
+    responseMsTotal: 0,
+    streakCorrect: 0,
+    consecutiveWrong: 0
+};
+
+const THEME_ACCENTS: Record<string, { bg: string; text: string; emoji: string; label: string }> = {
+    animals: { bg: 'bg-cyber-green', text: 'text-black', emoji: '🦁', label: 'Hayvanlar' },
+    adventure: { bg: 'bg-cyber-yellow', text: 'text-black', emoji: '🗺️', label: 'Macera' },
+    fantasy: { bg: 'bg-cyber-purple', text: 'text-white', emoji: '🧙', label: 'Fantezi' },
+    science: { bg: 'bg-cyber-blue', text: 'text-white', emoji: '🔬', label: 'Bilim' },
+    friendship: { bg: 'bg-cyber-pink', text: 'text-black', emoji: '🤝', label: 'Arkadaşlık' },
+    'life-lessons': { bg: 'bg-cyber-yellow', text: 'text-black', emoji: '💡', label: 'Hayat Dersleri' },
+};
+
+const resolveTopicFromTheme = (theme: Story['theme']): string => {
+    switch (theme) {
+        case 'animals':
+            return 'hafıza ve sınıflama';
+        case 'adventure':
+            return 'problem çözme';
+        case 'fantasy':
+            return 'yaratıcı mantık';
+        case 'science':
+            return 'analitik düşünme';
+        case 'friendship':
+            return 'sözel anlama';
+        case 'life-lessons':
+            return 'çıkarım ve mantık';
+        default:
+            return 'mantık';
+    }
+};
 
 export default function StoryQuizGame() {
     const navigate = useNavigate();
-    const { saveGamePlay } = useGamePersistence();
-    const [phase, setPhase] = useState<GamePhase>('welcome');
-    const [story, setStory] = useState<Story | null>(null);
+    const { playSound } = useSound();
+
+    const engine = useGameEngine({
+        gameId: GAME_ID,
+        maxLevel: MAX_LEVEL,
+        timeLimit: TIME_LIMIT,
+        initialLives: INITIAL_LIVES,
+        disableAutoStart: true, // We handle autoStart ourselves (reading phase first)
+    });
+
+    const feedback = useGameFeedback({ duration: 1200 });
+    const { feedbackState, showFeedback, dismissFeedback } = feedback;
+
     const [stories, setStories] = useState<Story[]>([]);
+    const [story, setStory] = useState<Story | null>(null);
     const [loading, setLoading] = useState(true);
-    const hasSavedResult = useRef(false);
 
-    // Reading phase
+    // Reading is a separate full-screen state BEFORE the shell takes over
+    const [isReading, setIsReading] = useState(false);
     const [readingTime, setReadingTime] = useState(0);
-    const [isReadingTimerActive, setIsReadingTimerActive] = useState(false);
 
-    // Quiz phase
+    // Quiz state
     const [currentQuestion, setCurrentQuestion] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-    const [showFeedback, setShowFeedback] = useState(false);
-    const [score, setScore] = useState(0);
-    const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
-    const [questionStartTime, setQuestionStartTime] = useState(0);
-    const [totalQuizTime, setTotalQuizTime] = useState(0);
+    const [quizResults, setQuizResults] = useState<{ isCorrect: boolean }[]>([]);
+    const [sessionPerformanceId, setSessionPerformanceId] = useState<string | null>(null);
+    const [sessionTracking, setSessionTracking] = useState<SessionTrackingState>(INITIAL_SESSION_TRACKING);
+    const [questionStartedAtMs, setQuestionStartedAtMs] = useState<number>(0);
 
     // Load stories
     useEffect(() => {
         async function loadStories() {
             try {
                 const data = await getStories();
-                // Filter stories with questions
-                const storiesWithQuestions = data.filter(s => s.questions && s.questions.length > 0);
-                setStories(storiesWithQuestions);
+                setStories(data.filter(s => s.questions && s.questions.length > 0));
             } catch (error) {
                 console.error('Hikayeler yüklenirken hata:', error);
             } finally {
@@ -53,102 +112,259 @@ export default function StoryQuizGame() {
         loadStories();
     }, []);
 
-    // Reading timer
+    // Reading timer (separate from engine timer)
     useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (isReadingTimerActive) {
-            interval = setInterval(() => {
-                setReadingTime(prev => prev + 1);
-            }, 1000);
-        }
+        if (!isReading) return;
+        const interval = setInterval(() => setReadingTime(p => p + 1), 1000);
         return () => clearInterval(interval);
-    }, [isReadingTimerActive]);
+    }, [isReading]);
 
-    const selectRandomStory = useCallback(() => {
+    // Start reading phase (picks story, shows reading screen)
+    const startReading = useCallback(() => {
         if (stories.length === 0) return;
-        const randomIndex = Math.floor(Math.random() * stories.length);
-        setStory(stories[randomIndex]);
-    }, [stories]);
-
-    const startGame = () => {
-        window.scrollTo(0, 0);
-        selectRandomStory();
-        setPhase('reading');
+        const randomStory = stories[Math.floor(Math.random() * stories.length)];
+        setStory(randomStory);
+        setIsReading(true);
         setReadingTime(0);
-        setIsReadingTimerActive(true);
-        setScore(0);
-        setQuizResults([]);
         setCurrentQuestion(0);
-        setTotalQuizTime(0);
-        hasSavedResult.current = false; // Reset save flag for new game
-    };
+        setSelectedAnswer(null);
+        setQuizResults([]);
+        setSessionPerformanceId(null);
+        setSessionTracking(INITIAL_SESSION_TRACKING);
+        setQuestionStartedAtMs(0);
+        playSound('pop');
+    }, [stories, playSound]);
 
-    const finishReading = () => {
-        setIsReadingTimerActive(false);
-        setPhase('quiz');
-        setQuestionStartTime(Date.now());
-    };
+    const getSessionUserId = useCallback(async (): Promise<string | null> => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            return user?.id ?? null;
+        } catch {
+            return null;
+        }
+    }, []);
+
+    const startLearningSession = useCallback(async () => {
+        if (!story) {
+            return;
+        }
+
+        try {
+            const userId = await getSessionUserId();
+            if (!userId) {
+                setSessionPerformanceId(null);
+                return;
+            }
+
+            const sessionId = await aiLearningRepository.createSessionPerformance({
+                userId,
+                topic: resolveTopicFromTheme(story.theme),
+                locale: 'tr',
+                metrics: {
+                    recentAccuracy: 0,
+                    averageResponseMs: 0,
+                    targetResponseMs: SESSION_TARGET_RESPONSE_MS,
+                    streakCorrect: 0,
+                    consecutiveWrong: 0
+                },
+                totalQuestions: story.questions.length,
+                correctAnswers: 0,
+                startedAtISO: new Date().toISOString(),
+                metadata: {
+                    gameId: GAME_ID,
+                    storyId: story.id,
+                    storyTheme: story.theme
+                }
+            });
+
+            setSessionPerformanceId(sessionId);
+        } catch (error) {
+            console.error('session_performance başlatılamadı:', error);
+            setSessionPerformanceId(null);
+        }
+    }, [getSessionUserId, story]);
+
+    const finalizeLearningSession = useCallback(async (tracking: SessionTrackingState) => {
+        if (!story || !sessionPerformanceId) {
+            return;
+        }
+
+        try {
+            const userId = await getSessionUserId();
+            if (!userId) {
+                return;
+            }
+
+            const answered = Math.max(0, tracking.answered);
+            const recentAccuracy = answered > 0 ? tracking.correct / answered : 0;
+            const averageResponseMs = answered > 0 ? Math.round(tracking.responseMsTotal / answered) : 0;
+
+            await aiLearningRepository.updateSessionPerformance({
+                userId,
+                sessionPerformanceId,
+                totalQuestions: story.questions.length,
+                correctAnswers: tracking.correct,
+                endedAtISO: new Date().toISOString(),
+                metrics: {
+                    recentAccuracy,
+                    averageResponseMs,
+                    targetResponseMs: SESSION_TARGET_RESPONSE_MS,
+                    streakCorrect: tracking.streakCorrect,
+                    consecutiveWrong: tracking.consecutiveWrong
+                },
+                metadata: {
+                    gameId: GAME_ID,
+                    storyId: story.id,
+                    storyTheme: story.theme,
+                    answeredQuestions: answered
+                }
+            });
+
+            const currentSnapshot = await aiLearningRepository.getAbilitySnapshot(userId);
+            const baselineSnapshot = currentSnapshot ?? createDefaultAbilitySnapshot(userId);
+            const nextSnapshot = updateAbilitySnapshotFromSession({
+                snapshot: baselineSnapshot,
+                topic: resolveTopicFromTheme(story.theme),
+                sessionPerformance: {
+                    recentAccuracy,
+                    averageResponseMs,
+                    targetResponseMs: SESSION_TARGET_RESPONSE_MS,
+                    streakCorrect: tracking.streakCorrect,
+                    consecutiveWrong: tracking.consecutiveWrong
+                },
+                totalQuestions: answered,
+                correctAnswers: tracking.correct
+            });
+
+            await aiLearningRepository.upsertAbilitySnapshot(nextSnapshot, {
+                source: 'hybrid',
+                modelVersion: 'rule.v1',
+                lastSessionId: sessionPerformanceId,
+                context: {
+                    gameId: GAME_ID,
+                    storyId: story.id,
+                    storyTheme: story.theme
+                }
+            });
+        } catch (error) {
+            console.error('session_performance güncellenemedi:', error);
+        }
+    }, [getSessionUserId, sessionPerformanceId, story]);
+
+    // Finish reading → start the engine (quiz begins, timer starts)
+    const finishReading = useCallback(() => {
+        setIsReading(false);
+        setCurrentQuestion(0);
+        setSelectedAnswer(null);
+        setQuizResults([]);
+        setSessionTracking(INITIAL_SESSION_TRACKING);
+        setQuestionStartedAtMs(Date.now());
+        void startLearningSession();
+        engine.handleStart(); // NOW the shell takes over with HUD + timer
+        playSound('pop');
+    }, [engine, playSound, startLearningSession]);
+
+    // Restart: reset engine to welcome, pick a new story, start reading
+    const handleRestart = useCallback(() => {
+        engine.setGamePhase('welcome');
+        setSessionPerformanceId(null);
+        setSessionTracking(INITIAL_SESSION_TRACKING);
+        setQuestionStartedAtMs(0);
+        startReading();
+    }, [engine, startReading]);
+
+    const markQuestionSolved = useCallback(async (questionId?: string) => {
+        if (!questionId) return;
+
+        try {
+            const userId = await getSessionUserId();
+            if (!userId) return;
+            await aiQuestionPoolRepository.markQuestionSolved(userId, questionId);
+        } catch (error) {
+            console.error('Soru solved durumuna geçirilemedi:', error);
+        }
+    }, [getSessionUserId]);
 
     const handleAnswer = (answerIndex: number) => {
-        if (!story) return;
+        if (!story || feedbackState || selectedAnswer !== null) return;
 
         const question = story.questions[currentQuestion];
         const isCorrect = answerIndex === question.correctAnswer;
-        const timeTaken = Date.now() - questionStartTime;
+        const responseMs = questionStartedAtMs > 0 ? Math.max(0, Date.now() - questionStartedAtMs) : 0;
+        const nextTracking: SessionTrackingState = {
+            answered: sessionTracking.answered + 1,
+            correct: sessionTracking.correct + (isCorrect ? 1 : 0),
+            responseMsTotal: sessionTracking.responseMsTotal + responseMs,
+            streakCorrect: isCorrect ? sessionTracking.streakCorrect + 1 : 0,
+            consecutiveWrong: isCorrect ? 0 : sessionTracking.consecutiveWrong + 1
+        };
 
         setSelectedAnswer(answerIndex);
-        setShowFeedback(true);
-        setTotalQuizTime(prev => prev + timeTaken);
+        setQuizResults(prev => [...prev, { isCorrect }]);
+        setSessionTracking(nextTracking);
+
+        if (sessionPerformanceId) {
+            void (async () => {
+                try {
+                    const userId = await getSessionUserId();
+                    if (!userId) {
+                        return;
+                    }
+
+                    const questionId =
+                        question.aiGeneratedQuestionId ||
+                        question.id ||
+                        `story-${story.id}-q-${currentQuestion + 1}`;
+
+                    await aiLearningRepository.recordQuestionAttempt({
+                        userId,
+                        sessionPerformanceId,
+                        questionId,
+                        topic: resolveTopicFromTheme(story.theme),
+                        difficultyLevel: 3,
+                        wasCorrect: isCorrect,
+                        responseMs,
+                        selectedIndex: answerIndex,
+                        correctIndex: question.correctAnswer,
+                        source: question.aiGeneratedQuestionId ? 'ai' : 'fallback',
+                        questionPayload: {
+                            storyId: story.id,
+                            storyTheme: story.theme
+                        }
+                    });
+                } catch (error) {
+                    console.error('question_attempt kaydı başarısız:', error);
+                }
+            })();
+        }
 
         if (isCorrect) {
-            // Bonus points for fast answers (under 10 seconds)
-            const timeBonus = timeTaken < 10000 ? Math.floor((10000 - timeTaken) / 1000) : 0;
-            setScore(prev => prev + 10 + timeBonus);
-        }
-
-        setQuizResults(prev => [...prev, {
-            questionText: question.text,
-            userAnswer: answerIndex,
-            correctAnswer: question.correctAnswer,
-            isCorrect
-        }]);
-    };
-
-    const nextQuestion = () => {
-        if (!story) return;
-
-        if (currentQuestion < story.questions.length - 1) {
-            setCurrentQuestion(prev => prev + 1);
-            setSelectedAnswer(null);
-            setShowFeedback(false);
-            setQuestionStartTime(Date.now());
+            showFeedback(true);
+            playSound('correct');
+            engine.addScore(20 + (readingTime < 60 ? 10 : 0));
+            void markQuestionSolved(question.aiGeneratedQuestionId);
         } else {
-            // Save game result to database
-            if (!hasSavedResult.current) {
-                hasSavedResult.current = true;
-                const correctCount = quizResults.filter(r => r.isCorrect).length +
-                    (selectedAnswer === story.questions[currentQuestion].correctAnswer ? 1 : 0);
-                const totalDuration = readingTime + Math.floor(totalQuizTime / 1000);
-
-                saveGamePlay({
-                    game_id: 'hikaye-quiz',
-                    score_achieved: score,
-                    duration_seconds: totalDuration,
-                    difficulty_played: 'orta',
-                    metadata: {
-                        story_id: story.id,
-                        story_title: story.title,
-                        story_theme: story.theme,
-                        reading_time_seconds: readingTime,
-                        quiz_time_seconds: Math.floor(totalQuizTime / 1000),
-                        correct_answers: correctCount,
-                        total_questions: story.questions.length,
-                        accuracy_percent: Math.round((correctCount / story.questions.length) * 100)
-                    }
-                });
-            }
-            setPhase('results');
+            showFeedback(false);
+            playSound('incorrect');
+            engine.loseLife();
         }
+
+        setTimeout(() => {
+            dismissFeedback();
+            if (currentQuestion < story.questions.length - 1) {
+                setCurrentQuestion(prev => prev + 1);
+                setSelectedAnswer(null);
+                setQuestionStartedAtMs(Date.now());
+            } else {
+                const correctCount = [...quizResults, { isCorrect }].filter(r => r.isCorrect).length;
+                void finalizeLearningSession(nextTracking);
+                if (correctCount >= Math.ceil(story.questions.length * 0.5)) {
+                    engine.setGamePhase('victory');
+                } else {
+                    engine.setGamePhase('game_over');
+                }
+            }
+        }, 1500);
     };
 
     const formatTime = (seconds: number) => {
@@ -157,327 +373,319 @@ export default function StoryQuizGame() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const getScoreEmoji = () => {
-        if (!story) return '🎮';
-        const percentage = (score / (story.questions.length * 10)) * 100;
-        if (percentage >= 80) return '🏆';
-        if (percentage >= 60) return '⭐';
-        if (percentage >= 40) return '👍';
-        return '💪';
-    };
+    const themeInfo = story ? THEME_ACCENTS[story.theme] || THEME_ACCENTS.adventure : THEME_ACCENTS.adventure;
+    const correctCount = quizResults.filter(r => r.isCorrect).length;
 
-    const getThemeColor = (theme: string) => {
-        const colors: Record<string, string> = {
-            animals: 'from-emerald-500 to-teal-600',
-            adventure: 'from-orange-500 to-red-600',
-            fantasy: 'from-purple-500 to-pink-600',
-            science: 'from-blue-500 to-cyan-600',
-            friendship: 'from-rose-500 to-pink-600',
-            'life-lessons': 'from-amber-500 to-yellow-600'
-        };
-        return colors[theme] || 'from-purple-500 to-indigo-600';
-    };
-
-    const getThemeName = (theme: string) => {
-        const names: Record<string, string> = {
-            animals: '🦁 Hayvanlar',
-            adventure: '🗺️ Macera',
-            fantasy: '🧙 Fantezi',
-            science: '🔬 Bilim',
-            friendship: '🤝 Arkadaşlık',
-            'life-lessons': '💡 Hayat Dersleri'
-        };
-        return names[theme] || '📖 Hikaye';
-    };
-
-    if (loading) {
+    // ============================================================
+    // READING PHASE — Full-screen, outside BrainTrainerShell
+    // ============================================================
+    if (isReading && story) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
-                <div className="text-center">
-                    <div className="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-white text-xl">Hikayeler yükleniyor...</p>
+            <div className="min-h-[100dvh] bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 flex flex-col items-center p-4 sm:p-6 overflow-y-auto relative">
+                <div className="relative z-10 w-full max-w-3xl">
+                    {/* Back button */}
+                    <div className="flex items-center justify-between mb-6">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="flex items-center gap-2 text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white transition-colors bg-white dark:bg-slate-800 border-2 border-black/10 px-4 py-2 rounded-xl shadow-neo-xs active:translate-y-[2px] active:translate-x-[2px] active:shadow-none font-nunito font-bold"
+                        >
+                            <ChevronLeft size={20} className="stroke-[3]" />
+                            <span>Vazgeç</span>
+                        </button>
+                        <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl shadow-neo-xs -rotate-2">
+                            <Clock size={18} className="text-cyber-purple stroke-[3]" />
+                            <span className="font-nunito font-black text-black dark:text-white">{formatTime(readingTime)}</span>
+                        </div>
+                    </div>
+
+                    {/* Theme Badge + Title */}
+                    <div className="text-center mb-6">
+                        <span className={`inline-block px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-xs font-nunito font-black text-sm uppercase tracking-widest rotate-2 mb-4 ${themeInfo.bg} ${themeInfo.text}`}>
+                            {themeInfo.emoji} {themeInfo.label}
+                        </span>
+                        <h1 className="text-2xl sm:text-4xl font-nunito font-black text-black dark:text-white uppercase tracking-tight">
+                            {story.title}
+                        </h1>
+                    </div>
+
+                    {/* Story Image */}
+                    {story.image_url && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="rounded-2xl overflow-hidden border-2 border-black/10 shadow-neo-md rotate-1 mb-6"
+                        >
+                            <img src={story.image_url} alt={story.title} className="w-full aspect-video object-cover" />
+                        </motion.div>
+                    )}
+
+                    {/* Story Content */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-8 border-2 border-black/10 shadow-neo-md -rotate-1 mb-6"
+                    >
+                        <p className="text-black dark:text-white font-nunito text-lg leading-relaxed whitespace-pre-wrap">
+                            {story.content}
+                        </p>
+                    </motion.div>
+
+                    {/* Animal Info */}
+                    {story.theme === 'animals' && story.animalInfo && (
+                        <div className="p-4 bg-cyber-green border-2 border-black/10 rounded-2xl shadow-neo-xs rotate-1 mb-6">
+                            <p className="text-black font-nunito font-bold">
+                                <span className="font-black">🤔 Biliyor muydun?</span> {story.animalInfo}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Finish Reading Button */}
+                    <motion.button
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={finishReading}
+                        className="w-full bg-cyber-green border-2 border-black/10 shadow-neo-sm text-black text-lg sm:text-xl py-4 rounded-2xl hover:-translate-y-1 hover:shadow-neo-md active:translate-y-2 active:shadow-none transition-all flex items-center justify-center gap-3 font-nunito font-black uppercase tracking-widest"
+                    >
+                        <CheckCircle2 size={24} className="stroke-[3]" />
+                        Okudum, Sorulara Geç
+                    </motion.button>
+
+                    <p className="text-center text-slate-400 dark:text-slate-500 font-nunito font-bold text-sm mt-4">
+                        Hikayeyi dikkatlice oku, sorularda bu bilgilere ihtiyacın olacak!
+                    </p>
                 </div>
             </div>
         );
     }
 
+    // ============================================================
+    // WELCOME + QUIZ phases — BrainTrainerShell handles everything
+    // ============================================================
+
+    // Custom Welcome Screen
+    const WelcomeScreen = (
+        <div className="min-h-[100dvh] bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 flex flex-col items-center justify-center p-4 overflow-hidden relative">
+            <div className="relative z-10 w-full max-w-xl">
+
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-2xl border-2 border-black/10 shadow-neo-md -rotate-1"
+                >
+                    <motion.div
+                        className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 bg-cyber-purple border-3 border-black/20 shadow-neo-md rounded-2xl flex items-center justify-center rotate-3"
+                        animate={{ y: [0, -8, 0], rotate: [3, 8, 3] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                        <BookOpenCheck size={56} className="text-white" strokeWidth={2.5} />
+                    </motion.div>
+
+                    <h1 className="text-4xl sm:text-5xl font-nunito font-black mb-4 uppercase text-black dark:text-white tracking-tight">
+                        Hikaye Quiz
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400 font-nunito text-lg mb-6">
+                        Hikaye oku, sorulara cevap ver, puan kazan!
+                    </p>
+
+                    <div className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-5 mb-6 border-2 border-black/10 shadow-neo-md text-left rotate-1">
+                        <h3 className="text-xl font-nunito font-black text-cyber-blue mb-4 flex items-center gap-2 uppercase">
+                            <Sparkles size={24} className="stroke-[3]" /> Nasıl Oynanır
+                        </h3>
+                        <div className="space-y-2 text-black dark:text-white font-nunito font-bold text-sm">
+                            <p>📖 Rastgele bir hikaye okursun</p>
+                            <p>❓ Hikaye hakkında sorulara cevap verirsin</p>
+                            <p>⏱️ Hızlı okuma bonus puan kazandırır</p>
+                            <p>❤️ 3 can hakkın var, dikkatli ol!</p>
+                        </div>
+                    </div>
+
+                    {loading ? (
+                        <div className="px-4 py-3 bg-cyber-yellow border-2 border-black/10 rounded-xl shadow-neo-xs inline-block font-nunito font-black text-black animate-pulse">
+                            Hikayeler yükleniyor...
+                        </div>
+                    ) : (
+                        <>
+                            <div className="bg-cyber-yellow border-2 border-black/10 text-black rounded-xl shadow-neo-xs px-4 py-2 mb-6 inline-block rotate-2">
+                                <span className="text-xs font-nunito font-black uppercase tracking-widest">
+                                    <Sparkles className="inline w-4 h-4 mr-1" />
+                                    {stories.length} hikaye hazır
+                                </span>
+                            </div>
+
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={startReading}
+                                disabled={stories.length === 0}
+                                className="w-full bg-cyber-green border-2 border-black/10 shadow-neo-md text-black text-lg sm:text-2xl py-4 rounded-2xl hover:-translate-y-1 hover:shadow-neo-md active:translate-y-2 active:shadow-none transition-all flex items-center justify-center gap-2 font-nunito font-black uppercase tracking-widest disabled:opacity-50"
+                            >
+                                🎮 Oyuna Başla
+                            </motion.button>
+                        </>
+                    )}
+
+                    <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-cyber-purple border-2 border-black/10 text-white rounded-xl shadow-neo-xs -rotate-2">
+                        <span className="text-xs font-nunito font-black uppercase tracking-widest">
+                            TUZÖ 6.3.1 Okuduğunu Anlama
+                        </span>
+                    </div>
+                </motion.div>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 py-8 px-4">
-            {/* Welcome Phase */}
-            {phase === 'welcome' && (
-                <div className="max-w-2xl mx-auto text-center">
-                    <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20">
-                        <div className="text-6xl mb-6 animate-bounce">📚</div>
-                        <h1 className="text-4xl font-bold text-white mb-4">
-                            Hikaye Quiz Oyunu
-                        </h1>
-                        <p className="text-xl text-purple-200 mb-8">
-                            Rastgele bir hikaye oku, sorulara cevap ver ve puan kazan!
-                        </p>
-
-                        <div className="grid grid-cols-3 gap-4 mb-8">
-                            <div className="bg-white/10 rounded-xl p-4">
-                                <BookOpen className="w-8 h-8 text-white mx-auto mb-2" />
-                                <p className="text-white text-sm">Hikaye Oku</p>
+        <BrainTrainerShell
+            engine={engine}
+            feedback={feedback}
+            config={{
+                title: 'Hikaye Quiz',
+                icon: BookOpenCheck,
+                description: 'Hikaye oku, sorulara cevap ver, puan kazan!',
+                howToPlay: [
+                    'Rastgele bir hikaye okursun.',
+                    'Hikaye hakkında sorulara cevap verirsin.',
+                    'Hızlı okuma bonus puan kazandırır.',
+                ],
+                tuzoCode: 'TUZÖ 6.3.1 Okuduğunu Anlama',
+                accentColor: 'cyber-purple',
+                onRestart: handleRestart,
+                maxLevel: MAX_LEVEL,
+                customWelcome: WelcomeScreen,
+                extraGameOverActions: (
+                    <div className="space-y-3 mt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold uppercase tracking-widest text-xs mb-2">
+                                    Doğru/Toplam
+                                </p>
+                                <p className="text-2xl sm:text-3xl font-black">
+                                    <span className="text-cyber-green">{correctCount}</span>
+                                    <span className="text-slate-300 dark:text-slate-600 mx-1">/</span>
+                                    <span className="text-black dark:text-white">{story?.questions.length || 0}</span>
+                                </p>
                             </div>
-                            <div className="bg-white/10 rounded-xl p-4">
-                                <Clock className="w-8 h-8 text-white mx-auto mb-2" />
-                                <p className="text-white text-sm">Süre Tutulur</p>
-                            </div>
-                            <div className="bg-white/10 rounded-xl p-4">
-                                <Trophy className="w-8 h-8 text-white mx-auto mb-2" />
-                                <p className="text-white text-sm">Puan Kazan</p>
+                            <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600">
+                                <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold uppercase tracking-widest text-xs mb-2">
+                                    Okuma Süresi
+                                </p>
+                                <p className="text-2xl sm:text-3xl font-black text-cyber-purple">
+                                    {formatTime(readingTime)}
+                                </p>
                             </div>
                         </div>
-
-                        <div className="bg-purple-500/30 rounded-xl p-4 mb-8">
-                            <p className="text-purple-200 text-sm">
-                                <Sparkles className="inline w-4 h-4 mr-1" />
-                                {stories.length} hikaye arasından rastgele bir hikaye seçilecek
-                            </p>
-                        </div>
-
-                        <button
-                            onClick={startGame}
-                            disabled={stories.length === 0}
-                            className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xl font-bold rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            🎮 Oyuna Başla
-                        </button>
 
                         <button
                             onClick={() => navigate('/stories')}
-                            className="mt-4 text-purple-300 hover:text-white transition-colors"
+                            className="w-full py-3 bg-white dark:bg-slate-800 border-2 border-black/10 shadow-neo-sm text-black dark:text-white text-lg rounded-2xl hover:-translate-y-1 hover:shadow-neo-md active:translate-y-2 active:shadow-none transition-all flex items-center justify-center gap-2 font-nunito font-black uppercase tracking-widest"
                         >
-                            ← Hikayelere Dön
+                            <Home size={20} className="stroke-[3]" />
+                            Hikayelere Dön
                         </button>
                     </div>
-                </div>
-            )}
-
-            {/* Reading Phase */}
-            {phase === 'reading' && story && (
-                <div className="max-w-3xl mx-auto">
-                    <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 shadow-2xl border border-white/20 mb-6">
-                        {/* Header */}
-                        <div className="flex justify-between items-center mb-6">
-                            <span className={`px-4 py-2 rounded-full bg-gradient-to-r ${getThemeColor(story.theme)} text-white text-sm font-medium`}>
-                                {getThemeName(story.theme)}
-                            </span>
-                            <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full">
-                                <Clock className="w-5 h-5 text-white" />
-                                <span className="text-white font-mono text-lg">{formatTime(readingTime)}</span>
-                            </div>
-                        </div>
-
-                        {/* Story Title */}
-                        <h1 className="text-3xl font-bold text-white text-center mb-6">{story.title}</h1>
-
-                        {/* Story Image */}
-                        {story.image_url && (
-                            <div className="relative aspect-video rounded-2xl overflow-hidden mb-6">
-                                <img
-                                    src={story.image_url}
-                                    alt={story.title}
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-                        )}
-
-                        {/* Story Content */}
-                        <div className="bg-white rounded-2xl p-6 shadow-inner">
-                            <p className="text-gray-800 text-lg leading-relaxed whitespace-pre-wrap">
-                                {story.content}
-                            </p>
-                        </div>
-
-                        {/* Animal Info */}
-                        {story.theme === 'animals' && story.animalInfo && (
-                            <div className="mt-4 p-4 bg-emerald-500/20 rounded-xl border border-emerald-400/30">
-                                <p className="text-emerald-200">
-                                    <span className="font-bold">🤔 Biliyor muydun?</span> {story.animalInfo}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Finish Reading Button */}
-                    <button
-                        onClick={finishReading}
-                        className="w-full py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xl font-bold rounded-2xl hover:from-blue-600 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-lg"
-                    >
-                        ✅ Okudum, Sorulara Geç
-                    </button>
-
-                    <p className="text-center text-purple-300 mt-4 text-sm">
-                        Hikayeyi dikkatlice oku, sorularda bu bilgilere ihtiyacın olacak!
-                    </p>
-                </div>
-            )}
-
-            {/* Quiz Phase */}
-            {phase === 'quiz' && story && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 shadow-2xl border border-white/20">
-                        {/* Progress */}
-                        <div className="flex justify-between items-center mb-6">
-                            <span className="text-purple-200">
-                                Soru {currentQuestion + 1} / {story.questions.length}
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <Trophy className="w-5 h-5 text-yellow-400" />
-                                <span className="text-white font-bold">{score} puan</span>
-                            </div>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div className="w-full bg-white/20 rounded-full h-2 mb-6">
-                            <div
-                                className="bg-gradient-to-r from-green-400 to-emerald-500 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${((currentQuestion + 1) / story.questions.length) * 100}%` }}
-                            />
-                        </div>
-
-                        {/* Question */}
-                        <div className="bg-white rounded-2xl p-6 mb-6">
-                            <h2 className="text-xl font-semibold text-gray-800 mb-6">
-                                {story.questions[currentQuestion].text}
-                            </h2>
-
-                            <div className="space-y-3">
-                                {story.questions[currentQuestion].options.map((option, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => handleAnswer(index)}
-                                        disabled={showFeedback}
-                                        className={`w-full p-4 rounded-xl text-left transition-all transform hover:scale-102 ${showFeedback
-                                            ? index === story.questions[currentQuestion].correctAnswer
-                                                ? 'bg-green-100 border-2 border-green-500 text-green-800'
-                                                : index === selectedAnswer
-                                                    ? 'bg-red-100 border-2 border-red-500 text-red-800'
-                                                    : 'bg-gray-100 border-2 border-transparent text-gray-600'
-                                            : 'bg-gray-100 hover:bg-purple-100 border-2 border-transparent hover:border-purple-300'
-                                            }`}
-                                    >
-                                        <span className="font-medium">{String.fromCharCode(65 + index)}.</span> {option}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Feedback */}
-                            {showFeedback && (
-                                <div className={`mt-6 p-4 rounded-xl flex items-start gap-3 ${selectedAnswer === story.questions[currentQuestion].correctAnswer
-                                    ? 'bg-green-100'
-                                    : 'bg-red-100'
-                                    }`}>
-                                    {selectedAnswer === story.questions[currentQuestion].correctAnswer ? (
-                                        <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
-                                    ) : (
-                                        <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-                                    )}
-                                    <p className={`text-lg ${selectedAnswer === story.questions[currentQuestion].correctAnswer
-                                        ? 'text-green-800'
-                                        : 'text-red-800'
-                                        }`}>
-                                        {selectedAnswer === story.questions[currentQuestion].correctAnswer
-                                            ? story.questions[currentQuestion].feedback.correct
-                                            : story.questions[currentQuestion].feedback.incorrect}
-                                    </p>
+                ),
+            }}
+        >
+            {() => (
+                <div className="w-full h-full flex flex-col items-center justify-start p-4">
+                    <AnimatePresence mode="wait">
+                        {engine.phase === 'playing' && story && (
+                            <motion.div
+                                key={`quiz-${currentQuestion}`}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 1.05 }}
+                                className="w-full max-w-3xl space-y-6"
+                            >
+                                {/* Progress */}
+                                <div className="flex items-center justify-between">
+                                    <span className="px-4 py-2 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl shadow-neo-xs font-nunito font-black text-black dark:text-white text-sm uppercase tracking-widest rotate-2">
+                                        Soru {currentQuestion + 1} / {story.questions.length}
+                                    </span>
+                                    <span className="px-4 py-2 bg-cyber-yellow border-2 border-black/10 rounded-xl shadow-neo-xs font-nunito font-black text-black text-sm uppercase tracking-widest -rotate-2">
+                                        📖 {story.title}
+                                    </span>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Next Button */}
-                        {showFeedback && (
-                            <button
-                                onClick={nextQuestion}
-                                className="w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xl font-bold rounded-2xl hover:from-purple-600 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-lg"
-                            >
-                                {currentQuestion < story.questions.length - 1 ? 'Sonraki Soru →' : '🏆 Sonuçları Gör'}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
+                                {/* Progress Bar */}
+                                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 border-2 border-black/10 shadow-neo-xs">
+                                    <motion.div
+                                        className="bg-cyber-green h-full rounded-full"
+                                        initial={false}
+                                        animate={{ width: `${((currentQuestion + 1) / story.questions.length) * 100}%` }}
+                                        transition={{ duration: 0.4, ease: 'easeOut' }}
+                                    />
+                                </div>
 
-            {/* Results Phase */}
-            {phase === 'results' && story && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20 text-center">
-                        <div className="text-8xl mb-6">{getScoreEmoji()}</div>
+                                {/* Question Card */}
+                                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 sm:p-8 border-2 border-black/10 shadow-neo-md -rotate-1">
+                                    <h2 className="text-xl sm:text-2xl font-nunito font-black text-black dark:text-white mb-6">
+                                        {story.questions[currentQuestion].text}
+                                    </h2>
 
-                        <h1 className="text-4xl font-bold text-white mb-2">Tebrikler!</h1>
-                        <p className="text-xl text-purple-200 mb-8">"{story.title}" hikayesini tamamladın</p>
+                                    <div className="space-y-3">
+                                        {story.questions[currentQuestion].options.map((option, index) => {
+                                            const isSelected = selectedAnswer === index;
+                                            const isCorrectAnswer = index === story.questions[currentQuestion].correctAnswer;
+                                            const showResult = selectedAnswer !== null;
 
-                        {/* Stats */}
-                        <div className="grid grid-cols-2 gap-4 mb-8">
-                            <div className="bg-white/10 rounded-2xl p-6">
-                                <Trophy className="w-10 h-10 text-yellow-400 mx-auto mb-2" />
-                                <p className="text-3xl font-bold text-white">{score}</p>
-                                <p className="text-purple-300">Toplam Puan</p>
-                            </div>
-                            <div className="bg-white/10 rounded-2xl p-6">
-                                <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-2" />
-                                <p className="text-3xl font-bold text-white">
-                                    {quizResults.filter(r => r.isCorrect).length}/{story.questions.length}
-                                </p>
-                                <p className="text-purple-300">Doğru Cevap</p>
-                            </div>
-                            <div className="bg-white/10 rounded-2xl p-6">
-                                <BookOpen className="w-10 h-10 text-blue-400 mx-auto mb-2" />
-                                <p className="text-3xl font-bold text-white">{formatTime(readingTime)}</p>
-                                <p className="text-purple-300">Okuma Süresi</p>
-                            </div>
-                            <div className="bg-white/10 rounded-2xl p-6">
-                                <Clock className="w-10 h-10 text-purple-400 mx-auto mb-2" />
-                                <p className="text-3xl font-bold text-white">{formatTime(Math.floor(totalQuizTime / 1000))}</p>
-                                <p className="text-purple-300">Quiz Süresi</p>
-                            </div>
-                        </div>
+                                            let btnClass = 'bg-slate-50 dark:bg-slate-700 border-black/10 hover:bg-cyber-yellow/20 hover:-translate-y-1 hover:shadow-neo-sm';
+                                            if (showResult) {
+                                                if (isCorrectAnswer) {
+                                                    btnClass = 'bg-cyber-green border-black/10  translate-y-1 translate-x-1';
+                                                } else if (isSelected) {
+                                                    btnClass = 'bg-cyber-pink border-black/10  translate-y-1 translate-x-1';
+                                                } else {
+                                                    btnClass = 'bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 opacity-50';
+                                                }
+                                            }
 
-                        {/* Question Results */}
-                        <div className="bg-white/5 rounded-2xl p-4 mb-8 text-left">
-                            <h3 className="text-white font-semibold mb-4">Soru Detayları:</h3>
-                            <div className="space-y-2">
-                                {quizResults.map((result, index) => (
-                                    <div
-                                        key={index}
-                                        className={`flex items-center gap-3 p-3 rounded-xl ${result.isCorrect ? 'bg-green-500/20' : 'bg-red-500/20'
-                                            }`}
-                                    >
-                                        {result.isCorrect ? (
-                                            <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-                                        ) : (
-                                            <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-                                        )}
-                                        <span className={`text-sm ${result.isCorrect ? 'text-green-200' : 'text-red-200'}`}>
-                                            Soru {index + 1}: {result.isCorrect ? 'Doğru' : 'Yanlış'}
-                                        </span>
+                                            return (
+                                                <motion.button
+                                                    key={index}
+                                                    whileHover={!showResult ? { scale: 1.02 } : {}}
+                                                    whileTap={!showResult ? { scale: 0.98 } : {}}
+                                                    onClick={() => handleAnswer(index)}
+                                                    disabled={showResult}
+                                                    className={`w-full p-4 rounded-2xl text-left border-4 shadow-neo-xs transition-all font-nunito font-bold text-black dark:text-white flex items-center gap-3 ${btnClass}`}
+                                                >
+                                                    <span className={`w-10 h-10 rounded-xl border-2 border-black/10 flex items-center justify-center font-black text-lg shrink-0 ${showResult && isCorrectAnswer ? 'bg-white' : showResult && isSelected ? 'bg-white' : 'bg-white dark:bg-slate-600'}`}>
+                                                        {showResult && isCorrectAnswer ? (
+                                                            <CheckCircle2 size={20} className="text-cyber-green stroke-[3]" />
+                                                        ) : showResult && isSelected ? (
+                                                            <XCircle size={20} className="text-cyber-pink stroke-[3]" />
+                                                        ) : (
+                                                            String.fromCharCode(65 + index)
+                                                        )}
+                                                    </span>
+                                                    <span className="text-base sm:text-lg">{option}</span>
+                                                </motion.button>
+                                            );
+                                        })}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
 
-                        {/* Action Buttons */}
-                        <div className="space-y-3">
-                            <button
-                                onClick={startGame}
-                                className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xl font-bold rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
-                            >
-                                <RotateCcw className="w-6 h-6" />
-                                Yeni Hikaye
-                            </button>
-                            <button
-                                onClick={() => navigate('/stories')}
-                                className="w-full py-4 bg-white/20 text-white text-xl font-bold rounded-2xl hover:bg-white/30 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Home className="w-6 h-6" />
-                                Hikayelere Dön
-                            </button>
-                        </div>
-                    </div>
+                                    {/* Feedback Text */}
+                                    {selectedAnswer !== null && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className={`mt-6 p-4 rounded-2xl border-2 border-black/10 shadow-neo-xs font-nunito font-bold ${selectedAnswer === story.questions[currentQuestion].correctAnswer ? 'bg-cyber-green/20 text-black dark:text-white' : 'bg-cyber-pink/20 text-black dark:text-white'}`}
+                                        >
+                                            <p>
+                                                {selectedAnswer === story.questions[currentQuestion].correctAnswer
+                                                    ? story.questions[currentQuestion].feedback.correct
+                                                    : story.questions[currentQuestion].feedback.incorrect}
+                                            </p>
+                                        </motion.div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             )}
-        </div>
+        </BrainTrainerShell>
     );
 }

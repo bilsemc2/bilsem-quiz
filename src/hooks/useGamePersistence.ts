@@ -17,7 +17,7 @@ export const useGamePersistence = () => {
 
     const saveGamePlay = useCallback(async (data: GamePlayData): Promise<boolean> => {
         if (!user) {
-            console.log('Game data not saved: No user logged in');
+
             return false;
         }
 
@@ -42,7 +42,6 @@ export const useGamePersistence = () => {
                 return false;
             }
 
-            console.log(`Game play saved: ${data.game_id} (${workshopType}, ${intelligenceType})`);
             return true;
         } catch (err) {
             console.error('Error saving game play:', err);

@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Edit, X, Loader2, Zap, ArrowLeft } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { XPRequirement } from '../../types/xpRequirements';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { authRepository } from '@/server/repositories/authRepository';
+import { xpRepository } from '@/server/repositories/xpRepository';
+import { isAdminProfile, normalizeXPRequirements } from '@/features/admin/model/xpRequirementsUseCases';
 
 export default function XPRequirementsManagement() {
   const { user } = useAuth();
@@ -25,16 +27,14 @@ export default function XPRequirementsManagement() {
     description: ''
   });
 
-  const checkIsAdmin = async () => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user?.id)
-        .single();
+  const checkIsAdmin = useCallback(async () => {
+    if (!user?.id) {
+      return false;
+    }
 
-      if (error) throw error;
-      if (!profile?.is_admin) {
+    try {
+      const profile = await authRepository.getProfileByUserId(user.id);
+      if (!isAdminProfile(profile)) {
         toast.error('Bu sayfaya erişim yetkiniz yok');
         return false;
       }
@@ -44,7 +44,7 @@ export default function XPRequirementsManagement() {
       toast.error('Yetki kontrolü yapılamadı');
       return false;
     }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchRequirements = async () => {
@@ -55,27 +55,18 @@ export default function XPRequirementsManagement() {
           return;
         }
 
-        const { data, error } = await supabase
-          .from('xp_requirements')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          toast.error('XP gereksinimleri yüklenirken hata oluştu');
-          throw error;
-        }
-
-        const validRequirements = (data || []).filter(req => req && req.page_path);
-        setRequirements(validRequirements);
+        const data = await xpRepository.listXPRequirements();
+        setRequirements(normalizeXPRequirements(data));
       } catch (error) {
         console.error('XP gereksinimleri yüklenirken hata:', error);
+        toast.error('XP gereksinimleri yüklenirken hata oluştu');
       } finally {
         setLoading(false);
       }
     };
 
     fetchRequirements();
-  }, []);
+  }, [checkIsAdmin]);
 
   const handleAddRequirement = async () => {
     if (!newRequirement.page_path || newRequirement.required_xp <= 0) {
@@ -84,17 +75,11 @@ export default function XPRequirementsManagement() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('xp_requirements')
-        .insert([{
-          page_path: newRequirement.page_path,
-          required_xp: newRequirement.required_xp,
-          description: newRequirement.description || null
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await xpRepository.createXPRequirement({
+        page_path: newRequirement.page_path,
+        required_xp: newRequirement.required_xp,
+        description: newRequirement.description || null
+      });
 
       setRequirements([data, ...requirements]);
       setNewRequirement({ page_path: '', required_xp: 0, description: '' });
@@ -108,12 +93,7 @@ export default function XPRequirementsManagement() {
   const handleDeleteRequirement = async (id: string) => {
     if (!window.confirm('Bu gereksinimi silmek istediğinizden emin misiniz?')) return;
     try {
-      const { error } = await supabase
-        .from('xp_requirements')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await xpRepository.deleteXPRequirement(id);
       setRequirements(requirements.filter(req => req.id !== id));
       toast.success('XP gereksinimi başarıyla silindi');
     } catch (error) {
@@ -145,12 +125,7 @@ export default function XPRequirementsManagement() {
         description: editFormData.description || null
       };
 
-      const { error } = await supabase
-        .from('xp_requirements')
-        .update(updateData)
-        .eq('id', editingRequirement.id);
-
-      if (error) throw error;
+      await xpRepository.updateXPRequirement(editingRequirement.id, updateData);
 
       setRequirements(prev =>
         prev.map(req =>

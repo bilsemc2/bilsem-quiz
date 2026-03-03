@@ -5,7 +5,12 @@ description: XP-tüketimli premium arcade oyunu ekler
 
 # 🕹️ Zeka Arcade Oyunu Ekleme Skill'i
 
-Bu skill, **Zeka Arcade** hub'ına yeni bir premium oyun eklemek için gerekli adımları içerir.
+Bu skill, **Zeka Arcade** hub'ına yeni bir premium oyun **kaydetmek** için gerekli adımları içerir.
+(Kayıt: routing, hub listesi, XP, veritabanı)
+
+> 🔧 **Oyun bileşenini oluşturmak için** mutlaka `standardize-arcade-game` skill'ini de oku:
+> `.agent/skills/standardize-arcade-game/SKILL.md`
+> Bu skill; `ArcadeGameShell`, `ArcadeConstants`, lifecycle güvenliği ve renk standardını belgeler.
 
 ## Gerekli Bilgiler
 
@@ -30,41 +35,37 @@ Bu skill, **Zeka Arcade** hub'ına yeni bir premium oyun eklemek için gerekli a
 ## Adım 1: Klasör Yapısını Oluştur
 
 ```bash
-mkdir -p src/components/Arcade/Games/[OyunAdi]/components
-mkdir -p src/components/Arcade/Games/[OyunAdi]/hooks
+mkdir -p src/components/Arcade/Games/[OyunAdi]
 ```
 
 Klasör yapısı:
 ```
 src/components/Arcade/Games/[OyunAdi]/
-├── components/
-├── hooks/
-├── types.ts
-├── constants.ts
-└── [OyunAdi].tsx
+├── types.ts          ← GameState ve oyuna özgü tipler
+├── constants.ts      ← Oyuna özgü config (gerekirse)
+└── [OyunAdi].tsx     ← Ana bileşen (ArcadeGameShell içerir)
+```
+
+> Paylaşımlı bileşenler (`Balloon`, `Cloud`, `ArcadeFeedbackBanner` vb.) zaten
+> `src/components/Arcade/Shared/` altında mevcut — yeni kopya oluşturmayın.
+
+**types.ts şablonu:**
+```typescript
+export type GameStatus = 'START' | 'PLAYING' | 'GAME_OVER' | 'SUCCESS';
+
+export interface GameState {
+    score: number;
+    level: number;
+    lives: number;
+    status: GameStatus;
+}
 ```
 
 ---
 
-## Adım 2: Temel Dosyaları Oluştur
+## Adım 2: games.tsx'e Ekle
 
-**types.ts:**
-```typescript
-export type GamePhase = 'idle' | 'playing' | 'paused' | 'game_over' | 'victory';
-```
-
-**constants.ts:**
-```typescript
-export const GAME_CONFIG = {
-  GRID_WIDTH: 15,
-  GRID_HEIGHT: 15,
-  CELL_SIZE: 40,
-};
-```
-
----
-
-## Adım 3: games.tsx'e Ekle
+`src/components/Arcade/games.tsx` dosyasına ekle:
 
 ```tsx
 {
@@ -108,27 +109,30 @@ export const GAME_CONFIG = {
 
 > **⚠️ Inline Style Yasağı:**
 > `style={{ backgroundColor: '...' }}` gibi inline style'lar **kullanmayın**. Tailwind class'larını tercih edin:
-> - `boxShadow` → `shadow-lg`, `shadow-2xl`, `shadow-[0_8px_32px_rgba(...)]`
-> - `background` → `bg-gradient-to-br from-X to-Y`
-> - `borderRadius` → `rounded-2xl`, `rounded-[24px]`
+> - `boxShadow` → Tactile Toy-Box için `shadow-[8px_8px_0_#000]`, `shadow-[4px_4px_0_#000]` gibi keskin ve belirgin gölgeler kullanın. Karanlık mod için `dark:shadow-[8px_8px_0_#0f172a]` ekleyin.
+> - `background` → Canlı ve solid renkler `bg-amber-300`, `bg-sky-200`. Gradient **kullanmayın**. Karanlık mod için `dark:bg-slate-800` gibi koyu zeminler tanımlayın.
+> - `border` → Kalın siyah çerçeveler `border-4 border-black`. Karanlık mod için `dark:border-slate-700` veya `dark:border-slate-800` kullanın.
+> - `borderRadius` → `rounded-2xl`, `rounded-3xl`, `rounded-full`.
 >
-> **İstisna:** Yalnızca JavaScript ile dinamik hesaplanan değerler (canvas boyutu, pozisyon) inline olabilir.
+> **İstisna:** Yalnızca JavaScript ile dinamik hesaplanan değerler (canvas boyutu, pozisyon, hesaplanmış rotasyon) inline olabilir.
 
 ---
 
-## Adım 4: Route Ekle (App.tsx)
+## Adım 3: Route Ekle
+
+`src/routes/arcadeRoutes.tsx` dosyasına ekle:
 
 ```tsx
-const [OyunAdi] = React.lazy(() => 
-  import('./components/Arcade/Games/[OyunAdi]/[OyunAdi]')
-);
+// Lazy import (dosyanın üstüne)
+const [OyunAdi] = React.lazy(() => import('@/components/Arcade/Games/[OyunAdi]/[OyunAdi]'));
 
-<Route path="/bilsem-zeka/[oyun-slug]" element={<RequireAuth><[OyunAdi] /></RequireAuth>} />
+// arcadeRoutes dizisine ekle
+<Route key="[oyun-slug]" path="/bilsem-zeka/[oyun-slug]" element={<RequireAuth><[OyunAdi] /></RequireAuth>} />,
 ```
 
 ---
 
-## Adım 5: XP Requirement Ekle
+## Adım 4: XP Requirement Ekle
 
 ```sql
 INSERT INTO xp_requirements (path, xp_cost, description) 
@@ -137,7 +141,7 @@ VALUES ('/bilsem-zeka/[oyun-slug]', 40, '[Oyun Adı]');
 
 ---
 
-## Adım 6: Intelligence Types Eşleştirmesi
+## Adım 5: Intelligence Types Eşleştirmesi
 
 `src/constants/intelligenceTypes.ts` dosyasına oyunu ekle:
 
@@ -157,35 +161,37 @@ VALUES ('/bilsem-zeka/[oyun-slug]', 40, '[Oyun Adı]');
 
 ---
 
-## Tasarım Standartları - 3D Gummy Candy Stili
+## Tasarım Standartları - Tactile Toy-Box Stili
 
-### 🍬 3D Gummy Candy Estetiği
+### 🪀 Tactile Toy-Box Estetiği
 
-Arcade oyunları "yumuşak şeker" görsel stilini takip etmelidir:
+Arcade oyunları "oyuncak kutusu" (Tactile Toy-Box) ve Cyber-Pop görsel stilini takip etmelidir. Bulanık efektler (glassmorphism) ve gradientler **kaldırılmıştır**. Canlı ve solid renkler, kalın siyah çerçeveler, belirgin offset gölgeler ve rotasyonlu elementler temel alınır. Metinlerde kontrast için genellikle siyah kullanılır, tüm componentlerde `font-black` ve `uppercase` kullanımına ağırlık verilir.
 
-#### Ana İkon (Welcome Screen)
+---
+
+### 🌙 Karanlık Mod (Dark Mode) Uyumu
+
+Tüm arcade oyunları **mutlaka** karanlık mod desteğine sahip olmalıdır. Sabit ışık modu renkleri (örneğin `bg-white`, `border-black`, `text-black`) tek başına bırakılamaz; daima `dark:` Tailwind varyantlarıyla tamamlanmalıdır.
+
+1. **Renk Geçişleri:** Tema değişiminin pürüzsüz olması için ana konteynere ve değişen tüm arayüz elemanlarına `transition-colors duration-300` sınıfını ekleyin.
+2. **Arka Planlar:** Açık renkli zeminler (`bg-sky-200`, `bg-white`) için karanlık modda derin renkler (`dark:bg-slate-800`, `dark:bg-slate-900`) tercih edin.
+3. **Metinler ve Kenarlıklar:** Siyah metin ve kenarlıklar için karanlık modda okunaklı zıt varyantlar (`dark:text-white`, `dark:border-slate-700`) kullanın.
+4. **Katı Gölgeler (Solid Shadows):** `shadow-[8px_8px_0_#000]` gibi siyah katı gölgeler karanlık renkli arka planlarda görünmez olabileceği için `dark:shadow-[..._#0f172a]` kullanarak `bg-slate-900` vb. zeminlerde kontrast oluşturmasını sağlayın.
+
+#### Ana İkon Container (Welcome Screen)
 ```tsx
-<motion.div 
-    className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-[40%] flex items-center justify-center shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)]"
-    animate={{ y: [0, -8, 0] }}
-    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
->
-    <IconComponent size={52} className="text-white drop-shadow-lg" />
-</motion.div>
+<div className="inline-block bg-sky-300 p-6 rounded-3xl border-4 border-black shadow-[8px_8px_0_#000] rotate-3 mb-6">
+    <IconComponent size={52} className="text-black" />
+</div>
 ```
 
-#### 3D Gummy Butonlar
+#### Tactile Oyuncak Butonlar
 ```tsx
-<motion.button
-    whileHover={{ scale: 1.05, y: -2 }}
-    whileTap={{ scale: 0.95 }}
-    className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl font-bold text-xl shadow-[0_8px_32px_rgba(6,182,212,0.4)]"
+<button
+    className="w-full px-8 py-5 bg-yellow-400 text-black border-4 border-black rounded-2xl text-2xl font-black uppercase tracking-widest shadow-[8px_8px_0_#000] hover:-translate-y-1 hover:shadow-[12px_12px_0_#000] active:translate-y-2 active:shadow-none transition-all flex items-center justify-center gap-3"
 >
-    <div className="flex items-center gap-3">
-        <Play size={28} className="fill-white" />
-        <span>Başla</span>
-    </div>
-</motion.button>
+    <Play size={28} fill="currentColor" /> Başla
+</button>
 ```
 
 ---
@@ -196,24 +202,28 @@ Arcade oyunları "yumuşak şeker" görsel stilini takip etmelidir:
 const SUCCESS_MESSAGES = ["Harikasın! 🎮", "Süpersin! ⭐", "Muhteşem! 🌟"];
 const FAIL_MESSAGES = ["Tekrar dene! 💪", "Düşün ve bul! 🧐"];
 
-// Feedback Overlay
+// Feedback Overlay (Tactile Style)
 <AnimatePresence>
     {showFeedback && (
         <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 p-4"
         >
             <motion.div
-                className={`px-12 py-8 rounded-3xl text-center ${
-                    isCorrect ? 'bg-gradient-to-br from-emerald-500 to-teal-600' 
-                              : 'bg-gradient-to-br from-orange-500 to-amber-600'
+                initial={{ scale: 0.5, y: 100 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.5, y: 100 }}
+                className={`px-10 py-8 rounded-[3rem] text-center border-8 border-black shadow-[16px_16px_0_#000] rotate-2 max-w-sm w-full ${
+                    isCorrect ? 'bg-emerald-300' 
+                              : 'bg-rose-400'
                 }`}
-                className="shadow-[0_16px_48px_rgba(0,0,0,0.4)]"
             >
-                {isCorrect ? <CheckCircle2 size={64} /> : <XCircle size={64} />}
-                <p className="text-3xl font-black text-white">{feedbackMessage}</p>
+                <div className="inline-block bg-white p-4 rounded-full border-4 border-black mb-4 shadow-[4px_4px_0_#000]">
+                    {isCorrect ? <CheckCircle2 size={56} className="text-emerald-500" /> : <XCircle size={56} className="text-rose-500" />}
+                </div>
+                <p className="text-3xl font-black text-black uppercase tracking-tight drop-shadow-[2px_2px_0_#fff]">{feedbackMessage}</p>
             </motion.div>
         </motion.div>
     )}
@@ -222,34 +232,29 @@ const FAIL_MESSAGES = ["Tekrar dene! 💪", "Düşün ve bul! 🧐"];
 
 ---
 
-### 🎨 Renk Paleti
+## 🎨 Renk Paleti ve Tasarım Standardı
 
-```css
-/* Arka Plan - Koyu Gradient */
-bg-gradient-to-br from-cyan-950 via-blue-950 to-slate-900
+Yeni oyunlarda aşağıdaki **paylaşımlı sabitler** doğrudan kullanılır — ayrıca tanımlama gerekmez:
 
-/* Glassmorphism Paneller */
-bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20
-
-/* HUD Elementleri */
-bg-amber-500/20 backdrop-blur-sm rounded-xl border border-amber-500/30  /* Skor */
-bg-red-500/20 backdrop-blur-sm rounded-xl border border-red-500/30      /* Can */
-bg-blue-500/20 backdrop-blur-sm rounded-xl border border-blue-500/30    /* Süre */
-
-/* Kalp İkonlu Can Gösterimi */
-{Array.from({ length: 5 }).map((_, i) => (
-    <Heart key={i} size={14} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'} />
-))}
+```ts
+import {
+    ARCADE_COLORS,        // string[] — tüm renk hex'leri
+    ARCADE_COLOR_NAMES,   // Record<string,string> — hex → Türkçe isim
+    ARCADE_PALETTE,       // Nesne: ARCADE_PALETTE.red.hex, .name
+    ARCADE_FEEDBACK_TEXTS // SUCCESS_MESSAGES, ERROR_MESSAGES dizileri
+} from '../../Shared/ArcadeConstants';
 ```
+
+> Detaylı renk tablosu ve tasarım standartları için `standardize-arcade-game` skill'ine bak.
 
 ---
 
-### 📍 TUZÖ Badge
+### 📍 TUZÖ Badge (Toy-Box Style)
 
 ```tsx
-<div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-full">
-    <span className="text-[9px] font-black text-cyan-300 uppercase tracking-wider">TUZÖ</span>
-    <span className="text-[9px] font-bold text-cyan-400">5.X.X Beceri Adı</span>
+<div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-200 border-2 border-black rounded-xl shadow-[2px_2px_0_#000] rotate-1">
+    <span className="text-[10px] font-black text-black uppercase tracking-wider">TUZÖ</span>
+    <span className="text-[10px] font-bold text-black">5.X.X Beceri Adı</span>
 </div>
 ```
 
@@ -307,13 +312,14 @@ const startGame = () => {
 
 ## Referans Oyunlar
 
-- `src/components/Arcade/Games/DarkMaze/`
-- `src/components/Arcade/Games/RenkliBalon/`
+- `src/components/Arcade/Games/RenkliBalon/` — Pilot standardizasyon oyunu
+- `src/components/Arcade/Shared/` — Paylaşımlı bileşenler
 - `src/components/Arcade/README.md`
+- **Bileşen mimarisi için:** `.agent/skills/standardize-arcade-game/SKILL.md`
 
 ---
 
-## Adım 7: YouTube İçerik Paketi
+## Adım 6: YouTube İçerik Paketi
 
 Her yeni arcade oyunu için YouTube tanıtım içeriği oluştur.
 
@@ -365,23 +371,23 @@ Her oyun için **3 farklı thumbnail istemi** üret:
 
 **İstem 1 — Oyun Mekaniği Odaklı:**
 ```
-YouTube thumbnail, [renk paleti] gradient background, [oyunun ana görselini tanımla],
-bold Turkish text "[KISA BAŞLIK]" in [renk] with glow effect, arcade game style,
-clean modern design, 1280x720
+YouTube thumbnail, [renk] solid background with thick black borders, [oyunun ana görselini tanımla],
+bold Turkish text "[KISA BAŞLIK]" in [renk] with heavy black drop shadow, tactile toy-box style,
+clean neo-brutalist design, 1280x720
 ```
 
 **İstem 2 — Aksiyon/Eğlence Odaklı:**
 ```
-YouTube thumbnail, vibrant [renk] gradient, [oyun karakterleri/elementleri aksiyon pozunda],
-bold Turkish text "[KANCA]" in white with neon glow, dynamic composition, game UI elements,
+YouTube thumbnail, vibrant [renk] solid background, [oyun karakterleri/elementleri aksiyon pozunda],
+bold Turkish text "[KANCA]" in white with thick black outline and offset shadow, dynamic composition, playful toy UI elements,
 1280x720
 ```
 
 **İstem 3 — Premium/XP Odaklı:**
 ```
-YouTube thumbnail, dark [renk] background with gold accents, [oyun elementleri],
-"PREMIUM" badge, XP coin icon, bold Turkish text "[OYUN ADI]", luxurious arcade feel,
-dramatic lighting, 1280x720
+YouTube thumbnail, bright [renk] background with bold geometric accents, [oyun elementleri],
+"PREMIUM" badge with thick borders, XP coin icon, bold Turkish text "[OYUN ADI]", tactile arcade feel,
+flat lighting, 1280x720
 ```
 
 **Thumbnail Kuralları:**

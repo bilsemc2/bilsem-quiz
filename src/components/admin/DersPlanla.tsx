@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
+import {
+    adminLessonSlotRepository,
+    type CreateLessonSlotInput
+} from '@/server/repositories/adminLessonSlotRepository';
+import {
+    buildStudentReservationSlot,
+    buildTutorLessonSlot,
+    toLessonSlotUpdateInput,
+    type LessonSlotDraftInput
+} from '@/features/admin/model/lessonPlannerUseCases';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -342,17 +351,12 @@ const DersPlanla: React.FC = () => {
     // ─── Supabase CRUD ───────────────────────────────────────────────
 
     const fetchSlots = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('lesson_slots')
-            .select('*')
-            .order('hour', { ascending: true })
-            .order('minute', { ascending: true });
-
-        if (error) {
+        try {
+            const data = await adminLessonSlotRepository.listSlots();
+            setSlots(data as TimeSlot[]);
+        } catch (error) {
             toast.error('Dersler yüklenirken hata oluştu');
             console.error(error);
-        } else {
-            setSlots(data || []);
         }
         setLoading(false);
     }, []);
@@ -361,54 +365,38 @@ const DersPlanla: React.FC = () => {
         fetchSlots();
     }, [fetchSlots]);
 
-    const addSlot = async (slot: Omit<TimeSlot, 'id'>) => {
-        const id = crypto.randomUUID();
-        const newSlot = { ...slot, id };
-
-        const { error } = await supabase
-            .from('lesson_slots')
-            .insert(newSlot);
-
-        if (error) {
-            toast.error(`Ders eklenirken hata: ${error.message}`);
+    const addSlot = async (slot: CreateLessonSlotInput) => {
+        try {
+            await adminLessonSlotRepository.createSlot(slot);
+            setSlots(prev => [...prev, slot as TimeSlot]);
+            toast.success('Ders eklendi');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Bilinmeyen hata';
+            toast.error(`Ders eklenirken hata: ${message}`);
             console.error('Insert error:', error);
-            return;
         }
-
-        setSlots(prev => [...prev, newSlot as TimeSlot]);
-        toast.success('Ders eklendi');
     };
 
     const deleteSlot = async (id: string) => {
-        const { error } = await supabase
-            .from('lesson_slots')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
+        try {
+            await adminLessonSlotRepository.deleteSlot(id);
+            setSlots(prev => prev.filter(s => s.id !== id));
+            toast.success('Ders silindi');
+        } catch (error) {
             toast.error('Ders silinirken hata oluştu');
             console.error(error);
-            return;
         }
-
-        setSlots(prev => prev.filter(s => s.id !== id));
-        toast.success('Ders silindi');
     };
 
     const clearAllSlots = async () => {
-        const { error } = await supabase
-            .from('lesson_slots')
-            .delete()
-            .gt('id', '00000000-0000-0000-0000-000000000000'); // delete all
-
-        if (error) {
+        try {
+            await adminLessonSlotRepository.deleteAllSlots();
+            setSlots([]);
+            toast.success('Tüm program temizlendi');
+        } catch (error) {
             toast.error('Dersler silinirken hata oluştu');
             console.error(error);
-            return;
         }
-
-        setSlots([]);
-        toast.success('Tüm program temizlendi');
     };
 
     // ─── Handlers ────────────────────────────────────────────────────
@@ -432,51 +420,27 @@ const DersPlanla: React.FC = () => {
     const handleClearClipboard = () => setClipboardSlot(null);
     const handleEditSlot = (slot: TimeSlot) => setEditingSlot(slot);
 
-    const updateSlot = async (data: { title: string; student_name: string; parent_name: string; phone: string; hour: number; minute: number; duration: number; color: string }) => {
+    const updateSlot = async (data: LessonSlotDraftInput) => {
         if (!editingSlot) return;
 
-        const updates = {
-            title: data.title,
-            student_name: data.student_name,
-            parent_name: data.parent_name,
-            phone: data.phone,
-            hour: data.hour,
-            minute: data.minute,
-            duration: data.duration,
-            color: data.color,
-        };
+        const updates = toLessonSlotUpdateInput(data);
 
-        const { error } = await supabase
-            .from('lesson_slots')
-            .update(updates)
-            .eq('id', editingSlot.id);
-
-        if (error) {
-            toast.error(`Güncelleme hatası: ${error.message}`);
+        try {
+            await adminLessonSlotRepository.updateSlot(editingSlot.id, updates);
+            setSlots(prev => prev.map(s => s.id === editingSlot.id ? { ...s, ...updates } : s));
+            setEditingSlot(null);
+            toast.success('Ders güncellendi');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Bilinmeyen hata';
+            toast.error(`Güncelleme hatası: ${message}`);
             console.error(error);
-            return;
         }
-
-        setSlots(prev => prev.map(s => s.id === editingSlot.id ? { ...s, ...updates } : s));
-        setEditingSlot(null);
-        toast.success('Ders güncellendi');
     };
 
-    const handleTutorSave = (data: { title: string; student_name: string; parent_name: string; phone: string; hour: number; minute: number; duration: number; color: string }) => {
+    const handleTutorSave = (data: LessonSlotDraftInput) => {
         if (tutorBookingModal) {
             const { day } = tutorBookingModal;
-            addSlot({
-                day,
-                hour: data.hour,
-                minute: data.minute,
-                duration: data.duration,
-                is_booked: true,
-                title: data.title,
-                student_name: data.student_name,
-                parent_name: data.parent_name,
-                phone: data.phone,
-                color: data.color,
-            });
+            addSlot(buildTutorLessonSlot(day, data));
             setTutorBookingModal(null);
         }
     };
@@ -486,14 +450,7 @@ const DersPlanla: React.FC = () => {
     const confirmStudentBooking = () => {
         if (studentBookingModal) {
             const { day, hour } = studentBookingModal;
-            addSlot({
-                day,
-                hour,
-                minute: 0,
-                duration: 60,
-                is_booked: true,
-                title: 'Öğrenci Rezervasyonu',
-            });
+            addSlot(buildStudentReservationSlot(day, hour));
             setStudentBookingModal(null);
         }
     };

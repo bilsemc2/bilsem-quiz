@@ -20,9 +20,9 @@ const GameScene: React.FC<GameSceneProps> = ({ pieces, isRevealing, onPieceClick
         const updateCamera = () => {
             const width = window.innerWidth;
             if (width < 640) {
-                setCameraDistance(20); // Mobile - much further
+                setCameraDistance(16); // Mobile - closer for bigger pieces
             } else if (width < 1024) {
-                setCameraDistance(18); // Tablet - further
+                setCameraDistance(15); // Tablet
             } else {
                 setCameraDistance(12); // Desktop
             }
@@ -77,8 +77,8 @@ const GameScene: React.FC<GameSceneProps> = ({ pieces, isRevealing, onPieceClick
 
                             {/* Magnetic base plate hint */}
                             <mesh position={[0, 0, -0.2]} receiveShadow>
-                                <boxGeometry args={[11, 11, 0.1]} />
-                                <meshStandardMaterial color="#0c0c0e" roughness={1} metalness={0} />
+                                <boxGeometry args={[11, 11, 0.4]} />
+                                <meshStandardMaterial color="#38bdf8" roughness={0.7} metalness={0.1} />
                             </mesh>
                         </group>
                     </Float>

@@ -143,4 +143,4 @@ const handleTouchStart = (e: React.TouchEvent) => {
 - [x] Chroma Hafıza - Responsive header + touch-none (3D game)
 
 ### Kalan ⬜
-- [ ] KraftOrigami (Paper folder)
+- [x] KraftOrigami (Paper folder)

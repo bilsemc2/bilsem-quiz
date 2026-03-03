@@ -5,42 +5,21 @@ import {
     Users, Search, Loader2, X, BarChart3, Trophy,
     Gamepad2, Brain, Clock, TrendingUp, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { adminStatisticsRepository } from '@/server/repositories/adminStatisticsRepository';
+import {
+    buildStudentStatsSummary,
+    filterStudentsForStatistics,
+    toStudentGamePlayItems,
+    toStudentListItems,
+    type StudentGamePlayItem,
+    type StudentListItem,
+    type StudentStatsSummary
+} from '@/features/admin/model/studentStatisticsUseCases';
 import { ZEKA_RENKLERI, ZekaTuru, WORKSHOP_LABELS, WorkshopType } from '../../constants/intelligenceTypes';
 
-interface Student {
-    id: string;
-    name: string;
-    email: string;
-    grade: number | null;
-    experience: number;
-    points: number;
-    is_vip: boolean;
-    created_at: string;
-}
-
-interface GamePlay {
-    id: string;
-    game_id: string;
-    score_achieved: number;
-    duration_seconds: number;
-    intelligence_type: string | null;
-    workshop_type: string | null;
-    created_at: string;
-}
-
-interface StudentStats {
-    totalGames: number;
-    avgScore: number;
-    totalDuration: number;
-    intelligenceBreakdown: Record<string, number>;
-    workshopBreakdown: Record<string, number>;
-    recentGames: GamePlay[];
-}
-
 const StudentStatistics = () => {
-    const [students, setStudents] = useState<Student[]>([]);
-    const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+    const [students, setStudents] = useState<StudentListItem[]>([]);
+    const [filteredStudents, setFilteredStudents] = useState<StudentListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [gradeFilter, setGradeFilter] = useState('');
@@ -48,8 +27,8 @@ const StudentStatistics = () => {
     const [rowsPerPage, setRowsPerPage] = useState(15);
 
     // Detail Modal
-    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-    const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
+    const [selectedStudent, setSelectedStudent] = useState<StudentListItem | null>(null);
+    const [studentStats, setStudentStats] = useState<StudentStatsSummary | null>(null);
     const [loadingStats, setLoadingStats] = useState(false);
     const [detailOpen, setDetailOpen] = useState(false);
 
@@ -58,33 +37,15 @@ const StudentStatistics = () => {
     }, []);
 
     useEffect(() => {
-        let result = [...students];
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            result = result.filter(s =>
-                s.name?.toLowerCase().includes(term) ||
-                s.email.toLowerCase().includes(term)
-            );
-        }
-        if (gradeFilter !== '') {
-            result = result.filter(s => String(s.grade) === gradeFilter);
-            // Sınıf filtrelemesinde sadece XP'si olanları göster
-            result = result.filter(s => (s.experience || 0) > 0);
-        }
-        setFilteredStudents(result);
+        setFilteredStudents(filterStudentsForStatistics(students, searchTerm, gradeFilter));
         setPage(0);
     }, [students, searchTerm, gradeFilter]);
 
     const fetchStudents = async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, name, email, grade, experience, points, is_vip, created_at')
-                .order('name', { ascending: true });
-
-            if (error) throw error;
-            setStudents(data || []);
+            const data = await adminStatisticsRepository.listStudents();
+            setStudents(toStudentListItems(data));
         } catch (err) {
             console.error('Öğrenciler yüklenirken hata:', err);
         } finally {
@@ -95,45 +56,9 @@ const StudentStatistics = () => {
     const fetchStudentStats = useCallback(async (studentId: string) => {
         try {
             setLoadingStats(true);
-
-            const { data: plays, error } = await supabase
-                .from('game_plays')
-                .select('id, game_id, score_achieved, duration_seconds, intelligence_type, workshop_type, created_at')
-                .eq('user_id', studentId)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            const gamePlays = plays || [];
-            const totalGames = gamePlays.length;
-            const totalScore = gamePlays.reduce((sum, g) => sum + (g.score_achieved || 0), 0);
-            const avgScore = totalGames > 0 ? Math.round(totalScore / totalGames) : 0;
-            const totalDuration = gamePlays.reduce((sum, g) => sum + (g.duration_seconds || 0), 0);
-
-            // Zeka türü dağılımı
-            const intelligenceBreakdown: Record<string, number> = {};
-            gamePlays.forEach(g => {
-                if (g.intelligence_type) {
-                    intelligenceBreakdown[g.intelligence_type] = (intelligenceBreakdown[g.intelligence_type] || 0) + 1;
-                }
-            });
-
-            // Workshop dağılımı
-            const workshopBreakdown: Record<string, number> = {};
-            gamePlays.forEach(g => {
-                if (g.workshop_type) {
-                    workshopBreakdown[g.workshop_type] = (workshopBreakdown[g.workshop_type] || 0) + 1;
-                }
-            });
-
-            setStudentStats({
-                totalGames,
-                avgScore,
-                totalDuration,
-                intelligenceBreakdown,
-                workshopBreakdown,
-                recentGames: gamePlays.slice(0, 15),
-            });
+            const plays = await adminStatisticsRepository.listGamePlaysByUserId(studentId);
+            const gamePlays: StudentGamePlayItem[] = toStudentGamePlayItems(plays);
+            setStudentStats(buildStudentStatsSummary(gamePlays));
         } catch (err) {
             console.error('Öğrenci istatistikleri yüklenirken hata:', err);
         } finally {
@@ -141,7 +66,7 @@ const StudentStatistics = () => {
         }
     }, []);
 
-    const handleOpenDetail = (student: Student) => {
+    const handleOpenDetail = (student: StudentListItem) => {
         setSelectedStudent(student);
         setStudentStats(null);
         setDetailOpen(true);

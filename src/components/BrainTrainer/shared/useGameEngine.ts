@@ -11,6 +11,8 @@ export interface UseGameEngineConfig {
     maxLevel?: number;
     initialLives?: number;
     timeLimit?: number; // In seconds
+    /** When true, prevents auto-start from location.state (useful for games with custom pre-game phases like reading) */
+    disableAutoStart?: boolean;
 }
 
 export const useGameEngine = ({
@@ -18,6 +20,7 @@ export const useGameEngine = ({
     maxLevel = 20,
     initialLives = 5,
     timeLimit = 180,
+    disableAutoStart = false,
 }: UseGameEngineConfig) => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
@@ -48,14 +51,20 @@ export const useGameEngine = ({
 
     const handleStart = useCallback(() => {
         window.scrollTo(0, 0);
-        setPhase("playing");
+        // First go to welcome to trigger cleanup in all game components
+        setPhase("welcome");
         setScore(0);
         setLevel(1);
         setLives(initialLives);
         setTimeLeft(examMode ? examTimeLimit : timeLimit);
         hasSavedRef.current = false;
+        startTimeRef.current = Date.now();
         clearTimer();
-        playSound("pop"); // Typically games use a slide/pop/run sound for starting
+        // Then transition to playing on next tick so games see welcome→playing
+        setTimeout(() => {
+            setPhase("playing");
+            playSound("pop");
+        }, 0);
     }, [playSound, examMode, examTimeLimit, initialLives, timeLimit, clearTimer]);
 
     const addScore = useCallback((points: number) => {
@@ -97,12 +106,13 @@ export const useGameEngine = ({
         }
     }, [clearTimer]);
 
-    // Auto-start for exam mode
+    // Auto-start for exam mode only
     useEffect(() => {
-        if ((location.state?.autoStart || examMode) && phase === "welcome") {
+        if (disableAutoStart) return;
+        if (examMode && phase === "welcome") {
             handleStart();
         }
-    }, [location.state, phase, handleStart, examMode]);
+    }, [phase, handleStart, examMode, disableAutoStart]);
 
     // Timer
     useEffect(() => {
@@ -133,14 +143,17 @@ export const useGameEngine = ({
 
         if (examMode) {
             const passed = level >= 5 || phase === "victory";
-            await submitResult(
-                passed,
-                score,
-                maxLevel * 100, // Approximate max possible score for exam evaluation
-                duration,
-            );
-            // Let the shell or game handle redirection if we want, but engine handles it by default
-            setTimeout(() => navigate("/atolyeler/sinav-simulasyonu/devam"), 2000);
+            try {
+                await submitResult(
+                    passed,
+                    score,
+                    maxLevel * 100,
+                    duration,
+                );
+            } catch (err) {
+                console.error('[useGameEngine] submitResult hatası:', err);
+            }
+            setTimeout(() => navigate("/atolyeler/sinav-simulasyonu/devam"), 3000);
             return;
         }
 

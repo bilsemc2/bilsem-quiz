@@ -60,6 +60,7 @@ const TimeExplorerGame = React.lazy(() => import('@/components/BrainTrainer/Time
 const ShapeAlgebraGame = React.lazy(() => import('@/components/BrainTrainer/ShapeAlgebraGame'));
 const LazerHafizaGame = React.lazy(() => import('@/components/BrainTrainer/LazerHafizaGame'));
 const MazeRunnerGame = React.lazy(() => import('@/components/BrainTrainer/MazeRunnerGame'));
+const DeyimlerGame = React.lazy(() => import('@/components/BrainTrainer/DeyimlerGame'));
 
 /**
  * Brain Trainer Game Routes
@@ -123,4 +124,5 @@ export const gameRoutes = [
     <Route key="sekil-cebiri" path="/games/sekil-cebiri" element={<RequireAuth><ShapeAlgebraGame /></RequireAuth>} />,
     <Route key="lazer-hafiza" path="/games/lazer-hafiza" element={<RequireAuth><LazerHafizaGame /></RequireAuth>} />,
     <Route key="labirent" path="/games/labirent" element={<RequireAuth><MazeRunnerGame /></RequireAuth>} />,
+    <Route key="deyimler-oyunu" path="/games/deyimler-oyunu" element={<RequireAuth><DeyimlerGame /></RequireAuth>} />,
 ];

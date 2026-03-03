@@ -1,16 +1,334 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, RotateCcw, Trophy, Timer as TimerIcon, Play, Star, Heart, Grid3X3, Eye, EyeOff, Plus, Sparkles, Zap } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useSound } from '../../hooks/useSound';
-import { useGamePersistence } from '../../hooks/useGamePersistence';
-import { useExam } from '../../contexts/ExamContext';
-import { useGameFeedback } from '../../hooks/useGameFeedback';
-import GameFeedbackBanner from './shared/GameFeedbackBanner'; // ─── Constants ───────────────────────────────────────────────
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Timer as TimerIcon, EyeOff, Plus, Grid3X3 } from "lucide-react";
+import { useGameEngine } from "./shared/useGameEngine";
+import BrainTrainerShell from "./shared/BrainTrainerShell";
+import { useGameFeedback } from "../../hooks/useGameFeedback";
+import { useSound } from "../../hooks/useSound";
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
+
+const GAME_ID = "hedef-sayi";
 const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
-const GAME_ID = 'hedef-sayi';
-const GRID_SIZE = 16; interface Card { id: string; value: number; isRevealed: boolean; isSolved: boolean;
-} type Phase = 'welcome' | 'preview' | 'playing' | 'feedback' | 'game_over' | 'victory'; const TargetGridGame: React.FC = () => { const { playSound } = useSound(); const { saveGamePlay } = useGamePersistence(); const { submitResult } = useExam(); const location = useLocation(); const navigate = useNavigate(); const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1500 }); const [phase, setPhase] = useState<Phase>('welcome'); const [score, setScore] = useState(0); const [level, setLevel] = useState(1); const [lives, setLives] = useState(INITIAL_LIVES); const [timeLeft, setTimeLeft] = useState(TIME_LIMIT); const [cards, setCards] = useState<Card[]>([]); const [targetSum, setTargetSum] = useState(0); const [_selectedIndices, setSelectedIndices] = useState<number[]>([]); const [currentSum, setCurrentSum] = useState(0); const [previewTimer, setPreviewTimer] = useState(3); const timerRef = useRef<NodeJS.Timeout | null>(null); const startTimeRef = useRef(0); const hasSavedRef = useRef(false); const examMode = location.state?.examMode || false; const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT; const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme"; const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri"; const generateGrid = useCallback((lvl: number) => { const newCards: Card[] = []; for (let i = 0; i < GRID_SIZE; i++) { newCards.push({ id: Math.random().toString(36).substr(2, 9), value: Math.floor(Math.random() * 9) + 1, isRevealed: true, isSolved: false }); } const numToCombine = Math.random() > 0.7 && lvl > 5 ? 3 : 2; const targetIndices: number[] = []; while (targetIndices.length < numToCombine) { const idx = Math.floor(Math.random() * GRID_SIZE); if (!targetIndices.includes(idx)) targetIndices.push(idx); } setTargetSum(targetIndices.reduce((acc, idx) => acc + newCards[idx].value, 0)); setCards(newCards); setSelectedIndices([]); setCurrentSum(0); setPreviewTimer(Math.max(1, 4 - Math.floor(lvl / 5))); }, []); const handleStart = useCallback(() => { window.scrollTo(0, 0); setScore(0); setLevel(1); setLives(INITIAL_LIVES); setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT); startTimeRef.current = Date.now(); hasSavedRef.current = false; setPhase('preview'); generateGrid(1); playSound('slide'); }, [generateGrid, playSound, examMode, examTimeLimit]); useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart(); }, [location.state, phase, handleStart, examMode]); useEffect(() => { if (phase === 'preview' && previewTimer > 0) { const t = setTimeout(() => setPreviewTimer(p => p - 1), 1000); return () => clearTimeout(t); } else if (phase === 'preview' && previewTimer === 0) { setPhase('playing'); setCards(p => p.map(c => ({ ...c, isRevealed: false }))); playSound('signal_disappear'); } }, [phase, previewTimer, playSound]); useEffect(() => { if (phase === 'playing' && timeLeft > 0) { timerRef.current = setInterval(() => setTimeLeft(p => { if (p <= 1) { clearInterval(timerRef.current!); setPhase('game_over'); return 0; } return p - 1; }), 1000); return () => clearInterval(timerRef.current!); } }, [phase, timeLeft]); const handleFinish = useCallback(async () => { if (hasSavedRef.current) return; hasSavedRef.current = true; const duration = Math.floor((Date.now() - startTimeRef.current) / 1000); if (examMode) { await submitResult(level >= 5 || phase === 'victory', score, MAX_LEVEL * 100, duration); navigate("/atolyeler/sinav-simulasyonu/devam"); return; } await saveGamePlay({ game_id: GAME_ID, score_achieved: score, duration_seconds: duration, metadata: { level_reached: level, victory: phase === 'victory' } }); }, [phase, score, level, saveGamePlay, examMode, submitResult, navigate]); useEffect(() => { if (phase === 'game_over' || phase === 'victory') handleFinish(); }, [phase, handleFinish]); const handleCard = (idx: number) => { if (phase !== 'playing' || cards[idx].isRevealed || cards[idx].isSolved || feedbackState) return; const card = cards[idx]; const newSum = currentSum + card.value; setCurrentSum(newSum); setSelectedIndices(p => [...p, idx]); setCards(p => p.map((c, i) => i === idx ? { ...c, isRevealed: true } : c)); playSound('grid_flip'); if (newSum === targetSum) { showFeedback(true); playSound('correct'); setScore(p => p + 20 * level); setTimeout(() => { dismissFeedback(); if (level >= MAX_LEVEL) setPhase('victory'); else { setLevel(l => l + 1); setPhase('preview'); generateGrid(level + 1); } }, 1000); } else if (newSum > targetSum) { showFeedback(false); playSound('incorrect'); setLives(l => { const nl = l - 1; if (nl <= 0) setTimeout(() => setPhase('game_over'), 500); else { setTimeout(() => { dismissFeedback(); setCards(p => p.map(c => ({ ...c, isRevealed: false }))); setSelectedIndices([]); setCurrentSum(0); }, 1000); } return nl; }); } }; const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`; if (phase === 'welcome') { return ( <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black flex items-center justify-center p-6 text-white relative overflow-hidden"> <div className="fixed inset-0 pointer-events-none"><div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" /></div> <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl relative z-10"> <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" style={{ background: 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}><Grid3X3 size={52} className="text-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" /></motion.div> <h1 className="text-4xl font-black mb-4 bg-slate-50 dark:bg-slate-800 border-4 border-black bg-clip-text text-transparent">Hedef Sayı</h1> <p className="text-slate-400 mb-8 text-lg">Sayıları ezberle, hedef toplamı bul ve zihinden hesaplama becerini geliştir. Hızlı ve doğru karar ver!</p> <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 mb-6 text-left border border-2 border-black"> <h3 className="text-lg font-bold text-indigo-300 mb-3 flex items-center gap-2"><Eye size={20} /> Nasıl Oynanır?</h3> <ul className="space-y-2 text-slate-300 text-sm"> <li className="flex items-center gap-2"><Sparkles size={14} className="text-indigo-400" /><span>Sayıları <strong>kısa sürede ezberle</strong> - sonra gizlenecekler</span></li> <li className="flex items-center gap-2"><Sparkles size={14} className="text-indigo-400" /><span>Hedef sayıya ulaşan <strong>doğru kartları seç</strong></span></li> <li className="flex items-center gap-2"><Sparkles size={14} className="text-indigo-400" /><span>Toplamı aşmamaya <strong>dikkat et</strong> - can kaybedersin</span></li> </ul> </div> <div className="bg-indigo-500/10 text-indigo-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-indigo-500/30 font-bold uppercase tracking-widest">TUZÖ 5.4.2 Görsel Kısa Süreli Bellek</div> <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]"><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button> </motion.div> </div> ); } return ( <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black text-white relative overflow-hidden flex flex-col"> <div className="relative z-10 p-4 pt-20"> <div className="max-w-5xl mx-auto flex items-center justify-between"> <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link> {(phase !== 'game_over' && phase !== 'victory') && ( <div className="flex items-center gap-4 flex-wrap"> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30"><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />))}</div> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30"><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 border border-purple-500/30"><Zap className="text-fuchsia-400" size={18} /><span className="font-bold text-fuchsia-400">Seviye {level}/{MAX_LEVEL}</span></div> </div> )} </div> </div> <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1"> <AnimatePresence mode="wait"> {(phase === 'playing' || phase === 'preview') && ( <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-6 w-full max-w-lg"> <div className="w-full bg-white dark:bg-slate-800 rounded-[40px] p-8 border border-2 border-black shadow-[16px_16px_0_#000] dark:shadow-[16px_16px_0_#0f172a] text-center"> <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1 block">Hesaplanacak Sayı</span> <div className="text-6xl font-black text-white mb-2">{targetSum}</div> <div className="flex items-center justify-center gap-2 text-slate-400"><Plus size={16} /><span>Toplam: </span><span className="text-xl font-bold text-white">{currentSum}</span></div> </div> {phase === 'preview' && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-2 px-6 py-2 bg-indigo-500 rounded-full font-bold shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a] shadow-indigo-500/40"><TimerIcon size={18} className="animate-pulse" /><span>Ezberle: {previewTimer}s</span></motion.div>} <div className="grid grid-cols-4 gap-4 p-6 bg-white dark:bg-slate-800 rounded-[40px] border border-2 border-black shadow-inner w-full"> {cards.map((card, i) => ( <motion.button key={card.id} whileHover={phase === 'playing' && !card.isRevealed ? { scale: 1.05 } : {}} whileTap={phase === 'playing' && !card.isRevealed ? { scale: 0.95 } : {}} onClick={() => handleCard(i)} disabled={phase === 'preview' || card.isRevealed || feedbackState !== null} className="aspect-square rounded-2xl flex items-center justify-center text-3xl font-black transition-all" style={{ background: card.isRevealed ? 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)' : 'rgba(255,255,255,0.05)', boxShadow: card.isRevealed ? '0 0 20px rgba(129, 140, 248, 0.5), inset 0 -4px 8px rgba(0,0,0,0.2)' : 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.05)', border: card.isRevealed ? '2px solid #818CF8' : '1px solid rgba(255,255,255,0.1)', color: card.isRevealed ? '#fff' : 'transparent' }}> {card.isRevealed ? card.value : <EyeOff className="text-white/10" size={24} />} </motion.button> ))} </div> </motion.div> )} {(phase === 'game_over' || phase === 'victory') && ( <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl"> <motion.div className="w-24 h-24 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div> <h2 className="text-3xl font-bold text-amber-400 mb-2">{phase === 'victory' || level >= 5 ? '🎖️ Hesaplama Dahisi!' : 'Tebrikler!'}</h2> <p className="text-slate-400 mb-6">{phase === 'victory' || level >= 5 ? 'Görsel hafızan ve hızlı hesaplama yeteneğin mükemmel seviyede!' : 'Daha fazla pratikle görsel belleğini ve sayısal zekanı geliştirebilirsin.'}</p> <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-6 border border-2 border-black"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-indigo-400">{level}/{MAX_LEVEL}</p></div></div></div> <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl mb-4 shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button> <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">Geri Dön</Link> </motion.div> )} </AnimatePresence> <GameFeedbackBanner feedback={feedbackState} /> </div> </div> );
-}; export default TargetGridGame;
+const GRID_SIZE = 16;
+const PREVIEW_TIME = 4;
+
+interface Card {
+  id: string;
+  value: number;
+  isRevealed: boolean;
+  isSolved: boolean;
+}
+
+const TargetGridGame: React.FC = () => {
+  const engine = useGameEngine({
+    gameId: GAME_ID,
+    maxLevel: MAX_LEVEL,
+    timeLimit: TIME_LIMIT,
+    initialLives: INITIAL_LIVES,
+  });
+
+  const feedback = useGameFeedback({
+    duration: 1200,
+  });
+  const { feedbackState, showFeedback, dismissFeedback } = feedback;
+  const { playSound } = useSound();
+  const safeTimeout = useSafeTimeout();
+
+  const [cards, setCards] = useState<Card[]>([]);
+  const [targetSum, setTargetSum] = useState(0);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+  const [currentSum, setCurrentSum] = useState(0);
+  const [previewTimer, setPreviewTimer] = useState(PREVIEW_TIME);
+  const [isPreview, setIsPreview] = useState(false);
+
+  const previewIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const prevPhaseRef = useRef(engine.phase);
+
+  const generateGrid = useCallback((lvl: number) => {
+    const newCards: Card[] = [];
+    for (let i = 0; i < GRID_SIZE; i++) {
+      newCards.push({
+        id: `card-${lvl}-${i}-${Math.random().toString(36).substr(2, 5)}`,
+        value: Math.floor(Math.random() * 9) + 1,
+        isRevealed: true,
+        isSolved: false,
+      });
+    }
+
+    const numToCombine = Math.random() > 0.7 && lvl > 5 ? 3 : 2;
+    const targetIdxs: number[] = [];
+    while (targetIdxs.length < numToCombine) {
+      const idx = Math.floor(Math.random() * GRID_SIZE);
+      if (!targetIdxs.includes(idx)) targetIdxs.push(idx);
+    }
+
+    const sum = targetIdxs.reduce((acc, idx) => acc + newCards[idx].value, 0);
+    setTargetSum(sum);
+    setCards(newCards);
+    setSelectedIndices([]);
+    setCurrentSum(0);
+
+    const previewTime = Math.max(1, PREVIEW_TIME - Math.floor(lvl / 5));
+    setPreviewTimer(previewTime);
+    setIsPreview(true);
+  }, []);
+
+  useEffect(() => {
+    const prevPhase = prevPhaseRef.current;
+
+    if (
+      engine.phase === "playing" &&
+      (prevPhase === "welcome" || prevPhase === "game_over" || prevPhase === "victory")
+    ) {
+      generateGrid(engine.level);
+    } else if (engine.phase === "welcome" || engine.phase === "game_over" || engine.phase === "victory") {
+      if (previewIntervalRef.current) clearTimeout(previewIntervalRef.current);
+      setCards([]);
+      setSelectedIndices([]);
+      setCurrentSum(0);
+      setIsPreview(false);
+    }
+
+    prevPhaseRef.current = engine.phase;
+  }, [engine.phase, engine.level, generateGrid]);
+
+  useEffect(() => {
+    if (engine.phase === "playing" && isPreview) {
+      if (previewTimer > 0) {
+        previewIntervalRef.current = setTimeout(() => {
+          setPreviewTimer((p) => p - 1);
+          playSound("pop");
+        }, 1000);
+      } else {
+        setIsPreview(false);
+        setCards((p) => p.map((c) => ({ ...c, isRevealed: false })));
+        playSound("pop");
+      }
+    }
+    return () => {
+      if (previewIntervalRef.current) clearTimeout(previewIntervalRef.current);
+    };
+  }, [engine.phase, isPreview, previewTimer, engine, playSound]);
+
+  const handleCard = (idx: number) => {
+    if (
+      engine.phase !== "playing" ||
+      isPreview ||
+      cards[idx].isRevealed ||
+      cards[idx].isSolved ||
+      feedbackState
+    )
+      return;
+
+    const card = cards[idx];
+    const newSum = currentSum + card.value;
+    setCurrentSum(newSum);
+    setSelectedIndices((p) => [...p, idx]);
+
+    setCards((p) =>
+      p.map((c, i) => (i === idx ? { ...c, isRevealed: true } : c))
+    );
+    playSound("pop");
+
+    if (newSum === targetSum) {
+      showFeedback(true);
+      playSound("correct");
+      engine.addScore(20 * engine.level);
+
+      safeTimeout(() => {
+        dismissFeedback();
+        if (engine.level >= MAX_LEVEL) {
+          engine.setGamePhase("victory");
+        } else {
+          engine.nextLevel();
+          generateGrid(engine.level + 1);
+        }
+      }, 1000);
+    } else if (newSum > targetSum) {
+      showFeedback(false);
+      playSound("incorrect");
+      engine.loseLife();
+
+      safeTimeout(() => {
+        dismissFeedback();
+        if (engine.lives > 1) {
+          // Reset revealed cards for this attempt
+          setCards((p) =>
+            p.map((c, i) =>
+              selectedIndices.includes(i) || i === idx
+                ? { ...c, isRevealed: false }
+                : c
+            )
+          );
+          setSelectedIndices([]);
+          setCurrentSum(0);
+        }
+      }, 1000);
+    }
+  };
+
+  return (
+    <BrainTrainerShell
+      engine={engine}
+      feedback={feedback}
+      config={{
+        title: "Hedef Sayı",
+        icon: Grid3X3,
+        description:
+          "Sayıları ezberle, hedef toplamı bul ve zihinden hesaplama becerini geliştir!",
+        howToPlay: [
+          "Sayıları kısa sürede ezberle - sonra gizlenecekler.",
+          "Hedef sayıya ulaşan doğru kartları seç.",
+          "Toplamı aşmamaya dikkat et - can kaybedersin.",
+        ],
+        tuzoCode: "5.4.2 Görsel Kısa Süreli Bellek",
+        accentColor: "cyber-blue",
+        maxLevel: MAX_LEVEL,
+      }}
+    >
+      {() => (
+        <div className="w-full h-full flex flex-col items-center justify-center p-4">
+
+          {engine.phase === "playing" && cards.length > 0 && (
+            <motion.div
+              key={`grid-${engine.level}`}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col md:flex-row items-center justify-center gap-8 w-full max-w-4xl"
+            >
+              {/* Target Panel */}
+              <div className="w-full md:w-1/3 flex flex-col items-center p-6 sm:p-10 bg-white dark:bg-slate-800 rounded-2xl border-2 border-black/10 shadow-neo-sm -rotate-1 shrink-0">
+                {isPreview ? (
+                  /* Preview mode: hide target, show countdown */
+                  <>
+                    <span className="bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400 border-2 border-black/10 px-6 py-2 rounded-xl text-xs sm:text-sm font-nunito font-black uppercase tracking-widest shadow-neo-sm mb-6 rotate-2">
+                      Sayıları Ezberle!
+                    </span>
+                    <div className="text-6xl sm:text-7xl font-black font-nunito text-slate-300 dark:text-slate-600 drop-shadow-sm mb-6 select-none">
+                      ?
+                    </div>
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="flex items-center gap-2 px-6 py-3 bg-cyber-pink border-2 border-black/10 text-black rounded-2xl font-nunito font-black shadow-neo-sm rotate-2"
+                    >
+                      <TimerIcon size={20} className="animate-spin-slow" />
+                      <span className="text-lg">Ezberle: {previewTimer}</span>
+                    </motion.div>
+                  </>
+                ) : (
+                  /* Cards hidden: show target and current sum */
+                  <>
+                    <span className="bg-cyber-yellow text-black border-2 border-black/10 px-6 py-2 rounded-xl text-xs sm:text-sm font-nunito font-black uppercase tracking-widest shadow-neo-sm mb-6 rotate-2">
+                      Hedef Sayı
+                    </span>
+                    <motion.div
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", bounce: 0.4 }}
+                      className="text-6xl sm:text-7xl font-black font-nunito text-black dark:text-white drop-shadow-sm mb-6"
+                    >
+                      {targetSum}
+                    </motion.div>
+
+                    <div className="w-full bg-slate-100 dark:bg-slate-700 p-4 rounded-2xl border-2 border-black/10 shadow-inner flex flex-col items-center">
+                      <span className="text-xs font-nunito font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">
+                        Mevcut Toplam
+                      </span>
+                      <div
+                        className={`text-4xl font-black font-nunito flex items-center gap-3 transition-colors ${currentSum > targetSum
+                          ? "text-cyber-pink"
+                          : currentSum === targetSum
+                            ? "text-cyber-green"
+                            : "text-cyber-blue"
+                          }`}
+                      >
+                        <Plus size={24} strokeWidth={4} />
+                        {currentSum}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Grid Panel */}
+
+              <div className="w-full md:w-2/3 flex-1 relative">
+
+                <div
+                  className={`grid grid-cols-4 gap-2 sm:gap-4 p-4 sm:p-6 bg-slate-200 dark:bg-slate-700 rounded-2xl border-2 border-black/10 shadow-neo-sm aspect-square transition-all ${isPreview ? "border-cyber-green" : ""
+                    }`}
+                >
+                  {cards.map((card, i) => {
+                    const isSelected = selectedIndices.includes(i);
+                    const isFeedbackAndTarget = feedbackState?.correct && isSelected;
+                    const isFeedbackAndWrong = feedbackState?.correct === false && isSelected;
+
+                    let bgClass = "bg-white dark:bg-slate-800 text-black dark:text-white border-black/10 shadow-neo-sm";
+                    if (card.isRevealed || isPreview) {
+                      if (isFeedbackAndTarget) {
+                        bgClass = "bg-cyber-green text-black border-black/10 shadow-neo-sm";
+                      } else if (isFeedbackAndWrong) {
+                        bgClass = "bg-cyber-pink text-black border-black/10 shadow-neo-sm";
+                      } else if (isSelected) {
+                        bgClass = "bg-cyber-blue text-white border-black/10 shadow-neo-sm";
+                      } else {
+                        bgClass = "bg-white dark:bg-slate-800 text-black dark:text-white border-black/10 shadow-neo-sm";
+                      }
+                    } else {
+                      bgClass = "bg-slate-300 dark:bg-slate-600 border-black/10 shadow-neo-sm";
+                    }
+
+                    return (
+                      <motion.button
+                        key={card.id}
+                        whileTap={
+                          !isPreview && !card.isRevealed && !feedbackState
+                            ? { scale: 0.95 }
+                            : {}
+                        }
+                        onClick={() => handleCard(i)}
+                        disabled={isPreview || card.isRevealed || feedbackState !== null}
+                        className={`w-full h-full rounded-2xl sm:rounded-xl border-4 flex items-center justify-center text-3xl sm:text-5xl font-nunito font-black transition-all overflow-hidden ${bgClass} ${card.isRevealed || isPreview ? "translate-y-1 translate-x-1" : ""
+                          }`}
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {card.isRevealed || isPreview ? (
+                            <motion.span
+                              key="value"
+                              initial={{ scale: 0, rotate: -45 }}
+                              animate={{ scale: 1, rotate: 0 }}
+                              transition={{ type: "spring", bounce: 0.5 }}
+                            >
+                              {card.value}
+                            </motion.span>
+                          ) : (
+                            <motion.span
+                              key="hidden"
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                            >
+                              <EyeOff
+                                className="text-slate-400/50 w-8 h-8 sm:w-12 sm:h-12"
+                                strokeWidth={3}
+                              />
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+        </div>
+      )}
+    </BrainTrainerShell>
+  );
+};
+
+export default TargetGridGame;

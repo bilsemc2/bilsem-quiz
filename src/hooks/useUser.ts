@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { authRepository, type AuthProfileRecord } from '@/server/repositories/authRepository';
 
-interface UserProfile {
-    id: string;
-    email: string;
-    name: string;
-    experience: number;
-    [key: string]: unknown;
-}
+type UserProfile = AuthProfileRecord;
 
 export const useUser = () => {
     const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -16,36 +10,20 @@ export const useUser = () => {
     useEffect(() => {
         const getCurrentUser = async () => {
             try {
-                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                const user = await authRepository.getSessionUser();
 
-                if (authError) {
-                    console.error('Auth hatası:', authError);
-                    throw authError;
-                }
 
-                console.log('Auth user:', user);
 
                 if (user) {
-                    const { data: profile, error: profileError } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', user.id)
-                        .single();
-
-                    if (profileError) {
-                        console.error('Profil hatası:', profileError);
-                        throw profileError;
-                    }
+                    const profile = await authRepository.getProfileByUserId(user.id);
 
                     if (!profile) {
                         console.error('Profil bulunamadı');
                         return;
                     }
 
-                    console.log('Kullanıcı profili:', profile);
                     setCurrentUser(profile);
                 } else {
-                    console.log('Kullanıcı oturum açmamış');
                     setCurrentUser(null);
                 }
             } catch (error) {
@@ -59,8 +37,8 @@ export const useUser = () => {
         getCurrentUser();
 
         // Auth durumu değiştiğinde yeniden kontrol et
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (session?.user) {
+        const subscription = authRepository.onAuthStateChange((authUser) => {
+            if (authUser) {
                 getCurrentUser();
             } else {
                 setCurrentUser(null);

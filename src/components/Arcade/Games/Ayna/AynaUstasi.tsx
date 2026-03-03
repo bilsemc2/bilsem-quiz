@@ -1,19 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
+import ArcadeGameShell from '../../Shared/ArcadeGameShell';
+import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
+import { ARCADE_SCORE_FORMULA, ARCADE_SCORE_BASE, ARCADE_FEEDBACK_TEXTS } from '../../Shared/ArcadeConstants';
 import { Target, Level } from './types';
 import GameCanvas from './components/GameCanvas';
-
-const FEEDBACK_MESSAGES = [
-    "Harikasın! 🌈",
-    "Muhteşem simetri! 🌟",
-    "Çizgilerin çok düzgün! 🎨",
-    "Hadi, bir tane daha yakala! 🚀",
-    "Ayna seni çok sevdi! ✨",
-    "Tam bir usta çizimi! 🏆",
-    "Neredeyse bitti, devam et! 💪"
-];
+import { motion, AnimatePresence } from 'framer-motion';
 
 const INITIAL_LEVELS: Level[] = [
     {
@@ -40,35 +33,37 @@ const INITIAL_LEVELS: Level[] = [
     }
 ];
 
-type GameState = 'idle' | 'playing' | 'finished';
+type GamePhase = 'idle' | 'playing' | 'finished';
 
 const AynaUstasi: React.FC = () => {
     const location = useLocation();
     const { saveGamePlay } = useGamePersistence();
     const gameStartTimeRef = useRef<number>(0);
+    const isResolvingRef = useRef(false);
+    const hasSavedRef = useRef(false);
 
-    const [gameState, setGameState] = useState<GameState>('idle');
+    const [gamePhase, setGamePhase] = useState<GamePhase>('idle');
     const [currentLevelIdx, setCurrentLevelIdx] = useState(0);
     const [levels, setLevels] = useState<Level[]>(INITIAL_LEVELS);
-    const [feedback, setFeedback] = useState<string>("Hazır mısın? Karanlıkta parlayan hedefleri yakala!");
+    const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [resetTrigger, setResetTrigger] = useState(0);
-    const [showWin, setShowWin] = useState(false);
+    const [showLevelUp, setShowLevelUp] = useState(false);
     const [totalScore, setTotalScore] = useState(0);
 
-    const currentLevel = levels[currentLevelIdx];
+    const currentLevel = levels[currentLevelIdx] ?? levels[levels.length - 1];
     const totalHits = currentLevel?.targets.filter(t => t.hit).length || 0;
     const totalTargets = currentLevel?.targets.length || 0;
 
     // Auto-start from Arcade Hub
     useEffect(() => {
-        if (location.state?.autoStart && gameState === 'idle') {
+        if (location.state?.autoStart && gamePhase === 'idle') {
             startGame();
         }
     }, [location.state]);
 
     const startGame = useCallback(() => {
         window.scrollTo(0, 0);
-        setGameState('playing');
+        setGamePhase('playing');
         setCurrentLevelIdx(0);
         setLevels(INITIAL_LEVELS.map(l => ({
             ...l,
@@ -76,7 +71,10 @@ const AynaUstasi: React.FC = () => {
         })));
         setTotalScore(0);
         setResetTrigger(prev => prev + 1);
-        setFeedback("Karanlıkta parlayan hedefleri vurmak için sol tarafa çizim yap!");
+        setFeedback(null);
+        setShowLevelUp(false);
+        hasSavedRef.current = false;
+        isResolvingRef.current = false;
         gameStartTimeRef.current = Date.now();
     }, []);
 
@@ -120,39 +118,46 @@ const AynaUstasi: React.FC = () => {
     };
 
     const handleTargetHit = (targetId: string) => {
+        if (isResolvingRef.current) return;
+
         setLevels(prev => {
             const newLevels = [...prev];
             const target = newLevels[currentLevelIdx].targets.find(t => t.id === targetId);
             if (target && !target.hit) {
                 target.hit = true;
-                setTotalScore(s => s + 100);
+                const hitScore = ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, currentLevelIdx + 1);
+                setTotalScore(s => s + hitScore);
             }
             return newLevels;
         });
     };
 
     const handleDrawComplete = () => {
+        if (!currentLevel || isResolvingRef.current) return;
         const hits = currentLevel.targets.filter(t => t.hit).length;
         const total = currentLevel.targets.length;
 
         if (hits === total) {
-            setFeedback("Harika! Hepsini başardın! 🥳");
-            setShowWin(true);
-        } else {
-            const randomTip = FEEDBACK_MESSAGES[Math.floor(Math.random() * FEEDBACK_MESSAGES.length)];
-            setFeedback(randomTip);
+            isResolvingRef.current = true;
+            const msgs = ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES;
+            setFeedback({ message: msgs[Math.floor(Math.random() * msgs.length)], type: 'success' });
+
+            setTimeout(() => {
+                setFeedback(null);
+                setShowLevelUp(true);
+                isResolvingRef.current = false;
+            }, 1500);
         }
     };
 
     const nextLevel = () => {
-        setShowWin(false);
+        setShowLevelUp(false);
         if (currentLevelIdx >= levels.length - 1) {
             const newLevel = generateProceduralLevel(levels.length + 1);
             setLevels(prev => [...prev, newLevel]);
         }
         setCurrentLevelIdx(prev => prev + 1);
         setResetTrigger(prev => prev + 1);
-        setFeedback("Yeni bölüm, yeni macera! 🎈");
     };
 
     const resetLevel = () => {
@@ -162,182 +167,145 @@ const AynaUstasi: React.FC = () => {
             return newLevels;
         });
         setResetTrigger(prev => prev + 1);
-        setFeedback("Tekrar denemek harika bir fikir! 🍎");
+        setShowLevelUp(false);
     };
 
     const endGame = () => {
-        setGameState('finished');
-        const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-        saveGamePlay({
-            game_id: 'arcade-ayna-ustasi',
-            score_achieved: totalScore,
-            duration_seconds: duration,
-            metadata: {
-                game_name: 'Ayna Ustası',
-                levels_completed: currentLevelIdx + 1
-            }
-        });
+        setGamePhase('finished');
+        if (!hasSavedRef.current) {
+            hasSavedRef.current = true;
+            const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            saveGamePlay({
+                game_id: 'arcade-ayna-ustasi',
+                score_achieved: totalScore,
+                duration_seconds: duration,
+                metadata: {
+                    game_name: 'Ayna Ustası',
+                    levels_completed: currentLevelIdx + 1
+                }
+            });
+        }
     };
 
-    // Start Overlay
-    if (gameState === 'idle') {
-        return (
-            <div className="min-h-screen bg-[#020617] text-white pt-24 pb-12 flex flex-col items-center justify-center">
-                <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20 mx-4">
-                    <div
-                        className="w-24 h-24 bg-gradient-to-br from-blue-500 to-rose-500 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                       
-                    >
-                        <span className="text-5xl">🪞</span>
-                    </div>
-                    <h1 className="text-4xl font-black bg-gradient-to-r from-blue-400 to-rose-400 bg-clip-text text-transparent tracking-tight mb-4">
-                        Ayna Ustası
-                    </h1>
-                    <p className="text-slate-400 font-medium text-lg mb-4 max-w-md mx-auto">
-                        Sol tarafta çiz, sağ tarafta ayna görüntüsüyle hedefleri vur!
-                    </p>
-                    <div className="bg-blue-500/20 text-blue-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-blue-500/30">
-                        TUZÖ 3.2.1 Ayna Simetrisi / Görsel-Uzamsal Algı
-                    </div>
-                    <button
-                        onClick={startGame}
-                        className="w-full px-12 py-4 bg-gradient-to-r from-blue-500 to-rose-500 text-white rounded-2xl font-black text-xl active:scale-95 transition-all"
-                        style={{ boxShadow: '0 8px 32px rgba(59, 130, 246, 0.4)' }}
-                    >
-                        BAŞLA
-                    </button>
-                    <Link
-                        to="/bilsem-zeka"
-                        className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
-                    >
-                        <ArrowLeft size={16} /> BİLSEM Zeka'ya Dön
-                    </Link>
-                </div>
-            </div>
-        );
-    }
-
-    // Game Over Overlay
-    if (gameState === 'finished') {
-        return (
-            <div className="min-h-screen bg-[#020617] text-white pt-24 pb-12 flex flex-col items-center justify-center">
-                <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20 mx-4">
-                    <div
-                        className="w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-                        style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.4), 0 6px 16px rgba(0,0,0,0.3)' }}
-                    >
-                        <span className="text-4xl">🏆</span>
-                    </div>
-                    <h2 className="text-4xl font-black mb-4 bg-gradient-to-r from-blue-400 to-rose-400 bg-clip-text text-transparent">Oyun Bitti!</h2>
-                    <p className="text-2xl text-white mb-2">Toplam Skor: <span className="text-rose-400 font-black">{totalScore}</span></p>
-                    <p className="text-slate-400 mb-8">Tamamlanan Seviye: {currentLevelIdx + 1}</p>
-                    <button
-                        onClick={startGame}
-                        className="w-full px-12 py-4 bg-gradient-to-r from-blue-500 to-rose-500 text-white rounded-2xl font-black text-xl active:scale-95 transition-all"
-                        style={{ boxShadow: '0 8px 32px rgba(59, 130, 246, 0.4)' }}
-                    >
-                        TEKRAR OYNA
-                    </button>
-                    <Link
-                        to="/bilsem-zeka"
-                        className="mt-4 inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm"
-                    >
-                        <ArrowLeft size={16} /> BİLSEM Zeka'ya Dön
-                    </Link>
-                </div>
-            </div>
-        );
-    }
+    // ─── Shell status mapping ────────────────────────────────────────────
+    const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' =
+        gamePhase === 'idle' ? 'START' :
+            gamePhase === 'finished' ? 'GAME_OVER' : 'PLAYING';
 
     return (
-        <div className="min-h-screen flex flex-col items-center py-4 px-2 md:py-8 md:px-4 bg-[#020617] pt-24">
-            <header className="text-center mb-4 md:mb-8">
-                <Link
-                    to="/bilsem-zeka"
-                    className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm mb-4"
-                >
-                    <ArrowLeft size={16} /> BİLSEM Zeka'ya Dön
-                </Link>
-                <h1 className="text-3xl md:text-5xl font-black text-blue-400 tracking-tight flex items-center justify-center gap-3 drop-shadow-[0_0_10px_rgba(96,165,250,0.3)]">
-                    Ayna <span className="text-rose-400">Ustası</span>
-                </h1>
-                <p className="text-slate-500 font-medium text-sm md:text-base mt-1">Gece modunda simetriyi keşfet!</p>
-            </header>
+        <ArcadeGameShell
+            gameState={{ score: totalScore, level: currentLevelIdx + 1, lives: 1, status: shellStatus }}
+            gameMetadata={{
+                id: 'arcade-ayna-ustasi',
+                title: 'AYNA USTASI',
+                description: (
+                    <>
+                        <p>🪞 Sol tarafta çiz, sağ tarafta ayna görüntüsüyle hedefleri vur!</p>
+                        <p className="mt-2">🧠 Ayna simetrisi ve görsel-uzamsal algı testi!</p>
+                    </>
+                ),
+                tuzoCode: '3.2.1 Ayna Simetrisi',
+                icon: <span className="text-5xl">🪞</span>,
+                iconBgColor: 'bg-sky-400',
+                containerBgColor: 'bg-rose-200 dark:bg-slate-900'
+            }}
+            onStart={startGame}
+            onRestart={startGame}
+            showLevel={true}
+            showLives={false}
+            allowMobileScroll
+        >
+            <div className="w-full min-h-[60dvh] flex flex-col items-center py-4 px-2 md:py-8 md:px-4 bg-sky-200 dark:bg-slate-900 font-sans transition-colors duration-300">
 
-            <main className="w-full max-w-5xl bg-slate-900/50 rounded-[2rem] shadow-2xl p-4 md:p-8 border-b-8 border-slate-950 border-x border-t border-slate-800 relative">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                        <div className="bg-blue-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-xl shadow-[0_0_15px_rgba(37,99,235,0.4)]">
-                            {currentLevelIdx + 1}
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-100">{currentLevel.title}</h2>
-                            <div className="flex gap-1 mt-1">
-                                {Array.from({ length: totalTargets }).map((_, i) => (
-                                    <div
-                                        key={i}
-                                        className={`h-2 w-4 rounded-full transition-all duration-300 ${i < totalHits ? 'bg-green-400 w-8 shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'bg-slate-800'}`}
-                                    />
-                                ))}
+                {/* Feedback Banner */}
+                <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
+
+                <main className="w-full max-w-5xl flex flex-col bg-white dark:bg-slate-800 rounded-[3rem] border-2 border-black/10 dark:border-slate-700 shadow-neo-sm dark:shadow-[16px_16px_0_#0f172a] p-4 md:p-8 relative transition-colors duration-300">
+                    {/* Level info + controls */}
+                    <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b-8 border-black/10 pb-6">
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                            <div className="bg-sky-400 text-black w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl border-2 border-black/10 shadow-neo-sm rotate-3">
+                                {currentLevelIdx + 1}
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-black dark:text-white uppercase drop-shadow-[2px_2px_0_rgba(0,0,0,0.1)] transition-colors duration-300">{currentLevel.title}</h2>
+                                <div className="flex gap-2 mt-2">
+                                    {Array.from({ length: totalTargets }).map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className={`h-4 w-6 rounded-full border-2 border-black/10 transition-all duration-300 ${i < totalHits ? 'bg-emerald-400 shadow-neo-sm w-12' : 'bg-slate-200'}`}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="flex gap-2">
-                        <div className="px-4 py-2 bg-rose-600/20 text-rose-400 rounded-xl font-bold text-sm border border-rose-600/30">
-                            Skor: {totalScore}
-                        </div>
-                        <button
-                            onClick={resetLevel}
-                            className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-700"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
-                            Sıfırla
-                        </button>
-                        <button
-                            onClick={endGame}
-                            className="px-6 py-2 bg-red-800 hover:bg-red-700 text-white rounded-xl font-bold transition-all active:scale-95 border border-red-700"
-                        >
-                            Bitir
-                        </button>
-                    </div>
-                </div>
-
-                <div className="mb-6 p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex items-center gap-4">
-                    <span className="text-2xl drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">💡</span>
-                    <p className="text-slate-300 font-semibold text-sm md:text-base">{feedback}</p>
-                </div>
-
-                <GameCanvas
-                    targets={currentLevel.targets}
-                    onTargetHit={handleTargetHit}
-                    onDrawComplete={handleDrawComplete}
-                    resetTrigger={resetTrigger}
-                />
-
-                {showWin && (
-                    <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center rounded-[2rem] p-8 text-center text-white bounce-in">
-                        <div className="text-8xl mb-6 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">🎉</div>
-                        <h2 className="text-4xl md:text-5xl font-black mb-4 text-blue-400">MÜKEMMEL!</h2>
-                        <p className="text-xl opacity-90 mb-10 font-medium text-slate-300">Bu karanlıkta tüm simetrileri buldun!</p>
-                        <div className="flex flex-col md:flex-row gap-4 w-full max-w-md">
+                        <div className="flex flex-wrap gap-3">
                             <button
                                 onClick={resetLevel}
-                                className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 border-2 border-slate-700 rounded-2xl font-black text-xl transition-all text-slate-300"
+                                className="px-6 py-3 bg-yellow-300 text-black rounded-xl font-black uppercase tracking-widest transition-all hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 border-2 border-black/10 shadow-neo-sm"
                             >
-                                TEKRAR
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+                                Sıfırla
                             </button>
                             <button
-                                onClick={nextLevel}
-                                className="flex-1 py-4 bg-blue-500 hover:bg-blue-400 text-white rounded-2xl font-black text-xl shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all hover:scale-105 active:scale-95"
+                                onClick={endGame}
+                                className="px-6 py-3 bg-red-400 text-black rounded-xl font-black uppercase tracking-widest transition-all hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 border-2 border-black/10 shadow-neo-sm"
                             >
-                                SIRADAKİ ➔
+                                Bitir
                             </button>
                         </div>
                     </div>
-                )}
-            </main>
-        </div>
+
+                    <GameCanvas
+                        targets={currentLevel.targets}
+                        onTargetHit={handleTargetHit}
+                        onDrawComplete={handleDrawComplete}
+                        resetTrigger={resetTrigger}
+                    />
+
+                    {/* Level complete overlay (mid-game transition) */}
+                    <AnimatePresence>
+                        {showLevelUp && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                            >
+                                <motion.div
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0.8, opacity: 0 }}
+                                    className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-slate-700 p-6 sm:p-10 rounded-[3rem] shadow-neo-sm text-center max-w-sm w-full transform rotate-2 transition-colors duration-300"
+                                >
+                                    <div className="text-6xl mb-4">🎉</div>
+                                    <h2 className="text-3xl md:text-4xl font-black mb-3 text-emerald-500 uppercase tracking-tighter">MÜKEMMEL!</h2>
+                                    <p className="text-sm font-black text-rose-500 mb-6 bg-slate-100 dark:bg-slate-700 border-2 border-black/10 inline-block px-4 py-2 rounded-xl shadow-neo-sm -rotate-1 transition-colors duration-300">
+                                        Tüm simetrileri buldun!
+                                    </p>
+
+                                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                                        <button
+                                            onClick={resetLevel}
+                                            className="flex-1 py-3 bg-amber-300 active:translate-y-2 active:shadow-none hover:-translate-y-1 hover:shadow-neo-sm border-2 border-black/10 shadow-neo-sm rounded-2xl font-black text-lg uppercase transition-all text-black"
+                                        >
+                                            TEKRAR
+                                        </button>
+                                        <button
+                                            onClick={nextLevel}
+                                            className="flex-1 py-3 bg-sky-400 active:translate-y-2 active:shadow-none hover:-translate-y-1 hover:shadow-neo-sm border-2 border-black/10 shadow-neo-sm text-black rounded-2xl font-black text-lg transition-all uppercase"
+                                        >
+                                            SIRADAKİ ➔
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </main>
+            </div>
+        </ArcadeGameShell>
     );
 };
 

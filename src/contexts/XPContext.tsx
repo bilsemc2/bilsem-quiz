@@ -64,12 +64,11 @@ export const XPProvider: React.FC<{ children: React.ReactNode }> = ({ children }
             // Güvenlik: 45 saniyeden önce tekrar XP vermeyi engelle (drift/lag payı ile)
             if (timeSinceLastGain > 45000) {
                 if (handleXPGain) {
-                    console.log(`[XP] Cycle Complete. Gaining XP. Interval: ${timeSinceLastGain / 1000}s`);
+
                     handleXPGain();
                     setLastXPGainAt(now);
                 }
             } else {
-                console.log(`[XP] Cycle Skip. Too frequent: ${timeSinceLastGain / 1000}s`);
             }
         }
 

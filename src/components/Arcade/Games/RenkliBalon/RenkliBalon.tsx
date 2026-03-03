@@ -1,23 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Heart, Trophy, Play, RefreshCw, ChevronLeft, ShieldAlert } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Target } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import Balloon from './components/Balloon';
-import Cloud from './components/Cloud';
+import ArcadeGameShell from '../../Shared/ArcadeGameShell';
+import Balloon from '../../Shared/Balloon';
+import Cloud from '../../Shared/Cloud';
 import { Difficulty, GameState, Pattern, FloatingBalloon } from './types';
 import { generateLocalPattern } from './services/patternService';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
 
-const COLORS = ['#FF5F5D', '#3F7C85', '#72F2EB', '#FFD166', '#06D6A0', '#EF476F'];
-const COLOR_NAMES: Record<string, string> = {
-    '#FF5F5D': 'Kırmızı',
-    '#3F7C85': 'Turkuaz',
-    '#72F2EB': 'Açık Mavi',
-    '#FFD166': 'Sarı',
-    '#06D6A0': 'Yeşil',
-    '#EF476F': 'Pembe'
-};
+import { ARCADE_COLORS, ARCADE_COLOR_NAMES, ARCADE_FEEDBACK_TEXTS, ARCADE_DIFFICULTY_THRESHOLDS, ARCADE_SPAWN_CONFIG, ARCADE_SCORE_FORMULA, ARCADE_SCORE_BASE } from '../../Shared/ArcadeConstants';
+import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
 
 const RenkliBalon: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
@@ -34,16 +28,33 @@ const RenkliBalon: React.FC = () => {
     const [activeBalloons, setActiveBalloons] = useState<FloatingBalloon[]>([]);
     const [poppedId, setPoppedId] = useState<string | null>(null);
     const [laserPath, setLaserPath] = useState<{ x: number; y: number } | null>(null);
-    const [feedback, setFeedback] = useState<string | null>(null);
+    const [feedback, setFeedback] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const spawnTimerRef = useRef<number | null>(null);
     const gameStartTimeRef = useRef<number>(0);
 
+    // Modernization Refs
+    const hasSavedRef = useRef<boolean>(false);
+    const isResolvingRef = useRef<boolean>(false);
+    const laserTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const patternTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Global Timeout Cleanup on Unmount
+    useEffect(() => {
+        return () => {
+            if (laserTimeoutRef.current) clearTimeout(laserTimeoutRef.current);
+            if (patternTimeoutRef.current) clearTimeout(patternTimeoutRef.current);
+            if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+            if (spawnTimerRef.current) clearInterval(spawnTimerRef.current);
+        };
+    }, []);
+
     const startNewPattern = useCallback((level: number) => {
         let diff = Difficulty.EASY;
-        if (level > 10) diff = Difficulty.HARD;
-        else if (level > 5) diff = Difficulty.MEDIUM;
+        if (level > ARCADE_DIFFICULTY_THRESHOLDS.HARD_LEVEL) diff = Difficulty.HARD;
+        else if (level > ARCADE_DIFFICULTY_THRESHOLDS.MEDIUM_LEVEL) diff = Difficulty.MEDIUM;
 
         const pattern = generateLocalPattern(diff);
         setCurrentPattern(pattern);
@@ -55,6 +66,8 @@ const RenkliBalon: React.FC = () => {
 
     const startGame = () => {
         window.scrollTo(0, 0);
+        hasSavedRef.current = false;
+        isResolvingRef.current = false;
         setGameState({ score: 0, level: 1, lives: 3, status: 'PLAYING' });
         gameStartTimeRef.current = Date.now();
         startNewPattern(1);
@@ -81,7 +94,7 @@ const RenkliBalon: React.FC = () => {
                 color = currentPattern.targetColor;
             } else if (roll > 0.5) {
                 value = currentPattern.answer;
-                const otherColors = COLORS.filter(c => c !== currentPattern.targetColor);
+                const otherColors = ARCADE_COLORS.filter(c => c !== currentPattern.targetColor);
                 color = otherColors[Math.floor(Math.random() * otherColors.length)];
             } else if (roll > 0.3) {
                 const wrongOptions = currentPattern.options.filter(o => o !== currentPattern.answer);
@@ -90,23 +103,31 @@ const RenkliBalon: React.FC = () => {
             } else {
                 const wrongOptions = currentPattern.options.filter(o => o !== currentPattern.answer);
                 value = wrongOptions.length > 0 ? wrongOptions[Math.floor(Math.random() * wrongOptions.length)] : currentPattern.answer + 1;
-                const otherColors = COLORS.filter(c => c !== currentPattern.targetColor);
+                const otherColors = ARCADE_COLORS.filter(c => c !== currentPattern.targetColor);
                 color = otherColors[Math.floor(Math.random() * otherColors.length)];
             }
 
             const newBalloon: FloatingBalloon = {
-                id: Math.random().toString(36).substr(2, 9),
+                id: window.crypto && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11),
                 value,
                 color,
                 x: 10 + Math.random() * 80,
-                speed: 5 + Math.random() * 2 - (gameState.level * 0.1),
+                speed: Math.max(
+                    ARCADE_SPAWN_CONFIG.SPEED_MIN,
+                    ARCADE_SPAWN_CONFIG.SPEED_BASE
+                    + Math.random() * ARCADE_SPAWN_CONFIG.SPEED_VARIANCE
+                    - (gameState.level * ARCADE_SPAWN_CONFIG.SPEED_DECAY_PER_LEVEL)
+                ),
                 startTime: Date.now()
             };
 
             setActiveBalloons(prev => [...prev, newBalloon]);
         };
 
-        const interval = Math.max(700, 1800 - (gameState.level * 80));
+        const interval = Math.max(
+            ARCADE_SPAWN_CONFIG.INTERVAL_MIN_MS,
+            ARCADE_SPAWN_CONFIG.INTERVAL_BASE_MS - (gameState.level * ARCADE_SPAWN_CONFIG.INTERVAL_DECAY_PER_LEVEL)
+        );
         spawnTimerRef.current = window.setInterval(spawnBalloon, interval);
 
         return () => {
@@ -116,6 +137,8 @@ const RenkliBalon: React.FC = () => {
 
     // Balloon Lifecycle & Game Over Check
     useEffect(() => {
+        if (gameState.status !== 'PLAYING') return;
+
         const checkBalloons = setInterval(() => {
             const now = Date.now();
             setActiveBalloons(prev => {
@@ -125,7 +148,7 @@ const RenkliBalon: React.FC = () => {
 
                     if (isOffScreen && b.value === currentPattern?.answer && b.color === currentPattern?.targetColor && poppedId !== b.id) {
                         setGameState(gs => ({ ...gs, lives: Math.max(0, gs.lives - 1) }));
-                        setFeedback("Hedef balon kaçtı!");
+                        setFeedback({ message: 'Hedef balon kaçtı!', type: 'error' });
                     }
 
                     return !isOffScreen;
@@ -142,26 +165,28 @@ const RenkliBalon: React.FC = () => {
     useEffect(() => {
         if (gameState.lives <= 0 && gameState.status === 'PLAYING') {
             setGameState(gs => ({ ...gs, status: 'GAME_OVER' }));
-            saveGamePlay({
-                game_id: 'renkli-balon',
-                score_achieved: gameState.score,
-                duration_seconds: (Date.now() - gameStartTimeRef.current) / 1000,
-                metadata: { level_reached: gameState.level }
-            });
+            if (!hasSavedRef.current) {
+                hasSavedRef.current = true;
+                saveGamePlay({
+                    game_id: 'renkli-balon',
+                    score_achieved: gameState.score,
+                    duration_seconds: (Date.now() - gameStartTimeRef.current) / 1000,
+                    metadata: { level_reached: gameState.level }
+                });
+            }
         }
     }, [gameState.lives, gameState.status, gameState.score, gameState.level, saveGamePlay]);
 
     const handleShoot = async (balloon: FloatingBalloon, event: React.MouseEvent) => {
-        if (gameState.status !== 'PLAYING' || poppedId) return;
+        if (gameState.status !== 'PLAYING' || poppedId || isResolvingRef.current) return;
 
+        isResolvingRef.current = true;
         const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-        const containerRect = gameContainerRef.current?.getBoundingClientRect();
-        if (containerRect) {
-            setLaserPath({
-                x: rect.left + rect.width / 2 - containerRect.left,
-                y: rect.top + rect.height / 2 - containerRect.top
-            });
-        }
+        // Store raw viewport coordinates for laser rendering
+        setLaserPath({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        });
 
         await new Promise(r => setTimeout(r, 100));
 
@@ -170,28 +195,43 @@ const RenkliBalon: React.FC = () => {
 
         if (isCorrectValue && isCorrectColor) {
             setPoppedId(balloon.id);
-            setFeedback("Harika! Doğru balon!");
+            const successMsg = ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES[Math.floor(Math.random() * ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES.length)];
+            setFeedback({ message: successMsg, type: 'success' });
+
+            // Prevent stale closure issue by calculating next level here
+            const nextLevel = gameState.level + 1;
+
             confetti({
                 particleCount: 100,
                 spread: 70,
-                origin: { x: (rect.left + rect.width / 2) / window.innerWidth, y: (rect.top + rect.height / 2) / window.innerHeight }
+                origin: { x: (rect.left + rect.width / 2) / (window.innerWidth || 1000), y: (rect.top + rect.height / 2) / (window.innerHeight || 1000) }
             });
 
             setGameState(prev => ({
                 ...prev,
-                score: prev.score + (20 * prev.level),
-                level: prev.level + 1
+                score: prev.score + ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, prev.level),
+                level: nextLevel
             }));
 
-            setTimeout(() => {
-                startNewPattern(gameState.level + 1);
+            if (patternTimeoutRef.current) clearTimeout(patternTimeoutRef.current);
+            patternTimeoutRef.current = setTimeout(() => {
+                startNewPattern(nextLevel);
+                isResolvingRef.current = false;
             }, 1000);
         } else {
-            let msg = "Yanlış balon!";
-            if (isCorrectValue && !isCorrectColor) msg = "Numara doğru ama renk yanlış!";
-            else if (!isCorrectValue && isCorrectColor) msg = "Renk doğru ama numara yanlış!";
+            let type: 'error' | 'warning' = 'error';
+            let msg = ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES[Math.floor(Math.random() * ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES.length)];
 
-            setFeedback(msg);
+            if (isCorrectValue && !isCorrectColor) {
+                msg = "Numara doğru ama renk yanlış!";
+                type = 'warning';
+            }
+            else if (!isCorrectValue && isCorrectColor) {
+                msg = "Renk doğru ama numara yanlış!";
+                type = 'warning';
+            }
+
+            setFeedback({ message: msg, type });
 
             setActiveBalloons(prev => prev.map(b => {
                 if (b.value === currentPattern?.answer && b.color === currentPattern?.targetColor) {
@@ -207,233 +247,159 @@ const RenkliBalon: React.FC = () => {
 
             setActiveBalloons(prev => prev.filter(b => b.id !== balloon.id));
 
-            setTimeout(() => {
+            if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+            highlightTimeoutRef.current = setTimeout(() => {
                 setActiveBalloons(prev => prev.map(b => ({ ...b, isHighlighted: false })));
-            }, 2000);
+                isResolvingRef.current = false;
+            }, 500);
         }
 
-        setTimeout(() => {
+        if (laserTimeoutRef.current) clearTimeout(laserTimeoutRef.current);
+        laserTimeoutRef.current = setTimeout(() => {
             setLaserPath(null);
             setFeedback(null);
         }, 2000);
     };
 
     return (
-        <div
-            ref={gameContainerRef}
-            className="relative w-full h-screen overflow-hidden bg-gradient-to-br from-violet-950 via-indigo-950 to-slate-900 select-none flex flex-col items-center pt-16 touch-none"
-           
+        <ArcadeGameShell
+            gameState={gameState}
+            gameMetadata={{
+                id: 'renkli-balon',
+                title: 'RENKLİ BALON AVI',
+                description: (
+                    <>
+                        <p>1. Örüntüdeki <span className="text-amber-500 bg-white px-2 py-0.5 rounded border-2 border-black/10 rotate-1 inline-block">eksik sayıyı</span> bul.</p>
+                        <p>2. <span className="text-rose-500">Hedef rengi</span> kontrol et.</p>
+                        <p>3. Gökyüzünde sadece o <span className="text-indigo-500 bg-white px-1.5 py-0.5 rounded border-2 border-black/10 shadow-neo-sm -rotate-2 inline-block">renk</span> ve <span className="text-emerald-500 bg-white px-1.5 py-0.5 rounded border-2 border-black/10 shadow-neo-sm rotate-1 inline-block">numara</span> ikilisini vur!</p>
+                    </>
+                ),
+                tuzoCode: '5.1.1 Sayı Örüntüsü / Seçici Dikkat',
+                icon: <Target className="w-14 h-14 text-black" strokeWidth={3} />,
+                iconBgColor: 'bg-rose-400',
+                containerBgColor: 'bg-sky-200 dark:bg-slate-900'
+            }}
+            onStart={startGame}
+            onRestart={startGame} // Using startGame as restart for this specific loop
         >
-            <Cloud top="10%" delay={0} duration={45} />
-            <Cloud top="35%" delay={7} duration={60} />
-            <Cloud top="65%" delay={20} duration={50} />
 
-            {/* HUD */}
-            <div className="absolute top-16 sm:top-20 left-2 right-2 sm:left-4 sm:right-4 z-30 flex flex-wrap gap-2 sm:gap-4 justify-between items-center pointer-events-none">
-                <div className="flex flex-wrap gap-2 sm:gap-4 pointer-events-auto">
-                    <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-xl px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1 sm:gap-2 border border-white/20 hover:bg-white/20 transition-colors">
-                        <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
-                        <span className="font-bold text-white text-xs sm:text-sm">BİLSEM</span>
-                    </Link>
-                    <div className="bg-amber-500/20 backdrop-blur-xl px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1.5 sm:gap-2 border border-amber-500/30">
-                        <Trophy className="text-amber-400 w-4 h-4 sm:w-6 sm:h-6" />
-                        <span className="text-base sm:text-xl font-bold text-amber-400">{gameState.score}</span>
-                    </div>
-                    <div className="bg-emerald-500/20 backdrop-blur-xl px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1.5 sm:gap-2 border border-emerald-500/30">
-                        <Target className="text-emerald-400 w-4 h-4 sm:w-6 sm:h-6" />
-                        <span className="text-base sm:text-xl font-bold text-emerald-400">Lv {gameState.level}</span>
-                    </div>
-                </div>
-                <div className="bg-red-500/20 backdrop-blur-xl px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-1 sm:gap-2 border border-red-500/30 pointer-events-auto">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                        <Heart
-                            key={i}
-                            className={`w-4 h-4 sm:w-6 sm:h-6 transition-all duration-300 ${i < gameState.lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'}`}
-                        />
-                    ))}
-                </div>
-            </div>
 
-            {/* Mission Area */}
-            <AnimatePresence mode='wait'>
-                {gameState.status === 'PLAYING' && currentPattern && (
-                    <motion.div
-                        initial={{ y: -120, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -120, opacity: 0 }}
-                        className="absolute top-32 z-20 w-full flex flex-col items-center px-4"
-                    >
-                        <div className="bg-white/10 backdrop-blur-xl p-6 rounded-3xl border border-white/20 flex flex-col md:flex-row items-center gap-8 max-w-4xl">
-                            <div>
-                                <h2 className="text-amber-400 text-lg font-bold mb-4 uppercase tracking-wider text-center md:text-left">Örüntü Görevi</h2>
-                                <div className="flex gap-3 md:gap-5 items-end justify-center">
-                                    {currentPattern.sequence.map((val, i) => (
-                                        <div key={`p-${i}`} className="flex flex-col items-center">
-                                            <div
-                                                className={`w-14 h-16 rounded-[50%_50%_50%_50%/40%_40%_60%_60%] flex items-center justify-center text-white text-xl font-bold shadow-lg ${val === '?' ? 'bg-slate-600 animate-pulse scale-110' : ''}`}
-                                                style={{ backgroundColor: val === '?' ? undefined : COLORS[i % COLORS.length] }}
-                                            >
-                                                {val}
+            {/* Mission Area - Compact layout to fit within viewport */}
+            <div className="w-full flex justify-center pt-20 lg:pt-24 pb-16 px-4 relative z-20 pointer-events-none">
+                <AnimatePresence mode='wait'>
+                    {gameState.status === 'PLAYING' && currentPattern && (
+                        <motion.div
+                            initial={{ y: -120, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: -120, opacity: 0 }}
+                            className="w-full flex flex-col items-center"
+                        >
+                            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-[2rem] border-2 border-black/10 dark:border-slate-700 shadow-neo-sm dark:shadow-[8px_8px_0_#0f172a] rotate-1 flex flex-col md:flex-row items-center gap-6 sm:gap-8 max-w-4xl transition-colors duration-300 pointer-events-auto">
+                                <div>
+                                    <h2 className="text-black dark:text-white bg-sky-100 dark:bg-slate-700 px-3 py-1 rounded-lg border-2 border-black/10 dark:border-slate-800 text-[10px] sm:text-xs font-black mb-4 uppercase tracking-widest text-center shadow-neo-sm transform -rotate-2 w-max mx-auto md:mx-0 transition-colors duration-300">Örüntü Görevi</h2>
+                                    <div className="flex gap-2 sm:gap-4 items-end justify-center">
+                                        {currentPattern.sequence.map((val, i) => (
+                                            <div key={`p-${i}`} className="flex flex-col items-center">
+                                                <div
+                                                    className={`w-12 h-14 sm:w-14 sm:h-16 rounded-[40%_40%_50%_50%] flex items-center justify-center text-black text-xl font-black border-2 border-black/10 relative ${val === '?' ? 'bg-slate-200 animate-pulse scale-110 shadow-neo-sm' : 'shadow-none'}`}
+                                                    style={{ backgroundColor: val === '?' ? undefined : ARCADE_COLORS[i % ARCADE_COLORS.length] }}
+                                                >
+                                                    {val !== '?' && <div className="absolute top-1 left-2 w-3 h-3 bg-white/60 rounded-full" />}
+                                                    <span className="z-10 bg-white/30 px-1 rounded">{val}</span>
+                                                </div>
                                             </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="h-2 w-full md:h-20 md:w-2 bg-black dark:bg-slate-700 rounded-full hidden md:block transition-colors duration-300"></div>
+
+                                <div className="flex flex-col items-center">
+                                    <h2 className="text-black dark:text-white bg-rose-200 dark:bg-slate-700 px-3 py-1 rounded-lg border-2 border-black/10 dark:border-slate-800 text-[10px] sm:text-xs font-black mb-4 uppercase tracking-widest text-center shadow-neo-sm transform rotate-2 w-max mx-auto transition-colors duration-300">Hedef Balon</h2>
+                                    <div className="flex items-center gap-4 bg-slate-100 dark:bg-slate-700 p-2 sm:p-3 rounded-2xl border-2 border-black/10 dark:border-slate-800 shadow-neo-sm -rotate-1 transition-colors duration-300">
+                                        <div
+                                            className="w-10 h-12 rounded-[40%_40%_50%_50%] border-2 border-black/10 relative"
+                                            style={{ backgroundColor: currentPattern.targetColor }}
+                                        >
+                                            <div className="absolute top-1 left-1.5 w-2.5 h-2.5 bg-white/60 rounded-full" />
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="h-20 w-px bg-white/20 hidden md:block"></div>
-
-                            <div className="flex flex-col items-center">
-                                <h2 className="text-rose-400 text-lg font-bold mb-2 uppercase tracking-wider">Hedef Balon</h2>
-                                <div className="flex items-center gap-4 bg-white/10 p-3 rounded-2xl border border-white/20">
-                                    <div
-                                        className="w-10 h-12 rounded-[50%_50%_50%_50%/40%_40%_60%_60%] shadow-lg"
-                                        style={{ backgroundColor: currentPattern.targetColor }}
-                                    ></div>
-                                    <span className="text-white font-black text-xl">{COLOR_NAMES[currentPattern.targetColor]}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Gameplay Layer */}
-            <div className="absolute inset-0 z-0 pointer-events-none">
-                {activeBalloons.map((balloon) => (
-                    <motion.div
-                        key={balloon.id}
-                        initial={{ y: '110vh', x: `${balloon.x}vw` }}
-                        animate={{ y: '-30vh' }}
-                        transition={{ duration: balloon.speed, ease: "linear" }}
-                        className="absolute pointer-events-auto"
-                        style={{ left: 0 }}
-                    >
-                        <Balloon
-                            value={balloon.value}
-                            color={balloon.color}
-                            isPopping={poppedId === balloon.id}
-                            isHighlighted={balloon.isHighlighted}
-                            onClick={(e) => { handleShoot(balloon, e); }}
-                        />
-                    </motion.div>
-                ))}
-            </div>
-
-            {/* Laser Visual */}
-            {laserPath && (
-                <motion.div
-                    initial={{ height: 0, opacity: 1 }}
-                    animate={{ height: '110vh', opacity: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="absolute bottom-0 w-1.5 bg-red-500 shadow-[0_0_20px_#f00,0_0_40px_#f00] z-40 origin-bottom"
-                    style={{
-                        rotate: `${Math.atan2(laserPath.x - (window.innerWidth / 2), window.innerHeight - laserPath.y) * (180 / Math.PI)}deg`,
-                        height: `${Math.sqrt(Math.pow(laserPath.x - (window.innerWidth / 2), 2) + Math.pow(window.innerHeight - laserPath.y, 2))}px`,
-                        position: 'absolute',
-                        bottom: '0px',
-                        left: '50%'
-                    }}
-                />
-            )}
-
-            {/* Feedback Messages */}
-            <AnimatePresence>
-                {feedback && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 50, scale: 0.5 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.5 }}
-                        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 px-8 py-4 rounded-2xl shadow-2xl font-black text-2xl flex items-center gap-3 border text-center ${feedback.includes('Harika') ? 'bg-emerald-500/90 border-emerald-400 text-white' : 'bg-rose-500/90 border-rose-400 text-white'
-                            }`}
-                    >
-                        {!feedback.includes('Harika') && <ShieldAlert className="w-8 h-8 shrink-0" />}
-                        {feedback}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Start Overlay */}
-            <AnimatePresence>
-                {gameState.status === 'START' && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-6"
-                    >
-                        <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20">
-                            <div
-                                className="w-28 h-28 bg-gradient-to-br from-amber-500 to-orange-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
-                               
-                            >
-                                <Target className="w-14 h-14 text-white" />
-                            </div>
-                            <h1 className="text-5xl bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent mb-6 tracking-tight font-black">RENKLİ BALON AVI</h1>
-                            <div className="space-y-4 text-slate-300 mb-6 text-lg font-medium bg-white/5 p-6 rounded-2xl border border-white/10">
-                                <p>1. Örüntüdeki <span className="text-amber-400 font-bold">eksik sayıyı</span> bul.</p>
-                                <p>2. <span className="text-rose-400 font-bold">Hedef rengi</span> kontrol et.</p>
-                                <p>3. Gökyüzünde sadece o <span className="text-white font-bold">renk</span> ve <span className="text-white font-bold">numara</span> ikilisini vur!</p>
-                            </div>
-                            <div className="bg-amber-500/20 text-amber-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-amber-500/30">
-                                TUZÖ 5.1.1 Sayı Örüntüsü / Seçici Dikkat
-                            </div>
-                            <button
-                                onClick={startGame}
-                                className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white text-3xl py-5 rounded-2xl transform active:scale-95 transition-all flex items-center justify-center gap-3 font-black"
-                                style={{ boxShadow: '0 8px 32px rgba(245, 158, 11, 0.4)' }}
-                            >
-                                <Play fill="white" className="w-8 h-8" /> BAŞLA!
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* Game Over Overlay */}
-                {gameState.status === 'GAME_OVER' && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-xl z-50 flex items-center justify-center p-6"
-                    >
-                        <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20">
-                            <h2 className="text-6xl text-rose-400 mb-4 font-black">OYUN BİTTİ</h2>
-                            <p className="text-2xl text-slate-400 mb-8 font-bold italic">Dikkatli patlatmalıydın!</p>
-
-                            <div className="bg-white/5 rounded-3xl p-8 mb-10 border border-white/10">
-                                <p className="text-rose-300 uppercase text-sm font-black tracking-[0.2em] mb-2">TOPLAM PUANIN</p>
-                                <p className="text-8xl font-black text-white tabular-nums">{gameState.score}</p>
-                                <div className="flex justify-center gap-4 mt-4">
-                                    <div className="bg-white/10 px-4 py-1 rounded-full border border-white/20 text-amber-400 font-bold">
-                                        Seviye {gameState.level}
+                                        <span className="text-black dark:text-white font-black text-lg sm:text-xl uppercase tracking-wider transition-colors duration-300">{ARCADE_COLOR_NAMES[currentPattern.targetColor]}</span>
                                     </div>
                                 </div>
                             </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <Link to="/bilsem-zeka" className="bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xl py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-                                    <ChevronLeft className="w-6 h-6" /> Bilsem Zeka
-                                </Link>
-                                <button
-                                    onClick={startGame}
-                                    className="bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xl py-4 rounded-2xl transform active:scale-95 transition-all flex items-center justify-center gap-2 font-black"
-                                    style={{ boxShadow: '0 8px 32px rgba(244, 63, 94, 0.4)' }}
-                                >
-                                    <RefreshCw className="w-6 h-6" /> Tekrar
-                                </button>
-                            </div>
+            {/* Game Background and Animation Layer */}
+            <div ref={gameContainerRef} className="absolute inset-0 overflow-hidden pointer-events-none z-10">
+                <Cloud top="10%" delay={0} duration={45} />
+                <Cloud top="35%" delay={7} duration={60} />
+                <Cloud top="65%" delay={20} duration={50} />
+
+                {/* Gameplay Layer */}
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    {activeBalloons.map((balloon) => (
+                        <motion.div
+                            key={balloon.id}
+                            initial={{ y: '110vh', x: `${balloon.x}vw` }}
+                            animate={{ y: '-30vh' }}
+                            transition={{ duration: balloon.speed, ease: "linear" }}
+                            className="absolute pointer-events-auto"
+                            style={{ left: 0 }}
+                        >
+                            <Balloon
+                                value={balloon.value}
+                                color={balloon.color}
+                                isPopping={poppedId === balloon.id}
+                                isHighlighted={balloon.isHighlighted}
+                                onClick={(e) => { handleShoot(balloon, e); }}
+                            />
+                        </motion.div>
+                    ))}
+                </div>
+
+                {/* Laser Visual - fixed viewport coords, shoots from screen bottom-center to balloon */}
+                {laserPath && (() => {
+                    const baseX = window.innerWidth / 2;
+                    const baseY = window.innerHeight;
+                    const dx = laserPath.x - baseX;
+                    const dy = laserPath.y - baseY;
+                    const lengthPx = Math.sqrt(dx * dx + dy * dy);
+                    const angleDeg = Math.atan2(dx, -dy) * (180 / Math.PI);
+                    return (
+                        <motion.div
+                            key={`laser-${laserPath.x}-${laserPath.y}`}
+                            initial={{ opacity: 1 }}
+                            animate={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="fixed w-2 bg-red-500 shadow-[0_0_20px_#f00,0_0_40px_#f00] z-[9999] pointer-events-none origin-bottom"
+                            style={{
+                                bottom: 0,
+                                left: baseX,
+                                height: `${lengthPx}px`,
+                                rotate: `${angleDeg}deg`,
+                            }}
+                        />
+                    );
+                })()}
+
+                {/* Feedback Messages */}
+                <ArcadeFeedbackBanner message={feedback?.message || null} type={feedback?.type} />
+            </div>
+
+            {/* Laser Base Decoration - fixed to match laser beam coordinate system */}
+            {gameState.status === 'PLAYING' && (
+                <div className="fixed bottom-0 left-0 w-full h-12 bg-emerald-400 dark:bg-emerald-600 z-40 border-t-8 border-black/10 dark:border-slate-800 transition-colors duration-300 pointer-events-none">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%+8px)] w-24 sm:w-32 h-16 bg-slate-100 dark:bg-slate-800 rounded-t-3xl border-8 border-b-0 border-black/10 dark:border-slate-800 flex items-center justify-center transition-colors duration-300">
+                        <div className="w-8 h-12 bg-rose-500 rounded-t-xl -translate-y-4 border-4 border-b-0 border-black/10 dark:border-slate-800 shadow-[inset_0_4px_8px_rgba(0,0,0,0.3)] relative overflow-hidden transition-colors duration-300">
+                            <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Laser Base Decoration */}
-            <div className="absolute bottom-0 w-full h-12 bg-green-500 z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-32 h-16 bg-gray-800 rounded-t-[3rem] shadow-2xl flex items-center justify-center">
-                    <div className="w-8 h-12 bg-gradient-to-t from-gray-700 to-gray-600 rounded-t-xl -translate-y-6 shadow-inner border-t-8 border-red-600 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-red-500/20 animate-pulse"></div>
                     </div>
                 </div>
-            </div>
-        </div>
+            )}
+        </ArcadeGameShell >
     );
 };
 

@@ -2,19 +2,21 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, X, Search, Users, Loader2, Check } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import { useAuth } from '@/contexts/AuthContext';
+import { profileRepository } from '@/server/repositories/profileRepository';
+import { adminMessageRepository } from '@/server/repositories/adminMessageRepository';
+import {
+  filterRecipientsByTalent,
+  mergeRecipientIds,
+  selectAllRecipientIds,
+  toMessageRecipientItems,
+  type MessageRecipientItem
+} from '@/features/content/model/adminMessagingUseCases';
 
 const SendMessage = () => {
   const { user } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<MessageRecipientItem[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -27,14 +29,8 @@ const SendMessage = () => {
   const loadUsers = async () => {
     setUserSearchLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .ilike('name', `%${userSearch}%`)
-        .order('name');
-
-      if (error) throw error;
-      setUsers(data || []);
+      const data = await profileRepository.listMessageRecipients(userSearch);
+      setUsers(toMessageRecipientItems(data));
     } catch (err) {
       console.error('Kullanıcılar yüklenirken hata:', err);
       setError('Kullanıcılar yüklenemedi');
@@ -46,15 +42,11 @@ const SendMessage = () => {
   const loadAllUsers = async () => {
     setUserSearchLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .order('name');
-
-      if (error) throw error;
-      setUsers(data || []);
-      setSelectedUsers(data?.map(user => user.id) || []);
-      toast.success(`${data?.length || 0} öğrenci seçildi`);
+      const data = await profileRepository.listMessageRecipients();
+      const recipients = toMessageRecipientItems(data);
+      setUsers(recipients);
+      setSelectedUsers(selectAllRecipientIds(recipients));
+      toast.success(`${recipients.length} öğrenci seçildi`);
       setOpenUserSearch(false);
     } catch (err) {
       console.error('Tüm kullanıcılar yüklenirken hata:', err);
@@ -68,16 +60,11 @@ const SendMessage = () => {
   const loadUsersByGrade = async (grade: number) => {
     setUserSearchLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .eq('grade', grade)
-        .order('name');
-
-      if (error) throw error;
-      setUsers(data || []);
-      setSelectedUsers(prev => [...new Set([...prev, ...(data?.map(u => u.id) || [])])]);
-      toast.success(`${data?.length || 0} öğrenci eklendi (${grade}. Sınıf)`);
+      const data = await profileRepository.listMessageRecipientsByGrade(grade);
+      const recipients = toMessageRecipientItems(data);
+      setUsers(recipients);
+      setSelectedUsers(prev => mergeRecipientIds(prev, selectAllRecipientIds(recipients)));
+      toast.success(`${recipients.length} öğrenci eklendi (${grade}. Sınıf)`);
     } catch (err) {
       console.error('Sınıf filtresi hatası:', err);
       toast.error('Kullanıcılar yüklenemedi');
@@ -89,16 +76,11 @@ const SendMessage = () => {
   const loadVipUsers = async () => {
     setUserSearchLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .eq('is_vip', true)
-        .order('name');
-
-      if (error) throw error;
-      setUsers(data || []);
-      setSelectedUsers(prev => [...new Set([...prev, ...(data?.map(u => u.id) || [])])]);
-      toast.success(`${data?.length || 0} VIP öğrenci eklendi`);
+      const data = await profileRepository.listVipMessageRecipients();
+      const recipients = toMessageRecipientItems(data);
+      setUsers(recipients);
+      setSelectedUsers(prev => mergeRecipientIds(prev, selectAllRecipientIds(recipients)));
+      toast.success(`${recipients.length} VIP öğrenci eklendi`);
     } catch (err) {
       console.error('VIP filtresi hatası:', err);
       toast.error('Kullanıcılar yüklenemedi');
@@ -110,22 +92,11 @@ const SendMessage = () => {
   const loadUsersByYetenek = async (yetenek: string) => {
     setUserSearchLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email, yetenek_alani')
-        .order('name');
-
-      if (error) throw error;
-
-      // yetenek_alani JSON array olarak saklanıyor, bu yüzden client-side filtreleme yapıyoruz
-      const filtered = (data || []).filter(u => {
-        const yetenekler = Array.isArray(u.yetenek_alani) ? u.yetenek_alani : [];
-        return yetenekler.includes(yetenek);
-      });
-
-      setUsers(filtered);
-      setSelectedUsers(prev => [...new Set([...prev, ...filtered.map(u => u.id)])]);
-      toast.success(`${filtered.length} öğrenci eklendi (${yetenek})`);
+      const data = await profileRepository.listMessageRecipients();
+      const recipients = filterRecipientsByTalent(toMessageRecipientItems(data), yetenek);
+      setUsers(recipients);
+      setSelectedUsers(prev => mergeRecipientIds(prev, selectAllRecipientIds(recipients)));
+      toast.success(`${recipients.length} öğrenci eklendi (${yetenek})`);
     } catch (err) {
       console.error('Yetenek filtresi hatası:', err);
       toast.error('Kullanıcılar yüklenemedi');
@@ -148,6 +119,11 @@ const SendMessage = () => {
   };
 
   const handleSendMessage = async () => {
+    if (!user?.id) {
+      toast.error('Oturum bulunamadı');
+      return;
+    }
+
     if (!message.trim()) {
       toast.error('Mesaj içeriği boş olamaz');
       return;
@@ -162,18 +138,11 @@ const SendMessage = () => {
     setError(null);
 
     try {
-      const messages = selectedUsers.map(receiverId => ({
-        message: message,
-        sender_id: user?.id,
-        receiver_id: receiverId,
-        read: false
-      }));
-
-      const { error } = await supabase
-        .from('admin_messages')
-        .insert(messages);
-
-      if (error) throw error;
+      await adminMessageRepository.sendAdminMessages({
+        senderId: user.id,
+        receiverIds: selectedUsers,
+        message
+      });
 
       toast.success('Mesaj başarıyla gönderildi');
       setSelectedUsers([]);

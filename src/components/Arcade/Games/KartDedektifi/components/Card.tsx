@@ -27,7 +27,7 @@ const Card: React.FC<CardProps> = ({ card, onClick, isSelected, isReference, dis
       icons.push(
         <IconComponent
           key={i}
-          className="text-white w-6 h-6 md:w-10 md:h-10 fill-current drop-shadow-md"
+          className="text-white w-6 h-6 md:w-10 md:h-10 fill-current drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)]"
         />
       );
     }
@@ -36,7 +36,7 @@ const Card: React.FC<CardProps> = ({ card, onClick, isSelected, isReference, dis
     const gridCols = card.number === 1 ? 'grid-cols-1' : card.number === 2 ? 'grid-cols-1 gap-2' : 'grid-cols-2 gap-2';
 
     return (
-      <div className={`grid ${gridCols} items-center justify-items-center`}>
+      <div className={`grid ${gridCols} items-center justify-items-center relative z-10`}>
         {icons}
       </div>
     );
@@ -47,20 +47,17 @@ const Card: React.FC<CardProps> = ({ card, onClick, isSelected, isReference, dis
       onClick={onClick}
       disabled={disabled}
       className={`
-        relative w-24 h-36 md:w-32 md:h-48 rounded-2xl shadow-lg flex items-center justify-center transition-all duration-300
+        relative w-24 h-36 md:w-32 md:h-48 rounded-3xl flex items-center justify-center transition-all duration-200
+        border-[4px] border-black/10 sm:shadow-neo-sm shadow-neo-sm overflow-hidden
         ${COLORS[card.color]}
-        ${isSelected ? 'ring-4 ring-yellow-300 scale-105 z-10' : 'hover:scale-105 active:scale-95'}
-        ${isReference ? 'cursor-default' : 'cursor-pointer'}
-        ${disabled ? 'opacity-80 grayscale-[0.2]' : ''}
-        border-4 border-white
+        ${isSelected ? 'ring-8 ring-yellow-400 scale-105 z-10 shadow-none -translate-y-1' : 'hover:-translate-y-2 hover:shadow-neo-sm sm:hover:shadow-neo-sm active:translate-y-2 active:shadow-none'}
+        ${isReference ? 'cursor-default hover:-translate-y-0 hover:shadow-neo-sm sm:hover:shadow-neo-sm' : 'cursor-pointer'}
+        ${disabled ? 'opacity-90 grayscale-[0.5] hover:-translate-y-0 active:translate-y-0 hover:shadow-neo-sm sm:hover:shadow-neo-sm' : ''}
       `}
     >
-      <div className="bg-white/10 w-full h-full absolute inset-0 rounded-xl pointer-events-none" />
+      {/* Gloss reflection overlay, cartoonish */}
+      <div className="bg-white/30 w-12 h-[150%] absolute -top-4 -left-2 skew-x-12 pointer-events-none rounded-full blur-[2px]" />
       {renderShapes()}
-
-      {/* Decorative dots for card feel */}
-      <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-white/30" />
-      <div className="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-white/30" />
     </button>
   );
 };

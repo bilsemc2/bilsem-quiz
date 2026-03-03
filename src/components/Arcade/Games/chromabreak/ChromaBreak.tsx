@@ -1,36 +1,39 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, ChevronLeft, Trophy, Zap } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
-import confetti from 'canvas-confetti';
+
+import { useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
 import BreakoutGame from './components/BreakoutGame';
 import QuizMode from './components/QuizMode';
 import { GamePhase, TIMING } from './types';
+import ArcadeGameShell from '../../Shared/ArcadeGameShell';
+import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
+import { ARCADE_SCORE_BASE, ARCADE_SCORE_FORMULA, ARCADE_FEEDBACK_TEXTS } from '../../Shared/ArcadeConstants';
 
 const GAME_ID = 'chromabreak';
+const BLOCK_SCORE = ARCADE_SCORE_BASE / 2; // 10 puan per blok
 
 const ChromaBreak: React.FC = () => {
     const location = useLocation();
     const { saveGamePlay } = useGamePersistence();
     const hasSavedRef = useRef(false);
     const startTimeRef = useRef<number>(0);
+    const isResolvingRef = useRef(false);
 
     const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.IDLE);
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
+    const [lives, setLives] = useState(3);
     const [history, setHistory] = useState<string[]>([]);
-    const [lastQuizResult, setLastQuizResult] = useState<boolean | null>(null);
+    const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-    // Hub'dan autoStart kontrolü
-    const searchParams = new URLSearchParams(location.search);
-    const autoStart = searchParams.get('autoStart') === 'true';
+    const autoStart = location.state?.autoStart ||
+        new URLSearchParams(location.search).get('autoStart') === 'true';
 
-    // saveResult defined first (used by handleGameOver and handleQuizComplete)
-    const saveResult = useCallback(async (finalScore: number, quizCorrect: boolean) => {
+    // ─── Save ────────────────────────────────────────────────────────────────
+    const saveResult = useCallback(async (finalScore: number) => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
-
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         await saveGamePlay({
             game_id: GAME_ID,
@@ -39,12 +42,12 @@ const ChromaBreak: React.FC = () => {
             difficulty_played: `level-${level}`,
             metadata: {
                 blocks_hit: history.length,
-                quiz_correct: quizCorrect,
                 level_reached: level
             }
         });
     }, [saveGamePlay, level, history.length]);
 
+    // ─── Breakout → Quiz transition ──────────────────────────────────────────
     const handleGameOver = useCallback((finalHistory: string[], finalScore: number) => {
         setHistory(finalHistory);
         setScore(finalScore);
@@ -55,38 +58,86 @@ const ChromaBreak: React.FC = () => {
                 setGamePhase(GamePhase.QUIZZING);
             }, TIMING.QUIZ_PREP_DELAY_MS);
         } else {
-            setGamePhase(GamePhase.RESULT);
-            saveResult(finalScore, false);
+            // Yeterli blok vurulamadı → can kaybı
+            setLives(prev => {
+                const newLives = prev - 1;
+                if (newLives <= 0) {
+                    setGamePhase(GamePhase.RESULT);
+                    saveResult(finalScore);
+                } else {
+                    setFeedback({ message: 'Daha fazla blok vurmalısın! 💪', type: 'error' });
+                    setTimeout(() => {
+                        setFeedback(null);
+                        // Aynı seviyede tekrar dene
+                        setGamePhase(GamePhase.PLAYING);
+                        setHistory([]);
+                        setScore(0);
+                    }, 2000);
+                }
+                return newLives;
+            });
         }
     }, [saveResult]);
 
+    // ─── Quiz complete ───────────────────────────────────────────────────────
     const handleQuizComplete = useCallback((correct: boolean) => {
-        setLastQuizResult(correct);
+        if (isResolvingRef.current) return;
+        isResolvingRef.current = true;
 
         if (correct) {
+            const msgs = ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES;
+            setFeedback({ message: msgs[Math.floor(Math.random() * msgs.length)], type: 'success' });
+            const bonus = ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, level);
+            setScore(prev => prev + bonus);
             setLevel(prev => prev + 1);
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#06b6d4', '#3b82f6', '#8b5cf6']
+
+            setTimeout(() => {
+                setFeedback(null);
+                isResolvingRef.current = false;
+                // Sonraki seviyeye geç
+                setGamePhase(GamePhase.PLAYING);
+                setHistory([]);
+            }, 2000);
+        } else {
+            const msgs = ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES;
+            setFeedback({ message: msgs[Math.floor(Math.random() * msgs.length)], type: 'error' });
+            setLives(prev => {
+                const newLives = prev - 1;
+                if (newLives <= 0) {
+                    setTimeout(() => {
+                        setFeedback(null);
+                        isResolvingRef.current = false;
+                        setGamePhase(GamePhase.RESULT);
+                        saveResult(score);
+                    }, 2000);
+                } else {
+                    setTimeout(() => {
+                        setFeedback(null);
+                        isResolvingRef.current = false;
+                        // Aynı seviyede tekrar dene
+                        setGamePhase(GamePhase.PLAYING);
+                        setHistory([]);
+                    }, 2000);
+                }
+                return newLives;
             });
         }
+    }, [score, level, saveResult]);
 
-        saveResult(score, correct);
-        setGamePhase(GamePhase.RESULT);
-    }, [score, saveResult]);
-
+    // ─── Start / Restart ─────────────────────────────────────────────────────
     const startGame = useCallback(() => {
         window.scrollTo(0, 0);
         setGamePhase(GamePhase.PLAYING);
         setHistory([]);
         setScore(0);
+        setLevel(1);
+        setLives(3);
+        setFeedback(null);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
+        isResolvingRef.current = false;
     }, []);
 
-    // autoStart useEffect - must be after startGame definition
     useEffect(() => {
         if (autoStart && gamePhase === GamePhase.IDLE) {
             startGame();
@@ -94,98 +145,42 @@ const ChromaBreak: React.FC = () => {
     }, [autoStart, gamePhase, startGame]);
 
     const handleBlockHit = useCallback(() => {
-        setScore(prev => prev + 10);
+        setScore(prev => prev + BLOCK_SCORE);
     }, []);
 
+    // ─── Shell status mapping ────────────────────────────────────────────────
+    const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' | 'SUCCESS' =
+        gamePhase === GamePhase.IDLE ? 'START' :
+            gamePhase === GamePhase.RESULT ? 'GAME_OVER' : 'PLAYING';
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden touch-none [-webkit-tap-highlight-color:transparent]">
-            {/* Background Effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600 rounded-full blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600 rounded-full blur-[120px]" />
-            </div>
+        <ArcadeGameShell
+            gameState={{ score, level, lives, status: shellStatus }}
+            gameMetadata={{
+                id: GAME_ID,
+                title: 'CHROMABREAK',
+                description: (
+                    <>
+                        <p>🎮 Renkli blokları kır ve hafızanı test et!</p>
+                        <p className="mt-2">🧠 Her blok vurduğunda rengi hatırla — sonra quiz'de doğru cevapla!</p>
+                    </>
+                ),
+                tuzoCode: '5.4.2 Görsel Kısa Süreli Bellek',
+                icon: <span className="text-5xl">🎮</span>,
+                iconBgColor: 'bg-sky-300',
+                containerBgColor: 'bg-amber-200 dark:bg-slate-900'
+            }}
+            onStart={startGame}
+            onRestart={startGame}
+            showLevel={true}
+            showLives={true}
+        >
+            <main className="max-w-4xl mx-auto px-4 py-6 sm:py-10 relative z-10 w-full flex flex-col items-center">
 
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-700/50">
-                <div className="max-w-4xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
-                    <Link
-                        to="/bilsem-zeka"
-                        className="flex items-center gap-1.5 sm:gap-2 text-slate-300 hover:text-cyan-400 transition-colors"
-                    >
-                        <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
-                        <span className="text-xs sm:text-sm font-medium">BİLSEM</span>
-                    </Link>
+                {/* Feedback Banner */}
+                <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
 
-                    <h1 className="text-sm sm:text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-                        CHROMABREAK
-                    </h1>
-
-                    <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm">
-                        <div className="flex items-center gap-1 text-yellow-400">
-                            <Trophy size={14} className="sm:w-4 sm:h-4" />
-                            <span className="font-bold">{score}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-cyan-400">
-                            <Zap size={14} className="sm:w-4 sm:h-4" />
-                            <span className="font-bold">Lv.{level}</span>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <main className="max-w-4xl mx-auto px-4 py-6 relative z-10">
                 <AnimatePresence mode="wait">
-                    {/* IDLE Phase - Start Screen */}
-                    {gamePhase === GamePhase.IDLE && (
-                        <motion.div
-                            key="idle"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="flex flex-col items-center justify-center min-h-[70vh] text-center"
-                        >
-                            <div
-                                className="w-24 h-24 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
-                               
-                            >
-                                <span className="text-5xl">🎮</span>
-                            </div>
-                            <h2 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent mb-4">ChromaBreak</h2>
-                            <p className="text-slate-400 max-w-md mb-8">
-                                Renkli blokları kır ve hafızanı test et!
-                                Her blok vurduğunda rengi hatırla - sonra quiz'de doğru cevapla!
-                            </p>
-
-                            <motion.button
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-2xl text-xl font-bold"
-                               
-                            >
-                                <Play size={24} />
-                                Başla
-                            </motion.button>
-
-                            <div className="mt-8 grid grid-cols-3 gap-6 text-slate-500 text-sm">
-                                <div>
-                                    <div className="text-cyan-400 font-bold mb-1">🎯 HEDEF</div>
-                                    <div>Blokları Kır</div>
-                                </div>
-                                <div>
-                                    <div className="text-cyan-400 font-bold mb-1">🧠 HATIRLA</div>
-                                    <div>Renk Sırasını</div>
-                                </div>
-                                <div>
-                                    <div className="text-cyan-400 font-bold mb-1">📝 TEST</div>
-                                    <div>Hafıza Quizi</div>
-                                </div>
-                            </div>
-                            <div className="mt-6 bg-cyan-500/20 text-cyan-300 text-xs px-4 py-2 rounded-full inline-block border border-cyan-500/30">
-                                TUZÖ 5.4.2 Görsel Kısa Süreli Bellek
-                            </div>
-                        </motion.div>
-                    )}
-
                     {/* PLAYING Phase */}
                     {gamePhase === GamePhase.PLAYING && (
                         <motion.div
@@ -209,17 +204,17 @@ const ChromaBreak: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="flex flex-col items-center justify-center min-h-[60vh] text-center"
+                            className="bg-sky-200 border-2 border-black/10 rounded-[3rem] p-12 shadow-neo-sm w-full max-w-lg text-center rotate-1 relative mt-8 flex flex-col items-center justify-center min-h-[40vh]"
                         >
                             <motion.div
                                 animate={{ scale: [1, 1.2, 1] }}
                                 transition={{ repeat: Infinity, duration: 1 }}
-                                className="text-6xl mb-6"
+                                className="text-6xl sm:text-7xl mb-6 bg-white p-4 rounded-full border-2 border-black/10 shadow-neo-sm -rotate-3"
                             >
                                 🧠
                             </motion.div>
-                            <h2 className="text-3xl font-bold text-white">Hafıza Testi</h2>
-                            <p className="text-slate-400 mt-2">Hazırlanıyor...</p>
+                            <h2 className="text-3xl sm:text-4xl font-black text-black uppercase tracking-tighter drop-shadow-[2px_2px_0_#fff]">Hafıza Testi</h2>
+                            <p className="text-black font-black mt-4 bg-yellow-300 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm rotate-2">Hazırlanıyor...</p>
                         </motion.div>
                     )}
 
@@ -238,72 +233,9 @@ const ChromaBreak: React.FC = () => {
                             />
                         </motion.div>
                     )}
-
-                    {/* RESULT Phase */}
-                    {gamePhase === GamePhase.RESULT && (
-                        <motion.div
-                            key="result"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="flex flex-col items-center justify-center min-h-[60vh] text-center"
-                        >
-                            <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: 'spring', delay: 0.2 }}
-                                className="text-8xl mb-6"
-                            >
-                                {lastQuizResult ? '🎉' : history.length < 3 ? '💪' : '🔄'}
-                            </motion.div>
-
-                            <h2 className={`text-4xl font-bold mb-4 ${lastQuizResult ? 'text-green-400' : 'text-orange-400'}`}>
-                                {lastQuizResult ? 'Harika!' : history.length < 3 ? 'Tekrar Dene!' : 'Hafıza Hatası'}
-                            </h2>
-
-                            <p className="text-slate-300 mb-6 max-w-md">
-                                {lastQuizResult
-                                    ? `Seviye ${level}'e yükseldin! Hafızan keskin.`
-                                    : history.length < 3
-                                        ? 'Quiz için daha fazla blok vurmalısın!'
-                                        : 'Renk sıralamasını hatırlayamadın. Tekrar dene!'}
-                            </p>
-
-                            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mb-8">
-                                <div className="grid grid-cols-2 gap-8 text-center">
-                                    <div>
-                                        <div className="text-3xl font-bold text-amber-400">{score}</div>
-                                        <div className="text-sm text-slate-400">Skor</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-3xl font-bold text-cyan-400">{history.length}</div>
-                                        <div className="text-sm text-slate-400">Blok</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-4">
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={startGame}
-                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-2xl font-bold"
-                                    style={{ boxShadow: '0 6px 24px rgba(6, 182, 212, 0.4)' }}
-                                >
-                                    <Play size={20} />
-                                    Tekrar Oyna
-                                </motion.button>
-                                <Link
-                                    to="/bilsem-zeka"
-                                    className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-bold transition-colors"
-                                >
-                                    BİLSEM Zeka'ya Dön
-                                </Link>
-                            </div>
-                        </motion.div>
-                    )}
                 </AnimatePresence>
             </main>
-        </div>
+        </ArcadeGameShell>
     );
 };
 

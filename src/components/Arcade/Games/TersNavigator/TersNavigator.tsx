@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ChevronLeft, Timer } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Timer, Navigation } from 'lucide-react';
 import { GameState, PerformanceStats } from './types';
 import { GAME_DURATION } from './constants';
 import Menu from './components/Menu';
 import GameCanvas from './components/GameCanvas';
 import GameOver from './components/GameOver';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
+import ArcadeGameShell from '../../Shared/ArcadeGameShell';
 
 const TersNavigator: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
@@ -21,13 +22,7 @@ const TersNavigator: React.FC = () => {
     const totalRoundsRef = useRef(0);
     const totalTimeRef = useRef(0);
     const gameStartTimeRef = useRef<number>(0);
-
-    // Auto-start from Hub
-    useEffect(() => {
-        if (location.state?.autoStart && gameState === GameState.MENU) {
-            startGame();
-        }
-    }, [location.state, gameState]);
+    const hasSavedRef = useRef(false);
 
     useEffect(() => {
         const saved = localStorage.getItem('tersNavigator_highScore');
@@ -36,6 +31,7 @@ const TersNavigator: React.FC = () => {
 
     const startGame = () => {
         window.scrollTo(0, 0);
+        hasSavedRef.current = false;
         setGameState(GameState.PLAYING);
         setTimeLeft(GAME_DURATION);
         setStats({ score: 0, accuracy: 0, averageTime: 0, rounds: 0 });
@@ -44,6 +40,13 @@ const TersNavigator: React.FC = () => {
         totalTimeRef.current = 0;
         gameStartTimeRef.current = Date.now();
     };
+
+    // Auto-start from Hub
+    useEffect(() => {
+        if (location.state?.autoStart && gameState === GameState.MENU) {
+            startGame();
+        }
+    }, [location.state, gameState]);
 
     useEffect(() => {
         if (gameState !== GameState.PLAYING) return;
@@ -77,12 +80,15 @@ const TersNavigator: React.FC = () => {
             localStorage.setItem('tersNavigator_highScore', finalStats.score.toString());
         }
 
-        saveGamePlay({
-            game_id: 'ters-navigator',
-            score_achieved: finalStats.score,
-            duration_seconds: (Date.now() - gameStartTimeRef.current) / 1000,
-            metadata: { accuracy: finalStats.accuracy, rounds: finalStats.rounds }
-        });
+        if (!hasSavedRef.current) {
+            hasSavedRef.current = true;
+            saveGamePlay({
+                game_id: 'ters-navigator',
+                score_achieved: finalStats.score,
+                duration_seconds: (Date.now() - gameStartTimeRef.current) / 1000,
+                metadata: { accuracy: finalStats.accuracy, rounds: finalStats.rounds }
+            });
+        }
     }, [stats.score, highScore, saveGamePlay]);
 
     const handleRoundComplete = useCallback((isCorrect: boolean, reactionTime: number) => {
@@ -97,51 +103,66 @@ const TersNavigator: React.FC = () => {
         }
     }, []);
 
+    // Map local GameState enum → ArcadeGameShell status string
+    const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' =
+        gameState === GameState.MENU ? 'START'
+            : gameState === GameState.PLAYING ? 'PLAYING'
+                : 'GAME_OVER';
+
+    // Süre sayacı — ArcadeGameShell HUD'una eklenir
+    const timerHud = (
+        <div className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl shadow-neo-sm flex items-center gap-1.5 sm:gap-2 border-2 border-black/10 rotate-1 transition-colors duration-300 ${timeLeft <= 10 ? 'bg-red-300 animate-pulse' : 'bg-blue-300 dark:bg-slate-700'}`}>
+            <Timer className={`w-4 h-4 sm:w-5 sm:h-5 stroke-[3px] ${timeLeft <= 10 ? 'text-red-700' : 'text-black dark:text-white'}`} />
+            <span className={`text-base sm:text-lg font-black leading-none bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg border-2 border-black/10 dark:border-slate-700 tabular-nums transition-colors duration-300 ${timeLeft <= 10 ? 'text-red-700' : 'text-black dark:text-white'}`}>{timeLeft}s</span>
+        </div>
+    );
+
     return (
-        <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-2 sm:p-4 pt-16 sm:pt-20 relative touch-none [-webkit-tap-highlight-color:transparent]">
-            {/* Back to Arcade */}
-            <div className="absolute top-16 sm:top-20 left-2 sm:left-4 z-50">
-                <Link to="/bilsem-zeka" className="flex items-center gap-1.5 sm:gap-2 text-slate-400 hover:text-white transition-colors bg-slate-900/50 backdrop-blur px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-slate-800">
-                    <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="font-bold text-xs sm:text-sm">BİLSEM Zeka</span>
-                </Link>
-            </div>
-
-            {/* Timer During Play */}
-            {gameState === GameState.PLAYING && (
-                <div className="absolute top-16 sm:top-20 right-2 sm:right-4 z-50 flex items-center gap-1.5 sm:gap-3 bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-full px-3 sm:px-5 py-1.5 sm:py-3 shadow-xl">
-                    <Timer className={`w-4 h-4 sm:w-6 sm:h-6 ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-indigo-400'}`} />
-                    <span className={`text-xl sm:text-3xl font-black tabular-nums ${timeLeft <= 10 ? 'text-red-500' : 'text-white'}`}>{timeLeft}</span>
-                </div>
-            )}
-
-            {/* Score During Play - Hidden on very small screens to avoid clutter */}
-            {gameState === GameState.PLAYING && (
-                <div className="hidden sm:block absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/70 backdrop-blur-md border border-slate-700 rounded-full px-6 py-3 shadow-xl">
-                    <span className="text-2xl font-black text-yellow-400">{stats.score}</span>
-                    <span className="text-slate-500 text-sm font-bold ml-2">puan</span>
-                </div>
-            )}
-
-            {/* Game Content */}
+        <ArcadeGameShell
+            gameState={{ score: stats.score, level: 1, lives: 1, status: shellStatus }}
+            gameMetadata={{
+                id: 'ters-navigator',
+                title: 'TERS NAVİGATÖR',
+                description: (
+                    <>
+                        <p>🧭 Ekrandaki <strong>kelimeyi</strong> oku — ama yönü değil harfin gösterdiği <strong>oku</strong> izle!</p>
+                        <p className="mt-2">⚡ Hızlı karar ver, süreni iyi kullan. {GAME_DURATION} saniyede kaç puan toplarsan o kadar iyisin!</p>
+                    </>
+                ),
+                tuzoCode: '5.8.1 Bilişsel Esneklik',
+                icon: <Navigation className="w-14 h-14 text-black" strokeWidth={3} />,
+                iconBgColor: 'bg-blue-400',
+                containerBgColor: 'bg-sky-200 dark:bg-slate-900'
+            }}
+            onStart={startGame}
+            onRestart={startGame}
+            showLevel={false}
+            showLives={false}
+            hudExtras={timerHud}
+        >
+            {/* Menu Screen */}
             {gameState === GameState.MENU && (
                 <Menu onStart={startGame} highScore={highScore} />
             )}
 
+            {/* Play Area */}
             {gameState === GameState.PLAYING && (
-                <div className="w-full max-w-5xl">
+                <div className="w-full max-w-5xl pt-32 sm:pt-28">
                     <GameCanvas onRoundComplete={handleRoundComplete} />
                 </div>
             )}
 
+            {/* Game Over Screen — istatistik gösterir */}
             {gameState === GameState.GAME_OVER && (
-                <GameOver
-                    stats={stats}
-                    onRestart={startGame}
-                    onMenu={() => setGameState(GameState.MENU)}
-                />
+                <div className="pt-20">
+                    <GameOver
+                        stats={stats}
+                        onRestart={startGame}
+                        onMenu={() => setGameState(GameState.MENU)}
+                    />
+                </div>
             )}
-        </div>
+        </ArcadeGameShell>
     );
 };
 

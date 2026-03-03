@@ -1,326 +1,391 @@
-// Matrix Puzzle Game - Ana Oyun Bileşeni
-// 3x3 Matris Bulmaca - Kural Tabanlı Görsel Desen Tamamlama
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { motion } from "framer-motion";
+import { Grid3X3, CheckCircle2, ChevronLeft } from "lucide-react";
+import { useSound } from "../../hooks/useSound";
+import { useGameFeedback } from "../../hooks/useGameFeedback";
+import { useGameEngine } from "./shared/useGameEngine";
+import BrainTrainerShell from "./shared/BrainTrainerShell";
+import { ShapeRenderer } from "./matrix/ShapeRenderer";
+import { MatrixCell, GameOption, BaseShape } from "../../types/matrixRules";
+import { generateMatrix, generateWrongOption } from "../../utils/ruleExecutors";
+import { getRandomRuleForLevel, shouldUseInnerGrid } from "../../data/matrixRules";
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-    ChevronLeft, RotateCcw, Play, Trophy, Grid3X3,
-    Heart, Star, Timer as TimerIcon, CheckCircle2, XCircle, Zap, Eye, Sparkles
-} from 'lucide-react';
-import { useSound } from '../../hooks/useSound';
-import { useGameFeedback } from '../../hooks/useGameFeedback';
-import GameFeedbackBanner from './shared/GameFeedbackBanner';
-import { useGamePersistence } from '../../hooks/useGamePersistence';
-import { useExam } from '../../contexts/ExamContext';
-import { ShapeRenderer } from './matrix/ShapeRenderer';
-import { MatrixCell, GameOption, BaseShape } from '../../types/matrixRules';
-import {
-    generateMatrix,
-    generateWrongOption,
-} from '../../utils/ruleExecutors';
-import {
-    getRandomRuleForLevel,
-    shouldUseInnerGrid,
-} from '../../data/matrixRules';
-
-// ============================================
-// OYUN SABİTLERİ
-// ============================================
-
+const GAME_ID = "matris-bulmaca";
+const GAME_TITLE = "Matris Bulmaca";
+const GAME_DESCRIPTION = "3x3 ızgaradaki deseni analiz et ve gizli hücreyi bul! Her satırda belirli bir kural var.";
+const TUZO_TEXT = "TUZÖ 5.5.2 Kural Çıkarsama";
 const INITIAL_LIVES = 5;
-const TIME_LIMIT = 180; // 3 dakika
+const TIME_LIMIT = 180;
 const MAX_LEVEL = 20;
 const OPTIONS_COUNT = 5;
-
-type Phase = 'welcome' | 'playing' | 'feedback' | 'game_over' | 'victory' | 'review';
-
-// Soru geçmişi tipi - hata inceleme için
 interface QuestionHistory {
-    level: number;
-    ruleName: string;
-    ruleDescription: string;
-    grid: MatrixCell[][];
-    correctAnswer: BaseShape;
-    selectedAnswer: BaseShape;
-    isCorrect: boolean;
+  level: number;
+  ruleName: string;
+  ruleDescription: string;
+  grid: MatrixCell[][];
+  correctAnswer: BaseShape;
+  selectedAnswer: BaseShape;
+  isCorrect: boolean;
 }
-
 const MatrixPuzzleGame: React.FC = () => {
-    const { saveGamePlay } = useGamePersistence();
-    const location = useLocation();
-    const navigate = useNavigate();
-    const examMode = location.state?.examMode || false;
-    const { submitResult } = useExam();
-    const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1000 });
-    const { playSound } = useSound();
+  const engine = useGameEngine({
+    gameId: GAME_ID,
+    maxLevel: MAX_LEVEL,
+    initialLives: INITIAL_LIVES,
+    timeLimit: TIME_LIMIT,
+  });
 
-    const [phase, setPhase] = useState<Phase>('welcome');
-    const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(INITIAL_LIVES);
-    const [level, setLevel] = useState(1);
-    const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const { playSound } = useSound();
+  const safeTimeout = useSafeTimeout();
+  const feedback = useGameFeedback({ duration: 1000 });
+  const { showFeedback, dismissFeedback } = feedback;
 
-    const [grid, setGrid] = useState<MatrixCell[][]>([]);
-    const [options, setOptions] = useState<GameOption[]>([]);
-    const [selectedOption, setSelectedOption] = useState<string | null>(null);
-    const [currentRuleName, setCurrentRuleName] = useState('');
-    const [currentRuleDescription, setCurrentRuleDescription] = useState('');
-    const [questionHistory, setQuestionHistory] = useState<QuestionHistory[]>([]);
+  const [grid, setGrid] = useState<MatrixCell[][]>([]);
+  const [options, setOptions] = useState<GameOption[]>([]);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [currentRuleName, setCurrentRuleName] = useState("");
+  const [currentRuleDescription, setCurrentRuleDescription] = useState("");
+  const [questionHistory, setQuestionHistory] = useState<QuestionHistory[]>([]);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const pendingTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const prevPhaseRef = useRef(engine.phase);
 
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const startTimeRef = useRef<number>(0);
-    const hasSavedRef = useRef(false);
+  const clearPendingTimeouts = useCallback(() => {
+    pendingTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+    pendingTimeoutsRef.current = [];
+  }, []);
 
-    const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
-    const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+  const generateQuestion = useCallback(() => {
+    const useInnerGrid = shouldUseInnerGrid(engine.level);
+    const rule = getRandomRuleForLevel(engine.level);
+    setCurrentRuleName(rule.name);
+    setCurrentRuleDescription(rule.description);
 
-    const generateQuestion = useCallback(() => {
-        const useInnerGrid = shouldUseInnerGrid(level);
-        const rule = getRandomRuleForLevel(level);
-        setCurrentRuleName(rule.name);
-        setCurrentRuleDescription(rule.description);
+    const matrix = generateMatrix([rule], useInnerGrid);
+    const newGrid: MatrixCell[][] = matrix.map((row, rowIdx) =>
+      row.map((shape, colIdx) => ({
+        row: rowIdx,
+        col: colIdx,
+        shape,
+        isHidden: false,
+      })),
+    );
 
-        const matrix = generateMatrix([rule], useInnerGrid);
-        const newGrid: MatrixCell[][] = matrix.map((row, rowIdx) =>
-            row.map((shape, colIdx) => ({
-                row: rowIdx, col: colIdx, shape, isHidden: false,
-            }))
+    const hiddenRow = Math.floor(Math.random() * 2) + 1;
+    const hiddenCol = Math.floor(Math.random() * 2) + 1;
+    newGrid[hiddenRow][hiddenCol].isHidden = true;
+
+    const correctShape = matrix[hiddenRow][hiddenCol];
+    const newOptions: GameOption[] = [
+      { id: "correct", shape: correctShape, isCorrect: true },
+    ];
+
+    for (let i = 0; i < OPTIONS_COUNT - 1; i++) {
+      const wrongShape = generateWrongOption(
+        correctShape,
+        newOptions.map((o) => o.shape),
+      );
+      newOptions.push({
+        id: `wrong-${i}`,
+        shape: wrongShape,
+        isCorrect: false,
+      });
+    }
+
+    setGrid(newGrid);
+    setOptions(newOptions.sort(() => Math.random() - 0.5));
+    setSelectedOption(null);
+  }, [engine.level]);
+
+  useEffect(() => {
+    const prevPhase = prevPhaseRef.current;
+
+    if (
+      engine.phase === "playing" &&
+      (prevPhase === "welcome" ||
+        prevPhase === "game_over" ||
+        prevPhase === "victory")
+    ) {
+      clearPendingTimeouts();
+      generateQuestion();
+      setQuestionHistory([]);
+      setIsReviewing(false);
+    } else if (engine.phase === "welcome") {
+      clearPendingTimeouts();
+      setGrid([]);
+      setOptions([]);
+      setSelectedOption(null);
+      setCurrentRuleName("");
+      setCurrentRuleDescription("");
+      setQuestionHistory([]);
+      setIsReviewing(false);
+    } else if (engine.phase === "game_over" || engine.phase === "victory") {
+      clearPendingTimeouts();
+    }
+
+    prevPhaseRef.current = engine.phase;
+  }, [engine.phase, generateQuestion, clearPendingTimeouts]);
+
+  useEffect(() => {
+    return () => {
+      clearPendingTimeouts();
+    };
+  }, [clearPendingTimeouts]);
+
+  const handleOptionSelect = useCallback(
+    (option: GameOption) => {
+      if (selectedOption || engine.phase !== "playing") return;
+      setSelectedOption(option.id);
+      const isCorrect = option.isCorrect;
+      showFeedback(isCorrect);
+
+      const correctOption = options.find((o) => o.isCorrect);
+      setQuestionHistory((prev) => [
+        ...prev,
+        {
+          level: engine.level,
+          ruleName: currentRuleName,
+          ruleDescription: currentRuleDescription,
+          grid: grid.map((row) => row.map((cell) => ({ ...cell }))),
+          correctAnswer: correctOption?.shape || option.shape,
+          selectedAnswer: option.shape,
+          isCorrect: option.isCorrect,
+        },
+      ]);
+
+      if (isCorrect) {
+        playSound("correct");
+        engine.addScore(10 * engine.level);
+      } else {
+        playSound("incorrect");
+        engine.loseLife();
+      }
+
+      const timeoutId = safeTimeout(() => {
+        pendingTimeoutsRef.current = pendingTimeoutsRef.current.filter(
+          (id) => id !== timeoutId,
         );
 
-        const hiddenRow = Math.floor(Math.random() * 2) + 1;
-        const hiddenCol = Math.floor(Math.random() * 2) + 1;
-        newGrid[hiddenRow][hiddenCol].isHidden = true;
+        dismissFeedback();
 
-        const correctShape = matrix[hiddenRow][hiddenCol];
-        const newOptions: GameOption[] = [{ id: 'correct', shape: correctShape, isCorrect: true }];
-
-        for (let i = 0; i < OPTIONS_COUNT - 1; i++) {
-            const wrongShape = generateWrongOption(correctShape, newOptions.map(o => o.shape));
-            newOptions.push({ id: `wrong-${i}`, shape: wrongShape, isCorrect: false });
-        }
-
-        setGrid(newGrid);
-        setOptions(newOptions.sort(() => Math.random() - 0.5));
-        setSelectedOption(null);
-    }, [level]);
-
-    const handleStart = useCallback(() => {
-        window.scrollTo(0, 0);
-        setPhase('playing');
-        setScore(0);
-        setLives(INITIAL_LIVES);
-        setLevel(1);
-        setTimeLeft(TIME_LIMIT);
-        setQuestionHistory([]);
-        startTimeRef.current = Date.now();
-        hasSavedRef.current = false;
-        generateQuestion();
-    }, [generateQuestion]);
-
-    useEffect(() => {
-        if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart();
-    }, [location.state, examMode, phase, handleStart]);
-
-    useEffect(() => {
-        if (phase === 'playing' && timeLeft > 0) {
-            timerRef.current = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
-        } else if (timeLeft === 0 && phase === 'playing') {
-            handleGameOver();
-        }
-        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-    }, [phase, timeLeft]);
-
-    const handleGameOver = useCallback(async () => {
-        if (hasSavedRef.current) return;
-        hasSavedRef.current = true;
-        setPhase('game_over');
-        playSound?.('incorrect');
-        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        if (examMode) {
-            await submitResult(level >= 5, score, totalPossibleScore(), duration);
-            navigate('/atolyeler/sinav-simulasyonu/devam');
-            return;
-        }
-        await saveGamePlay({
-            game_id: 'matris-bulmaca',
-            score_achieved: score,
-            duration_seconds: duration,
-            metadata: { levels_completed: level, final_lives: lives, game_name: 'Matris Bulmaca' },
-        });
-    }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate, playSound]);
-
-    const handleVictory = useCallback(async () => {
-        if (hasSavedRef.current) return;
-        hasSavedRef.current = true;
-        setPhase('victory');
-        playSound?.('complete');
-        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        if (examMode) {
-            await submitResult(true, score, totalPossibleScore(), duration);
-            navigate('/atolyeler/sinav-simulasyonu/devam');
-            return;
-        }
-        await saveGamePlay({
-            game_id: 'matris-bulmaca',
-            score_achieved: score,
-            duration_seconds: duration,
-            metadata: { levels_completed: MAX_LEVEL, victory: true, game_name: 'Matris Bulmaca' },
-        });
-    }, [saveGamePlay, score, examMode, submitResult, navigate, playSound]);
-
-    const totalPossibleScore = () => MAX_LEVEL * 10 * (MAX_LEVEL + 1) / 2;
-
-    const handleOptionSelect = useCallback((option: GameOption) => {
-        if (selectedOption || phase !== 'playing') return;
-        setSelectedOption(option.id);
-        const isCorrect = option.isCorrect;
-        showFeedback(isCorrect);
-        setPhase('feedback');
-
-        const correctOption = options.find(o => o.isCorrect);
-        setQuestionHistory(prev => [...prev, {
-            level,
-            ruleName: currentRuleName,
-            ruleDescription: currentRuleDescription,
-            grid: grid.map(row => row.map(cell => ({ ...cell }))),
-            correctAnswer: correctOption?.shape || option.shape,
-            selectedAnswer: option.shape,
-            isCorrect: option.isCorrect,
-        }]);
+        if (prevPhaseRef.current !== "playing") return;
 
         if (isCorrect) {
-            playSound?.('correct');
-            setScore(prev => prev + 10 * level);
-        } else {
-            playSound?.('incorrect');
-            setLives(l => l - 1);
+          if (engine.level >= MAX_LEVEL) {
+            engine.setGamePhase("victory");
+            playSound("success");
+          } else {
+            engine.nextLevel();
+            generateQuestion();
+          }
+        } else if (engine.lives > 1) {
+          generateQuestion();
         }
+      }, 1200);
 
-        setTimeout(() => {
-            dismissFeedback();
-            const newLives = isCorrect ? lives : lives - 1;
-            setSelectedOption(null);
-            if (!isCorrect && newLives <= 0) { handleGameOver(); return; }
-            if (isCorrect && level >= MAX_LEVEL) { handleVictory(); return; }
-            if (isCorrect) {
-                setLevel(l => l + 1);
-                // useEffect will trigger generateQuestion
-            } else {
-                generateQuestion();
-            }
-            setPhase('playing');
-        }, 1200);
-    }, [selectedOption, phase, level, lives, options, grid, currentRuleName, playSound, generateQuestion, handleVictory, handleGameOver]);
+      pendingTimeoutsRef.current.push(timeoutId);
+    },
+    [
+      selectedOption,
+      engine,
+      options,
+      grid,
+      currentRuleName,
+      currentRuleDescription,
+      playSound,
+      generateQuestion,
+      showFeedback,
+      dismissFeedback,
+      safeTimeout,
+    ],
+  );
 
-    useEffect(() => {
-        if (phase === 'playing' && level > 1) generateQuestion();
-    }, [level]);
+  const gameConfig = {
+    title: GAME_TITLE,
+    description: GAME_DESCRIPTION,
+    tuzoCode: TUZO_TEXT,
+    icon: Grid3X3,
+    accentColor: "cyber-blue",
+    maxLevel: MAX_LEVEL,
+    wideLayout: true,
+    howToPlay: [
+      "Satır ve sütunlardaki değişim kuralını belirle",
+      "Soru işareti yerine gelecek şekli seç",
+      "Yanlış seçimler can götürür, dikkatli ol!"
+    ],
+    extraGameOverActions: questionHistory.some((q) => !q.isCorrect) && (
+      <motion.button
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsReviewing(true)}
+        className="w-full sm:w-auto px-6 py-4 bg-cyber-blue text-white font-nunito font-black text-lg uppercase tracking-widest border-2 border-black/10 shadow-neo-sm rounded-2xl hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-2 active:shadow-none transition-all flex items-center justify-center gap-3"
+      >
+        <CheckCircle2 size={24} className="stroke-[3]" />
+        <span>Hata Analizi</span>
+      </motion.button>
+    )
+  };
 
-    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-
+  if (isReviewing) {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black text-white">
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-            </div>
-            <div className="relative z-10 p-4 pt-20">
-                <div className="max-w-5xl mx-auto flex items-center justify-between">
-                    <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
-                    {(phase === 'playing' || phase === 'feedback') && (
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30"><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />))}</div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30"><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%)', border: '1px solid rgba(139, 92, 246, 0.3)' }}><Zap className="text-violet-400" size={18} /><span className="font-bold text-violet-400">{level}/{MAX_LEVEL}</span></div>
-                        </div>
-                    )}
-                </div>
-            </div>
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
-                <AnimatePresence mode="wait">
-                    {phase === 'welcome' && (
-                        <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <motion.div className="w-28 h-28 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><Grid3X3 size={52} className="text-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" /></motion.div>
-                            <h1 className="text-4xl font-bold mb-4 bg-slate-50 dark:bg-slate-800 border-4 border-black bg-clip-text text-transparent">Matris Bulmaca</h1>
-                            <p className="text-slate-400 mb-8">3×3 ızgaradaki deseni analiz et ve gizli hücreyi bul! Her satırda belirli bir kural var.</p>
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 mb-6 text-left border border-2 border-black">
-                                <h3 className="text-lg font-bold text-violet-300 mb-3 flex items-center gap-2"><Eye size={20} /> Nasıl Oynanır?</h3>
-                                <ul className="space-y-2 text-slate-300 text-sm">
-                                    <li className="flex items-center gap-2"><Sparkles size={14} className="text-violet-400" /><span>Satır ve sütunlardaki değişim kuralını belirle</span></li>
-                                    <li className="flex items-center gap-2"><Sparkles size={14} className="text-violet-400" /><span>Soru işareti yerine gelecek doğru şekli seç</span></li>
-                                    <li className="flex items-center gap-2"><Sparkles size={14} className="text-violet-400" /><span>Yanlış seçimler can götürür, dikkatli ol!</span></li>
-                                </ul>
-                            </div>
-                            <div className="bg-violet-500/10 text-violet-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-violet-500/30 font-bold uppercase tracking-widest">TUZÖ 5.5.2 Kural Çıkarsama</div>
-                            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl" style={{ boxShadow: '0 8px 32px rgba(139, 92, 246, 0.4)' }}><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
-                        </motion.div>
-                    )}
-                    {(phase === 'playing' || phase === 'feedback') && (
-                        <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-4xl">
-                            <div className="flex justify-center mb-8">
-                                <div className="grid grid-cols-3 gap-3 p-4 bg-slate-800 rounded-3xl border border-2 border-black" style={{ boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), 0 8px 32px rgba(0,0,0,0.3)' }}>
-                                    {grid.map((row, rIdx) => row.map((cell, cIdx) => (
-                                        <motion.div key={`${rIdx}-${cIdx}`} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (rIdx * 3 + cIdx) * 0.05 }} className="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center">
-                                            <ShapeRenderer shape={cell.shape} size={90} isHidden={cell.isHidden} />
-                                        </motion.div>
-                                    )))}
-                                </div>
-                            </div>
-                            <p className="text-center text-lg text-slate-300 mb-6">Gizli hücredeki şekil hangisi?</p>
-                            <div className="flex flex-wrap justify-center gap-4">
-                                {options.map((option, idx) => {
-                                    const isSelected = selectedOption === option.id;
-                                    const showResult = selectedOption !== null;
-                                    return (
-                                        <motion.button key={option.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} whileHover={!showResult ? { scale: 1.05, y: -4 } : {}} whileTap={!showResult ? { scale: 0.95 } : {}} onClick={() => handleOptionSelect(option)} disabled={showResult} className={`p-3 rounded-2xl transition-all ${isSelected ? (option.isCorrect ? 'ring-4 ring-emerald-400 bg-emerald-500/20' : 'ring-4 ring-red-400 bg-red-500/20') : (showResult && option.isCorrect ? 'ring-4 ring-emerald-400 bg-emerald-500/20' : 'bg-slate-800 border border-2 border-black')}`} style={{ boxShadow: isSelected ? (option.isCorrect ? '0 0 30px rgba(52, 211, 153, 0.5)' : '0 0 30px rgba(248, 113, 113, 0.5)') : '0 4px 16px rgba(0,0,0,0.2)' }}><ShapeRenderer shape={option.shape} size={80} /></motion.button>
-                                    );
-                                })}
-                            </div>
-                        </motion.div>
-                    )}
-                    {phase === 'game_over' && (
-                        <motion.div key="game_over" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-3xl flex items-center justify-center"><XCircle size={48} className="text-white" /></div>
-                            <h2 className="text-3xl font-bold text-red-400 mb-4">Oyun Bitti!</h2>
-                            <div className="bg-slate-800 rounded-2xl p-6 mb-6"><div className="grid grid-cols-3 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Doğru</p><p className="text-2xl font-bold text-emerald-400">{questionHistory.filter(q => q.isCorrect).length}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Yanlış</p><p className="text-2xl font-bold text-red-400">{questionHistory.filter(q => !q.isCorrect).length}</p></div></div></div>
-                            <div className="flex flex-wrap justify-center gap-4">
-                                {questionHistory.some(q => !q.isCorrect) && (<motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setPhase('review')} className="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-lg"><div className="flex items-center gap-3"><CheckCircle2 size={24} /><span>Yanlışlarımı Gör</span></div></motion.button>)}
-                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-lg"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Dene</span></div></motion.button>
-                            </div>
-                        </motion.div>
-                    )}
-                    {phase === 'victory' && (
-                        <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-                            <motion.div className="w-24 h-24 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-3xl flex items-center justify-center" animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
-                            <h2 className="text-3xl font-bold text-amber-400 mb-4">🎉 Şampiyon!</h2>
-                            <div className="bg-slate-800 rounded-2xl p-6 mb-6"><p className="text-4xl font-bold text-amber-400">{score}</p><p className="text-slate-400">Toplam Puan</p></div>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-8 py-4 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-lg"><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
-                        </motion.div>
-                    )}
-                    {phase === 'review' && (
-                        <motion.div key="review" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-4xl text-center">
-                            <h2 className="text-2xl font-bold text-amber-400 mb-6 font-display uppercase tracking-widest">📚 Soru Analizi</h2>
-                            <div className="space-y-6 max-h-[60vh] overflow-y-auto px-4 py-4 thin-scrollbar">
-                                {questionHistory.filter(q => !q.isCorrect).map((q, idx) => (
-                                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} className="bg-slate-800/40 rounded-[2rem] p-6 border border-red-500/20 shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]">
-                                        <div className="flex items-center justify-between mb-4"><span className="px-3 py-1 bg-violet-500/20 text-violet-300 rounded-full text-xs font-bold ring-1 ring-violet-500/30">Seviye {q.level}</span><span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{q.ruleName}</span></div>
-                                        <div className="flex justify-center mb-6"><div className="grid grid-cols-3 gap-2 p-4 bg-slate-950/50 rounded-2xl border border-white/5 shadow-inner">{q.grid.map((row, rIdx) => row.map((cell, cIdx) => (
-                                            <div key={`${rIdx}-${cIdx}`} className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center"><ShapeRenderer shape={cell.shape} size={60} isHidden={cell.isHidden} /></div>
-                                        )))}</div></div>
-                                        <div className="bg-slate-50 dark:bg-slate-800 border-4 border-black border-l-4 border-violet-500 p-4 rounded-r-xl text-left mb-6"><p className="text-[10px] font-black text-violet-400 uppercase tracking-tighter mb-1">Düşünme Yolu:</p><p className="text-sm font-medium text-slate-200">{q.ruleDescription}</p></div>
-                                        <div className="grid grid-cols-2 gap-6"><div className="text-center"><p className="text-[10px] font-black text-red-500 uppercase mb-3">Senin Seçimin</p><div className="inline-block p-4 bg-red-500/10 rounded-2xl border border-red-500/20 shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]"><ShapeRenderer shape={q.selectedAnswer} size={60} /></div></div><div className="text-center"><p className="text-[10px] font-black text-emerald-500 uppercase mb-3">Doğru Şekil</p><div className="inline-block p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]"><ShapeRenderer shape={q.correctAnswer} size={60} /></div></div></div>
-                                    </motion.div>
-                                ))}
-                            </div>
-                            <div className="flex justify-center gap-4 mt-8"><motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setPhase('game_over')} className="px-8 py-4 bg-slate-800 rounded-2xl font-bold flex items-center gap-2 border border-2 border-black shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a] transition-colors hover:bg-slate-700"><ChevronLeft size={20} /> Geri</motion.button><motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-8 py-4 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold shadow-[8px_8px_0_#000] dark:shadow-[8px_8px_0_#0f172a]">Tekrar Dene</motion.button></div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-                <GameFeedbackBanner feedback={feedbackState} />
-            </div>
-        </div>
-    );
-};
+      <div className="min-h-[100dvh] bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 flex flex-col font-nunito tracking-tight relative overflow-hidden items-center justify-center p-4">
+        <motion.div
+          key="review"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="w-full max-w-4xl text-center relative z-10"
+        >
+          <h2 className="text-3xl font-nunito font-black text-black dark:text-white mb-6 uppercase tracking-widest inline-block px-8 py-4 bg-white dark:bg-slate-800 border-2 border-black/10 shadow-neo-sm rounded-2xl">
+            SORU ANALİZİ 🔍
+          </h2>
+          <div className="space-y-8 max-h-[70vh] overflow-y-auto px-4 py-6 custom-scrollbar pr-4">
+            {questionHistory
+              .filter((q) => !q.isCorrect)
+              .map((q, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 sm:p-8 border-2 border-black/10 shadow-neo-sm relative"
+                >
+                  <div className="absolute top-0 right-6 -translate-y-1/2">
+                    <span className="px-4 py-2 bg-cyber-blue text-white rounded-xl text-sm font-nunito font-black border-2 border-black/10 shadow-neo-sm">
+                      Seviye {q.level}
+                    </span>
+                  </div>
 
+                  <div className="text-left mb-6 pt-4">
+                    <span className="text-sm font-nunito font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                      {q.ruleName}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row items-center gap-8 mb-6">
+                    <div className="grid grid-cols-3 gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-3xl border-2 border-black/10">
+                      {q.grid.map((row, rIdx) =>
+                        row.map((cell, cIdx) => (
+                          <div
+                            key={`${rIdx}-${cIdx}`}
+                            className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center border-2 border-black/20 dark:border-white/10 rounded-2xl bg-white dark:bg-slate-800 shadow-sm"
+                          >
+                            {cell.isHidden ? (
+                              <span className="text-2xl font-nunito font-black text-cyber-pink drop-shadow-neo-sm">
+                                ?
+                              </span>
+                            ) : (
+                              <ShapeRenderer
+                                shape={cell.shape}
+                                size={48}
+                                isHidden={cell.isHidden}
+                              />
+                            )}
+                          </div>
+                        )),
+                      )}
+                    </div>
+
+                    <div className="flex-1 w-full bg-slate-50 dark:bg-slate-800 border-2 border-black/10 border-l-8 border-l-cyber-blue p-6 rounded-2xl text-left shadow-neo-sm">
+                      <p className="text-xs font-nunito font-black text-cyber-blue uppercase tracking-widest mb-2">
+                        Düşünme Yolu:
+                      </p>
+                      <p className="text-base font-nunito font-medium text-slate-700 dark:text-slate-200">
+                        {q.ruleDescription}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6 sm:gap-8">
+                    <div className="text-center bg-cyber-pink/20 dark:bg-cyber-pink/10 rounded-3xl p-6 border-4 border-cyber-pink border-dashed">
+                      <p className="text-sm font-nunito font-black text-cyber-pink uppercase tracking-widest mb-4">
+                        Senin Seçimin
+                      </p>
+                      <div className="inline-block p-4 bg-white dark:bg-slate-800 rounded-[2rem] border-2 border-black/10 shadow-neo-sm">
+                        <ShapeRenderer shape={q.selectedAnswer} size={60} />
+                      </div>
+                    </div>
+                    <div className="text-center bg-cyber-green/20 dark:bg-cyber-green/10 rounded-3xl p-6 border-4 border-cyber-green border-dashed">
+                      <p className="text-sm font-nunito font-black text-cyber-green uppercase tracking-widest mb-4">
+                        Doğru Şekil
+                      </p>
+                      <div className="inline-block p-4 bg-white dark:bg-slate-800 rounded-[2rem] border-2 border-black/10 shadow-neo-sm">
+                        <ShapeRenderer shape={q.correctAnswer} size={60} />
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+          </div>
+          <div className="flex justify-center gap-4 mt-10">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsReviewing(false)}
+              className="px-8 py-5 bg-white dark:bg-slate-800 text-black dark:text-white rounded-2xl font-nunito font-black flex items-center gap-2 border-2 border-black/10 shadow-neo-sm hover:shadow-neo-sm active:translate-y-2 active:shadow-none transition-all uppercase tracking-widest"
+            >
+              <ChevronLeft size={24} className="stroke-[3]" /> Geri
+            </motion.button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <BrainTrainerShell config={gameConfig} engine={engine} feedback={feedback}>
+      {() => (
+        <>
+          <div className="flex justify-center mb-2 w-full max-w-lg">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 p-4 sm:p-6 bg-slate-50 dark:bg-slate-700 rounded-2xl border-2 border-black/10 shadow-neo-sm w-full aspect-square">
+              {grid.map((row, rIdx) =>
+                row.map((cell, cIdx) => (
+                  <motion.div
+                    key={`${rIdx}-${cIdx}`}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: (rIdx * 3 + cIdx) * 0.05 }}
+                    className={`aspect-square flex items-center justify-center border-2 border-black/10 shadow-neo-sm rounded-2xl bg-white dark:bg-slate-800`}
+                  >
+                    {cell.isHidden ? (
+                      <span className="text-3xl sm:text-5xl font-nunito font-black text-cyber-pink">
+                        ?
+                      </span>
+                    ) : (
+                      <ShapeRenderer
+                        shape={cell.shape}
+                        size={90}
+                        isHidden={cell.isHidden}
+                      />
+                    )}
+                  </motion.div>
+                )),
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-7 w-full max-w-4xl mx-auto">
+            {options.map((option, idx) => {
+              const isSelected = selectedOption === option.id;
+              const showResult = selectedOption !== null;
+              return (
+                <motion.button
+                  key={option.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  whileTap={!showResult ? { scale: 0.95 } : {}}
+                  onClick={() => handleOptionSelect(option)}
+                  disabled={showResult}
+                  className={`aspect-square w-[88px] sm:w-[104px] md:w-[118px] lg:w-[128px] flex items-center justify-center p-2 sm:p-3 rounded-2xl border-2 transition-all duration-300 flex-shrink-0 ${isSelected ? (option.isCorrect ? "bg-cyber-green/15 border-cyber-green ring-2 ring-cyber-green shadow-none" : "bg-cyber-pink/15 border-cyber-pink ring-2 ring-cyber-pink shadow-none") : showResult && option.isCorrect ? "bg-cyber-green/15 border-cyber-green ring-2 ring-cyber-green shadow-none" : showResult ? "opacity-40 bg-white dark:bg-slate-700 border-black/10 shadow-neo-sm" : "bg-white dark:bg-slate-700 border-black/10 shadow-neo-sm hover:shadow-neo-sm hover:bg-cyber-yellow dark:hover:bg-cyber-yellow active:translate-y-2 active:shadow-none"}`}
+                >
+                  <ShapeRenderer shape={option.shape} size={72} />
+                </motion.button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </BrainTrainerShell>
+  );
+};
 export default MatrixPuzzleGame;

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { Lock, Crown, ArrowLeft } from 'lucide-react';
 import { showXPDeduct } from './XPToast';
+import { checkVipAccessForPath, deductVipXPForPageVisit } from '@/features/auth/model/vipAccessUseCases';
+import { authRepository } from '@/server/repositories/authRepository';
+import { xpRepository } from '@/server/repositories/xpRepository';
 
 interface RequireVipProps {
     children: React.ReactNode;
@@ -33,71 +35,29 @@ export default function RequireVip({ children }: RequireVipProps) {
             }
 
             try {
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('is_vip, is_admin, role, experience')
-                    .eq('id', user.id)
-                    .single();
+                const accessResult = await checkVipAccessForPath({
+                    userId: user.id,
+                    pagePath: location.pathname
+                }, {
+                    auth: authRepository,
+                    xp: xpRepository
+                });
 
-                if (error) {
-                    console.error('VIP kontrol hatası:', error);
-                    setLoading(false);
-                    return;
-                }
+                setIsVip(accessResult.hasVipAccess);
 
-                // Admin ve öğretmenler de VIP olarak kabul edilir
-                const hasVipAccess = profile?.is_vip || profile?.is_admin || profile?.role === 'teacher';
-                setIsVip(hasVipAccess);
-
-                // XP düşürme işlemi (VIP erişimi varsa ve admin/öğretmen değilse)
-                if (hasVipAccess && !profile?.is_admin && profile?.role !== 'teacher' && !xpDeductionAttemptedRef.current) {
+                if (accessResult.shouldDeductXP && !xpDeductionAttemptedRef.current) {
                     xpDeductionAttemptedRef.current = true;
 
-                    // Bu sayfa için XP gereksinimi var mı?
-                    const { data: xpRequirement } = await supabase
-                        .from('xp_requirements')
-                        .select('required_xp')
-                        .eq('page_path', location.pathname)
-                        .maybeSingle();
+                    const transactionResult = await deductVipXPForPageVisit({
+                        pagePath: location.pathname,
+                        requiredXP: accessResult.requiredXP
+                    }, {
+                        auth: authRepository,
+                        xp: xpRepository
+                    });
 
-                    const requiredAmount = xpRequirement?.required_xp || 0;
-
-                    if (requiredAmount > 0 && (profile.experience || 0) >= requiredAmount) {
-                        // Son 5 dakika içinde bu sayfa için XP düşürülmüş mü kontrol et
-                        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-                        const reasonForVisit = `Sayfa ziyareti: ${location.pathname}`;
-
-                        const { count: recentLogCount, error: recentLogError } = await supabase
-                            .from('experience_log')
-                            .select('*', { count: 'exact', head: true })
-                            .eq('user_id', user.id)
-                            .eq('change_reason', reasonForVisit)
-                            .gte('changed_at', fiveMinutesAgo);
-
-                        if (!recentLogError && (recentLogCount === null || recentLogCount === 0)) {
-                            // XP düşür
-                            const currentXP = profile.experience || 0;
-                            const newExperience = currentXP - requiredAmount;
-
-                            const { error: updateErr } = await supabase
-                                .from('profiles')
-                                .update({ experience: newExperience })
-                                .eq('id', user.id);
-
-                            if (!updateErr) {
-                                // Log kaydet
-                                await supabase.from('experience_log').insert({
-                                    user_id: user.id,
-                                    change_amount: -requiredAmount,
-                                    old_experience: currentXP,
-                                    new_experience: newExperience,
-                                    change_reason: reasonForVisit
-                                });
-
-                                // Modern toast göster
-                                showXPDeduct(requiredAmount, 'Atölye erişimi');
-                            }
-                        }
+                    if (transactionResult.success && transactionResult.change < 0) {
+                        showXPDeduct(Math.abs(transactionResult.change), 'Atölye erişimi');
                     }
                 }
 
@@ -200,4 +160,3 @@ export default function RequireVip({ children }: RequireVipProps) {
 
     return <>{children}</>;
 }
-

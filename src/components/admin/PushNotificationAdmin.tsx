@@ -16,8 +16,14 @@ import {
     NotificationsActive as NotifIcon,
     People as PeopleIcon,
 } from '@mui/icons-material';
-import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
+import { authRepository } from '@/server/repositories/authRepository';
+import { adminPushNotificationRepository } from '@/server/repositories/adminPushNotificationRepository';
+import {
+    buildPushNotificationInput,
+    buildSubscriberLabel,
+    isPushNotificationDraftValid
+} from '@/features/admin/model/pushNotificationAdminUseCases';
 
 const PushNotificationAdmin: React.FC = () => {
     const [title, setTitle] = useState('');
@@ -33,20 +39,16 @@ const PushNotificationAdmin: React.FC = () => {
 
     const fetchSubscriberCount = async () => {
         try {
-            const { count, error } = await supabase
-                .from('push_subscriptions')
-                .select('*', { count: 'exact', head: true });
-
-            if (!error && count !== null) {
-                setSubscriberCount(count);
-            }
+            const count = await adminPushNotificationRepository.countSubscribers();
+            setSubscriberCount(count);
         } catch (err) {
             console.error('Abone sayısı alınamadı:', err);
         }
     };
 
     const handleSend = async () => {
-        if (!title.trim() || !body.trim()) {
+        const draft = { title, body, url };
+        if (!isPushNotificationDraftValid(draft)) {
             toast.error('Başlık ve mesaj alanları zorunludur');
             return;
         }
@@ -55,30 +57,25 @@ const PushNotificationAdmin: React.FC = () => {
         setLastResult(null);
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
+            const accessToken = await authRepository.getAccessToken();
+            if (!accessToken) {
                 toast.error('Oturum bulunamadı');
                 return;
             }
 
-            const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push-notification`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ title: title.trim(), body: body.trim(), url: url.trim() || '/' }),
-                }
-            );
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                toast.error(result.error || 'Bildirim gönderilemedi');
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            if (!supabaseUrl) {
+                toast.error('Supabase URL bulunamadı');
                 return;
             }
+
+            const result = await adminPushNotificationRepository.sendPushNotification(
+                buildPushNotificationInput({
+                    draft,
+                    accessToken,
+                    supabaseUrl
+                })
+            );
 
             setLastResult({ sent: result.sent, failed: result.failed, total: result.total });
             toast.success(`${result.sent} aboneye bildirim gönderildi!`);
@@ -175,7 +172,7 @@ const PushNotificationAdmin: React.FC = () => {
                         size="large"
                         startIcon={sending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
                         onClick={handleSend}
-                        disabled={sending || !title.trim() || !body.trim()}
+                        disabled={sending || !isPushNotificationDraftValid({ title, body, url })}
                         fullWidth
                         sx={{
                             py: 1.5,
@@ -184,7 +181,7 @@ const PushNotificationAdmin: React.FC = () => {
                             fontSize: '1rem',
                         }}
                     >
-                        {sending ? 'Gönderiliyor...' : `Tüm Abonelere Gönder (${subscriberCount ?? 0})`}
+                        {sending ? 'Gönderiliyor...' : buildSubscriberLabel(subscriberCount)}
                     </Button>
                 </CardContent>
             </Card>

@@ -8,6 +8,10 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, FileText, Share2, Sparkles, Bookmark, Loader2, ChevronLeft } from 'lucide-react';
 import DOMPurify from 'dompurify';
 
+// ═══════════════════════════════════════════════
+// 📰 BlogPage — Kid-UI Çocuk Dostu Tasarım
+// ═══════════════════════════════════════════════
+
 interface BlogPost {
   id: string;
   title: string;
@@ -170,7 +174,6 @@ const BlogPage: React.FC = () => {
   };
 
   const getPreviewContent = (content: string) => {
-    // HTML taglerini temizle
     const plainText = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     return plainText.length > 200 ? plainText.substring(0, 200) + '...' : plainText;
   };
@@ -178,8 +181,6 @@ const BlogPage: React.FC = () => {
   const getFirstImage = (content: string) => {
     const match = content.match(/<img.*?src=["'](.*?)["']/);
     if (match) return match[1];
-
-    // Markdown fallback (mevcut yazılar için)
     const mdMatch = content.match(/!\[.*?\]\((.*?)\)/);
     return mdMatch ? mdMatch[1] : null;
   };
@@ -231,23 +232,27 @@ const BlogPage: React.FC = () => {
     }
   };
 
+  /* ─────── Loading ─────── */
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-cyber-pink animate-spin" />
       </div>
     );
   }
 
-  // Detay Sayfası
+  /* ─────── Blog Detail ─────── */
   if (selectedPost) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 pt-24 pb-12 px-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen pt-24 pb-12 px-4 md:px-6 transition-colors">
+        {/* Dot Pattern */}
+        <div className="fixed inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+
+        <div className="max-w-4xl mx-auto relative z-10">
           {/* Reading Progress Bar */}
-          <div className="fixed top-0 left-0 w-full h-1 z-[100]">
+          <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-transparent">
             <motion.div
-              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+              className="h-full bg-cyber-emerald"
               initial={{ width: 0 }}
               animate={{ width: `${readingProgress}%` }}
             />
@@ -256,93 +261,100 @@ const BlogPage: React.FC = () => {
           <motion.article
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
+            className="bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-lg"
           >
+            {/* Accent Strip */}
+            <div className="h-2.5 bg-cyber-pink" />
+
             {/* Header */}
-            <div className="p-6 md:p-8 border-b border-white/5">
+            <div className="p-6 md:p-8">
               <button
                 onClick={() => navigate('/blog')}
-                className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors mb-6 font-medium"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-700 text-black dark:text-white border-2 border-black/10 dark:border-white/10 rounded-lg font-nunito font-extrabold text-xs uppercase tracking-widest hover:-translate-y-0.5 transition-all mb-6"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Tüm Yazılar</span>
               </button>
 
-              <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight mb-4">
+              <h1 className="text-2xl md:text-4xl font-nunito font-black text-black dark:text-white leading-tight mb-5">
                 {selectedPost.title}
               </h1>
 
-              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4" />
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-700 px-3 py-1.5 rounded-lg border-2 border-black/10 dark:border-white/10 font-nunito font-extrabold text-slate-500 dark:text-slate-400">
+                  <Calendar className="w-3.5 h-3.5" />
                   <span>{formatDate(selectedPost.created_at)}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4" />
+                <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-700 px-3 py-1.5 rounded-lg border-2 border-black/10 dark:border-white/10 font-nunito font-extrabold text-slate-500 dark:text-slate-400">
+                  <Clock className="w-3.5 h-3.5" />
                   <span>{getReadingTime(selectedPost.content)} dk okuma</span>
                 </div>
                 <div className="flex-1" />
                 <div className="flex gap-2">
                   <button
                     onClick={handleShare}
-                    className="p-2 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
+                    className="p-2 bg-cyber-blue/10 text-cyber-blue border-2 border-cyber-blue/20 rounded-lg hover:-translate-y-0.5 transition-all"
                     title="Paylaş"
                   >
-                    <Share2 className="w-5 h-5" />
+                    <Share2 className="w-4 h-4" />
                   </button>
                   <button
-                    className="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
+                    className="p-2 bg-cyber-pink/10 text-cyber-pink border-2 border-cyber-pink/20 rounded-lg hover:-translate-y-0.5 transition-all"
                     title="Kaydet"
                   >
-                    <Bookmark className="w-5 h-5" />
+                    <Bookmark className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Cover Image in Detail View */}
+            {/* Cover Image */}
             {(selectedPost.image_url || getFirstImage(selectedPost.content)) && (
-              <div className="px-6 md:px-10 py-4">
+              <div className="px-6 md:px-8 pb-6">
                 <img
                   src={selectedPost.image_url || getFirstImage(selectedPost.content)!}
                   alt={selectedPost.title}
-                  className="w-full aspect-[21/9] object-cover rounded-3xl border border-white/10"
+                  className="w-full aspect-[21/9] object-cover rounded-xl border-2 border-black/10"
                 />
               </div>
             )}
 
             {/* Content */}
-            <div className="p-6 md:p-12">
-              <div className="prose prose-invert prose-lg max-w-none font-inter
-                prose-headings:font-outfit prose-headings:font-black prose-headings:tracking-tight
-                prose-headings:text-transparent prose-headings:bg-clip-text prose-headings:bg-gradient-to-r prose-headings:from-white prose-headings:to-slate-400
-                prose-p:text-slate-300 prose-p:leading-[1.8] prose-p:text-[1.1rem]
-                prose-a:text-purple-400 prose-a:no-underline hover:prose-a:underline 
-                prose-img:rounded-[2rem] prose-img:shadow-2xl prose-img:border prose-img:border-white/10
-                prose-li:text-slate-300 prose-strong:text-white prose-strong:font-bold
-                prose-blockquote:border-purple-500 prose-blockquote:bg-purple-500/5 prose-blockquote:py-4 prose-blockquote:px-8 prose-blockquote:rounded-r-3xl prose-blockquote:italic"
+            <div className="p-6 md:p-10">
+              <div className="prose prose-lg dark:prose-invert max-w-none font-nunito
+                prose-headings:font-nunito prose-headings:font-black prose-headings:text-black dark:prose-headings:text-white
+                prose-p:text-slate-700 dark:prose-p:text-slate-300 prose-p:leading-relaxed prose-p:font-bold prose-p:text-sm
+                prose-a:text-cyber-blue dark:prose-a:text-cyber-emerald prose-a:font-bold hover:prose-a:underline 
+                prose-img:rounded-xl prose-img:border-2 prose-img:border-black/10
+                prose-li:text-slate-700 dark:prose-li:text-slate-300 prose-strong:text-black dark:prose-strong:text-white prose-strong:font-extrabold
+                prose-blockquote:border-l-4 prose-blockquote:border-cyber-blue dark:prose-blockquote:border-cyber-emerald prose-blockquote:bg-gray-50 dark:prose-blockquote:bg-slate-700 prose-blockquote:py-3 prose-blockquote:px-6 prose-blockquote:rounded-r-xl prose-blockquote:font-bold prose-blockquote:italic prose-blockquote:text-sm"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedPost.content) }}
               />
             </div>
           </motion.article>
 
-          {/* Featured Related Content Placeholder */}
-          <div className="mt-12 p-8 bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-xl border border-white/10 rounded-[2rem] text-center">
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-400 fill-amber-400" />
-              Bunu Sevebilirsiniz
-            </h3>
-            <p className="text-slate-300 mb-6">BİLSEM hazırlık sürecinde çocuğunuzun zihinsel becerilerini geliştirecek eğitimlerimize göz atın.</p>
-            <Link to="/atolyeler" className="inline-flex items-center gap-2 px-8 py-3 bg-white text-slate-950 font-black rounded-full hover:scale-105 transition-transform shadow-xl">
-              Atölyeleri Keşfet
-            </Link>
+          {/* Related Content CTA */}
+          <div className="mt-10 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-md">
+            <div className="h-2 bg-cyber-gold" />
+            <div className="p-8 text-center">
+              <div className="w-12 h-12 bg-cyber-gold/10 border-2 border-cyber-gold/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-6 h-6 text-cyber-gold" />
+              </div>
+              <h3 className="text-xl font-nunito font-extrabold text-black dark:text-white mb-2 uppercase tracking-tight">
+                Bunu Sevebilirsiniz
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold text-xs mb-6 max-w-md mx-auto">BİLSEM hazırlık sürecinde çocuğunuzun zihinsel becerilerini geliştirecek eğitimlerimize göz atın.</p>
+              <Link to="/atolyeler" className="inline-flex items-center gap-2 px-6 py-3 bg-cyber-gold text-black border-3 border-black/10 font-nunito font-extrabold rounded-xl shadow-neo-sm hover:shadow-neo-md transition-all uppercase text-xs tracking-wider">
+                Atölyeleri Keşfet
+              </Link>
+            </div>
           </div>
 
-          {/* Back button at bottom */}
-          <div className="text-center mt-8">
+          {/* Back button */}
+          <div className="text-center mt-10">
             <Link
               to="/blog"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-700/50 border border-white/10 text-white font-medium rounded-xl hover:bg-slate-700 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border-3 border-black/10 text-black dark:text-white font-nunito font-extrabold rounded-xl shadow-neo-sm hover:shadow-neo-md transition-all uppercase text-xs tracking-wider"
             >
               <ArrowLeft className="w-4 h-4" />
               Tüm Blog Yazıları
@@ -353,54 +365,55 @@ const BlogPage: React.FC = () => {
     );
   }
 
-  // Liste Sayfası
+  /* ─────── Blog List ─────── */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 pt-24 pb-12 px-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen pt-24 pb-12 px-4 md:px-6 transition-colors">
+      {/* Dot Pattern */}
+      <div className="fixed inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+
+      <div className="max-w-6xl mx-auto relative z-10">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-16"
+          className="text-center mb-12"
         >
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-purple-400 font-bold hover:text-purple-300 transition-colors mb-6 uppercase text-[10px] tracking-[0.2em]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 text-black dark:text-white border-2 border-black/10 dark:border-white/10 rounded-lg font-nunito font-extrabold text-xs uppercase tracking-widest hover:-translate-y-0.5 transition-all mb-6"
           >
-            <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-            Ana Sayfa
+            <ChevronLeft size={14} /> Ana Sayfa
           </Link>
 
-          <h1 className="text-5xl lg:text-7xl font-black text-white mb-6 tracking-tight">
-            Eğitim <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Vizyonu</span>
+          <h1 className="text-4xl lg:text-5xl font-nunito font-black text-black dark:text-white mb-4 tracking-tight">
+            Eğitim <span className="text-cyber-pink">Vizyonu</span>
           </h1>
-          <p className="text-slate-400 text-lg lg:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold text-sm max-w-2xl mx-auto mb-8">
             BİLSEM sınavları, çocuk psikolojisi ve geleceğin eğitim trendlerine dair uzman görüşleri.
           </p>
 
-          <div className="max-w-md mx-auto relative group">
-            <div className="absolute inset-0 bg-purple-500/20 blur-2xl group-focus-within:bg-pink-500/30 transition-colors" />
+          <div className="max-w-xl mx-auto relative">
             <input
               type="text"
               placeholder="Makale ara..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="relative w-full px-6 py-4 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl text-white placeholder:text-slate-500 outline-none focus:border-purple-500/50 transition-all font-medium"
+              className="w-full px-5 py-3.5 bg-white dark:bg-slate-800 border-3 border-black/10 rounded-xl text-black dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-cyber-blue/30 shadow-neo-sm transition-all font-nunito font-bold text-sm"
             />
           </div>
         </motion.div>
 
-        {/* Featured Post (if not searching) */}
+        {/* Featured Post */}
         {!searchQuery && blogPosts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mb-16"
+            className="mb-12"
           >
             <Link
               to={`/blog/${blogPosts[0].slug}`}
-              className="group relative flex flex-col lg:flex-row bg-slate-900/40 backdrop-blur-2xl border border-white/10 rounded-[3rem] overflow-hidden hover:border-white/20 transition-all shadow-2xl"
+              className="group relative flex flex-col lg:flex-row bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden transition-all shadow-neo-lg hover:-translate-y-1 hover:shadow-neo-lg"
             >
-              <div className="lg:w-1/2 aspect-[16/10] overflow-hidden">
+              <div className="lg:w-1/2 aspect-[16/10] overflow-hidden border-b-4 lg:border-b-0 lg:border-r-4 border-black/10">
                 {blogPosts[0].image_url || getFirstImage(blogPosts[0].content) ? (
                   <img
                     src={blogPosts[0].image_url || getFirstImage(blogPosts[0].content)!}
@@ -408,32 +421,32 @@ const BlogPage: React.FC = () => {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center p-12">
-                    <FileText className="w-24 h-24 text-white/20" />
+                  <div className="w-full h-full bg-cyber-blue/10 flex items-center justify-center p-12">
+                    <FileText className="w-20 h-20 text-cyber-blue/40" />
                   </div>
                 )}
-                <div className="absolute top-6 left-6 px-4 py-1.5 bg-purple-600 text-white text-xs font-black rounded-full shadow-lg">
+                <div className="absolute top-4 left-4 px-3 py-1 bg-cyber-gold text-black text-[10px] font-nunito font-extrabold rounded-lg border-2 border-black/10 uppercase tracking-widest shadow-neo-sm">
                   ÖNE ÇIKAN
                 </div>
               </div>
-              <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
-                <div className="flex items-center gap-3 text-xs font-bold text-slate-400 mb-4 tracking-wider">
-                  <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-purple-400 uppercase">
+              <div className="lg:w-1/2 p-6 lg:p-10 flex flex-col justify-center">
+                <div className="flex items-center gap-2 text-[10px] font-nunito font-extrabold text-slate-500 dark:text-slate-400 mb-4 tracking-widest uppercase">
+                  <span className="px-2.5 py-1 bg-cyber-blue/10 border-2 border-cyber-blue/20 rounded-lg text-cyber-blue">
                     {getCategory(blogPosts[0])}
                   </span>
                   <span>{getReadingTime(blogPosts[0].content)} DK OKUMA</span>
                 </div>
-                <h2 className="text-3xl lg:text-4xl font-black text-white mb-6 group-hover:text-purple-400 transition-colors leading-tight">
+                <h2 className="text-2xl lg:text-3xl font-nunito font-black text-black dark:text-white mb-4 group-hover:text-cyber-pink transition-colors leading-tight">
                   {blogPosts[0].title}
                 </h2>
-                <p className="text-slate-400 text-lg mb-8 line-clamp-3 leading-relaxed">
+                <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold text-sm mb-6 line-clamp-3 leading-relaxed">
                   {getPreviewContent(blogPosts[0].content)}
                 </p>
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500" />
+                <div className="flex items-center gap-3 mt-auto">
+                  <div className="w-9 h-9 rounded-xl bg-cyber-emerald/20 border-2 border-cyber-emerald/30" />
                   <div>
-                    <p className="text-white font-bold text-sm leading-none">Admin</p>
-                    <p className="text-slate-500 text-[10px] mt-1 uppercase font-bold">{formatDate(blogPosts[0].created_at)}</p>
+                    <p className="text-black dark:text-white font-nunito font-extrabold text-xs uppercase">Admin</p>
+                    <p className="text-slate-400 text-[10px] font-nunito font-bold">{formatDate(blogPosts[0].created_at)}</p>
                   </div>
                 </div>
               </div>
@@ -442,21 +455,22 @@ const BlogPage: React.FC = () => {
         )}
 
         {/* Blog Grid Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h3 className="text-xl font-black text-white flex items-center gap-2">
-            <div className="w-2 h-8 bg-purple-500 rounded-full" />
+        <div className="flex items-center justify-between mb-6 overflow-hidden">
+          <h3 className="shrink-0 text-xl font-nunito font-extrabold text-black dark:text-white flex items-center gap-3 uppercase tracking-tight">
+            <div className="w-2.5 h-7 bg-cyber-pink rounded-full" />
             {searchQuery ? 'Arama Sonuçları' : 'Son Yazılar'}
           </h3>
-          <div className="text-slate-500 text-sm font-bold tracking-tighter uppercase">
-            {filteredPosts.length} YAZI BULUNDU
-          </div>
+          <div className="flex-1 h-px bg-black/5 dark:bg-white/5 mx-4 hidden sm:block" />
+          <span className="shrink-0 bg-black/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-nunito font-extrabold px-3 py-1 text-xs tracking-wider rounded-lg uppercase">
+            {filteredPosts.length} YAZI
+          </span>
         </div>
 
         {/* Blog Grid */}
         {filteredPosts.length > 0 ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPosts
-              .filter(post => searchQuery || post.id !== blogPosts[0]?.id) // Skip featured on main list if not searching
+              .filter(post => searchQuery || post.id !== blogPosts[0]?.id)
               .map((post, idx) => (
                 <motion.article
                   key={post.id}
@@ -466,48 +480,46 @@ const BlogPage: React.FC = () => {
                 >
                   <Link
                     to={`/blog/${post.slug}`}
-                    className="group block bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[2.5rem] hover:border-white/20 transition-all duration-500 overflow-hidden h-full flex flex-col hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/10"
+                    className="group block bg-white dark:bg-slate-800 border-3 border-black/10 rounded-2xl transition-all duration-300 overflow-hidden h-full flex flex-col hover:-translate-y-1 shadow-neo-sm hover:shadow-neo-md"
                   >
-                    <div className="aspect-[16/10] overflow-hidden relative">
+                    <div className="aspect-[16/10] overflow-hidden relative border-b-3 border-black/10">
                       {post.image_url || getFirstImage(post.content) ? (
                         <img
                           src={post.image_url || getFirstImage(post.content)!}
                           alt={post.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                       ) : (
-                        <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                          <FileText className="w-12 h-12 text-slate-700" />
+                        <div className="w-full h-full bg-cyber-emerald/10 flex items-center justify-center">
+                          <FileText className="w-12 h-12 text-cyber-emerald/30" />
                         </div>
                       )}
-                      <div className="absolute top-4 left-4">
-                        <span className="px-3 py-1 bg-slate-900/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-purple-400 rounded-full uppercase tracking-tighter">
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2.5 py-1 bg-white/90 backdrop-blur-sm border-2 border-black/10 text-[9px] font-nunito font-extrabold text-black rounded-lg uppercase tracking-widest">
                           {getCategory(post)}
                         </span>
                       </div>
                     </div>
 
-                    <div className="p-6 md:p-8 flex flex-col flex-1">
-                      <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500 mb-4 tracking-widest uppercase">
-                        <span>{formatDate(post.created_at)}</span>
-                        <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                    <div className="p-5 flex flex-col flex-1">
+                      <div className="flex items-center gap-2 text-[9px] font-nunito font-extrabold text-slate-400 mb-3 tracking-widest uppercase">
+                        <span className="bg-gray-50 dark:bg-slate-700 border border-black/5 px-2 py-0.5 rounded-md">{formatDate(post.created_at)}</span>
                         <span>{getReadingTime(post.content)} DK</span>
                       </div>
 
-                      <h2 className="text-xl font-black text-white group-hover:text-purple-400 transition-colors mb-4 line-clamp-2 leading-tight">
+                      <h2 className="text-lg font-nunito font-extrabold text-black dark:text-white group-hover:text-cyber-pink transition-colors mb-3 line-clamp-2 leading-tight">
                         {post.title}
                       </h2>
 
-                      <p className="text-slate-400 text-sm leading-relaxed line-clamp-3 flex-1 mb-6">
+                      <p className="text-slate-500 dark:text-slate-400 text-xs font-nunito font-bold leading-relaxed line-clamp-3 flex-1 mb-5">
                         {getPreviewContent(post.content)}
                       </p>
 
-                      <div className="pt-6 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-xs font-bold text-white group-hover:text-purple-400 transition-colors flex items-center gap-1.5">
-                          KEŞFET
-                          <ArrowLeft className="w-3.5 h-3.5 rotate-180 group-hover:translate-x-1 transition-transform" />
+                      <div className="pt-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
+                        <span className="px-3 py-1.5 bg-black text-white rounded-lg font-nunito font-extrabold text-[9px] uppercase tracking-wider group-hover:bg-cyber-blue transition-colors">
+                          OKUMAYA DEVAM ET
                         </span>
-                        <Bookmark className="w-4 h-4 text-slate-700 group-hover:text-amber-500/50 transition-colors" />
+                        <Bookmark className="w-4 h-4 text-slate-300 dark:text-slate-600 hover:text-cyber-gold transition-colors" />
                       </div>
                     </div>
                   </Link>
@@ -519,48 +531,51 @@ const BlogPage: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-[2.5rem] p-8 flex flex-col justify-center text-center shadow-xl shadow-purple-500/20"
+                className="bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden flex flex-col justify-center text-center shadow-neo-md"
               >
-                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Sparkles className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-black text-white mb-2 leading-none">Bültene Katılın</h3>
-                <p className="text-white/80 text-sm mb-6 font-medium">En yeni BİLSEM ipuçlarını ve eğitim içeriklerini e-postanıza gönderelim.</p>
+                <div className="h-2 bg-cyber-pink" />
+                <div className="p-6">
+                  <div className="w-12 h-12 bg-cyber-pink/10 border-2 border-cyber-pink/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="w-6 h-6 text-cyber-pink" />
+                  </div>
+                  <h3 className="text-lg font-nunito font-extrabold text-black dark:text-white mb-2 uppercase tracking-tight">Bültene Katılın</h3>
+                  <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold text-xs mb-5">En yeni BİLSEM ipuçlarını e-postanıza gönderelim.</p>
 
-                {subscribed ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="py-4 bg-white/10 rounded-2xl border border-white/20 text-white font-bold"
-                  >
-                    Aramıza Hoş Geldiniz! ✨
-                  </motion.div>
-                ) : (
-                  <form
-                    onSubmit={handleNewsletter}
-                    className="space-y-3"
-                  >
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="E-posta adresiniz"
-                      className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder:text-white/50 outline-none focus:bg-white/20 transition-all font-medium"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-4 bg-white text-slate-900 font-bold rounded-2xl hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  {subscribed ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="py-3 bg-cyber-emerald/10 border-2 border-cyber-emerald/30 rounded-xl text-cyber-emerald font-nunito font-extrabold text-sm"
                     >
-                      {isSubmitting ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        'Takibe Al'
-                      )}
-                    </button>
-                  </form>
-                )}
+                      Aramıza Hoş Geldiniz! ✨
+                    </motion.div>
+                  ) : (
+                    <form
+                      onSubmit={handleNewsletter}
+                      className="space-y-3"
+                    >
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="E-posta adresiniz"
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border-2 border-black/10 dark:border-white/10 rounded-xl text-black dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-cyber-pink/30 transition-all font-nunito font-bold text-sm"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-3 bg-cyber-pink text-black font-nunito font-extrabold uppercase text-xs tracking-wider border-3 border-black/10 rounded-xl shadow-neo-sm hover:shadow-neo-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          'TAKİBE AL'
+                        )}
+                      </button>
+                    </form>
+                  )}
+                </div>
               </motion.div>
             )}
           </div>
@@ -568,22 +583,22 @@ const BlogPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-16"
+            className="text-center py-16 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl shadow-neo-md"
           >
-            <div className="w-20 h-20 bg-slate-800/50 border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-10 h-10 text-slate-500" />
+            <div className="w-16 h-16 bg-gray-50 dark:bg-slate-700 border-2 border-black/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <FileText className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">
+            <h3 className="text-xl font-nunito font-extrabold text-black dark:text-white mb-2 uppercase tracking-tight">
               Henüz blog yazısı bulunmuyor
             </h3>
-            <p className="text-slate-400 mb-6">
+            <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold text-xs mb-6">
               Yakında yeni içerikler yayınlanacak, takipte kalın!
             </p>
             <Link
               to="/"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-cyber-blue text-white border-3 border-black/10 font-nunito font-extrabold rounded-xl shadow-neo-sm hover:shadow-neo-md transition-all uppercase text-xs tracking-wider"
             >
-              <Sparkles className="w-5 h-5" />
+              <Sparkles className="w-4 h-4" />
               Ana Sayfaya Dön
             </Link>
           </motion.div>

@@ -4,6 +4,10 @@ import { CoinToss } from './CoinToss';
 import { Gamepad2, Coins, Play } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
+// ═══════════════════════════════════════════════
+// 🕹️ ArcadeMachine — Kid-UI Çocuk Dostu Tasarım
+// ═══════════════════════════════════════════════
+
 interface ArcadeMachineProps {
     gameId: string;
     title: string;
@@ -40,7 +44,6 @@ export const ArcadeMachine: React.FC<ArcadeMachineProps> = ({
             return;
         }
 
-        // Bakiye var, animasyonu başlat
         setIsAnimating(true);
     };
 
@@ -54,63 +57,59 @@ export const ArcadeMachine: React.FC<ArcadeMachineProps> = ({
 
     return (
         <div
-            className="relative group overflow-hidden rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 transition-all hover:scale-[1.02] hover:border-white/30"
-            style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
+            className="group relative overflow-hidden bg-white dark:bg-slate-800 border-3 border-black/10 rounded-2xl transition-all hover:-translate-y-1
+            shadow-neo-sm hover:shadow-neo-md"
         >
             {isAnimating && <CoinToss onComplete={handleAnimationComplete} />}
 
             <div className="relative h-full p-5 flex flex-col items-center text-center">
 
-                {/* 3D Gummy Icon Container */}
+                {/* Icon */}
                 <div
-                    className={`w-16 h-16 bg-gradient-to-br ${color} rounded-[40%] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
-                    style={{ boxShadow: 'inset 0 -6px 12px rgba(0,0,0,0.2), inset 0 6px 12px rgba(255,255,255,0.3), 0 6px 16px rgba(0,0,0,0.3)' }}
+                    className={`w-16 h-16 border-2 border-black/10 bg-gradient-to-br ${color} rounded-2xl flex items-center justify-center mb-4 
+                    group-hover:scale-105 group-hover:-rotate-6 transition-transform`}
                 >
                     {icon ? (
-                        <div className="scale-[0.6]">{icon}</div>
+                        <div className="scale-[0.8] text-black dark:text-white mix-blend-plus-darker">{icon}</div>
                     ) : (
-                        <Gamepad2 size={28} className="text-white" />
+                        <Gamepad2 size={30} className="text-black dark:text-white" strokeWidth={2} />
                     )}
                 </div>
 
                 {/* Info */}
-                <h3 className="text-lg font-bold text-white mb-1 line-clamp-1">{title}</h3>
-                <p className="text-slate-400 text-xs mb-3 line-clamp-2 min-h-[32px]">{description}</p>
+                <h3 className="text-base font-nunito font-extrabold text-black dark:text-white mb-1.5 uppercase tracking-tight line-clamp-2 leading-tight">{title}</h3>
+                <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold text-xs mb-3 line-clamp-2 min-h-[32px] leading-relaxed">{description}</p>
 
                 {/* TUZÖ Badge */}
                 {tuzo && (
-                    <div className="mb-4 inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
-                        <span className="text-[8px] font-black text-indigo-300 uppercase tracking-wider">TUZÖ</span>
-                        <span className="text-[8px] font-bold text-indigo-400">{tuzo}</span>
+                    <div className="mb-4 inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                        <span className="text-[9px] font-nunito font-extrabold text-black dark:text-white uppercase tracking-widest">TUZÖ</span>
+                        <span className="text-[9px] font-nunito font-bold text-cyber-blue dark:text-cyber-gold">{tuzo}</span>
                     </div>
                 )}
 
-                {/* Coin Slot / Button - 3D Gummy Style */}
+                {/* Coin Slot / Button */}
                 {!isPaid ? (
                     <button
                         onClick={handleInsertCoin}
                         disabled={isAnimating || transactionLoading}
-                        className="mt-auto w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-2xl px-4 py-3 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ boxShadow: '0 6px 20px rgba(245, 158, 11, 0.4)' }}
+                        className="mt-auto w-full bg-cyber-pink text-black font-nunito font-extrabold border-3 border-black/10 rounded-xl px-4 py-3 flex items-center justify-center gap-3 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase shadow-neo-sm active:shadow-none"
                     >
-                        <div
-                            className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center"
-                        >
-                            <Coins size={16} />
+                        <div className="w-7 h-7 border-2 border-black/20 bg-white/30 rounded-full flex items-center justify-center">
+                            <Coins size={14} className="text-black" />
                         </div>
                         <div className="text-left">
-                            <div className="text-[9px] text-amber-100 uppercase tracking-wider font-bold">Jeton At</div>
-                            <div className="text-sm font-black leading-none">{cost} XP</div>
+                            <div className="text-[9px] uppercase tracking-widest font-extrabold leading-none mb-0.5 opacity-70">Jeton At</div>
+                            <div className="text-sm font-extrabold leading-none">{cost} XP</div>
                         </div>
                     </button>
                 ) : (
                     <button
                         onClick={onPlay}
-                        className="mt-auto w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black rounded-2xl px-4 py-4 flex items-center justify-center gap-2 active:scale-95 transition-all animate-pulse"
-                        style={{ boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)' }}
+                        className="mt-auto w-full bg-cyber-gold text-black font-nunito font-extrabold border-3 border-black/10 rounded-xl px-4 py-3.5 flex items-center justify-center gap-2 active:translate-y-0.5 transition-all animate-pulse uppercase shadow-neo-sm active:shadow-none"
                     >
-                        <Play size={20} fill="white" />
-                        <span className="text-lg tracking-tight">BAŞLAT</span>
+                        <Play size={20} fill="currentColor" strokeWidth={3} />
+                        <span className="text-base tracking-wider">BAŞLAT</span>
                     </button>
                 )}
             </div>

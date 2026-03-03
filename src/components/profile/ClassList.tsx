@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClassInfo } from '@/types/profile';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 
 interface ClassListProps {
   classes?: ClassInfo[];
@@ -10,35 +9,8 @@ interface ClassListProps {
 
 const ClassList: React.FC<ClassListProps> = ({ classes }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [userRole, setUserRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    const getUserRole = async () => {
-      if (user?.id) {
-        try {
-          // Kullanıcının rolünü profiles tablosundan çek
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-          if (error) {
-            console.error('Kullanıcı rolü alınamadı:', error);
-            return;
-          }
-
-          setUserRole(data?.role || null);
-          console.log('Kullanıcı rolü:', data?.role); // Debug için log
-        } catch (error) {
-          console.error('Bir hata oluştu:', error);
-        }
-      }
-    };
-
-    getUserRole();
-  }, [user]);
+  const { profile } = useAuth();
+  const userRole = typeof profile?.role === 'string' ? profile.role : null;
 
   const navigateToTeacherPanel = () => {
     navigate('/teacher');

@@ -1,602 +1,640 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Rocket, Star, Users, Palette, Music, Lightbulb, Brain, Sparkles, Target, TrendingUp, Zap, MessageSquare } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import {
+  Rocket, Star, Users, Palette, Music, Lightbulb, Brain,
+  Sparkles, Target, TrendingUp, Zap, MessageSquare,
+  Gamepad2, Award, BookOpen, ArrowRight, Play
+} from 'lucide-react';
+import { KidButton, KidCard, KidBadge } from '../components/kid-ui';
+import { loadStudentCountLabel } from '@/features/content/model/homeUseCases';
+
+// ═══════════════════════════════════════════════
+// Floating decoration component
+// ═══════════════════════════════════════════════
+const FloatingShape: React.FC<{
+  className?: string;
+  delay?: number;
+  duration?: number;
+}> = ({ className = '', delay = 0, duration = 4 }) => (
+  <motion.div
+    animate={{
+      y: [0, -15, 0],
+      rotate: [0, 5, -5, 0],
+    }}
+    transition={{ duration, repeat: Infinity, ease: 'easeInOut', delay }}
+    className={`absolute pointer-events-none ${className}`}
+  />
+);
+
+// ═══════════════════════════════════════════════
+// Section wrapper
+// ═══════════════════════════════════════════════
+const Section: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}> = ({ children, className = '', id }) => (
+  <section id={id} className={`py-20 lg:py-28 relative overflow-hidden ${className}`}>
+    <div className="container mx-auto px-5 lg:px-8 relative z-10">
+      {children}
+    </div>
+  </section>
+);
+
+const SectionTitle: React.FC<{
+  children: React.ReactNode;
+  subtitle?: string;
+  badge?: string;
+  badgeColor?: string;
+}> = ({ children, subtitle, badge, badgeColor }) => (
+  <div className="text-center mb-14 lg:mb-20 space-y-4">
+    {badge && (
+      <KidBadge variant="custom" className={`${badgeColor || 'bg-cyber-yellow'} mb-2`}>
+        {badge}
+      </KidBadge>
+    )}
+    <h2 className="text-4xl lg:text-6xl font-nunito font-extrabold text-black dark:text-white leading-tight">
+      {children}
+    </h2>
+    {subtitle && (
+      <p className="text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto font-nunito font-semibold">
+        {subtitle}
+      </p>
+    )}
+    <div className="flex items-center justify-center gap-2 pt-2">
+      <div className="w-3 h-3 bg-cyber-pink rounded-full border-2 border-black/10" />
+      <div className="w-12 h-1.5 bg-cyber-emerald rounded-full border border-black/10" />
+      <div className="w-3 h-3 bg-cyber-yellow rounded-full border-2 border-black/10" />
+    </div>
+  </div>
+);
+
+// ═══════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════
 
 const HomePage: React.FC = () => {
   const [studentCount, setStudentCount] = useState('1000+');
-  const [activityCount] = useState('50+');
-  const [rating] = useState('4.9');
 
   useEffect(() => {
-    supabase.from('profiles').select('id', { count: 'exact', head: true })
-      .then(({ count }) => {
-        if (count) setStudentCount(`${count}+`);
-      });
-  }, []);
+    let isActive = true;
 
-  const stats = [
-    { id: 'students', label: "Aktif Öğrenci", value: studentCount, color: "text-purple-600", icon: <Users size={20} /> },
-    { id: 'activities', label: "Eğlenceli Aktivite", value: activityCount, color: "text-purple-600", icon: <Star size={20} /> },
-    { id: 'rating', label: "Kullanıcı Puanı", value: rating, color: "text-purple-600", icon: <Rocket size={20} /> },
-  ];
+    loadStudentCountLabel().then((countLabel) => {
+      if (isActive) {
+        setStudentCount(countLabel);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const workshops = [
     {
-      title: "Bilsem Genel Yetenek",
-      description: "Mantık, analiz ve problem çözme becerilerini en üst seviyeye taşı.",
-      image: "images/gy.webp",
-      link: "/atolyeler/genel-yetenek",
-      color: "bg-[#7E30E1]",
-      icon: <Lightbulb className="text-white" />,
+      title: 'Genel Yetenek',
+      description: 'Mantık, analiz ve problem çözme becerilerini geliştir!',
+      image: 'images/gy.webp',
+      link: '/atolyeler/genel-yetenek',
+      color: 'purple',
+      icon: Lightbulb,
+      bg: 'bg-cyber-purple',
     },
     {
-      title: "Bilsem Resim",
-      description: "Sanatsal yaratıcılığını keşfet ve görsel zekânı geliştirerek fark yarat.",
-      image: "images/resim.webp",
-      link: "/atolyeler/resim",
-      color: "bg-pink-500",
-      icon: <Palette className="text-white" />,
+      title: 'Resim',
+      description: 'Sanatsal yaratıcılığını keşfet, görsel zekânı geliştir!',
+      image: 'images/resim.webp',
+      link: '/atolyeler/resim',
+      color: 'pink',
+      icon: Palette,
+      bg: 'bg-cyber-pink',
     },
     {
-      title: "Bilsem Müzik",
-      description: "Müzikal yeteneklerini keşfet, ritim ve kulak becerilerini geliştir.",
-      image: "images/music.webp",
-      link: "/atolyeler/muzik",
-      color: "bg-blue-500",
-      icon: <Music className="text-white" />,
-    }
+      title: 'Müzik',
+      description: 'Ritim ve kulak becerilerini müzikle geliştir!',
+      image: 'images/music.webp',
+      link: '/atolyeler/muzik',
+      color: 'blue',
+      icon: Music,
+      bg: 'bg-cyber-blue',
+    },
   ];
 
+  const containerAnim = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15 },
+    },
+  };
+
+  const itemAnim = {
+    hidden: { opacity: 0, y: 24 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+  };
+
   return (
-    <div className="font-open-sans text-gray-800 dark:text-gray-100 min-h-screen bg-[#F8F6FF] dark:bg-gray-900 overflow-x-hidden">
-      {/* HERO SECTION */}
-      <section className="relative min-h-[90vh] flex items-center pt-20 overflow-hidden">
-        {/* Animated Background Blobs/Circles - Matching Design */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-pink-400 rounded-full mix-blend-multiply opacity-70 animate-float-blob filter blur-xl" />
-        <div className="absolute top-40 right-20 w-48 h-48 bg-purple-400 rounded-full mix-blend-multiply opacity-70 animate-float-blob filter blur-xl delay-700" />
-        <div className="absolute bottom-20 left-1/4 w-64 h-64 bg-blue-300 rounded-full mix-blend-multiply opacity-70 animate-float-blob filter blur-xl delay-1000" />
-        <div className="absolute top-1/2 right-1/4 w-40 h-40 bg-yellow-200 rounded-full mix-blend-multiply opacity-70 animate-float-blob filter blur-xl delay-2000" />
-        <div className="absolute top-20 left-1/2 w-24 h-24 bg-green-300 rounded-full mix-blend-multiply opacity-70 animate-float-blob filter blur-xl delay-1500" />
+    <div className="font-nunito min-h-screen overflow-x-hidden bg-cyber-paper dark:bg-slate-900">
 
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="flex flex-col items-center justify-center text-center space-y-12">
+      {/* ═══════════════════════════════════════════ */}
+      {/* 🚀 HERO SECTION                            */}
+      {/* ═══════════════════════════════════════════ */}
+      <section className="relative min-h-[92vh] flex items-center pt-20 pb-12 overflow-hidden">
+        {/* Background pattern */}
+        <div className="absolute inset-0 bg-[radial-gradient(#dcf12620_2px,transparent_2px)] [background-size:32px_32px] dark:bg-[radial-gradient(#dcf12610_2px,transparent_2px)]" />
+
+        {/* Floating decorations */}
+        <FloatingShape delay={0} className="top-24 left-[8%] w-12 h-12 bg-cyber-yellow border-2 border-black/10 rounded-2xl rotate-12" />
+        <FloatingShape delay={0.5} className="top-40 right-[12%] w-8 h-8 bg-cyber-pink border-3 border-black/10 rounded-full" />
+        <FloatingShape delay={1} className="bottom-32 left-[15%] w-10 h-10 bg-cyber-emerald border-2 border-black/10 rounded-xl rotate-45" />
+        <FloatingShape delay={1.5} className="top-[60%] right-[8%] w-6 h-6 bg-cyber-purple border-3 border-black/10 rounded-lg" />
+
+        <div className="container mx-auto px-5 lg:px-8 relative z-10">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+            {/* Left content */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="max-w-4xl"
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7 }}
+              className="text-center lg:text-left max-w-2xl"
             >
-              <div className="flex items-center justify-center gap-6">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="inline-flex items-center gap-2 mb-6"
+              >
+                <KidBadge variant="tuzo">
+                  <Sparkles size={14} className="mr-1" />
+                  TÜZÖ Uyumlu
+                </KidBadge>
+              </motion.div>
 
+              <div className="flex items-end gap-3 lg:gap-5 justify-center lg:justify-start">
+                <motion.img
+                  src="images/beyni.webp"
+                  alt="Beyni Maskot"
+                  width={80}
+                  height={100}
+                  loading="eager"
+                  initial={{ opacity: 0, y: 20, rotate: -10 }}
+                  animate={{ opacity: 1, y: 0, rotate: 0 }}
+                  transition={{ delay: 0.5, type: 'spring', stiffness: 120 }}
+                  className="w-16 lg:w-20 flex-shrink-0 drop-shadow-[0_8px_20px_rgba(0,0,0,0.2)]"
+                />
+                <h1 className="text-5xl lg:text-7xl font-nunito font-extrabold text-black dark:text-white leading-[1.05]">
+                  Eğlenerek{' '}
+                  <span className="relative inline-block">
+                    <span className="relative z-10">Zekanı</span>
+                    <span className="absolute bottom-1 left-0 right-0 h-4 bg-cyber-yellow/60 -rotate-1 rounded" />
+                  </span>{' '}
+                  <span className="text-cyber-blue dark:text-cyber-emerald">Geliştir!</span>{' '}
+                  <motion.span
+                    animate={{ rotate: [0, 14, -8, 14, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                    className="inline-block origin-bottom-right"
+                  >
+                    🚀
+                  </motion.span>
+                </h1>
+              </div>
+
+              <p className="mt-6 text-xl text-slate-600 dark:text-slate-300 font-nunito font-semibold max-w-xl mx-auto lg:mx-0">
+                57+ zeka oyunu ve sınav simülasyonu ile BİLSEM hazırlığında en eğlenceli yol!
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 mt-10 justify-center lg:justify-start">
+                <Link to="/beyin-antrenoru-merkezi">
+                  <KidButton variant="primary" size="xl" icon={Play}>
+                    Hemen Başla
+                  </KidButton>
+                </Link>
+                <Link to="/login">
+                  <KidButton variant="ghost" size="lg" icon={ArrowRight}>
+                    Giriş Yap
+                  </KidButton>
+                </Link>
+              </div>
+
+              {/* AI Assistant */}
+              <motion.a
+                href="https://notebooklm.google.com/notebook/bb1c2a85-28f9-4e35-964b-d8bf2720554e"
+                target="_blank"
+                rel="noopener noreferrer"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="mt-8 inline-flex items-center gap-2 px-5 py-2.5 bg-cyber-obsidian text-cyber-yellow border-3 border-black/10 rounded-2xl font-bold text-sm shadow-neo-md hover:-translate-y-1 hover:shadow-neo-lg transition-all cursor-pointer"
+              >
+                <MessageSquare size={18} className="animate-pulse" />
+                AI Asistan ile Konuş
+                <span className="px-2 py-0.5 bg-cyber-pink text-white text-[10px] font-extrabold rounded-lg rotate-3">YENİ</span>
+              </motion.a>
+            </motion.div>
+
+            {/* Right mascot area */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ delay: 0.3, duration: 0.7, type: 'spring', stiffness: 100 }}
+              className="relative"
+            >
+              <div className="relative w-64 h-64 lg:w-80 lg:h-80">
                 <img
                   src="images/logo2.webp"
                   alt="Beynini Kullan!"
-                  width={600}
-                  height={200}
-                  fetchPriority="high"
-                  className="w-full max-w-[600px] drop-shadow-[0_20px_50px_rgba(126,48,225,0.3)]"
+                  width={400}
+                  height={400}
+                  loading="eager"
+                  className="w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(126,48,225,0.3)]"
                 />
+
+                {/* Floating badges around logo */}
+                <motion.div
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 2.5, repeat: Infinity }}
+                  className="absolute -top-4 -right-4"
+                >
+                  <KidBadge variant="xp">⭐ {studentCount} Öğrenci</KidBadge>
+                </motion.div>
+                <motion.div
+                  animate={{ y: [0, 8, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+                  className="absolute -bottom-2 -left-4"
+                >
+                  <KidBadge variant="level">🎮 57+ Oyun</KidBadge>
+                </motion.div>
               </div>
-              <motion.h1
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5, duration: 1 }}
-                className="text-2xl lg:text-3xl font-poppins font-bold mt-8 text-purple-brand"
-              >
-                Eğlenceli mantık sorularıyla zekanı geliştir! 🚀
-              </motion.h1>
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8 }}
-              className="flex flex-col sm:flex-row gap-6"
-            >
-              <Link
-                to="/beyin-antrenoru-merkezi"
-                className="px-12 py-5 bg-purple-brand text-white font-poppins font-black text-xl rounded-full shadow-[0_15px_30px_-5px_rgba(126,48,225,0.4)] hover:shadow-[0_20px_40px_-5px_rgba(126,48,225,0.6)] transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3"
-              >
-                Hemen Başla
-                <Rocket size={24} />
-              </Link>
-              <Link
-                to="/login"
-                className="px-12 py-5 bg-transparent border-4 border-purple-brand text-purple-brand font-poppins font-black text-xl rounded-full hover:bg-purple-brand hover:text-white transform hover:-translate-y-1 transition-all duration-300 text-center"
-              >
-                Giriş Yap
-              </Link>
-            </motion.div>
-
-            <div className="flex items-center gap-12 pt-10">
-              {stats.map((stat, i) => (
-                <div key={i} className="text-center">
-                  <div className="text-3xl font-black font-poppins text-gray-900 dark:text-white">{stat.value}</div>
-                  <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* AI Assistant Button */}
-            <motion.a
-              href="https://notebooklm.google.com/notebook/bb1c2a85-28f9-4e35-964b-d8bf2720554e"
-              target="_blank"
-              rel="noopener noreferrer"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2 }}
-              whileHover={{ scale: 1.05 }}
-              className="mt-8 px-8 py-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white font-poppins font-bold text-lg rounded-full shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform transition-all duration-300 inline-flex items-center gap-3"
-            >
-              <MessageSquare size={24} className="animate-pulse" />
-              🤖 AI Asistan ile Konuş
-              <span className="px-2 py-1 bg-white/20 rounded-full text-xs">YENİ</span>
-            </motion.a>
           </div>
+
+          {/* Stats bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mt-16 grid grid-cols-3 gap-4 max-w-2xl mx-auto"
+          >
+            {[
+              { value: studentCount, label: 'Aktif Öğrenci', icon: Users, color: 'emerald' },
+              { value: '57+', label: 'Zeka Oyunu', icon: Gamepad2, color: 'gold' },
+              { value: '4.9', label: 'Puan', icon: Star, color: 'pink' },
+            ].map((stat) => (
+              <KidCard key={stat.label} className="!p-4 text-center" animate={false}>
+                <stat.icon size={24} className="mx-auto mb-2 text-cyber-blue dark:text-cyber-emerald" strokeWidth={2.5} />
+                <div className="text-2xl lg:text-3xl font-nunito font-extrabold text-black dark:text-white">{stat.value}</div>
+                <div className="text-xs font-extrabold text-slate-500 uppercase tracking-wider mt-1">{stat.label}</div>
+              </KidCard>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* SINAV SİMÜLASYONU SECTION - Eye-catching Banner */}
-      <section className="py-16 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-1/4 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
-          {/* Floating icons */}
+      {/* ═══════════════════════════════════════════ */}
+      {/* 🧠 SINAV SİMÜLASYONU                       */}
+      {/* ═══════════════════════════════════════════ */}
+      <Section className="bg-cyber-obsidian dark:bg-[#0a0b0d] border-y-4 border-black/10">
+        {/* Animated bg */}
+        <div className="absolute inset-0 overflow-hidden opacity-15">
           <motion.div
             animate={{ y: [0, -20, 0], rotate: [0, 10, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
             className="absolute top-10 left-[10%] text-white/20"
           >
             <Brain size={60} />
           </motion.div>
           <motion.div
             animate={{ y: [0, 15, 0], rotate: [0, -10, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
             className="absolute bottom-10 right-[15%] text-white/20"
           >
             <Target size={50} />
           </motion.div>
           <motion.div
             animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-            className="absolute top-1/2 right-[5%] text-yellow-300/30"
+            transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+            className="absolute top-1/2 right-[5%] text-yellow-300/20"
           >
             <Sparkles size={40} />
           </motion.div>
         </div>
 
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-10">
-            {/* Left content */}
-            <div className="text-center lg:text-left space-y-6 lg:max-w-xl">
-              <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-md text-white text-sm font-bold rounded-full mb-4">
-                  <Zap className="w-4 h-4 text-yellow-300" />
-                  YENİ ÖZELLİK
-                </span>
-                <h2 className="text-4xl lg:text-5xl font-poppins font-black text-white leading-tight">
-                  BİLSEM Sınav
-                  <br />
-                  <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-                    Simülasyonu
-                  </span>
-                </h2>
-              </motion.div>
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+          {/* Left */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="text-center lg:text-left space-y-6 lg:max-w-xl"
+          >
+            <KidBadge variant="difficulty" className="!bg-cyber-pink !text-white">
+              <Zap size={14} className="mr-1" /> YENİ ÖZELLİK
+            </KidBadge>
 
-              <motion.p
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-                className="text-lg text-white/90 font-medium"
-              >
-                25 farklı modülle gerçek sınav deneyimi yaşa!
-                Performansını ölç ve <strong className="text-yellow-300">BZP (Bilsemc2 Zeka Puanı)</strong> ile kendini değerlendir.
-              </motion.p>
+            <h2 className="text-4xl lg:text-6xl font-nunito font-extrabold text-white leading-tight">
+              BİLSEM Sınav{' '}
+              <span className="text-cyber-yellow drop-shadow-lg">Simülasyonu</span>
+            </h2>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
-              >
-                <Link
-                  to="/atolyeler/sinav-simulasyonu"
-                  className="px-10 py-4 bg-white text-purple-600 font-poppins font-black text-lg rounded-full shadow-lg shadow-black/20 hover:shadow-xl hover:scale-105 transform transition-all duration-300 inline-flex items-center justify-center gap-3"
+            <p className="text-lg text-slate-300 font-nunito font-semibold">
+              25 farklı modülle gerçek sınav deneyimi yaşa!{' '}
+              <strong className="text-cyber-yellow">BZP (Bilsemc2 Zeka Puanı)</strong> ile kendini değerlendir.
+            </p>
+
+            <Link to="/atolyeler/sinav-simulasyonu">
+              <KidButton variant="success" size="lg" icon={Brain}>
+                Simülasyona Başla
+              </KidButton>
+            </Link>
+          </motion.div>
+
+          {/* Right — BZP Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
+            whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
+            viewport={{ once: true }}
+            className="w-full max-w-sm"
+          >
+            <KidCard accentColor="gold" className="!bg-[#1a1c23] !border-cyber-yellow rotate-2 hover:rotate-0 transition-transform duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-cyber-yellow border-2 border-black/10 rounded-2xl flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-black" />
+                </div>
+                <div>
+                  <p className="text-slate-400 text-xs font-extrabold uppercase tracking-widest">Senin Potansiyelin</p>
+                  <p className="text-white font-nunito font-extrabold text-xl">BZP Skoru</p>
+                </div>
+              </div>
+
+              <div className="text-center py-6 border-y-4 border-dashed border-slate-700 my-4">
+                <motion.span
+                  animate={{ opacity: [1, 0.5, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="block text-7xl font-nunito font-extrabold text-white drop-shadow-lg"
                 >
-                  <Brain className="w-6 h-6" />
-                  Simülasyona Başla
+                  ???
+                </motion.span>
+                <p className="text-cyber-yellow text-sm font-bold mt-4 uppercase tracking-widest">
+                  Simülasyonu tamamla ve öğren!
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mt-6 text-center">
+                {[
+                  { value: '25', label: 'Modül', color: 'text-white' },
+                  { value: '6', label: 'Kategori', color: 'text-cyber-yellow' },
+                  { value: '45m', label: 'Süre', color: 'text-cyber-pink' },
+                ].map((s) => (
+                  <div key={s.label} className="bg-cyber-obsidian p-2 border-2 border-slate-700 rounded-xl">
+                    <p className={`text-2xl font-nunito font-extrabold ${s.color}`}>{s.value}</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </KidCard>
+          </motion.div>
+        </div>
+      </Section>
+
+      {/* ═══════════════════════════════════════════ */}
+      {/* 🎨 ATÖLYELER                                */}
+      {/* ═══════════════════════════════════════════ */}
+      <Section className="bg-cyber-paper dark:bg-slate-900 border-b-4 border-black/10 dark:border-slate-700">
+        <SectionTitle subtitle="TÜZÖ standartlarına uygun olarak hazırlanmış yetenek geliştirme atölyeleri">
+          Eğlenceli <span className="text-cyber-blue">Atölyeler</span>
+        </SectionTitle>
+
+        <motion.div
+          variants={containerAnim}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
+        >
+          {workshops.map((w, i) => (
+            <motion.div key={w.link} variants={itemAnim}>
+              <KidCard
+                className={`h-full group ${i === 1 ? 'md:-rotate-1' : i === 2 ? 'md:rotate-1' : ''} hover:!rotate-0 transition-transform`}
+                onClick={() => { window.location.href = w.link; }}
+              >
+                {/* Number badge */}
+                <div className="absolute top-4 right-4 w-10 h-10 bg-white border-2 border-black/10 rounded-xl flex items-center justify-center font-nunito font-extrabold text-lg shadow-neo-sm z-10">
+                  0{i + 1}
+                </div>
+
+                {/* Image area */}
+                <div className={`${w.bg} -mx-6 -mt-6 mb-5 p-8 flex items-center justify-center rounded-t-xl border-b-4 border-black/10 relative overflow-hidden`}>
+                  <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.15)_2px,transparent_2px)] [background-size:16px_16px]" />
+                  <img
+                    src={w.image}
+                    alt={w.title}
+                    width={250}
+                    height={180}
+                    loading="lazy"
+                    className="w-full h-48 object-contain relative z-10 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 drop-shadow-[0_10px_15px_rgba(0,0,0,0.3)]"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 mb-2">
+                  <w.icon size={22} className="text-cyber-blue dark:text-cyber-emerald" strokeWidth={2.5} />
+                  <h3 className="text-xl font-nunito font-extrabold text-black dark:text-white uppercase">{w.title}</h3>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 font-semibold text-sm mb-5">{w.description}</p>
+
+                <Link to={w.link} className="block">
+                  <KidButton variant="secondary" size="md" fullWidth iconRight={ArrowRight}>
+                    Keşfet
+                  </KidButton>
                 </Link>
-              </motion.div>
-            </div>
-
-            {/* Right - BZP Preview Card */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
-              whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="relative"
-            >
-              <div className="bg-white/10 backdrop-blur-xl rounded-[2rem] p-8 border border-white/20 shadow-2xl min-w-[300px]">
-                {/* Header */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-white/60 text-xs font-medium">Senin Potansiyelin</p>
-                    <p className="text-white font-bold text-lg">BZP Skoru</p>
-                  </div>
-                </div>
-
-                {/* Score display */}
-                <div className="text-center py-6 border-y border-white/10">
-                  <motion.span
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="text-6xl font-black bg-gradient-to-r from-yellow-300 via-orange-300 to-pink-300 bg-clip-text text-transparent"
-                  >
-                    ???
-                  </motion.span>
-                  <p className="text-white/70 text-sm mt-2">Simülasyonu tamamla ve öğren!</p>
-                </div>
-
-                {/* Stats preview */}
-                <div className="grid grid-cols-3 gap-4 mt-6 text-center">
-                  <div>
-                    <p className="text-2xl font-bold text-white">25</p>
-                    <p className="text-xs text-white/60">Modül</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-emerald-400">6</p>
-                    <p className="text-xs text-white/60">Kategori</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-cyan-400">~45dk</p>
-                    <p className="text-xs text-white/60">Süre</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Decorative glow */}
-              <div className="absolute -inset-4 bg-gradient-to-r from-yellow-400/20 to-pink-500/20 rounded-[3rem] blur-2xl -z-10" />
+              </KidCard>
             </motion.div>
-          </div>
-        </div>
-      </section>
+          ))}
+        </motion.div>
+      </Section>
 
-      {/* ÖZELleştirilmiş DERS SECTİON - DersimVar.com */}
-      <section className="py-24 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-10 right-10 w-32 h-32 bg-emerald-300 rounded-full opacity-30 blur-2xl" />
-        <div className="absolute bottom-10 left-10 w-48 h-48 bg-teal-300 rounded-full opacity-30 blur-2xl" />
+      {/* ═══════════════════════════════════════════ */}
+      {/* 📚 PARTNER PROMOTIONS (DersimVar + BeyniniKullan) */}
+      {/* ═══════════════════════════════════════════ */}
+      <Section className="bg-cyber-yellow dark:bg-[#1a1c23] border-b-4 border-black/10 dark:border-slate-700">
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #0f172a 1px, transparent 0)', backgroundSize: '24px 24px' }} />
 
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-2xl overflow-hidden border border-emerald-100 dark:border-gray-700">
-            <div className="flex flex-col lg:flex-row items-center">
-              {/* Left - Logo and branding */}
-              <div className="lg:w-1/3 p-12 bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                <motion.img
-                  src="/images/logoDv.webp"
-                  alt="DersimVar.com"
-                  width={256}
-                  height={256}
-                  loading="lazy"
-                  className="w-48 lg:w-64 drop-shadow-2xl"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                />
-              </div>
-
-              {/* Right - Content */}
-              <div className="lg:w-2/3 p-10 lg:p-16 space-y-6 text-center lg:text-left">
-                <div className="space-y-3">
-                  <span className="inline-block px-4 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-sm font-bold rounded-full uppercase tracking-wider">
-                    Özel Ders
-                  </span>
-                  <h3 className="text-3xl lg:text-4xl font-poppins font-black text-gray-900 dark:text-white">
-                    Birebir Öğretmenle <span className="text-emerald-700 dark:text-emerald-400">Öğren</span>
-                  </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          {/* DersimVar */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+          >
+            <KidCard accentColor="blue" className="h-full">
+              <div className="flex flex-col items-center text-center space-y-5">
+                <div className="w-full bg-cyber-blue -mx-6 -mt-8 mb-2 p-6 border-b-4 border-black/10 rounded-t-xl flex items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.1)_2px,transparent_2px),linear-gradient(90deg,rgba(255,255,255,0.1)_2px,transparent_2px)] bg-[size:20px_20px]" />
+                  <motion.img
+                    src="/images/logoDv.webp"
+                    alt="DersimVar.com"
+                    width={180}
+                    height={180}
+                    loading="lazy"
+                    className="w-36 lg:w-44 relative z-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                    whileHover={{ scale: 1.05 }}
+                  />
                 </div>
-
-                <p className="text-lg text-gray-600 dark:text-gray-400 font-medium max-w-xl">
-                  Online veya yüz yüze özel ders almak, konularını daha detaylı öğrenmek istiyorsan <strong className="text-emerald-700 dark:text-emerald-400">DersimVar.com</strong> tam sana göre! Alanında uzman öğretmenlerle tanış.
+                <KidBadge variant="level">Özel Ders</KidBadge>
+                <h3 className="text-2xl font-nunito font-extrabold text-black dark:text-white">
+                  Birebir Öğretmenle Öğren
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 font-semibold text-sm">
+                  Online veya yüz yüze özel ders. Alanında uzman öğretmenlerle tanış!
                 </p>
-
-                <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-center lg:justify-start">
-                  <a
-                    href="https://dersimvar.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-10 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-poppins font-bold text-lg rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center gap-3"
-                  >
+                <a href="https://dersimvar.com" target="_blank" rel="noopener noreferrer" className="w-full">
+                  <KidButton variant="secondary" size="md" fullWidth iconRight={ArrowRight}>
                     Öğretmen Bul
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                </div>
-
-                <div className="pt-4 flex items-center gap-6 text-sm text-gray-500 justify-center lg:justify-start">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                    <span>Online Dersler</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
-                    <span>Uzman Öğretmenler</span>
-                  </div>
-                </div>
+                  </KidButton>
+                </a>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            </KidCard>
+          </motion.div>
 
-      {/* BEYNİNİ KULLAN SECTION */}
-      <section className="py-24 bg-gradient-to-br from-indigo-50 via-purple-50 to-violet-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-10 left-10 w-40 h-40 bg-indigo-300 rounded-full opacity-30 blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-56 h-56 bg-purple-300 rounded-full opacity-30 blur-3xl" />
-
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-2xl overflow-hidden border border-indigo-100 dark:border-gray-700">
-            <div className="flex flex-col lg:flex-row items-center">
-              {/* Left - Logo and branding */}
-              <div className="lg:w-1/3 p-12 bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center">
-                <motion.img
-                  src="/images/beyninikullan.webp"
-                  alt="BeyniniKullan.com"
-                  width={256}
-                  height={256}
-                  loading="lazy"
-                  className="w-48 lg:w-64 drop-shadow-2xl"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                />
-              </div>
-
-              {/* Right - Content */}
-              <div className="lg:w-2/3 p-10 lg:p-16 space-y-6 text-center lg:text-left">
-                <div className="space-y-3">
-                  <span className="inline-flex items-center gap-2 px-4 py-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 text-sm font-bold rounded-full uppercase tracking-wider">
-                    🧠 Yapay Zeka Destekli
-                  </span>
-                  <h3 className="text-3xl lg:text-4xl font-poppins font-black text-gray-900 dark:text-white">
-                    Çocuğunuza Özel <span className="text-indigo-600 dark:text-indigo-400">Zeka Kitabı</span> Oluşturun
-                  </h3>
+          {/* BeyniniKullan */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+          >
+            <KidCard accentColor="pink" className="h-full">
+              <div className="flex flex-col items-center text-center space-y-5">
+                <div className="w-full bg-cyber-pink -mx-6 -mt-8 mb-2 p-6 border-b-4 border-black/10 rounded-t-xl flex items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#000_10px,#000_20px)]" />
+                  <motion.img
+                    src="/images/beyninikullan.webp"
+                    alt="BeyniniKullan.com"
+                    width={180}
+                    height={180}
+                    loading="lazy"
+                    className="w-36 lg:w-44 relative z-10 bg-white p-3 border-2 border-black/10 rounded-2xl shadow-neo-md rotate-3"
+                    whileHover={{ scale: 1.05, rotate: 0 }}
+                  />
                 </div>
-
-                <p className="text-lg text-gray-600 dark:text-gray-400 font-medium max-w-xl">
-                  Gemini AI ile çocuğunuza özel, benzersiz mantık bulmacaları üretin. Kapağında çocuğunuzun adı yazan, baskıya hazır PDF kitabını saniyeler içinde oluşturun. <strong className="text-indigo-600 dark:text-indigo-400">beyninikullan.com</strong>
+                <KidBadge variant="tuzo">🧠 Yapay Zeka Destekli</KidBadge>
+                <h3 className="text-2xl font-nunito font-extrabold text-black dark:text-white">
+                  Çocuğunuza Özel Zeka Kitabı
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 font-semibold text-sm">
+                  Gemini AI ile benzersiz mantık bulmacaları üretin. Baskıya hazır PDF!
                 </p>
 
-                {/* Stats */}
-                <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+                <div className="flex gap-3 justify-center">
                   {[
-                    { value: '100', label: 'Temel Kural' },
-                    { value: '1.5M+', label: 'Mantık İskeleti' },
-                    { value: '3', label: 'Zorluk Seviyesi' },
-                  ].map((stat, i) => (
-                    <div key={i} className="bg-indigo-50 dark:bg-indigo-900/20 px-4 py-2 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
-                      <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{stat.value}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-1.5 font-bold">{stat.label}</span>
+                    { value: '100', label: 'Kural' },
+                    { value: '1.5M+', label: 'İskelet' },
+                    { value: '3', label: 'Seviye' },
+                  ].map((s) => (
+                    <div key={s.label} className="bg-gray-100 dark:bg-slate-700 px-3 py-1.5 border-2 border-black/10 rounded-xl">
+                      <span className="text-lg font-nunito font-extrabold text-black dark:text-white">{s.value}</span>
+                      <span className="text-[9px] block uppercase font-bold text-slate-400 tracking-wider">{s.label}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-center lg:justify-start">
-                  <a
-                    href="https://beyninikullan.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-10 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-poppins font-bold text-lg rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center gap-3"
-                  >
+                <a href="https://beyninikullan.com" target="_blank" rel="noopener noreferrer" className="w-full">
+                  <KidButton variant="danger" size="md" fullWidth iconRight={ArrowRight}>
                     Hemen Dene
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                </div>
-
-                <div className="pt-4 flex items-center gap-6 text-sm text-gray-500 justify-center lg:justify-start">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
-                    <span>Kişiselleştirilmiş Sorular</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
-                    <span>PDF & Baskıya Hazır</span>
-                  </div>
-                </div>
+                  </KidButton>
+                </a>
               </div>
-            </div>
-          </div>
+            </KidCard>
+          </motion.div>
         </div>
-      </section>
+      </Section>
 
-      {/* ATÖLYELER SECTION */}
-      <section className="py-32 relative">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-20 space-y-4">
-            <h2 className="text-5xl lg:text-6xl font-poppins font-black text-gray-900 dark:text-white">
-              Eğlenceli <span className="text-purple-brand">Atölyeler</span>
-            </h2>
-            <div className="w-24 h-2 bg-purple-brand mx-auto rounded-full" />
-          </div>
+      {/* ═══════════════════════════════════════════ */}
+      {/* 📖 E-KİTAPLAR                              */}
+      {/* ═══════════════════════════════════════════ */}
+      <Section className="bg-cyber-paper dark:bg-slate-800 border-b-4 border-black/10 dark:border-slate-700">
+        <SectionTitle
+          badge="📚 E-Kitaplar"
+          badgeColor="bg-white"
+          subtitle="Google Play'de yayınlanan eğitim kitaplarımızla her an her yerde öğren!"
+        >
+          Dijital <span className="text-cyber-pink">Kaynaklar</span>
+        </SectionTitle>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {workshops.map((workshop) => (
-              <motion.div
-                key={workshop.link}
-                whileHover={{ y: -15 }}
-                className="group bg-white dark:bg-gray-800 rounded-[3rem] overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col h-full border-4 border-transparent hover:border-purple-brand/20"
-              >
-                <div className={`h-64 relative ${workshop.color} p-8 flex items-center justify-center`}>
+        <motion.div
+          variants={containerAnim}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+        >
+          {[
+            { title: 'Bilsem Sınavı', image: '/images/bsm.webp', href: 'https://play.google.com/store/books/series?id=P8CnGwAAABCZ2M', color: 'pink' },
+            { title: 'Görsel Analoji', image: '/images/ga.webp', href: 'https://play.google.com/store/books/series?id=l5yQHAAAABAGgM', color: 'blue' },
+            { title: 'Türkçe Deyimler', image: '/images/td.webp', href: 'https://play.google.com/store/books/series?id=XIDDGwAAABCemM', color: 'gold' },
+          ].map((book) => (
+            <motion.a
+              key={book.title}
+              href={book.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              variants={itemAnim}
+              className="group"
+            >
+              <KidCard accentColor={book.color} className="h-full text-center hover:-translate-y-2 transition-transform">
+                <div className="w-36 h-48 mx-auto overflow-hidden mb-5 border-2 border-black/10 rounded-xl shadow-neo-md">
                   <img
-                    src={workshop.image}
-                    alt={workshop.title}
-                    width={300}
-                    height={200}
+                    src={book.image}
+                    alt={book.title}
+                    width={144}
+                    height={192}
                     loading="lazy"
-                    className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>
+                <h3 className="text-lg font-nunito font-extrabold text-black dark:text-white uppercase mb-2">{book.title}</h3>
+                <KidBadge variant="status" className="!bg-cyber-blue !text-white group-hover:!bg-cyber-gold group-hover:!text-black transition-colors">
+                  <BookOpen size={12} className="mr-1" /> Google Play'de İncele
+                </KidBadge>
+              </KidCard>
+            </motion.a>
+          ))}
+        </motion.div>
+      </Section>
 
-                <div className="p-10 flex flex-col flex-grow items-center text-center space-y-6">
-                  <h3 className="text-3xl font-poppins font-black text-gray-900 dark:text-white">
-                    {workshop.title}
-                  </h3>
-                  <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
-                    {workshop.description}
-                  </p>
+      {/* ═══════════════════════════════════════════ */}
+      {/* 💎 NEDEN BİLSEMC2                           */}
+      {/* ═══════════════════════════════════════════ */}
+      <Section className="bg-cyber-pink dark:bg-slate-900 border-b-4 border-black/10">
+        <div className="absolute inset-0 opacity-15 bg-[repeating-linear-gradient(45deg,transparent,transparent_20px,#000_20px,#000_40px)]" />
 
-                  <div className="mt-auto pt-6">
-                    <Link
-                      to={workshop.link}
-                      className="px-8 py-3 bg-purple-brand text-white font-black rounded-full hover:bg-gray-900 transition-colors inline-block"
-                      aria-label={`${workshop.title} atölyesini keşfet`}
-                    >
-                      Keşfet
-                    </Link>
-                  </div>
+        <h2 className="text-center text-4xl lg:text-6xl font-nunito font-extrabold mb-16 uppercase text-black dark:text-white drop-shadow-sm dark:drop-shadow-none">
+          Neden Bilsemc2?
+        </h2>
+
+        <motion.div
+          variants={containerAnim}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto"
+        >
+          {[
+            { label: 'Kişiselleştirilmiş Öğrenme', icon: Star, color: 'emerald' },
+            { label: 'Eğlenceli Aktiviteler', icon: Rocket, color: 'gold' },
+            { label: 'Uzman Rehberliği', icon: Users, color: 'blue' },
+            { label: 'Bilimsel Metotlar', icon: Award, color: 'purple' },
+          ].map((item) => (
+            <motion.div key={item.label} variants={itemAnim}>
+              <KidCard accentColor={item.color} className="text-center h-full hover:-translate-y-2 transition-transform">
+                <div className="w-16 h-16 mx-auto mb-4 bg-cyber-yellow border-2 border-black/10 rounded-2xl flex items-center justify-center shadow-neo-md -rotate-3">
+                  <item.icon size={28} className="text-black" strokeWidth={2.5} />
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* DİJİTAL KAYNAKLAR - Google Play Books */}
-      <section className="py-24 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-10 left-10 w-40 h-40 bg-orange-300 rounded-full opacity-30 blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-56 h-56 bg-amber-300 rounded-full opacity-30 blur-3xl" />
-
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="text-center mb-16 space-y-4">
-            <span className="inline-block px-4 py-1 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 text-sm font-bold rounded-full uppercase tracking-wider">
-              📚 E-Kitaplar
-            </span>
-            <h2 className="text-4xl lg:text-5xl font-poppins font-black text-gray-900 dark:text-white">
-              Dijital <span className="text-orange-500">Kaynaklar</span>
-            </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Google Play'de yayınlanan eğitim kitaplarımızla her an her yerde öğrenmeye devam et!
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Bilsem Sınavı Kitabı */}
-            <motion.a
-              href="https://play.google.com/store/books/series?id=P8CnGwAAABCZ2M"
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ y: -8, scale: 1.02 }}
-              className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-purple-500/30 flex flex-col items-center text-center"
-            >
-              <div className="w-32 h-40 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
-                <img src="/images/bsm.webp" alt="Bilsem Sınavı" width={128} height={160} loading="lazy" className="w-full h-full object-cover" />
-              </div>
-              <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
-                Bilsem Sınavı
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 font-medium mb-4 text-sm">
-                Bilim ve Sanat Merkezi sınavlarına kapsamlı hazırlık kaynağı
-              </p>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-bold rounded-full text-sm group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
-                </svg>
-                Google Play'de İncele
-              </span>
-            </motion.a>
-
-            {/* Görsel Analoji Kitabı */}
-            <motion.a
-              href="https://play.google.com/store/books/series?id=l5yQHAAAABAGgM"
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ y: -8, scale: 1.02 }}
-              className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-blue-500/30 flex flex-col items-center text-center"
-            >
-              <div className="w-32 h-40 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-                <img src="/images/ga.webp" alt="Görsel Analoji" width={128} height={160} loading="lazy" className="w-full h-full object-cover" />
-              </div>
-              <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
-                Görsel Analoji
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 font-medium mb-4 text-sm">
-                Görsel düşünme ve analoji kurma becerilerini geliştir
-              </p>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-bold rounded-full text-sm group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
-                </svg>
-                Google Play'de İncele
-              </span>
-            </motion.a>
-
-            {/* Türkçe Deyimler Kitabı */}
-            <motion.a
-              href="https://play.google.com/store/books/series?id=XIDDGwAAABCemM"
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ y: -8, scale: 1.02 }}
-              className="group bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-transparent hover:border-amber-500/30 flex flex-col items-center text-center"
-            >
-              <div className="w-32 h-40 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
-                <img src="/images/td.webp" alt="Türkçe Deyimler" width={128} height={160} loading="lazy" className="w-full h-full object-cover" />
-              </div>
-              <h3 className="text-xl font-poppins font-black text-gray-900 dark:text-white mb-3">
-                Türkçe Deyimler
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 font-medium mb-4 text-sm">
-                Türkçe deyimleri eğlenceli bir şekilde öğren ve pekiştir
-              </p>
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-bold rounded-full text-sm group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
-                </svg>
-                Google Play'de İncele
-              </span>
-            </motion.a>
-          </div>
-        </div>
-      </section>
-
-      {/* WHY US / VALUES */}
-      <section className="py-20 bg-purple-brand relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 blur-[100px]" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-pink-400 rounded-full translate-x-1/2 translate-y-1/2 blur-[100px]" />
-        </div>
-
-        <div className="container mx-auto px-6 relative z-10 text-center text-white">
-          <h2 className="text-4xl lg:text-5xl font-poppins font-black mb-16">Neden Bilsemc2?</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
-            {[
-              { label: "Kişiselleştirilmiş Öğrenme", icon: <Star /> },
-              { label: "Eğlenceli Aktiviteler", icon: <Rocket /> },
-              { label: "Uzman Rehberliği", icon: <Users /> },
-              { label: "Bilimsel Metotlar", icon: <Lightbulb /> }
-            ].map((item, i) => (
-              <div key={i} className="space-y-4 flex flex-col items-center">
-                <div className="w-20 h-20 bg-white/20 rounded-[2rem] flex items-center justify-center text-3xl border border-white/30 backdrop-blur-md">
-                  {item.icon}
-                </div>
-                <span className="font-bold text-xl">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+                <span className="font-nunito font-extrabold text-lg text-black dark:text-white uppercase leading-tight block">{item.label}</span>
+              </KidCard>
+            </motion.div>
+          ))}
+        </motion.div>
+      </Section>
     </div>
   );
 };

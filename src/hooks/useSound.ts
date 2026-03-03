@@ -8,7 +8,8 @@ type SoundType =
     | 'memory_flip' | 'memory_match' | 'memory_fail' | 'memory_shuffle'
     | 'signal_appear' | 'signal_disappear' | 'signal_correct' | 'signal_wrong'
     | 'grid_flip' | 'grid_match' | 'grid_fail' | 'grid_error'
-    | 'flow_next' | 'flow_correct' | 'flow_wrong' | 'flow_splash';
+    | 'flow_next' | 'flow_correct' | 'flow_wrong' | 'flow_splash'
+    | 'success' | 'wrong' | 'click';
 
 const SOUND_URLS: { [key in SoundType]: string } = {
     correct: '/sounds/correct.mp3',
@@ -20,6 +21,9 @@ const SOUND_URLS: { [key in SoundType]: string } = {
     complete: '/sounds/complete.mp3',
     slide: '/sounds/select.mp3',
     shing: '/sounds/pop.mp3',
+    success: '/sounds/correct.mp3',
+    wrong: '/sounds/incorrect.mp3',
+    click: '/sounds/select.mp3',
     // Kozmik (Space) Tema
     cosmic_pop: '/sounds/pop.mp3',
     cosmic_success: '/sounds/levelUp.mp3',

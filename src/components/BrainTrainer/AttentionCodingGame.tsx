@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { CheckCircle2, Code2 } from "lucide-react";
 import { useSound } from "../../hooks/useSound";
 import { useGameFeedback } from "../../hooks/useGameFeedback";
 import { useGameEngine } from "./shared/useGameEngine";
 import BrainTrainerShell from "./shared/BrainTrainerShell";
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 
 const GAME_ID = "dikkat-kodlama";
 const GAME_TITLE = "Dikkat Kodlama";
@@ -133,6 +134,7 @@ const AttentionCodingGame: React.FC = () => {
   });
 
   const { playSound } = useSound();
+  const safeTimeout = useSafeTimeout();
   const feedback = useGameFeedback({ duration: 1500 });
 
   const {
@@ -194,11 +196,13 @@ const AttentionCodingGame: React.FC = () => {
     playSound("correct");
     showFeedback(true);
 
-    const t = setTimeout(() => {
+    const t = safeTimeout(() => {
       dismissFeedback();
       addTime(10); // Orjinal oyunda bölüm bitince +10s veriliyordu
       nextLevel();
-      startLevel(level + 1);
+      if (level < 20) {
+        startLevel(level + 1);
+      }
     }, 1000); // reduced timeout for snappier feel like original
     timeoutsRef.current.push(t);
   }, [playSound, showFeedback, dismissFeedback, addTime, nextLevel, startLevel, level]);
@@ -208,7 +212,7 @@ const AttentionCodingGame: React.FC = () => {
     loseLife();
     showFeedback(false);
 
-    const t = setTimeout(() => {
+    const t = safeTimeout(() => {
       dismissFeedback();
     }, 1000);
     timeoutsRef.current.push(t);
@@ -255,94 +259,94 @@ const AttentionCodingGame: React.FC = () => {
   return (
     <BrainTrainerShell config={gameConfig} engine={engine} feedback={feedback}>
       {() => (
-        <div className="relative z-10 flex flex-col items-center justify-center p-4 flex-1 mt-4">
-          <AnimatePresence mode="wait">
-            {phase === "playing" && !feedbackState && items.length > 0 && (
-              <motion.div
-                key="game"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.05 }}
-                className="w-full max-w-4xl space-y-8"
-              >
-                <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-6 border-4 border-black shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] rotate-1">
-                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
-                    {keyMappings.map((m) => (
-                      <div
-                        key={m.number}
-                        className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-3 border-4 border-black flex flex-col items-center gap-2 shadow-[4px_4px_0_#000] group transition-all"
-                      >
-                        <span className="text-2xl font-syne font-black text-cyber-blue drop-shadow-sm">
-                          {m.number}
-                        </span>
-                        <div className="h-1 w-8 bg-black dark:bg-slate-600 rounded-full" />
-                        <ShapeIcon
-                          type={m.shape}
-                          className="text-black dark:text-white transition-transform"
-                          size={24}
-                          strokeWidth={3}
-                        />
-                      </div>
-                    ))}
-                  </div>
+        <div className="relative z-10 flex flex-col items-center justify-center p-2 flex-1">
+          {phase === "playing" && items.length > 0 && (
+            <motion.div
+              key="game"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-3xl flex flex-col gap-5"
+            >
+              {/* Eşleştirme Tablosu */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-black/10 shadow-neo-sm relative">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-cyber-blue text-white px-4 py-1.5 rounded-full font-nunito font-black uppercase tracking-widest text-xs border-2 border-black/10 shadow-neo-sm whitespace-nowrap">
+                  Eşleştirme Tablosu
                 </div>
-
-                <div className="flex flex-col items-center gap-6">
-                  <span className="text-sm font-syne font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest bg-white dark:bg-slate-800 px-4 py-1.5 rounded-xl border-4 border-black shadow-[4px_4px_0_#000] -rotate-2">
-                    SIRADAKİ SORU
-                  </span>
-                  <div className="flex items-center gap-4 flex-wrap justify-center">
-                    {items.map((item, idx) => (
-                      <div
-                        key={item.id}
-                        className={`w-16 h-16 rounded-2xl border-4 border-black flex flex-col items-center justify-center transition-all duration-300 ${idx === currentIndex ? "bg-cyber-pink scale-125 shadow-[8px_8px_0_#000] z-10" : idx < currentIndex ? "bg-cyber-green opacity-80 shadow-[4px_4px_0_#000]" : "bg-white dark:bg-slate-800 opacity-50 shadow-none border-dashed dark:border-slate-500"}`}
-                      >
-                        <span
-                          className={`text-2xl font-syne font-black ${idx === currentIndex ? "text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]" : "text-black dark:text-white"}`}
-                        >
-                          {item.targetNumber}
-                        </span>
-                        {idx < currentIndex && (
-                          <CheckCircle2
-                            size={14}
-                            className="text-black fill-black mt-1"
-                            strokeWidth={3}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-4">
-                  {ALL_SHAPES.filter((s) =>
-                    keyMappings.some((m) => m.shape === s),
-                  ).map((shape) => (
-                    <motion.button
-                      key={shape}
-                      whileHover={{ scale: 1.05, y: -4 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleAnswer(shape)}
-                      className="aspect-square bg-white dark:bg-slate-800 border-4 border-black rounded-[1.5rem] flex flex-col items-center justify-center gap-2 shadow-[8px_8px_0_#000] hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:shadow-[12px_12px_0_#000] transition-all group active:translate-y-2 active:shadow-none"
+                <div className="flex items-center justify-center gap-2 sm:gap-3 mt-2">
+                  {keyMappings.map((m) => (
+                    <div
+                      key={m.number}
+                      className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 border-2 border-black/10 flex flex-col items-center gap-1.5"
                     >
+                      <span className="text-xl font-nunito font-black text-cyber-blue">
+                        {m.number}
+                      </span>
+                      <div className="h-0.5 w-8 bg-slate-300 dark:bg-slate-600 rounded-full" />
                       <ShapeIcon
-                        type={shape}
-                        className="text-black dark:text-white group-hover:scale-110 transition-transform"
-                        size={36}
+                        type={m.shape}
+                        className="text-black dark:text-white"
+                        size={24}
                         strokeWidth={2.5}
                       />
-                      <span className="text-xs font-syne font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">
-                        {SHAPE_LABELS[shape]}
-                      </span>
-                    </motion.button>
+                    </div>
                   ))}
                 </div>
-              </motion.div>
-            )}
+              </div>
 
-            {/* The shell handles "game_over" and "victory" UI, as well as general feedback popups. */}
+              {/* Sıradaki Soru */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-black/10 shadow-neo-sm relative">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-cyber-pink text-white px-4 py-1.5 rounded-full font-nunito font-black uppercase tracking-widest text-xs border-2 border-black/10 shadow-neo-sm whitespace-nowrap">
+                  Sıradaki Soru
+                </div>
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center mt-2">
+                  {items.map((item, idx) => (
+                    <motion.div
+                      key={item.id}
+                      animate={idx === currentIndex ? { scale: 1.1 } : { scale: 1 }}
+                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-colors duration-300 ${idx === currentIndex ? "bg-cyber-pink border-black/10 shadow-neo-sm z-10" : idx < currentIndex ? "bg-cyber-green border-black/10 shadow-neo-sm" : "bg-slate-100 dark:bg-slate-700 border-dashed border-slate-300 dark:border-slate-500"}`}
+                    >
+                      <span
+                        className={`text-xl font-nunito font-black ${idx === currentIndex ? "text-white" : idx < currentIndex ? "text-black" : "text-slate-400 dark:text-slate-500"}`}
+                      >
+                        {item.targetNumber}
+                      </span>
+                      {idx < currentIndex && (
+                        <CheckCircle2
+                          size={14}
+                          className="text-black"
+                          strokeWidth={3}
+                        />
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
 
-          </AnimatePresence>
+              {/* Şekil Butonları */}
+              <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
+                {ALL_SHAPES.filter((s) =>
+                  keyMappings.some((m) => m.shape === s),
+                ).map((shape) => (
+                  <motion.button
+                    key={shape}
+                    whileTap={{ scale: 0.93 }}
+                    onClick={() => handleAnswer(shape)}
+                    className="w-20 h-20 sm:w-24 sm:h-24 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl flex flex-col items-center justify-center gap-1.5 shadow-neo-sm transition-all active:translate-y-1 active:shadow-none"
+                  >
+                    <ShapeIcon
+                      type={shape}
+                      className="text-black dark:text-white"
+                      size={32}
+                      strokeWidth={2.5}
+                    />
+                    <span className="text-[10px] sm:text-xs font-nunito font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight">
+                      {SHAPE_LABELS[shape]}
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </div>
       )}
     </BrainTrainerShell>

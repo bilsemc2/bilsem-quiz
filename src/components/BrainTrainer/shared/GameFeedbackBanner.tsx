@@ -40,16 +40,15 @@ const GameFeedbackBanner: React.FC<GameFeedbackBannerProps> = ({
           className="absolute bottom-6 left-0 right-0 z-50 flex justify-center px-6 pointer-events-none"
         >
           <motion.div
-            animate={{ rotate: feedback.correct ? 2 : -2 }}
-            className={`px-6 py-4 rounded-[2rem] flex items-center justify-center gap-4 border-4 border-black shadow-[8px_8px_0_#000] pointer-events-auto w-full max-w-sm ${feedback.correct
-                ? "bg-cyber-green text-black"
-                : "bg-cyber-pink text-black"
+            className={`px-6 py-4 rounded-[2rem] flex items-center justify-center gap-4 border-2 border-black/10 shadow-neo-md pointer-events-auto w-full max-w-sm ${feedback.correct
+              ? "bg-cyber-green text-black"
+              : "bg-cyber-pink text-black"
               }`}
           >
             <motion.div
               animate={{ scale: [1, 1.2, 1], rotate: [0, 10, 0] }}
               transition={{ duration: 0.5 }}
-              className="flex-shrink-0 bg-white border-4 border-black rounded-full p-2 shadow-[2px_2px_0_#000]"
+              className="flex-shrink-0 bg-white border-2 border-black/10 rounded-full p-2 shadow-neo-xs"
             >
               {feedback.correct ? (
                 <CheckCircle2 size={32} strokeWidth={3} className="text-black" />
@@ -58,9 +57,9 @@ const GameFeedbackBanner: React.FC<GameFeedbackBannerProps> = ({
               )}
             </motion.div>
             <div className="min-w-0 text-center sm:text-left flex-1">
-              <p className="font-syne font-black text-xl sm:text-2xl uppercase tracking-widest leading-none drop-shadow-sm">{feedback.message}</p>
+              <p className="font-nunito font-black text-xl sm:text-2xl uppercase tracking-widest leading-none drop-shadow-sm">{feedback.message}</p>
               {children && (
-                <div className="font-chivo font-bold text-sm sm:text-base text-black/80 mt-1">
+                <div className="font-nunito font-bold text-sm sm:text-base text-black/80 mt-1">
                   {children}
                 </div>
               )}

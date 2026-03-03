@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
+import { authRepository } from '@/server/repositories/authRepository';
+import { quizizzRepository } from '@/server/repositories/quizizzRepository';
+import { loadQuizizzDashboardData, toggleQuizizzCompletion } from '@/features/content/model/quizizzUseCases';
 
 export interface QuizizzCode {
     id: string;
@@ -29,41 +31,18 @@ export const useQuizizzCodes = () => {
 
             try {
                 setLoading(true);
-                // Get user profile
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('grade, is_vip')
-                    .eq('id', user.id)
-                    .single();
+                const dashboardData = await loadQuizizzDashboardData(user.id, {
+                    getProfileByUserId: authRepository.getProfileByUserId,
+                    listActiveCodesByGrade: quizizzRepository.listActiveCodesByGrade,
+                    listCompletedCodeIds: quizizzRepository.listCompletedCodeIds,
+                    markCodeCompleted: quizizzRepository.markCodeCompleted,
+                    unmarkCodeCompleted: quizizzRepository.unmarkCodeCompleted
+                });
 
-                if (profile) {
-                    setUserGrade(profile.grade);
-                    setIsVip(profile.is_vip || false);
-                }
-
-                // Get quizizz codes for user's grade
-                if (profile?.grade) {
-                    const { data: quizizzCodes } = await supabase
-                        .from('quizizz_codes')
-                        .select('id, code, subject, grade, scheduled_time, is_active')
-                        .eq('grade', profile.grade)
-                        .eq('is_active', true)
-                        .order('subject', { ascending: true });
-
-                    if (quizizzCodes) {
-                        setCodes(quizizzCodes);
-                    }
-                }
-
-                // Get user's completed codes
-                const { data: completions } = await supabase
-                    .from('user_quizizz_completions')
-                    .select('quizizz_code_id')
-                    .eq('user_id', user.id);
-
-                if (completions) {
-                    setCompletedCodes(new Set(completions.map(c => c.quizizz_code_id)));
-                }
+                setUserGrade(dashboardData.userGrade);
+                setIsVip(dashboardData.isVip);
+                setCodes(dashboardData.codes);
+                setCompletedCodes(new Set(dashboardData.completedCodeIds));
             } catch (error) {
                 console.error('Error fetching data:', error);
                 toast.error('Veriler yüklenirken bir hata oluştu.');
@@ -81,31 +60,33 @@ export const useQuizizzCodes = () => {
         const isCompleted = completedCodes.has(codeId);
 
         try {
-            if (isCompleted) {
-                // Remove completion
-                await supabase
-                    .from('user_quizizz_completions')
-                    .delete()
-                    .eq('user_id', user.id)
-                    .eq('quizizz_code_id', codeId);
+            const result = await toggleQuizizzCompletion(
+                {
+                    userId: user.id,
+                    codeId,
+                    isVip,
+                    isCompleted
+                },
+                {
+                    markCodeCompleted: quizizzRepository.markCodeCompleted,
+                    unmarkCodeCompleted: quizizzRepository.unmarkCodeCompleted
+                }
+            );
 
+            if (!result.changed) {
+                return;
+            }
+
+            if (result.isCompleted) {
+                setCompletedCodes(prev => new Set([...prev, codeId]));
+                toast.success('Tamamlandı olarak işaretlendi! ✅');
+            } else {
                 setCompletedCodes(prev => {
                     const newSet = new Set(prev);
                     newSet.delete(codeId);
                     return newSet;
                 });
                 toast.success('İşaret kaldırıldı');
-            } else {
-                // Add completion
-                await supabase
-                    .from('user_quizizz_completions')
-                    .insert({
-                        user_id: user.id,
-                        quizizz_code_id: codeId
-                    });
-
-                setCompletedCodes(prev => new Set([...prev, codeId]));
-                toast.success('Tamamlandı olarak işaretlendi! ✅');
             }
         } catch (error) {
             console.error('Error toggling completion:', error);

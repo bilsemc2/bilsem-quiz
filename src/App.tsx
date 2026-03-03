@@ -30,8 +30,12 @@ import {
 const PageLoader = () => (
   <div className="min-h-[60vh] flex items-center justify-center">
     <div className="flex flex-col items-center gap-4">
-      <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-      <p className="text-slate-500 dark:text-slate-400 font-medium">Yükleniyor...</p>
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 bg-cyber-emerald border-2 border-black/10 rounded-lg animate-bounce" style={{ animationDelay: '0ms' }} />
+        <div className="w-4 h-4 bg-cyber-gold border-2 border-black/10 rounded-lg animate-bounce" style={{ animationDelay: '150ms' }} />
+        <div className="w-4 h-4 bg-cyber-pink border-2 border-black/10 rounded-lg animate-bounce" style={{ animationDelay: '300ms' }} />
+      </div>
+      <p className="text-slate-600 dark:text-slate-400 font-nunito font-extrabold uppercase tracking-wider text-sm">Yükleniyor... 🚀</p>
     </div>
   </div>
 );
@@ -49,7 +53,7 @@ const LocationAwareRouter: React.FC = () => {
   }, [location]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-[#F8F6F0] dark:bg-slate-950 flex flex-col">
       <NavBar />
       <main className="flex-1 pt-16">
         <Suspense fallback={<PageLoader />}>

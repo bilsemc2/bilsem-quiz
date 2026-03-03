@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
 import type { Package } from '../../types/package';
 import { toast } from 'sonner';
+import { adminPackageRepository } from '@/server/repositories/adminPackageRepository';
+import {
+    createEmptyPackageFormData,
+    toPackageFormData,
+    toPackageMutationInput
+} from '@/features/admin/model/packageManagementUseCases';
 import {
     Box,
     Paper,
@@ -41,24 +46,7 @@ export default function PackageManagement() {
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingPackage, setEditingPackage] = useState<Package | null>(null);
-    const [formData, setFormData] = useState({
-        slug: '',
-        name: '',
-        description: '',
-        price: 0,
-        price_renewal: 0,
-        type: 'bundle' as Package['type'],
-        initial_credits: 0,
-        xp_required: 0,
-        features: '',
-        includes: [] as string[],
-        payment_url: '',
-        whatsapp_url: '',
-        qr_code_url: '',
-        is_recommended: false,
-        is_active: true,
-        sort_order: 0,
-    });
+    const [formData, setFormData] = useState(createEmptyPackageFormData(0));
 
     useEffect(() => {
         fetchPackages();
@@ -66,20 +54,8 @@ export default function PackageManagement() {
 
     const fetchPackages = async () => {
         try {
-            const { data, error } = await supabase
-                .from('packages')
-                .select('*')
-                .order('sort_order', { ascending: true });
-
-            if (error) throw error;
-
-            const parsed = (data || []).map(pkg => ({
-                ...pkg,
-                features: typeof pkg.features === 'string' ? JSON.parse(pkg.features) : pkg.features || [],
-                includes: pkg.includes || [],
-            }));
-
-            setPackages(parsed);
+            const data = await adminPackageRepository.listPackages();
+            setPackages(data);
         } catch (error) {
             console.error('Paketler yüklenirken hata:', error);
             toast.error('Paketler yüklenemedi');
@@ -91,83 +67,23 @@ export default function PackageManagement() {
     const handleOpenDialog = (pkg?: Package) => {
         if (pkg) {
             setEditingPackage(pkg);
-            setFormData({
-                slug: pkg.slug,
-                name: pkg.name,
-                description: pkg.description || '',
-                price: pkg.price,
-                price_renewal: pkg.price_renewal || 0,
-                type: pkg.type,
-                initial_credits: pkg.initial_credits || 0,
-                xp_required: pkg.xp_required || 0,
-                features: pkg.features.join('\n'),
-                includes: pkg.includes,
-                payment_url: pkg.payment_url || '',
-                whatsapp_url: pkg.whatsapp_url || '',
-                qr_code_url: pkg.qr_code_url || '',
-                is_recommended: pkg.is_recommended,
-                is_active: pkg.is_active,
-                sort_order: pkg.sort_order,
-            });
+            setFormData(toPackageFormData(pkg));
         } else {
             setEditingPackage(null);
-            setFormData({
-                slug: '',
-                name: '',
-                description: '',
-                price: 0,
-                price_renewal: 0,
-                type: 'bundle',
-                initial_credits: 0,
-                xp_required: 0,
-                features: '',
-                includes: [],
-                payment_url: '',
-                whatsapp_url: '',
-                qr_code_url: '',
-                is_recommended: false,
-                is_active: true,
-                sort_order: packages.length + 1,
-            });
+            setFormData(createEmptyPackageFormData(packages.length + 1));
         }
         setDialogOpen(true);
     };
 
     const handleSave = async () => {
         try {
-            const featuresArray = formData.features.split('\n').filter(f => f.trim());
-
-            const packageData = {
-                slug: formData.slug,
-                name: formData.name,
-                description: formData.description || null,
-                price: formData.price,
-                price_renewal: formData.price_renewal || null,
-                type: formData.type,
-                initial_credits: formData.type === 'credit_based' ? formData.initial_credits : null,
-                xp_required: formData.type === 'xp_based' ? formData.xp_required : null,
-                features: featuresArray,
-                includes: formData.includes,
-                payment_url: formData.payment_url || null,
-                whatsapp_url: formData.whatsapp_url || null,
-                qr_code_url: formData.qr_code_url || null,
-                is_recommended: formData.is_recommended,
-                is_active: formData.is_active,
-                sort_order: formData.sort_order,
-            };
+            const packageData = toPackageMutationInput(formData);
 
             if (editingPackage) {
-                const { error } = await supabase
-                    .from('packages')
-                    .update(packageData)
-                    .eq('id', editingPackage.id);
-                if (error) throw error;
+                await adminPackageRepository.updatePackage(editingPackage.id, packageData);
                 toast.success('Paket güncellendi');
             } else {
-                const { error } = await supabase
-                    .from('packages')
-                    .insert(packageData);
-                if (error) throw error;
+                await adminPackageRepository.createPackage(packageData);
                 toast.success('Paket oluşturuldu');
             }
 
@@ -183,8 +99,7 @@ export default function PackageManagement() {
         if (!confirm('Bu paketi silmek istediğinize emin misiniz?')) return;
 
         try {
-            const { error } = await supabase.from('packages').delete().eq('id', id);
-            if (error) throw error;
+            await adminPackageRepository.deletePackage(id);
             toast.success('Paket silindi');
             fetchPackages();
         } catch {
@@ -345,8 +260,19 @@ export default function PackageManagement() {
                                     value={formData.price_renewal}
                                     onChange={(e) => setFormData({ ...formData, price_renewal: Number(e.target.value) })}
                                     size="small"
+                                    helperText="+10 kredi ek satın alma fiyatı"
                                 />
                             </>
+                        )}
+                        {formData.type === 'time_based' && (
+                            <TextField
+                                label="Aylık Yenileme Fiyatı (₺)"
+                                type="number"
+                                value={formData.price_renewal}
+                                onChange={(e) => setFormData({ ...formData, price_renewal: Number(e.target.value) })}
+                                size="small"
+                                helperText="0 veya boş = tek seferlik ödeme, dolu = aylık abonelik"
+                            />
                         )}
                         {formData.type === 'xp_based' && (
                             <TextField
@@ -408,11 +334,16 @@ export default function PackageManagement() {
                             <Typography variant="caption" color="text.secondary" gutterBottom>
                                 İçerdiği Modüller
                             </Typography>
-                            <Box display="flex" gap={1} mt={1}>
-                                {['genel_yetenek', 'resim', 'muzik'].map((mod) => (
+                            <Box display="flex" gap={1} mt={1} flexWrap="wrap">
+                                {['genel_yetenek', 'resim', 'muzik', 'ozel_ders'].map((mod) => (
                                     <Chip
                                         key={mod}
-                                        label={mod === 'genel_yetenek' ? '🧠 Genel Yetenek' : mod === 'resim' ? '🎨 Resim' : '🎵 Müzik'}
+                                        label={
+                                            mod === 'genel_yetenek' ? '🧠 Genel Yetenek' :
+                                                mod === 'resim' ? '🎨 Resim' :
+                                                    mod === 'muzik' ? '🎵 Müzik' :
+                                                        '📚 Özel Ders'
+                                        }
                                         onClick={() => toggleInclude(mod)}
                                         color={formData.includes.includes(mod) ? 'primary' : 'default'}
                                         variant={formData.includes.includes(mod) ? 'filled' : 'outlined'}

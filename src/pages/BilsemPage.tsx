@@ -2,125 +2,128 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Brain, Palette, Music, ChevronRight, Sparkles } from 'lucide-react';
 
+// ═══════════════════════════════════════════════
+// 📚 BilsemPage — Kid-UI Çocuk Dostu Tasarım
+// ═══════════════════════════════════════════════
+
 const categories = [
     {
-        title: 'Bilsem Genel Yetenek',
+        title: 'Genel Yetenek',
         description: 'Mantık, uzamsal düşünme, problem çözme ve analitik düşünce becerileri',
         icon: Brain,
         path: '/atolyeler/genel-yetenek',
-        color: 'from-blue-500 via-indigo-500 to-purple-600',
-        bgGlow: 'bg-blue-500/20',
+        color: 'bg-cyber-blue',
+        accentColor: 'bg-cyber-blue',
         features: ['Eksik Parça', 'Küp Açınımları', 'Simetri', 'Hafıza Oyunları'],
+        emoji: '🧠',
     },
     {
-        title: 'Bilsem Resim',
+        title: 'Resim',
         description: 'Görsel sanatlar, renk teorisi, perspektif ve yaratıcı tasarım',
         icon: Palette,
         path: '/atolyeler/resim',
-        color: 'from-pink-500 via-rose-500 to-red-600',
-        bgGlow: 'bg-pink-500/20',
+        color: 'bg-cyber-pink',
+        accentColor: 'bg-cyber-pink',
         features: ['Şekil Tanıma', 'Renk Karışımı', 'Perspektif', 'Desen Tasarımı'],
+        emoji: '🎨',
     },
     {
-        title: 'Bilsem Müzik',
+        title: 'Müzik',
         description: 'Ritim, melodi, nota okuma ve müzikal zeka geliştirme',
         icon: Music,
-        path: '/atolyeler/muzik',
-        color: 'from-purple-500 via-violet-500 to-indigo-600',
-        bgGlow: 'bg-purple-500/20',
+        path: '/atolyeler/muzik-sinav',
+        color: 'bg-cyber-gold',
+        accentColor: 'bg-cyber-gold',
         features: ['Ritim Atölyesi', 'Nota Okuma', 'Melodi Eşleştirme', 'Enstrüman Tanıma'],
+        emoji: '🎵',
     },
 ];
 
 const BilsemPage = () => {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
-            {/* Background Effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/5 rounded-full blur-3xl" />
-            </div>
+        <div className="min-h-screen overflow-hidden transition-colors duration-300">
+            {/* Background pattern — dots */}
+            <div className="fixed inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
-            <div className="relative container mx-auto px-6 py-16">
-                {/* Header */}
+            <div className="relative z-10 container mx-auto px-6 py-24 md:py-32">
+                {/* Header Section */}
                 <motion.div
-                    initial={{ opacity: 0, y: -30 }}
+                    initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className="text-center mb-20"
+                    transition={{ duration: 0.6, type: 'spring', bounce: 0.5 }}
+                    className="text-center mb-20 relative"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/80 text-sm mb-6">
+                    <motion.div
+                        whileHover={{ scale: 1.05, rotate: 2 }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-cyber-gold text-black font-nunito font-extrabold border-3 border-black/10 shadow-neo-sm rounded-xl text-sm uppercase tracking-widest mb-8"
+                    >
                         <Sparkles className="w-4 h-4" />
                         Yeteneklerini Keşfet
-                    </div>
-                    <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
-                        <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                            Bilsem
-                        </span>
+                    </motion.div>
+
+                    <h1 className="text-5xl md:text-7xl lg:text-8xl font-nunito font-black text-black dark:text-white mb-6 uppercase tracking-tight leading-none">
+                        BİLSEM
                     </h1>
-                    <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-                        Üç farklı alanda yeteneklerini test et ve geliştir
+                    <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-lg mx-auto font-nunito font-bold">
+                        Üç farklı alanda yeteneklerini test et ve geliştir 🚀
                     </p>
                 </motion.div>
 
-                {/* Category Cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                {/* Category Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
                     {categories.map((category, index) => {
                         const Icon = category.icon;
                         return (
                             <motion.div
                                 key={category.title}
-                                initial={{ opacity: 0, y: 50 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.15, duration: 0.5 }}
+                                initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                transition={{ delay: index * 0.12, duration: 0.5, type: 'spring', bounce: 0.4 }}
+                                className="h-full"
                             >
-                                <Link to={category.path} className="block h-full">
-                                    <div className="group relative h-full">
-                                        {/* Glow effect */}
-                                        <div className={`absolute inset-0 ${category.bgGlow} rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                                <Link to={category.path} className="block h-full group outline-none">
+                                    <div className="h-full bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-lg hover:-translate-y-2 hover:shadow-neo-xl transition-all duration-300 flex flex-col relative">
+                                        {/* Accent Strip */}
+                                        <div className={`h-2.5 ${category.accentColor}`} />
 
-                                        {/* Card */}
-                                        <div className="relative h-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-8 
-                                    hover:bg-white/10 hover:border-white/20 transition-all duration-500
-                                    group-hover:scale-[1.02] group-hover:shadow-2xl">
-
-                                            {/* Icon */}
-                                            <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${category.color} 
-                                      flex items-center justify-center mb-6 shadow-lg
-                                      group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500`}>
-                                                <Icon className="w-10 h-10 text-white" />
+                                        <div className="p-7 flex flex-col flex-grow">
+                                            {/* Icon + Emoji */}
+                                            <div className="flex items-center gap-3 mb-5">
+                                                <div className={`w-16 h-16 ${category.color} border-3 border-black/10 rounded-2xl flex items-center justify-center shadow-neo-sm group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-300`}>
+                                                    <Icon className="w-8 h-8 text-black" strokeWidth={2.5} />
+                                                </div>
+                                                <span className="text-3xl">{category.emoji}</span>
                                             </div>
 
                                             {/* Content */}
-                                            <h2 className="text-2xl font-bold text-white mb-3 group-hover:text-transparent 
-                                     group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-white/80 
-                                     group-hover:bg-clip-text transition-all duration-300">
+                                            <h2 className="text-2xl font-nunito font-black text-black dark:text-white mb-2 uppercase tracking-wide">
                                                 {category.title}
                                             </h2>
-                                            <p className="text-slate-400 mb-6 leading-relaxed">
+                                            <p className="text-slate-600 dark:text-slate-400 mb-5 font-nunito font-bold leading-relaxed text-sm flex-grow">
                                                 {category.description}
                                             </p>
 
-                                            {/* Features */}
-                                            <div className="flex flex-wrap gap-2 mb-8">
+                                            {/* Feature Tags */}
+                                            <div className="flex flex-wrap gap-2 mb-6">
                                                 {category.features.map((feature) => (
                                                     <span
                                                         key={feature}
-                                                        className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-slate-300"
+                                                        className="px-3 py-1 bg-gray-50 dark:bg-slate-700 border-2 border-black/15 dark:border-white/10 rounded-lg text-xs font-nunito font-bold text-slate-700 dark:text-slate-300"
                                                     >
                                                         {feature}
                                                     </span>
                                                 ))}
                                             </div>
 
-                                            {/* CTA */}
-                                            <div className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl 
-                                      bg-gradient-to-r ${category.color} text-white font-medium
-                                      group-hover:shadow-lg transition-all duration-300`}>
-                                                Keşfet
-                                                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                            </div>
+                                            {/* CTA Button */}
+                                            <motion.div
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                className={`inline-flex items-center justify-between px-5 py-3 border-3 border-black/10 ${category.color} text-black font-nunito font-extrabold uppercase tracking-wider text-sm rounded-xl shadow-neo-sm group-hover:shadow-neo-md transition-all`}
+                                            >
+                                                <span>Keşfet</span>
+                                                <ChevronRight className="w-5 h-5 stroke-[3px] group-hover:translate-x-1 transition-transform" />
+                                            </motion.div>
                                         </div>
                                     </div>
                                 </Link>
@@ -129,15 +132,15 @@ const BilsemPage = () => {
                     })}
                 </div>
 
-                {/* Footer */}
+                {/* Footer Message */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.8 }}
-                    className="text-center mt-20"
+                    className="text-center mt-24"
                 >
-                    <p className="text-slate-500">
-                        Her alan için özel olarak tasarlanmış etkinliklerle potansiyelini ortaya çıkar! 🚀
+                    <p className="font-nunito font-extrabold text-lg md:text-2xl text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                        Her alan için özel tasarlanmış <span className="text-cyber-pink">etkinliklerle</span> potansiyelini ortaya çıkar! 🚀
                     </p>
                 </motion.div>
             </div>

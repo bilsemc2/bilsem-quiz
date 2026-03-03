@@ -1,6 +1,5 @@
 import { Pattern, Difficulty } from "../types";
-
-const COLORS = ['#FF5F5D', '#3F7C85', '#72F2EB', '#FFD166', '#06D6A0', '#EF476F'];
+import { ARCADE_COLORS } from "../../../Shared/ArcadeConstants";
 
 export const generateLocalPattern = (difficulty: Difficulty): Pattern => {
     const length = 5;
@@ -54,6 +53,6 @@ export const generateLocalPattern = (difficulty: Difficulty): Pattern => {
         answer,
         options: Array.from(options).sort(() => Math.random() - 0.5),
         rule,
-        targetColor: COLORS[Math.floor(Math.random() * COLORS.length)]
+        targetColor: ARCADE_COLORS[Math.floor(Math.random() * ARCADE_COLORS.length)]
     };
 };

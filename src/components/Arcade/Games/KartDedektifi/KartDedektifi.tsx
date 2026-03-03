@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { CardData, RuleType, Color, Shape, FeedbackType, GameState, GamePhase } from './types';
+import { CardData, RuleType, Color, Shape, GameState, GamePhase } from './types';
 import { REFERENCE_CARDS, CONSECUTIVE_LIMIT } from './constants';
 import Card from './components/Card';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Target, Heart, ChevronLeft, RefreshCw, Play, Search, GraduationCap } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
+import ArcadeGameShell from '../../Shared/ArcadeGameShell';
+import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
+import { ARCADE_SCORE_FORMULA, ARCADE_SCORE_BASE } from '../../Shared/ArcadeConstants';
 
 const KartDedektifi: React.FC = () => {
   const { saveGamePlay } = useGamePersistence();
@@ -23,10 +26,11 @@ const KartDedektifi: React.FC = () => {
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [currentCard, setCurrentCard] = useState<CardData | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackType>(null);
-  const [helperMessage, setHelperMessage] = useState<string>("Selam Dedektif! Hazırsan başlayalım.");
+  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+
   const gameStartTimeRef = useRef<number>(0);
   const hasSavedRef = useRef<boolean>(false);
+  const isResolvingRef = useRef<boolean>(false);
   const consecutiveWrongRef = useRef<number>(0);
 
   // Auto-start from Hub
@@ -49,15 +53,19 @@ const KartDedektifi: React.FC = () => {
     setLives(3);
     setLevel(1);
     setPhase('playing');
+    setFeedback(null);
     gameStartTimeRef.current = Date.now();
     hasSavedRef.current = false;
+    isResolvingRef.current = false;
     setCurrentCard(generateRandomCard());
   };
-  // Effect to handle game over and persistence
+
+  // Game Over handler
   useEffect(() => {
     if (lives <= 0 && phase === 'playing') {
       if (!hasSavedRef.current) {
         hasSavedRef.current = true;
+        isResolvingRef.current = true;
         setPhase('game_over');
         saveGamePlay({
           game_id: 'kart-dedektifi',
@@ -68,12 +76,6 @@ const KartDedektifi: React.FC = () => {
       }
     }
   }, [lives, phase, gameState.score, level, saveGamePlay]);
-
-  // Audio simulation (Visual feedback focus)
-  const triggerFeedback = (type: FeedbackType) => {
-    setFeedback(type);
-    setTimeout(() => setFeedback(null), 1000);
-  };
 
   const generateRandomCard = useCallback(() => {
     const colors = Object.values(Color);
@@ -88,49 +90,16 @@ const KartDedektifi: React.FC = () => {
     };
   }, []);
 
-
   useEffect(() => {
     if (!currentCard && !gameState.isGameOver) {
       setCurrentCard(generateRandomCard());
     }
   }, [currentCard, gameState.isGameOver, generateRandomCard]);
 
-  const updateHelperMessage = (isCorrect: boolean) => {
-    const correctMessages = [
-      "Harika! 🎉",
-      "Doğru! ⭐",
-      "Mükemmel! 🌟",
-      "Bunu biliyordun! 💫",
-      "Dedektif iş başında! 🔍"
-    ];
-
-    const wrongMessages = [
-      "Hmm, bu değildi! 🤔",
-      "Tekrar düşün! 💭",
-      "Dikkatli bak! 👀",
-      "Kurala odaklan! 🎯"
-    ];
-
-    let msg = isCorrect
-      ? correctMessages[Math.floor(Math.random() * correctMessages.length)]
-      : wrongMessages[Math.floor(Math.random() * wrongMessages.length)];
-
-    // Kural değişimi bildirimi
-    if (gameState.consecutiveCorrect >= CONSECUTIVE_LIMIT - 1 && isCorrect) {
-      msg = "🔄 Kural değişiyor! Hazır mısın?";
-      consecutiveWrongRef.current = 0;
-    }
-    // Sadece 3+ ardışık yanlışta ipucu ver (daha zor)
-    else if (!isCorrect && consecutiveWrongRef.current >= 3) {
-      msg = "💡 İpucu: Aynı özelliği eşleştir!";
-    }
-
-    setHelperMessage(msg);
-  };
-
   const checkMatch = (refCard: CardData) => {
-    if (!currentCard || gameState.isGameOver) return;
+    if (!currentCard || gameState.isGameOver || isResolvingRef.current) return;
 
+    isResolvingRef.current = true;
     let isCorrect = false;
     const { currentRule } = gameState;
 
@@ -142,13 +111,18 @@ const KartDedektifi: React.FC = () => {
       isCorrect = currentCard.number === refCard.number;
     }
 
-    triggerFeedback(isCorrect ? 'correct' : 'incorrect');
-
-    if (!isCorrect) {
+    if (isCorrect) {
+      setFeedback({ message: 'Dedektif iş başında! 🔍', type: 'success' });
+      consecutiveWrongRef.current = 0;
+    } else {
       setLives(prev => Math.max(0, prev - 1));
       consecutiveWrongRef.current += 1;
-    } else {
-      consecutiveWrongRef.current = 0;
+
+      if (consecutiveWrongRef.current >= 3) {
+        setFeedback({ message: '💡 İpucu: Aynı özelliği eşleştir!', type: 'warning' });
+      } else {
+        setFeedback({ message: 'Hmm, bu değildi! 🤔', type: 'error' });
+      }
     }
 
     setGameState(prev => {
@@ -161,215 +135,104 @@ const KartDedektifi: React.FC = () => {
         const availableRules = rules.filter(r => r !== prev.currentRule);
         nextRule = availableRules[Math.floor(Math.random() * availableRules.length)];
         setLevel(l => l + 1);
+        setFeedback({ message: '🔄 Kural değişiyor! Hazır mısın?', type: 'warning' });
       }
 
-      const newState = {
+      return {
         ...prev,
-        score: isCorrect ? prev.score + 1 : prev.score,
+        score: isCorrect ? prev.score + ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, level) : prev.score,
         totalAttempts: prev.totalAttempts + 1,
         consecutiveCorrect: nextConsecutive >= CONSECUTIVE_LIMIT ? 0 : nextConsecutive,
         currentRule: nextRule,
         history: [...prev.history, { isCorrect, ruleAtTime: prev.currentRule }],
       };
-
-      updateHelperMessage(isCorrect);
-      return newState;
     });
 
     // Move to next card
     setTimeout(() => {
       setCurrentCard(generateRandomCard());
-    }, 300);
+      setFeedback(null);
+      isResolvingRef.current = false;
+    }, 800);
   };
 
+  // Shell status mapping
+  const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' =
+    phase === 'idle' ? 'START' :
+      phase === 'game_over' ? 'GAME_OVER' : 'PLAYING';
+
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white overflow-hidden relative font-sans touch-none [-webkit-tap-highlight-color:transparent]">
-      {/* Arcade HUD */}
-      <div className="absolute top-16 sm:top-8 left-2 sm:left-4 right-2 sm:right-4 z-30 flex justify-between items-center pointer-events-none">
-        <div className="flex flex-wrap gap-2 sm:gap-4 pointer-events-auto">
-          <Link to="/bilsem-zeka" className="bg-white/10 backdrop-blur-md px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1.5 sm:gap-2 border border-white/20 hover:bg-white/20 transition-all">
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400" />
-            <span className="font-bold text-white/80 text-xs sm:text-base">BİLSEM</span>
-          </Link>
-          <div className="bg-white/10 backdrop-blur-md px-3 sm:px-5 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1.5 sm:gap-2 border border-white/20">
-            <Trophy className="text-yellow-500 w-4 h-4 sm:w-6 sm:h-6" />
-            <span className="text-base sm:text-xl font-bold text-white leading-none">{gameState.score}</span>
-          </div>
-          <div className="bg-white/10 backdrop-blur-md px-3 sm:px-5 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1.5 sm:gap-2 border border-white/20">
-            <Target className="text-sky-400 w-4 h-4 sm:w-6 sm:h-6" />
-            <span className="text-base sm:text-xl font-bold text-white leading-none">Lv {level}</span>
-          </div>
-        </div>
-        <div className="bg-white/10 backdrop-blur-md px-3 sm:px-5 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1 sm:gap-2 border border-red-500/30">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Heart
-              key={i}
-              className={`w-4 h-4 sm:w-6 sm:h-6 transition-all duration-300 ${i < lives ? 'text-red-500 fill-red-500' : 'text-gray-600 opacity-30'}`}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Main Game Area */}
-      <main className="w-full h-full flex flex-col items-center justify-center p-4 pt-32">
-        <AnimatePresence mode="wait">
-          {phase === 'playing' ? (
-            <motion.div
-              key="playing"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="w-full max-w-4xl flex flex-col items-center"
-            >
-              {/* Current Card to Match */}
-              <div className="mb-12 flex flex-col items-center">
-                <p className="text-sky-400 font-black uppercase tracking-widest text-sm mb-4">Sıradaki Kartın</p>
-                <div className="relative">
-                  <AnimatePresence mode="wait">
-                    {currentCard && (
-                      <motion.div
-                        key={currentCard.id}
-                        initial={{ scale: 0.8, opacity: 0, rotateY: 90 }}
-                        animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-                        exit={{ scale: 1.2, opacity: 0, rotateY: -90 }}
-                        transition={{ type: "spring", damping: 15 }}
-                      >
-                        <Card card={currentCard} isReference disabled={true} />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Feedback Overlay */}
-                  <AnimatePresence>
-                    {feedback && (
-                      <motion.div
-                        initial={{ scale: 0.5, opacity: 0 }}
-                        animate={{ scale: 1.2, opacity: 1 }}
-                        exit={{ scale: 1.5, opacity: 0 }}
-                        className={`absolute -top-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none`}
-                      >
-                        {feedback === 'correct' ? (
-                          <div className="bg-green-500 text-white px-6 py-2 rounded-full shadow-xl border-2 border-white flex items-center gap-2">
-                            <Play className="w-5 h-5 fill-current" />
-                            <span className="font-black text-lg">HARİKA!</span>
-                          </div>
-                        ) : (
-                          <div className="bg-red-500 text-white px-6 py-2 rounded-full shadow-xl border-2 border-white flex items-center gap-2">
-                            <RefreshCw className="w-5 h-5" />
-                            <span className="font-black text-lg">HATA!</span>
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-
-              {/* Helper Message */}
-              <div className="bg-white/5 backdrop-blur-2xl px-8 py-4 rounded-[2rem] border border-white/10 mb-12 max-w-md text-center">
-                <p className="text-xl font-bold text-sky-200">{helperMessage}</p>
-              </div>
-
-              {/* Reference Cards - User Picks One */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12">
-                {REFERENCE_CARDS.map(ref => (
+    <ArcadeGameShell
+      gameState={{ score: gameState.score, level, lives, status: shellStatus }}
+      gameMetadata={{
+        id: 'kart-dedektifi',
+        title: 'KART DEDEKTİFİ',
+        description: (
+          <>
+            <p>1. Ortadaki kartı <span className="bg-yellow-300 text-black px-1.5 rounded font-black border-2 border-black/10 rotate-1 inline-block text-xs">renk, şekil</span> veya <span className="bg-emerald-300 text-black px-1.5 rounded font-black border-2 border-black/10 -rotate-1 inline-block text-xs">sayıya</span> göre eşleştir.</p>
+            <p>2. Kural her {CONSECUTIVE_LIMIT} doğruda bir <span className="font-black underline decoration-4 underline-offset-4 decoration-rose-400">rastgele değişir!</span></p>
+            <p>3. <span className="text-rose-500 font-black">Dedektif dikkatli ol!</span></p>
+          </>
+        ),
+        tuzoCode: '5.2.2 Kural Keşfi / Esnek Düşünce',
+        icon: <Search className="w-14 h-14 text-black" strokeWidth={3} />,
+        iconBgColor: 'bg-sky-400',
+        containerBgColor: 'bg-sky-200 dark:bg-slate-900'
+      }}
+      onStart={startGame}
+      onRestart={startGame}
+      showLevel={true}
+      showLives={true}
+    >
+      {/* Game content — only visible during PLAYING phase */}
+      {phase === 'playing' && (
+        <div className="w-full max-w-4xl flex flex-col items-center pt-20 sm:pt-24 px-4">
+          {/* Current Card to Match */}
+          <div className="mb-8 sm:mb-12 flex flex-col items-center">
+            <p className="text-black dark:text-white bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-slate-700 px-4 py-1 rounded-full shadow-neo-sm font-black uppercase tracking-widest text-sm mb-4 sm:mb-6 -rotate-2 transition-colors duration-300">Sıradaki Kartın</p>
+            <div className="relative">
+              <AnimatePresence mode="wait">
+                {currentCard && (
                   <motion.div
-                    key={ref.id}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="flex flex-col items-center gap-4"
+                    key={currentCard.id}
+                    initial={{ scale: 0.8, opacity: 0, rotateY: 90 }}
+                    animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                    exit={{ scale: 1.2, opacity: 0, rotateY: -90 }}
+                    transition={{ type: "spring", damping: 15 }}
                   >
-                    <Card
-                      card={ref}
-                      onClick={() => checkMatch(ref)}
-                      disabled={feedback !== null}
-                    />
-                    <div className="bg-white/10 px-4 py-1 rounded-full text-[10px] font-black uppercase text-white/40 border border-white/5">
-                      {ref.color.toUpperCase()} • {ref.shape.toUpperCase()}
-                    </div>
+                    <Card card={currentCard} isReference disabled={true} />
                   </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          ) : phase === 'idle' ? (
-            <motion.div
-              key="idle"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20"
-            >
-              <div
-                className="w-28 h-28 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-[40%] flex items-center justify-center mx-auto mb-8"
-               
-              >
-                <Search className="w-14 h-14 text-white" />
-              </div>
-              <h1 className="text-5xl bg-gradient-to-r from-sky-400 to-cyan-400 bg-clip-text text-transparent mb-6 tracking-tighter font-black uppercase">Kart Dedektifi</h1>
-              <div className="space-y-4 text-slate-400 mb-10 text-lg font-medium bg-white/5 p-6 rounded-2xl border border-white/10">
-                <p>1. Ortadaki kartı <span className="text-sky-400 font-bold text-xl">renk, şekil</span> veya <span className="text-sky-400 font-bold text-xl">sayıya</span> göre eşleştir.</p>
-                <p>2. Kural her 3 doğruda bir <span className="text-white">rastgele değişir!</span></p>
-                <p>3. Yanlış eşleşme can kaybettirir. <span className="text-red-400">Dedektif dikkatli ol!</span></p>
-              </div>
-              <div className="bg-sky-500/20 text-sky-300 text-xs px-4 py-2 rounded-full mb-6 inline-block border border-sky-500/30">
-                TUZÖ 5.2.2 Kural Keşfi / Esnek Düşünce
-              </div>
-              <button
-                onClick={startGame}
-                className="w-full bg-gradient-to-r from-sky-500 to-cyan-600 text-white text-3xl py-5 rounded-2xl transform active:scale-95 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest"
-                style={{ boxShadow: '0 8px 32px rgba(14, 165, 233, 0.4)' }}
-              >
-                <Play fill="white" className="w-8 h-8" /> BAŞLA!
-              </button>
-              <Link to="/bilsem-zeka" className="mt-8 text-slate-500 hover:text-white transition-colors block text-sm font-bold uppercase tracking-widest text-center">İptal</Link>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="game_over"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white/10 backdrop-blur-xl rounded-3xl p-10 max-w-lg w-full text-center border border-white/20"
-            >
-              <div
-                className="w-24 h-24 bg-gradient-to-br from-rose-500 to-pink-600 rounded-[40%] flex items-center justify-center mx-auto mb-6"
-               
-              >
-                <GraduationCap className="w-12 h-12 text-white" />
-              </div>
-              <h2 className="text-6xl text-rose-400 mb-4 font-black tracking-tighter uppercase leading-tight">GÖREV BİTTİ</h2>
-              <p className="text-2xl text-slate-400 mb-8 font-bold italic">İpuçları bitti dedektif!</p>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
 
-              <div className="bg-white/5 rounded-3xl p-8 mb-10 border border-white/10">
-                <p className="text-rose-400/60 uppercase text-xs font-black tracking-[0.2em] mb-2">TOPLAM SKOR</p>
-                <p className="text-8xl font-black text-white tabular-nums tracking-tighter">{gameState.score}</p>
-                <div className="flex justify-center gap-4 mt-6">
-                  <div className="bg-white/10 px-6 py-2 rounded-full border border-white/20 text-amber-400 font-bold">
-                    Seviye {level}
-                  </div>
+          {/* Reference Cards - User Picks One */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-12">
+            {REFERENCE_CARDS.map(ref => (
+              <motion.div
+                key={ref.id}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex flex-col items-center gap-3 sm:gap-4"
+              >
+                <Card
+                  card={ref}
+                  onClick={() => checkMatch(ref)}
+                  disabled={isResolvingRef.current}
+                />
+                <div className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-slate-700 px-3 sm:px-4 py-1 sm:py-1.5 rounded-xl shadow-neo-sm text-[10px] sm:text-xs font-black uppercase text-black dark:text-white transform rotate-1 transition-colors duration-300">
+                  {ref.color} • {ref.shape}
                 </div>
-              </div>
+              </motion.div>
+            ))}
+          </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Link to="/bilsem-zeka" className="bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xl py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all">
-                  Arcade
-                </Link>
-                <button
-                  onClick={startGame}
-                  className="bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xl py-4 rounded-2xl transform active:scale-95 transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest"
-                  style={{ boxShadow: '0 8px 32px rgba(244, 63, 94, 0.4)' }}
-                >
-                  <RefreshCw className="w-6 h-6" /> TEKRAR
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-
-      {/* Background Decor */}
-      <div className="fixed top-20 -left-10 w-40 h-40 bg-sky-500/20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="fixed bottom-20 -right-10 w-60 h-60 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
-    </div>
+          {/* Feedback Banner */}
+          <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
+        </div>
+      )}
+    </ArcadeGameShell>
   );
 };
 

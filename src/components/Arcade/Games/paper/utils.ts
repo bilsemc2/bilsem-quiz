@@ -1,6 +1,56 @@
 
 import { FoldDirection, Punch } from "./types";
 
+type FoldBounds = {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+};
+
+const INITIAL_BOUNDS: FoldBounds = {
+  minX: 0,
+  maxX: 1,
+  minY: 0,
+  maxY: 1,
+};
+
+const getNextBounds = (bounds: FoldBounds, fold: FoldDirection): FoldBounds => {
+  const midX = (bounds.minX + bounds.maxX) / 2;
+  const midY = (bounds.minY + bounds.maxY) / 2;
+
+  switch (fold) {
+    case FoldDirection.LEFT:
+      return { ...bounds, maxX: midX };
+    case FoldDirection.RIGHT:
+      return { ...bounds, minX: midX };
+    case FoldDirection.UP:
+      return { ...bounds, maxY: midY };
+    case FoldDirection.DOWN:
+      return { ...bounds, minY: midY };
+    default:
+      return bounds;
+  }
+};
+
+const getExpandedBounds = (bounds: FoldBounds, fold: FoldDirection): FoldBounds => {
+  const width = bounds.maxX - bounds.minX;
+  const height = bounds.maxY - bounds.minY;
+
+  switch (fold) {
+    case FoldDirection.LEFT:
+      return { ...bounds, maxX: bounds.minX + width * 2 };
+    case FoldDirection.RIGHT:
+      return { ...bounds, minX: bounds.maxX - width * 2 };
+    case FoldDirection.UP:
+      return { ...bounds, maxY: bounds.minY + height * 2 };
+    case FoldDirection.DOWN:
+      return { ...bounds, minY: bounds.maxY - height * 2 };
+    default:
+      return bounds;
+  }
+};
+
 /**
  * Calculates all resulting hole positions on a 1x1 flat paper
  * based on the folds applied and the original punch coordinates.
@@ -8,55 +58,52 @@ import { FoldDirection, Punch } from "./types";
  */
 export const calculateUnfoldedPunches = (folds: FoldDirection[], punches: Punch[]): Punch[] => {
   let results: Punch[] = [...punches];
-  
-  // Start with the dimensions of the final folded piece
-  let currentWidth = 1;
-  let currentHeight = 1;
-  folds.forEach(f => {
-    if (f === FoldDirection.VERTICAL) currentWidth /= 2;
-    if (f === FoldDirection.HORIZONTAL) currentHeight /= 2;
+
+  // Calculate bounds of the currently folded visible piece.
+  let currentBounds: FoldBounds = { ...INITIAL_BOUNDS };
+  folds.forEach((fold) => {
+    currentBounds = getNextBounds(currentBounds, fold);
   });
 
   // We process folds in reverse to "unfold"
-  // Each step, we mirror across the boundary of the current piece
+  // Each step mirrors points across the active fold edge.
   for (let i = folds.length - 1; i >= 0; i--) {
     const fold = folds[i];
     const nextResults: Punch[] = [];
-    
-    // The axis to mirror across is the current boundary of the paper
-    const mirrorAxis = (fold === FoldDirection.VERTICAL) ? currentWidth : currentHeight;
 
     for (const punch of results) {
-      // Fix: Pushing the original punch object directly instead of an invalid functional call.
-      nextResults.push(punch); // Keep original
-      
+      nextResults.push(punch);
+
       const mirroredPunch = { ...punch };
-      if (fold === FoldDirection.VERTICAL) {
-        // Mirror X: newX = mirrorAxis + (mirrorAxis - oldX) = 2 * mirrorAxis - oldX
-        mirroredPunch.x = 2 * mirrorAxis - punch.x;
+
+      if (fold === FoldDirection.LEFT || fold === FoldDirection.RIGHT) {
+        const axisX = fold === FoldDirection.LEFT ? currentBounds.maxX : currentBounds.minX;
+        mirroredPunch.x = 2 * axisX - punch.x;
       } else {
-        // Mirror Y: newY = mirrorAxis + (mirrorAxis - oldY) = 2 * mirrorAxis - oldY
-        mirroredPunch.y = 2 * mirrorAxis - punch.y;
+        const axisY = fold === FoldDirection.UP ? currentBounds.maxY : currentBounds.minY;
+        mirroredPunch.y = 2 * axisY - punch.y;
       }
+
       nextResults.push(mirroredPunch);
     }
 
-    // Expand the current bounds for the next unfolding step
-    if (fold === FoldDirection.VERTICAL) currentWidth *= 2;
-    else currentHeight *= 2;
-
     results = nextResults;
+    currentBounds = getExpandedBounds(currentBounds, fold);
   }
 
   return results;
 };
 
 export const getFoldedDimensions = (folds: FoldDirection[]) => {
-  let width = 1;
-  let height = 1;
-  folds.forEach(f => {
-    if (f === FoldDirection.VERTICAL) width /= 2;
-    if (f === FoldDirection.HORIZONTAL) height /= 2;
+  let bounds: FoldBounds = { ...INITIAL_BOUNDS };
+  folds.forEach((fold) => {
+    bounds = getNextBounds(bounds, fold);
   });
-  return { width, height };
+
+  return {
+    width: bounds.maxX - bounds.minX,
+    height: bounds.maxY - bounds.minY,
+    offsetX: bounds.minX,
+    offsetY: bounds.minY,
+  };
 };

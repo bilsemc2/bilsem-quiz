@@ -29,7 +29,7 @@ class SoundManager {
 
             // Log successful load
             audio.addEventListener('canplaythrough', () => {
-                console.log(`Loaded sound: ${key}`);
+
             });
 
             // Log load errors
@@ -41,7 +41,6 @@ class SoundManager {
 
     public setVolume(volume: number) {
         this.volume = volume / 100;
-        console.log('Ses seviyesi ayarlandı:', this.volume);
         this.audioElements.forEach(audio => {
             audio.volume = this.volume;
         });
@@ -49,12 +48,10 @@ class SoundManager {
 
     public setMuted(muted: boolean) {
         this.isMuted = muted;
-        console.log('Sessiz mod:', this.isMuted);
     }
 
     public async playSound(soundName: SoundName) {
         if (this.isMuted) {
-            console.log('Ses kapalı olduğu için çalınmadı');
             return;
         }
 
@@ -68,7 +65,6 @@ class SoundManager {
             const playAudio = new Audio(sounds[soundName]);
             playAudio.volume = this.volume;
             await playAudio.play();
-            console.log('Ses başarıyla çalındı:', soundName);
         } catch (error) {
             console.error('Ses çalınırken hata oluştu:', error);
             try {
@@ -77,7 +73,6 @@ class SoundManager {
                 alternativeAudio.volume = this.volume;
                 await new Promise(resolve => setTimeout(resolve, 100));
                 await alternativeAudio.play();
-                console.log('Ses başarıyla tekrar çalındı:', soundName);
             } catch (retryError) {
                 console.error('Ses tekrar denenirken hata oluştu:', retryError);
             }
@@ -85,7 +80,6 @@ class SoundManager {
     }
 
     public playTestSound() {
-        console.log('Test sesi çalınıyor...');
         return this.playSound('correct');
     }
 }

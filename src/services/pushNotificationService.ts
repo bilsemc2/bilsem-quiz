@@ -48,7 +48,7 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
  */
 export async function subscribeToPush(): Promise<boolean> {
     const publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-    console.log('Push aboneliği başlatılıyor, VAPID Key mevcut mu:', !!publicKey);
+
 
     try {
         if (!isPushSupported()) {
@@ -68,7 +68,7 @@ export async function subscribeToPush(): Promise<boolean> {
         // Mevcut subscription varsa kontrol et
         const existingSubscription = await registration.pushManager.getSubscription();
         if (existingSubscription) {
-            console.log('Mevcut subscription bulundu, güncelleniyor');
+
             // Zaten abone, Supabase'de olduğundan emin ol
             await saveSubscriptionToSupabase(existingSubscription);
             return true;
@@ -81,7 +81,7 @@ export async function subscribeToPush(): Promise<boolean> {
             return false;
         }
 
-        console.log('Yeni push subscription oluşturuluyor...');
+
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer
@@ -89,7 +89,7 @@ export async function subscribeToPush(): Promise<boolean> {
 
         // Supabase'e kaydet
         await saveSubscriptionToSupabase(subscription);
-        console.log('Push aboneliği başarıyla tamamlandı');
+
         return true;
     } catch (error) {
         console.error('Push subscription hatası:', error);

@@ -1,4 +1,5 @@
 import { ColorType } from './types';
+import { ARCADE_PALETTE } from '../../Shared/ArcadeConstants';
 
 export const GAME_CONFIG = {
     INITIAL_LIVES: 3,
@@ -19,17 +20,17 @@ export const LEVEL_CONFIG: Record<number, { gridSize: number; memorizeTime: numb
     10: { gridSize: 6, memorizeTime: 2 },
 };
 
-// Soft Candy Colors - Pastel Palette
+// Renkler artık ARCADE_PALETTE'den türetiliyor
 export const COLORS: Record<ColorType, string> = {
-    RED: '#FF8FAB',      // Soft Pink
-    BLUE: '#7DD3FC',     // Sky Blue
-    YELLOW: '#FDE68A',   // Lemon Cream
-    GREEN: '#86EFAC',    // Mint
+    red: ARCADE_PALETTE.red.hex,
+    blue: ARCADE_PALETTE.blue.hex,
+    yellow: ARCADE_PALETTE.yellow.hex,
+    green: ARCADE_PALETTE.green.hex,
 };
 
 export const COLOR_LABELS: Record<ColorType, string> = {
-    RED: 'KIRMIZI',
-    BLUE: 'MAVİ',
-    YELLOW: 'SARI',
-    GREEN: 'YEŞİL',
+    red: ARCADE_PALETTE.red.name.toUpperCase(),
+    blue: ARCADE_PALETTE.blue.name.toUpperCase(),
+    yellow: ARCADE_PALETTE.yellow.name.toUpperCase(),
+    green: ARCADE_PALETTE.green.name.toUpperCase(),
 };

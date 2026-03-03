@@ -1,87 +1,55 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, ChevronRight } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-
-interface AdminMessage {
-  id: string;
-  message: string;
-  sender_id: string;
-  created_at: string;
-  sender_name?: string;
-}
+import { useAuth } from '@/contexts/AuthContext';
+import { adminMessageRepository } from '@/server/repositories/adminMessageRepository';
+import {
+  shouldShowAdminMessageNotification,
+  toAdminMessageNotificationItems,
+  type AdminMessageNotificationItem
+} from '@/features/content/model/adminMessageNotificationUseCases';
 
 const AdminMessageNotification = () => {
-  const [messages, setMessages] = useState<AdminMessage[]>([]);
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<AdminMessageNotificationItem[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
 
   // Don't show on profile page as it has its own message section
   const isProfilePage = location.pathname === '/profile';
 
-  useEffect(() => {
-    fetchMessages();
-
-    const channel = supabase
-      .channel('admin-messages-notif')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'admin_messages'
-        },
-        () => {
-          fetchMessages();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
+  const fetchMessages = useCallback(async (receiverId: string) => {
+    const unreadMessages = await adminMessageRepository.listUnreadMessagesByReceiverId(receiverId);
+    setMessages(toAdminMessageNotificationItems(unreadMessages));
   }, []);
 
   useEffect(() => {
-    if (messages.length > 0 && !isProfilePage) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
+    if (!user?.id) {
+      setMessages([]);
+      return;
     }
+
+    const receiverId = user.id;
+
+    void fetchMessages(receiverId);
+
+    const subscription = adminMessageRepository.subscribeMessageChanges(() => {
+      void fetchMessages(receiverId);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user?.id, fetchMessages]);
+
+  useEffect(() => {
+    setIsVisible(shouldShowAdminMessageNotification(messages, isProfilePage));
   }, [messages, isProfilePage]);
-
-  const fetchMessages = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('admin_messages')
-      .select(`
-        *,
-        sender:sender_id(name)
-      `)
-      .eq('receiver_id', user.id)
-      .eq('read', false)
-      .order('created_at', { ascending: false });
-
-    if (data) {
-      const formattedMessages = data.map(msg => ({
-        ...msg,
-        sender_name: (msg.sender && typeof msg.sender === 'object' && 'name' in msg.sender) ? (msg.sender as { name?: string }).name : undefined
-      }));
-      setMessages(formattedMessages);
-    }
-  };
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('admin_messages')
-        .update({ read: true })
-        .eq('id', id);
-
-      if (error) throw error;
+      await adminMessageRepository.markMessageAsRead(id);
 
       // Local state'i hemen güncelle
       setMessages(prev => prev.filter(msg => msg.id !== id));
@@ -129,7 +97,7 @@ const AdminMessageNotification = () => {
                   Yeni Duyuru
                 </p>
                 <h4 className="text-sm font-bold text-white truncate mb-1">
-                  {currentMessage.sender_name || 'Eğitmeninizden'}
+                  {currentMessage.senderName || 'Eğitmeninizden'}
                 </h4>
                 <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-3">
                   {currentMessage.message}

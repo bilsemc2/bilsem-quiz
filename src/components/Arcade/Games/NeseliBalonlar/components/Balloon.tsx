@@ -28,27 +28,31 @@ const Balloon: React.FC<BalloonProps> = ({
         >
             {/* Balloon Body */}
             <div
-                className={`balloon-sway relative w-20 h-24 rounded-[50%_50%_50%_50%_/_60%_60%_40%_40%] shadow-lg transition-all ${highlighted ? 'ring-8 ring-yellow-400 ring-opacity-60 scale-105' : ''
+                className={`balloon-sway relative w-20 h-24 rounded-[50%_50%_50%_50%_/_60%_60%_40%_40%] border-2 border-black/10 shadow-neo-sm transition-all ${highlighted ? 'border-yellow-400 scale-110 shadow-none -translate-y-1' : ''
                     }`}
                 style={{
-                    background: `radial-gradient(circle at 30% 30%, ${color.highlight}, ${color.primary} 60%, ${color.secondary})`,
+                    backgroundColor: highlighted ? '#FACC15' : color.primary,
                 }}
             >
-                {/* Shine */}
-                <div className="absolute top-[15%] left-[20%] w-5 h-7 bg-white opacity-30 rounded-full blur-[1px] transform -rotate-45"></div>
+                {/* Shine (Hard edge for toy look) */}
+                <div className="absolute top-[10%] left-[15%] w-4 h-6 bg-white/40 rounded-full transform -rotate-45"></div>
 
-                {/* Face (Eyes) */}
-                <div className="absolute top-[40%] left-1/2 -translate-x-1/2 flex gap-4 opacity-40">
-                    <div className="w-2 h-2 bg-black rounded-full"></div>
-                    <div className="w-2 h-2 bg-black rounded-full"></div>
-                </div>
-                {/* Face (Smile) */}
-                <div className="absolute top-[55%] left-1/2 -translate-x-1/2 w-4 h-2 border-b-2 border-black opacity-30 rounded-full"></div>
+                {/* Face (Eyes) — hide when number label is shown */}
+                {displayLabel === undefined && (
+                    <div className="absolute top-[40%] left-1/2 -translate-x-1/2 flex gap-4 opacity-80">
+                        <div className="w-2.5 h-2.5 bg-black rounded-full"></div>
+                        <div className="w-2.5 h-2.5 bg-black rounded-full"></div>
+                    </div>
+                )}
+                {/* Face (Smile) — hide when number label is shown */}
+                {displayLabel === undefined && (
+                    <div className="absolute top-[55%] left-1/2 -translate-x-1/2 w-4 h-2 border-b-4 border-black/10 rounded-full"></div>
+                )}
 
                 {/* Label */}
                 {displayLabel !== undefined && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="text-white text-3xl font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)] select-none">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none mt-2">
+                        <span className="text-white text-3xl font-black" style={{ WebkitTextStroke: '2px black' }}>
                             {displayLabel}
                         </span>
                     </div>
@@ -57,12 +61,12 @@ const Balloon: React.FC<BalloonProps> = ({
 
             {/* Balloon Knot */}
             <div
-                className="w-5 h-3 -mt-1 rounded-full shadow-sm"
-                style={{ backgroundColor: color.secondary }}
+                className="w-5 h-4 -mt-1.5 rounded-full border-2 border-black/10 border-t-0 shadow-neo-sm"
+                style={{ backgroundColor: highlighted ? '#FACC15' : color.primary }}
             ></div>
 
             {/* String */}
-            <div className="w-0.5 h-12 bg-gradient-to-b from-gray-400 to-gray-300"></div>
+            <div className="w-1 h-12 bg-black ml-[4px]"></div>
         </div>
     );
 };

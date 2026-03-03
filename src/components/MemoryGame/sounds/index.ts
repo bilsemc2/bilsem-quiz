@@ -27,7 +27,7 @@ class SoundManager {
       sound.currentTime = 0;
       sound.play().catch(() => {
         // Tarayıcı otomatik oynatmaya izin vermeyebilir
-        console.log('Ses oynatılamadı:', soundName);
+
       });
     }
   }

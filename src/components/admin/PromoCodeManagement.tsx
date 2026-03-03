@@ -2,54 +2,41 @@ import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Edit, X, Loader2, Ticket, ArrowLeft, Calendar, Zap, Users, Eye } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-
-interface PromoCode {
-    id: string;
-    code: string;
-    xp_reward: number;
-    max_uses: number;
-    current_uses: number;
-    expires_at: string | null;
-    created_at: string;
-}
+import {
+    adminPromoCodeRepository,
+    type AdminPromoCodeRecord,
+    type AdminPromoCodeUsageRecord
+} from '@/server/repositories/adminPromoCodeRepository';
+import {
+    createDefaultPromoCodeFormData,
+    isPromoCodeExpired,
+    isPromoCodeUsageFull,
+    toPromoCodeEditFormData,
+    toPromoCodeMutationInput,
+    toPromoCodeUsageAvatarUrl,
+    type PromoCodeFormData
+} from '@/features/admin/model/promoCodeManagementUseCases';
 
 export default function PromoCodeManagement() {
-    const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+    const [promoCodes, setPromoCodes] = useState<AdminPromoCodeRecord[]>([]);
     const [loading, setLoading] = useState(true);
-    const [newCode, setNewCode] = useState({
-        code: '',
-        xp_reward: 50,
-        max_uses: 100,
-        expires_at: ''
-    });
+    const [newCode, setNewCode] = useState<PromoCodeFormData>(createDefaultPromoCodeFormData());
 
     const [editDialogOpen, setEditDialogOpen] = useState(false);
-    const [editingCode, setEditingCode] = useState<PromoCode | null>(null);
-    const [editFormData, setEditFormData] = useState({
-        code: '',
-        xp_reward: 0,
-        max_uses: 0,
-        expires_at: ''
-    });
+    const [editingCode, setEditingCode] = useState<AdminPromoCodeRecord | null>(null);
+    const [editFormData, setEditFormData] = useState<PromoCodeFormData>(createDefaultPromoCodeFormData());
 
     const [usageDialogOpen, setUsageDialogOpen] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [usageList, setUsageList] = useState<any[]>([]);
+    const [usageList, setUsageList] = useState<AdminPromoCodeUsageRecord[]>([]);
     const [fetchingUsage, setFetchingUsage] = useState(false);
     const [selectedCodeName, setSelectedCodeName] = useState('');
 
     const fetchPromoCodes = async () => {
         try {
-            const { data, error } = await supabase
-                .from('promo_codes')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setPromoCodes(data || []);
+            const data = await adminPromoCodeRepository.listPromoCodes();
+            setPromoCodes(data);
         } catch (error) {
             console.error('Promo kodlar yüklenirken hata:', error);
             toast.error('Kodlar yüklenemedi');
@@ -63,39 +50,24 @@ export default function PromoCodeManagement() {
     }, []);
 
     const handleAddCode = async () => {
-        if (!newCode.code || newCode.xp_reward <= 0) {
+        if (!newCode.code.trim() || Number(newCode.xp_reward) <= 0) {
             toast.warning('Lütfen gerekli alanları doldurun');
             return;
         }
 
         try {
-            // 1. Kodun benzersiz olduğunu kontrol et
-            const { data: existing } = await supabase
-                .from('promo_codes')
-                .select('id')
-                .eq('code', newCode.code.toUpperCase().trim())
-                .maybeSingle();
+            const payload = toPromoCodeMutationInput(newCode);
+            const existing = await adminPromoCodeRepository.getPromoCodeByCode(payload.code);
 
             if (existing) {
                 toast.error('Bu kod zaten tanımlanmış.');
                 return;
             }
 
-            const { data, error } = await supabase
-                .from('promo_codes')
-                .insert([{
-                    code: newCode.code.toUpperCase().trim(),
-                    xp_reward: newCode.xp_reward,
-                    max_uses: newCode.max_uses,
-                    expires_at: newCode.expires_at || null
-                }])
-                .select()
-                .single();
+            const created = await adminPromoCodeRepository.createPromoCode(payload);
 
-            if (error) throw error;
-
-            setPromoCodes([data, ...promoCodes]);
-            setNewCode({ code: '', xp_reward: 50, max_uses: 100, expires_at: '' });
+            setPromoCodes((prev) => [created, ...prev]);
+            setNewCode(createDefaultPromoCodeFormData());
             toast.success('Promo kod başarıyla oluşturuldu');
         } catch (error: unknown) {
             console.error('Kod eklenirken hata:', error);
@@ -106,27 +78,17 @@ export default function PromoCodeManagement() {
     const handleDeleteCode = async (id: string) => {
         if (!window.confirm('Bu kodu silmek istediğinizden emin misiniz?')) return;
         try {
-            const { error } = await supabase
-                .from('promo_codes')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
-            setPromoCodes(promoCodes.filter(c => c.id !== id));
+            await adminPromoCodeRepository.deletePromoCode(id);
+            setPromoCodes((prev) => prev.filter((code) => code.id !== id));
             toast.success('Kod silindi');
         } catch {
             toast.error('Silme işlemi başarısız');
         }
     };
 
-    const handleEditClick = (code: PromoCode) => {
+    const handleEditClick = (code: AdminPromoCodeRecord) => {
         setEditingCode(code);
-        setEditFormData({
-            code: code.code,
-            xp_reward: code.xp_reward,
-            max_uses: code.max_uses,
-            expires_at: code.expires_at ? new Date(code.expires_at).toISOString().split('T')[0] : ''
-        });
+        setEditFormData(toPromoCodeEditFormData(code));
         setEditDialogOpen(true);
     };
 
@@ -134,53 +96,29 @@ export default function PromoCodeManagement() {
         if (!editingCode?.id || !editFormData.code) return;
 
         try {
-            const updateData = {
-                code: editFormData.code.toUpperCase().trim(),
-                xp_reward: editFormData.xp_reward,
-                max_uses: editFormData.max_uses,
-                expires_at: editFormData.expires_at || null
-            };
-
-            const { error } = await supabase
-                .from('promo_codes')
-                .update(updateData)
-                .eq('id', editingCode.id);
-
-            if (error) throw error;
+            const payload = toPromoCodeMutationInput(editFormData);
+            const updated = await adminPromoCodeRepository.updatePromoCode(editingCode.id, payload);
 
             setPromoCodes(prev =>
-                prev.map(c => c?.id === editingCode.id ? { ...c, ...updateData } : c)
+                prev.map((code) => (code.id === editingCode.id ? updated : code))
             );
 
             toast.success('Kod güncellendi');
             setEditDialogOpen(false);
+            setEditingCode(null);
         } catch (error: unknown) {
             console.error('Kod güncellenirken hata:', error);
             toast.error(`Güncelleme başarısız: ${error instanceof Error ? error.message : 'Bir hata oluştu'}`);
         }
     };
 
-    const handleViewUsage = async (code: PromoCode) => {
+    const handleViewUsage = async (code: AdminPromoCodeRecord) => {
         setSelectedCodeName(code.code);
         setUsageDialogOpen(true);
         setFetchingUsage(true);
         try {
-            const { data, error } = await supabase
-                .from('promo_code_usage')
-                .select(`
-                    id,
-                    used_at,
-                    profiles (
-                        name,
-                        email,
-                        avatar_url
-                    )
-                `)
-                .eq('promo_code_id', code.id)
-                .order('used_at', { ascending: false });
-
-            if (error) throw error;
-            setUsageList(data || []);
+            const usageRows = await adminPromoCodeRepository.listPromoCodeUsages(code.id);
+            setUsageList(usageRows);
         } catch (error) {
             console.error('Kullanım verileri yüklenirken hata:', error);
             toast.error('Kullanım listesi yüklenemedi');
@@ -284,8 +222,8 @@ export default function PromoCodeManagement() {
                         <tbody className="divide-y divide-slate-100">
                             {promoCodes.map((code) => {
                                 if (!code) return null;
-                                const isExpired = code.expires_at && new Date(code.expires_at) < new Date();
-                                const isFull = code.current_uses >= code.max_uses;
+                                const isExpired = isPromoCodeExpired(code);
+                                const isFull = isPromoCodeUsageFull(code);
 
                                 return (
                                     <motion.tr
@@ -473,7 +411,7 @@ export default function PromoCodeManagement() {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {usageList.map((usage, idx) => {
-                                            const profile = usage.profiles;
+                                            const avatarUrl = toPromoCodeUsageAvatarUrl(usage);
                                             return (
                                                 <motion.tr
                                                     key={usage.id}
@@ -485,15 +423,19 @@ export default function PromoCodeManagement() {
                                                     <td className="py-3 px-4 font-medium text-slate-900">
                                                         <div className="flex items-center gap-3">
                                                             <img
-                                                                src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.email}`}
+                                                                src={avatarUrl}
                                                                 alt=""
                                                                 className="w-8 h-8 rounded-full bg-slate-100"
                                                             />
-                                                            <span className="truncate max-w-[150px]">{profile?.name || 'İsimsiz'}</span>
+                                                            <span className="truncate max-w-[150px]">
+                                                                {usage.profile_name || 'İsimsiz'}
+                                                            </span>
                                                         </div>
                                                     </td>
                                                     <td className="py-3 px-4 text-slate-500 text-sm italic">
-                                                        <span className="truncate max-w-[200px] block">{profile?.email || '-'}</span>
+                                                        <span className="truncate max-w-[200px] block">
+                                                            {usage.profile_email || '-'}
+                                                        </span>
                                                     </td>
                                                     <td className="py-3 px-4 text-right text-slate-400 text-xs">
                                                         {new Date(usage.used_at).toLocaleString('tr-TR', {

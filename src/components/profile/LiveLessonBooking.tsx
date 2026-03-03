@@ -114,25 +114,25 @@ const LiveLessonBooking: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
-            className="mb-8"
+            className="mb-6"
         >
             {/* Clickable Banner Strip */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 rounded-2xl p-4 transition-all shadow-lg shadow-emerald-500/20"
+                className="w-full flex items-center gap-3 bg-cyber-emerald border-2 border-black/10 rounded-2xl p-4 shadow-neo-sm hover:-translate-y-0.5 hover:shadow-neo-md transition-all active:translate-y-0.5 active:shadow-none focus:outline-none"
             >
-                <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
-                    <Video className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-white border-2 border-black/10 rounded-xl flex items-center justify-center">
+                    <Video className="w-5 h-5 text-black" />
                 </div>
                 <div className="flex-1 text-left">
-                    <h2 className="text-lg font-bold text-white">🎓 Canlı Ders Al</h2>
-                    <p className="text-white/70 text-xs">Müsait saatleri seç, hemen randevu al</p>
+                    <h2 className="text-base font-nunito font-extrabold text-black">🎓 Canlı Ders Al</h2>
+                    <p className="text-black/60 font-nunito font-bold text-xs">Müsait saatleri seç, hemen randevu al</p>
                 </div>
                 <motion.div
                     animate={{ rotate: isOpen ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                 >
-                    <ChevronDown className="w-6 h-6 text-white/70" />
+                    <ChevronDown className="w-5 h-5 text-black" />
                 </motion.div>
             </button>
 
@@ -148,80 +148,86 @@ const LiveLessonBooking: React.FC = () => {
                     >
                         <div className="pt-4 space-y-4">
                             {/* Lesson Info Card */}
-                            <div className="bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-5 backdrop-blur-sm">
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                                    <div>
-                                        <p className="text-2xl font-black text-emerald-400">2</p>
-                                        <p className="text-white/70 text-xs font-medium">Haftalık Ders</p>
+                            <div className="bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-sm">
+                                <div className="h-1.5 bg-cyber-emerald" />
+                                <div className="p-5">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                                        <div className="bg-gray-50 dark:bg-slate-700/50 border border-black/5 dark:border-white/5 rounded-xl p-2.5">
+                                            <p className="text-xl font-nunito font-extrabold text-black dark:text-white">2</p>
+                                            <p className="text-slate-400 text-[9px] font-nunito font-extrabold uppercase tracking-wider">Haftalık</p>
+                                        </div>
+                                        <div className="bg-gray-50 dark:bg-slate-700/50 border border-black/5 dark:border-white/5 rounded-xl p-2.5">
+                                            <p className="text-xl font-nunito font-extrabold text-black dark:text-white">30<span className="text-xs">dk</span></p>
+                                            <p className="text-slate-400 text-[9px] font-nunito font-extrabold uppercase tracking-wider">Süre</p>
+                                        </div>
+                                        <div className="bg-gray-50 dark:bg-slate-700/50 border border-black/5 dark:border-white/5 rounded-xl p-2.5">
+                                            <p className="text-xl font-nunito font-extrabold text-black dark:text-white">8</p>
+                                            <p className="text-slate-400 text-[9px] font-nunito font-extrabold uppercase tracking-wider">Aylık Toplam</p>
+                                        </div>
+                                        <div className="bg-cyber-emerald/10 border border-cyber-emerald/20 rounded-xl p-2.5">
+                                            <p className="text-lg font-nunito font-extrabold text-black dark:text-white">₺10.000</p>
+                                            <p className="text-slate-500 text-[9px] font-nunito font-extrabold uppercase tracking-wider">Aylık Ücret</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-2xl font-black text-cyan-400">30<span className="text-sm">dk</span></p>
-                                        <p className="text-white/70 text-xs font-medium">Ders Süresi</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-black text-indigo-400">8</p>
-                                        <p className="text-white/70 text-xs font-medium">Aylık Toplam</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-black text-amber-400">₺10.000</p>
-                                        <p className="text-white/70 text-xs font-medium">Aylık Ücret</p>
-                                    </div>
+                                    <p className="text-center text-slate-500 dark:text-slate-400 text-xs mt-4 font-nunito font-bold">
+                                        🎁 Ders aldığınız sürece <span className="font-extrabold text-cyber-pink bg-cyber-pink/10 px-1.5 py-0.5 rounded border border-cyber-pink/20">PRO paket</span> ayrıcalıklarına ücretsiz sahip olursunuz!
+                                    </p>
                                 </div>
-                                <p className="text-center text-emerald-300 text-sm mt-4 font-medium">
-                                    🎁 Ders aldığınız sürece <span className="font-bold text-white">PRO paket</span> ayrıcalıklarına ücretsiz sahip olursunuz!
-                                </p>
                             </div>
 
                             {/* Day Selector & Schedule */}
-                            <div className="bg-slate-800/50 border border-emerald-500/20 rounded-2xl p-5">
-                                <div className="flex items-center justify-between mb-5">
-                                    <button onClick={prevDay} className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white">
-                                        <ChevronLeft className="w-5 h-5" />
-                                    </button>
-                                    <div className="flex gap-1.5">
-                                        {DAYS_ORDER.map(day => (
-                                            <button key={day} onClick={() => setSelectedDay(day)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedDay === day
-                                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                                                    : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-                                                    }`}>
-                                                {SHORT_DAY_NAMES[day]}
-                                            </button>
-                                        ))}
+                            <div className="bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-sm">
+                                <div className="h-1.5 bg-cyber-blue" />
+                                <div className="p-5">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <button onClick={prevDay} className="p-2 border-2 border-black/10 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-black dark:text-white">
+                                            <ChevronLeft className="w-4 h-4" />
+                                        </button>
+                                        <div className="flex gap-1.5 flex-wrap justify-center">
+                                            {DAYS_ORDER.map(day => (
+                                                <button key={day} onClick={() => setSelectedDay(day)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-nunito font-extrabold transition-all border-2 ${selectedDay === day
+                                                        ? 'bg-cyber-blue text-white border-cyber-blue shadow-neo-sm -translate-y-0.5'
+                                                        : 'bg-gray-50 dark:bg-slate-700 text-black dark:text-white border-black/10 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-slate-600'
+                                                        }`}>
+                                                    {SHORT_DAY_NAMES[day]}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button onClick={nextDay} className="p-2 border-2 border-black/10 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-black dark:text-white">
+                                            <ChevronRight className="w-4 h-4" />
+                                        </button>
                                     </div>
-                                    <button onClick={nextDay} className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white">
-                                        <ChevronRight className="w-5 h-5" />
-                                    </button>
-                                </div>
 
-                                {/* Available Hours Grid */}
-                                {availableHours.length > 0 ? (
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                                        {availableHours.map(hour => (
-                                            <button key={hour} onClick={() => setBookingHour(hour)}
-                                                className="group relative bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 hover:bg-emerald-500/20 hover:border-emerald-500/40 hover:scale-105 transition-all text-center">
-                                                <Clock className="w-4 h-4 text-emerald-400 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-                                                <span className="text-white font-bold text-sm">{`${hour.toString().padStart(2, '0')}:00`}</span>
-                                                <span className="block text-emerald-400 text-[10px] font-medium mt-0.5">Müsait</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <p className="text-white/40 text-sm">Bu gün için müsait saat bulunmuyor.</p>
-                                        <p className="text-white/30 text-xs mt-1">Diğer günlere göz atın.</p>
-                                    </div>
-                                )}
+                                    {/* Available Hours Grid */}
+                                    {availableHours.length > 0 ? (
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
+                                            {availableHours.map(hour => (
+                                                <button key={hour} onClick={() => setBookingHour(hour)}
+                                                    className="group relative bg-cyber-emerald/10 border-2 border-cyber-emerald/20 rounded-xl p-3 hover:bg-cyber-emerald hover:border-black hover:shadow-neo-sm hover:-translate-y-0.5 transition-all text-center focus:outline-none">
+                                                    <Clock className="w-4 h-4 text-cyber-emerald mx-auto mb-1 group-hover:text-black group-hover:scale-110 transition-all" />
+                                                    <span className="text-black dark:text-white font-nunito font-extrabold text-xs group-hover:text-black">{`${hour.toString().padStart(2, '0')}:00`}</span>
+                                                    <span className="block text-slate-400 text-[8px] font-nunito font-extrabold mt-0.5 uppercase tracking-wider group-hover:text-black/60">Müsait</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 bg-gray-50 dark:bg-slate-700/30 border-2 border-black/5 dark:border-white/5 border-dashed rounded-xl">
+                                            <p className="text-slate-500 dark:text-slate-400 text-xs font-nunito font-bold">Bu gün için müsait saat bulunmuyor.</p>
+                                            <p className="text-slate-400 text-[10px] mt-1 font-nunito font-bold">Diğer günlere göz atın.</p>
+                                        </div>
+                                    )}
 
-                                {/* Summary */}
-                                <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                                    <span className="text-white/30 text-xs">
-                                        {availableHours.length} müsait saat • {selectedDay}
-                                    </span>
-                                    <a href="https://wa.me/905416150721" target="_blank" rel="noopener noreferrer"
-                                        className="text-emerald-400 text-xs font-medium hover:text-emerald-300 transition-colors">
-                                        WhatsApp ile iletişime geç →
-                                    </a>
+                                    {/* Summary */}
+                                    <div className="mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
+                                        <span className="text-slate-400 text-[10px] font-nunito font-extrabold uppercase tracking-wider">
+                                            {availableHours.length} müsait saat • {selectedDay}
+                                        </span>
+                                        <a href="https://wa.me/905416150721" target="_blank" rel="noopener noreferrer"
+                                            className="text-cyber-pink text-[10px] font-nunito font-extrabold hover:underline transition-all uppercase tracking-wider">
+                                            WhatsApp ile iletişime geç →
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -231,32 +237,33 @@ const LiveLessonBooking: React.FC = () => {
 
             {/* Booking Confirmation Modal */}
             {bookingHour !== null && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setBookingHour(null)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-4" onClick={() => setBookingHour(null)}>
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-slate-800 border border-emerald-500/30 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+                        className="bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden p-6 w-full max-w-sm shadow-neo-lg"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <CheckCircle className="w-8 h-8 text-emerald-400" />
+                        <div className="h-1.5 bg-cyber-emerald -mx-6 -mt-6 mb-5" />
+                        <div className="text-center mb-5">
+                            <div className="w-14 h-14 bg-cyber-emerald/10 border-2 border-cyber-emerald/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                <CheckCircle className="w-7 h-7 text-cyber-emerald" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Randevu Al</h3>
-                            <p className="text-white/60">
-                                <span className="font-semibold text-emerald-400">{selectedDay}</span> günü saat{' '}
-                                <span className="font-semibold text-emerald-400">{bookingHour}:00</span> için
+                            <h3 className="text-lg font-nunito font-extrabold text-black dark:text-white mb-1.5">Randevu Al</h3>
+                            <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold text-sm">
+                                <span className="font-extrabold text-cyber-pink">{selectedDay}</span> günü saat{' '}
+                                <span className="font-extrabold text-cyber-pink">{bookingHour}:00</span> için
                                 canlı ders randevusu almak istiyor musunuz?
                             </p>
                         </div>
-                        <p className="text-white/40 text-xs text-center mb-4">
+                        <p className="text-slate-400 text-[9px] text-center mb-4 font-nunito font-extrabold uppercase tracking-wider">
                             WhatsApp üzerinden öğretmeninize otomatik mesaj gönderilecektir.
                         </p>
-                        <div className="flex gap-3">
+                        <div className="flex gap-2.5">
                             <button onClick={() => setBookingHour(null)}
-                                className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-white/70 font-medium rounded-xl hover:bg-white/10 transition-colors">İptal</button>
+                                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-slate-700 border-3 border-black/10 text-black dark:text-white font-nunito font-extrabold rounded-xl shadow-neo-sm hover:shadow-neo-md transition-all text-xs uppercase tracking-wider">İptal</button>
                             <button onClick={confirmBooking}
-                                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all active:scale-95">
+                                className="flex-1 px-4 py-2.5 bg-cyber-emerald text-black border-3 border-black/10 font-nunito font-extrabold rounded-xl shadow-neo-sm hover:shadow-neo-md transition-all text-xs uppercase tracking-wider">
                                 Randevu Al
                             </button>
                         </div>

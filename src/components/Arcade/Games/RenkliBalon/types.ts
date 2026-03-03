@@ -26,5 +26,5 @@ export interface GameState {
     score: number;
     level: number;
     lives: number;
-    status: 'START' | 'PLAYING' | 'GAME_OVER' | 'WIN';
+    status: 'START' | 'PLAYING' | 'GAME_OVER' | 'SUCCESS';
 }

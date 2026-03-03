@@ -2,25 +2,17 @@ import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
 import { Edit, Trash2, X, Loader2, Users, ChevronLeft, ChevronRight, Search, Key } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
+import { authRepository } from '@/server/repositories/authRepository';
+import { adminUserRepository, type AdminManagedUserRecord } from '@/server/repositories/adminUserRepository';
+import {
+  filterAdminUsers,
+  formatYetenekAlani,
+  parseYetenekAlani,
+  type UserManagementFilters
+} from '@/features/admin/model/userManagementUseCases';
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  points: number;
-  experience: number;
-  is_vip: boolean;
-  is_active: boolean;
-  grade?: number;
-  referred_by?: string;
-  yetenek_alani?: string[] | string;
-  resim_analiz_hakki?: number;
-  class_students?: {
-    classes: { id: string; name: string; grade: number };
-  }[];
-}
+type User = AdminManagedUserRecord;
 
 const YETENEK_ALANLARI = [
   { value: 'genel yetenek', label: 'Genel Yetenek', isParent: true },
@@ -29,26 +21,6 @@ const YETENEK_ALANLARI = [
   { value: 'resim', label: 'Resim', isParent: true },
   { value: 'müzik', label: 'Müzik', isParent: true },
 ];
-
-// yetenek_alani veritabanında JSON array olarak saklanıyor: ["genel yetenek", "resim"]
-const parseYetenekAlani = (value: unknown): string[] => {
-  if (!value) return [];
-  if (Array.isArray(value)) return value;
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      return [value];
-    }
-  }
-  return [];
-};
-
-const formatYetenekAlani = (value: string[]): string[] | null => {
-  if (!value || value.length === 0) return null;
-  return value;
-};
 
 const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -62,7 +34,7 @@ const UserManagement = () => {
   const [editFormData, setEditFormData] = useState({
     name: '', email: '', points: 0, experience: 0, grade: 0, referred_by: '', yetenek_alani: [] as string[], resim_analiz_hakki: 3,
   });
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<UserManagementFilters>({
     name: '', email: '', grade: '', showOnlyVip: false, yetenek_alani: '',
   });
   // Password reset state
@@ -82,11 +54,9 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles').select('*, class_students(classes(id, name, grade))').order('created_at', { ascending: false });
-      if (error) throw error;
-      setUsers(data || []);
-      setFilteredUsers(data || []);
+      const data = await adminUserRepository.listUsers();
+      setUsers(data);
+      setFilteredUsers(data);
       setError(null);
     } catch (err) {
       console.error('Kullanıcılar yüklenirken hata:', err);
@@ -98,18 +68,7 @@ const UserManagement = () => {
 
   // Filtreleme - users değiştiğinde
   useEffect(() => {
-    let result = [...users];
-    if (filters.name) result = result.filter(u => u.name?.toLowerCase().includes(filters.name.toLowerCase()));
-    if (filters.email) result = result.filter(u => u.email.toLowerCase().includes(filters.email.toLowerCase()));
-    if (filters.grade) result = result.filter(u => u.grade === parseInt(filters.grade));
-    if (filters.showOnlyVip) result = result.filter(u => u.is_vip);
-    if (filters.yetenek_alani) {
-      result = result.filter(u => {
-        const yetenekler = parseYetenekAlani(u.yetenek_alani);
-        return yetenekler.includes(filters.yetenek_alani);
-      });
-    }
-    setFilteredUsers(result);
+    setFilteredUsers(filterAdminUsers(users, filters));
   }, [users, filters]);
 
   // Filtre değiştiğinde sayfayı sıfırla (users değiştiğinde değil)
@@ -119,8 +78,7 @@ const UserManagement = () => {
 
   const handleToggleVip = async (userId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase.from('profiles').update({ is_vip: !currentStatus }).eq('id', userId);
-      if (error) throw error;
+      await adminUserRepository.setUserVipStatus(userId, !currentStatus);
       setUsers(users.map(u => u.id === userId ? { ...u, is_vip: !currentStatus } : u));
       toast.success('VIP durumu güncellendi');
     } catch {
@@ -132,7 +90,7 @@ const UserManagement = () => {
     setEditingUser(user);
     setEditFormData({
       name: user.name || '', email: user.email || '', points: user.points || 0, experience: user.experience || 0,
-      grade: user.grade || 0, referred_by: user.referred_by || '',
+      grade: Number(user.grade) || 0, referred_by: user.referred_by || '',
       yetenek_alani: parseYetenekAlani(user.yetenek_alani),
       resim_analiz_hakki: user.resim_analiz_hakki ?? 3,
     });
@@ -142,7 +100,7 @@ const UserManagement = () => {
   const handleSave = async () => {
     if (!editingUser) return;
     try {
-      const { error } = await supabase.from('profiles').update({
+      await adminUserRepository.updateUser(editingUser.id, {
         name: editFormData.name,
         email: editFormData.email,
         points: editFormData.points,
@@ -150,10 +108,8 @@ const UserManagement = () => {
         grade: editFormData.grade,
         referred_by: editFormData.referred_by || null,
         yetenek_alani: formatYetenekAlani(editFormData.yetenek_alani),
-        resim_analiz_hakki: editFormData.resim_analiz_hakki,
-      }).eq('id', editingUser.id);
-
-      if (error) throw error;
+        resim_analiz_hakki: editFormData.resim_analiz_hakki
+      });
 
       // Optimistik güncelleme: Sadece düzenlenen kullanıcıyı local state'de güncelle
       setUsers(prev => prev.map(u =>
@@ -165,8 +121,9 @@ const UserManagement = () => {
             points: editFormData.points,
             experience: editFormData.experience,
             grade: editFormData.grade,
-            referred_by: editFormData.referred_by,
+            referred_by: editFormData.referred_by || null,
             yetenek_alani: editFormData.yetenek_alani,
+            resim_analiz_hakki: editFormData.resim_analiz_hakki
           }
           : u
       ));
@@ -188,17 +145,7 @@ const UserManagement = () => {
     if (!deletingUser) return;
     try {
       setDeleting(true);
-
-      const { error, count } = await supabase
-        .from('profiles')
-        .delete({ count: 'exact' })
-        .eq('id', deletingUser.id);
-
-      if (error) {
-        console.error('Supabase silme hatası:', error);
-        toast.error(`Silme hatası: ${error.message}`);
-        return;
-      }
+      const count = await adminUserRepository.deleteUser(deletingUser.id);
 
       if (count === 0) {
         toast.error('Kullanıcı silinemedi. RLS politikası silme işlemini engelliyor olabilir.');
@@ -221,8 +168,7 @@ const UserManagement = () => {
     if (!window.confirm('TÜM KULLANICILARIN XP değerlerini sıfırlamak istediğinizden emin misiniz? Bu işlem geri alınamaz!')) return;
     if (!window.confirm('Bu işlemi ONAYLIYOR musunuz? Tüm XP\'ler 0 olacak!')) return;
     try {
-      const { error } = await supabase.from('profiles').update({ experience: 0 }).gte('experience', 0);
-      if (error) throw error;
+      await adminUserRepository.resetAllXp();
       setUsers(users.map(u => ({ ...u, experience: 0 })));
       toast.success('Tüm XP değerleri sıfırlandı');
     } catch (err) {
@@ -247,28 +193,25 @@ const UserManagement = () => {
       setResettingPassword(true);
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = await authRepository.getAccessToken();
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/admin-reset-password`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-          'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({
-          targetUserId: passwordResetUser.id,
-          newPassword: newPassword,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Şifre güncellenemedi');
+      if (!accessToken) {
+        throw new Error('Oturum bulunamadı');
       }
 
-      toast.success(`${passwordResetUser.name || passwordResetUser.email} kullanıcısının şifresi güncellendi`);
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase ortam değişkenleri eksik');
+      }
+
+      await adminUserRepository.resetUserPassword({
+        targetUserId: passwordResetUser.id,
+        newPassword,
+        accessToken,
+        supabaseUrl,
+        supabaseAnonKey
+      });
+
+      toast.success(`${passwordResetUser.name || passwordResetUser.email || 'Kullanıcı'} kullanıcısının şifresi güncellendi`);
       setPasswordDialogOpen(false);
       setNewPassword('');
       setPasswordResetUser(null);
@@ -356,10 +299,10 @@ const UserManagement = () => {
               {paginatedUsers.map((user, idx) => (
                 <motion.tr key={user.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.02 }} className="hover:bg-slate-50">
                   <td className="py-3 px-4 font-medium text-slate-800">{user.name || '-'}</td>
-                  <td className="py-3 px-4 text-slate-600">{user.email}</td>
+                  <td className="py-3 px-4 text-slate-600">{user.email || '-'}</td>
                   <td className="py-3 px-4 text-right"><span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded font-bold">{user.points}</span></td>
                   <td className="py-3 px-4 text-right"><span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded font-bold">{user.experience}</span></td>
-                  <td className="py-3 px-4 text-center"><ToggleSwitch checked={user.is_vip} onChange={() => handleToggleVip(user.id, user.is_vip)} /></td>
+                  <td className="py-3 px-4 text-center"><ToggleSwitch checked={Boolean(user.is_vip)} onChange={() => handleToggleVip(user.id, Boolean(user.is_vip))} /></td>
                   <td className="py-3 px-4">
                     <div className="flex justify-center gap-1">
                       <button onClick={() => handleEdit(user)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Düzenle"><Edit className="w-4 h-4" /></button>

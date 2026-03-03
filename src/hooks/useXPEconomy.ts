@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { showXPDeduct, showXPError } from '../components/XPToast';
+import { checkXPBalance, performXPTransaction } from '@/features/xp/model/xpUseCases';
 
 interface XPTransactionResult {
     success: boolean;
@@ -16,15 +16,10 @@ export const useXPEconomy = () => {
     const checkBalance = useCallback(async (requiredAmount: number): Promise<boolean> => {
         if (!user) return false;
 
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('experience')
-            .eq('id', user.id)
-            .single();
-
-        if (error || !data) return false;
-
-        return (data.experience || 0) >= requiredAmount;
+        return checkXPBalance({
+            userId: user.id,
+            requiredAmount
+        });
     }, [user]);
 
     const deductXP = useCallback(async (amount: number, reason: string): Promise<XPTransactionResult> => {
@@ -32,35 +27,19 @@ export const useXPEconomy = () => {
 
         setLoading(true);
         try {
-            // Get auth session for Edge Function call
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) {
-                throw new Error('Oturum bulunamadı');
-            }
+            const result = await performXPTransaction({
+                action: 'deduct',
+                amount,
+                reason
+            });
 
-            // Call secure Edge Function for atomic XP deduction
-            const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/xp-transaction`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session.access_token}`,
-                    },
-                    body: JSON.stringify({ action: 'deduct', amount, reason }),
-                }
-            );
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                if (errorData.error === 'Insufficient XP') {
+            if (!result.success) {
+                if (result.error === 'Insufficient XP') {
                     showXPError('Yetersiz XP!');
                     return { success: false, error: 'Insufficient funds' };
                 }
-                throw new Error(errorData.error || 'XP düşülemedi');
+                throw new Error(result.error || 'XP düşülemedi');
             }
-
-            const result = await response.json();
 
             // Update global state
             if (refreshProfile) {

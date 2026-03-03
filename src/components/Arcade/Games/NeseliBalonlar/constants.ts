@@ -1,15 +1,27 @@
+import { ARCADE_PALETTE } from '../../Shared/ArcadeConstants';
 import { BalloonColor } from './types';
 
-export const BALLOON_COLORS: BalloonColor[] = [
-    { name: 'Kırmızı', primary: '#ef4444', secondary: '#991b1b', highlight: '#fca5a5' },
-    { name: 'Mavi', primary: '#3b82f6', secondary: '#1e3a8a', highlight: '#93c5fd' },
-    { name: 'Yeşil', primary: '#22c55e', secondary: '#14532d', highlight: '#86efac' },
-    { name: 'Sarı', primary: '#eab308', secondary: '#713f12', highlight: '#fde047' },
-    { name: 'Mor', primary: '#a855f7', secondary: '#581c87', highlight: '#d8b4fe' },
-    { name: 'Turuncu', primary: '#f97316', secondary: '#7c2d12', highlight: '#fdba74' },
-    { name: 'Pembe', primary: '#ec4899', secondary: '#831843', highlight: '#f9a8d4' },
-    { name: 'Turkuaz', primary: '#06b6d4', secondary: '#164e63', highlight: '#67e8f9' },
-];
+// ARCADE_PALETTE'den BalloonColor formatına dönüştür
+// secondary: %30 karartılmış, highlight: %30 açıklaştırılmış
+function hexToBalloonColor(name: string, hex: string): BalloonColor {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const darker = (v: number) => Math.max(0, Math.floor(v * 0.6));
+    const lighter = (v: number) => Math.min(255, Math.floor(v + (255 - v) * 0.5));
+    const toHex = (rv: number, gv: number, bv: number) =>
+        `#${rv.toString(16).padStart(2, '0')}${gv.toString(16).padStart(2, '0')}${bv.toString(16).padStart(2, '0')}`;
+    return {
+        name,
+        primary: hex,
+        secondary: toHex(darker(r), darker(g), darker(b)),
+        highlight: toHex(lighter(r), lighter(g), lighter(b)),
+    };
+}
+
+export const BALLOON_COLORS: BalloonColor[] = Object.values(ARCADE_PALETTE).map(
+    c => hexToBalloonColor(c.name, c.hex)
+);
 
 export const MAX_BALLOONS = 8;
 export const POP_DELAY = 1000;

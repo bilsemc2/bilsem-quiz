@@ -107,7 +107,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
     canvas.style.height = `${rows * cellSize}px`;
     ctx.scale(dpr, dpr);
 
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#bae6fd'; // sky-200
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
@@ -115,7 +115,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
     ctx.rotate(-Math.PI / 4);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     const fontSize = Math.min(canvas.width, canvas.height) / (5 * dpr);
     ctx.font = `bold ${fontSize}px Inter, sans-serif`;
     ctx.fillText('bilsemc2', 0, 0);
@@ -124,15 +124,15 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
     grid.forEach((row, r) => {
       row.forEach((cell, c) => {
         if (cell.visited) {
-          ctx.fillStyle = 'rgba(30, 41, 59, 0.3)';
+          ctx.fillStyle = '#e0f2fe'; // sky-100
           ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
         }
       });
     });
 
     if (userPath.length > 0) {
-      ctx.strokeStyle = '#fbbf24';
-      ctx.lineWidth = cellSize / 4;
+      ctx.strokeStyle = '#fbbf24'; // amber-400
+      ctx.lineWidth = cellSize / 3;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
@@ -146,7 +146,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
     }
 
     if (solution.length > 0) {
-      ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)';
+      ctx.strokeStyle = '#34d399'; // emerald-400
       ctx.lineWidth = cellSize / 3;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -160,8 +160,9 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
       ctx.stroke();
     }
 
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000000'; // Black borders
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'square';
     ctx.beginPath();
     grid.forEach((row, r) => {
       row.forEach((cell, c) => {
@@ -176,7 +177,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
     ctx.stroke();
 
     // Draw start marker with green background
-    ctx.fillStyle = 'rgba(34, 197, 94, 0.4)';
+    ctx.fillStyle = '#4ade80'; // green-400
     ctx.fillRect(0, 0, cellSize, cellSize);
     ctx.font = `${cellSize * 0.7}px sans-serif`;
     ctx.textAlign = 'center';
@@ -184,25 +185,36 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
     ctx.fillText('🚀', cellSize / 2, cellSize / 2);
 
     // Draw finish marker with gold background
-    ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
+    ctx.fillStyle = '#fde047'; // yellow-300
     ctx.fillRect((cols - 1) * cellSize, (rows - 1) * cellSize, cellSize, cellSize);
     ctx.fillText('🏁', (cols - 1) * cellSize + cellSize / 2, (rows - 1) * cellSize + cellSize / 2);
 
     if (playerPosition) {
       const [pr, pc] = playerPosition;
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = '#fbbf24';
-      ctx.fillStyle = '#fbbf24';
-      ctx.beginPath();
-      ctx.arc(pc * cellSize + cellSize / 2, pr * cellSize + cellSize / 2, cellSize / 3, 0, Math.PI * 2);
-      ctx.fill();
+      // Solid black shadow for tactile feel
       ctx.shadowBlur = 0;
+      ctx.shadowColor = '#000000';
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+
+      ctx.fillStyle = '#f59e0b'; // amber-500
+      ctx.beginPath();
+      ctx.arc(pc * cellSize + cellSize / 2, pr * cellSize + cellSize / 2, cellSize / 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+
+      // Border around player
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(pc * cellSize + cellSize / 2, pr * cellSize + cellSize / 2, cellSize / 2.5, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
   }, [grid, solution, userPath, playerPosition, cellSize, isDrawing]);
 
   return (
-    <div className="relative bg-slate-900 rounded-lg p-4 shadow-2xl overflow-auto custom-scrollbar flex items-center justify-center min-h-[400px] touch-none">
+    <div className="relative bg-white rounded-2xl p-4 flex items-center justify-center min-h-[400px] touch-none">
       <canvas
         ref={canvasRef}
         onMouseDown={handleStart}
@@ -212,7 +224,7 @@ const MazeCanvas: React.FC<MazeCanvasProps> = ({
         onTouchMove={handleMove}
         onTouchEnd={handleEnd}
         onMouseLeave={() => { setIsDrawing(false); }}
-        className={`rounded border border-slate-700 shadow-inner select-none ${isDrawing ? 'cursor-none' : 'cursor-default'}`}
+        className={`rounded-xl border-2 border-black/10 select-none ${isDrawing ? 'cursor-none' : 'cursor-default'}`}
       />
     </div>
   );

@@ -1,144 +1,46 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart3, Brain, Tablet, Users, TrendingUp, Loader2, PieChart } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { ZEKA_RENKLERI, ZekaTuru } from '../../constants/intelligenceTypes';
-
-interface AnalyticsData {
-    totalPlays: number;
-    tabletPlays: number;
-    bireyselPlays: number;
-    intelligenceBreakdown: Record<string, number>;
-    topPlayers: { name: string; plays: number; avgScore: number }[];
-    recentActivity: { game_id: string; user_name: string; score: number; created_at: string }[];
-}
-
-interface GamePlayRecord {
-    user_id: string;
-    score_achieved: number;
-    game_id?: string;
-    created_at?: string;
-}
-
-interface ProfileRecord {
-    id: string;
-    name: string | null;
-}
+import { adminStatisticsRepository } from '@/server/repositories/adminStatisticsRepository';
+import {
+    buildTalentAnalyticsData,
+    collectProfileIdsFromRecentPlays,
+    createEmptyTalentAnalyticsData,
+    type TalentAnalyticsData
+} from '@/features/admin/model/talentAnalyticsUseCases';
 
 const TalentAnalytics = () => {
     const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<AnalyticsData>({
-        totalPlays: 0,
-        tabletPlays: 0,
-        bireyselPlays: 0,
-        intelligenceBreakdown: {},
-        topPlayers: [],
-        recentActivity: [],
-    });
+    const [data, setData] = useState<TalentAnalyticsData>(createEmptyTalentAnalyticsData());
 
     useEffect(() => {
-        fetchAnalytics();
-    }, []);
+        const fetchAnalytics = async () => {
+            try {
+                setLoading(true);
 
-    const fetchAnalytics = async () => {
-        try {
-            setLoading(true);
+                const [workshopPlays, recentPlays] = await Promise.all([
+                    adminStatisticsRepository.listWorkshopGamePlays(),
+                    adminStatisticsRepository.listRecentWorkshopGamePlays(100)
+                ]);
 
-            // Toplam oyun sayıları
-            const { data: allPlays, error: playsError } = await supabase
-                .from('game_plays')
-                .select('workshop_type, intelligence_type, score_achieved, user_id, game_id, created_at')
-                .not('workshop_type', 'is', null);
+                const profileIds = collectProfileIdsFromRecentPlays(recentPlays);
+                const profiles = await adminStatisticsRepository.listProfilesByIds(profileIds);
 
-            if (playsError) throw playsError;
-
-            const plays = allPlays || [];
-            const tabletPlays = plays.filter(p => p.workshop_type === 'tablet').length;
-            const bireyselPlays = plays.filter(p => p.workshop_type === 'bireysel').length;
-
-            // Zeka türü dağılımı
-            const intelligenceBreakdown: Record<string, number> = {};
-            plays.forEach(p => {
-                if (p.intelligence_type) {
-                    intelligenceBreakdown[p.intelligence_type] = (intelligenceBreakdown[p.intelligence_type] || 0) + 1;
-                }
-            });
-
-            // Top oyuncular - profiles JOIN olmadan
-            const { data: topPlayersData, error: topError } = await supabase
-                .from('game_plays')
-                .select('user_id, score_achieved')
-                .not('workshop_type', 'is', null)
-                .order('created_at', { ascending: false })
-                .limit(100);
-
-            console.log('Top Players Query:', { data: topPlayersData, error: topError });
-
-            // Player stats hesapla
-            const playerStats: Record<string, { plays: number; totalScore: number }> = {};
-            (topPlayersData || []).forEach((p: GamePlayRecord) => {
-                const id = p.user_id;
-                if (!playerStats[id]) {
-                    playerStats[id] = { plays: 0, totalScore: 0 };
-                }
-                playerStats[id].plays++;
-                playerStats[id].totalScore += p.score_achieved || 0;
-            });
-
-            // Profil isimlerini al
-            const userIds = Object.keys(playerStats);
-            const profileNames: Record<string, string> = {};
-            if (userIds.length > 0) {
-                const { data: profilesData } = await supabase
-                    .from('profiles')
-                    .select('id, name')
-                    .in('id', userIds);
-
-                (profilesData || []).forEach((p: ProfileRecord) => {
-                    profileNames[p.id] = p.name || 'Bilinmiyor';
-                });
+                setData(buildTalentAnalyticsData({
+                    workshopPlays,
+                    recentPlays,
+                    profiles
+                }));
+            } catch (error) {
+                console.error('Analytics yüklenirken hata:', error);
+            } finally {
+                setLoading(false);
             }
+        };
 
-            const topPlayers = Object.entries(playerStats)
-                .map(([id, stats]) => ({
-                    name: profileNames[id] || 'Bilinmiyor',
-                    plays: stats.plays,
-                    avgScore: Math.round(stats.totalScore / stats.plays)
-                }))
-                .sort((a, b) => b.plays - a.plays)
-                .slice(0, 5);
-
-            // Son aktiviteler - profiles JOIN olmadan
-            const { data: recentData, error: recentError } = await supabase
-                .from('game_plays')
-                .select('game_id, score_achieved, created_at, user_id')
-                .not('workshop_type', 'is', null)
-                .order('created_at', { ascending: false })
-                .limit(10);
-
-            console.log('Recent Activity Query:', { data: recentData, error: recentError });
-
-            const recentActivity = (recentData || []).map((r: GamePlayRecord & { game_id: string; created_at: string }) => ({
-                game_id: r.game_id,
-                user_name: profileNames[r.user_id] || 'Bilinmiyor',
-                score: r.score_achieved || 0,
-                created_at: r.created_at,
-            }));
-
-            setData({
-                totalPlays: plays.length,
-                tabletPlays,
-                bireyselPlays,
-                intelligenceBreakdown,
-                topPlayers,
-                recentActivity,
-            });
-        } catch (err) {
-            console.error('Analytics yüklenirken hata:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+        void fetchAnalytics();
+    }, []);
 
     if (loading) {
         return (

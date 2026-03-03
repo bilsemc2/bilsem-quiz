@@ -255,18 +255,18 @@ const UserGameStats: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-6 flex justify-center items-center min-h-[200px]">
-                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            <div className="bg-white dark:bg-slate-900 border-2 border-black/10 rounded-2xl p-6 flex justify-center items-center min-h-[200px] shadow-neo-sm ">
+                <Loader2 className="w-8 h-8 text-[#14F195] animate-spin" />
             </div>
         );
     }
 
     if (stats.totalPlays === 0) {
         return (
-            <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-8 text-center">
-                <Gamepad2 className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-white/60 mb-2">Henüz oyun verisi yok</h3>
-                <p className="text-white/40 text-sm">
+            <div className="bg-white dark:bg-slate-900 border-2 border-black/10 rounded-2xl p-8 text-center shadow-neo-sm ">
+                <Gamepad2 className="w-12 h-12 text-black/20 dark:text-white/20 mx-auto mb-4" />
+                <h3 className="text-lg font-extrabold text-black/60 dark:text-white/60 mb-2 font-nunito">Henüz oyun verisi yok</h3>
+                <p className="text-black/40 dark:text-white/40 font-bold text-sm">
                     Tablet veya Bireysel Değerlendirme oyunlarını oynamaya başlayın!
                 </p>
             </div>
@@ -276,48 +276,56 @@ const UserGameStats: React.FC = () => {
     return (
         <div className="space-y-4">
             {/* Özet İstatistikler - Compact 2x2 Grid */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-slate-800/90 border border-indigo-500/40 rounded-xl p-3 text-center"
+                    className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/10 rounded-xl p-3 text-center shadow-neo-sm hover:translate-y-0.5 hover:shadow-neo-sm transition-all"
                 >
-                    <Gamepad2 className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
-                    <p className="text-xl font-black bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">{stats.totalPlays}</p>
-                    <span className="text-white/50 text-[10px]">Oyun</span>
+                    <div className="w-8 h-8 bg-[#3374FF]/10 dark:bg-[#3374FF]/20 rounded-lg flex items-center justify-center mx-auto mb-2 border-2 border-black/10">
+                        <Gamepad2 className="w-4 h-4 text-[#3374FF] dark:text-[#3374FF]" />
+                    </div>
+                    <p className="text-2xl font-extrabold text-black dark:text-white font-nunito leading-none">{stats.totalPlays}</p>
+                    <span className="text-black/50 dark:text-white/50 text-[10px] uppercase font-bold tracking-wider">Oyun</span>
                 </motion.div>
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.05 }}
-                    className="bg-slate-800/90 border border-amber-500/40 rounded-xl p-3 text-center"
+                    className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/10 rounded-xl p-3 text-center shadow-neo-sm hover:translate-y-0.5 hover:shadow-neo-sm transition-all"
                 >
-                    <Award className="w-4 h-4 text-amber-400 mx-auto mb-1" />
-                    <p className="text-xl font-black bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">{stats.totalScore.toLocaleString()}</p>
-                    <span className="text-white/50 text-[10px]">Puan</span>
+                    <div className="w-8 h-8 bg-[#FFD700]/10 dark:bg-[#FFD700]/20 rounded-lg flex items-center justify-center mx-auto mb-2 border-2 border-black/10">
+                        <Award className="w-4 h-4 text-[#FFD700]" />
+                    </div>
+                    <p className="text-2xl font-extrabold text-black dark:text-white font-nunito leading-none">{stats.totalScore.toLocaleString()}</p>
+                    <span className="text-black/50 dark:text-white/50 text-[10px] uppercase font-bold tracking-wider">Puan</span>
                 </motion.div>
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-slate-800/90 border border-emerald-500/40 rounded-xl p-3 text-center"
+                    className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/10 rounded-xl p-3 text-center shadow-neo-sm hover:translate-y-0.5 hover:shadow-neo-sm transition-all"
                 >
-                    <Target className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
-                    <p className="text-xl font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">{stats.averageScore}</p>
-                    <span className="text-white/50 text-[10px]">Ort.</span>
+                    <div className="w-8 h-8 bg-[#14F195]/10 dark:bg-[#14F195]/20 rounded-lg flex items-center justify-center mx-auto mb-2 border-2 border-black/10">
+                        <Target className="w-4 h-4 text-[#14F195]" />
+                    </div>
+                    <p className="text-2xl font-extrabold text-black dark:text-white font-nunito leading-none">{stats.averageScore}</p>
+                    <span className="text-black/50 dark:text-white/50 text-[10px] uppercase font-bold tracking-wider">Ortalama</span>
                 </motion.div>
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.15 }}
-                    className="bg-slate-800/90 border border-cyan-500/40 rounded-xl p-3 text-center"
+                    className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/10 rounded-xl p-3 text-center shadow-neo-sm hover:translate-y-0.5 hover:shadow-neo-sm transition-all"
                 >
-                    <Clock className="w-4 h-4 text-cyan-400 mx-auto mb-1" />
-                    <p className="text-xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">{formatDuration(stats.totalDuration)}</p>
-                    <span className="text-white/50 text-[10px]">Süre</span>
+                    <div className="w-8 h-8 bg-[#FF00EA]/10 dark:bg-[#FF00EA]/20 rounded-lg flex items-center justify-center mx-auto mb-2 border-2 border-black/10">
+                        <Clock className="w-4 h-4 text-[#FF00EA]" />
+                    </div>
+                    <p className="text-2xl font-extrabold text-black dark:text-white font-nunito leading-none">{formatDuration(stats.totalDuration)}</p>
+                    <span className="text-black/50 dark:text-white/50 text-[10px] uppercase font-bold tracking-wider">Süre</span>
                 </motion.div>
             </div>
 
@@ -327,14 +335,16 @@ const UserGameStats: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="bg-slate-800/90 border border-purple-500/30 rounded-xl p-4"
+                    className="bg-white dark:bg-slate-900 border-2 border-black/10 rounded-2xl p-5 shadow-neo-sm "
                 >
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-purple-400" />
-                            <span className="font-bold text-white text-sm">Bu Hafta</span>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-purple-500 border-2 border-black/10 dark:border-white/10 rounded-xl flex items-center justify-center shadow-neo-sm">
+                                <TrendingUp className="w-5 h-5 text-white" />
+                            </div>
+                            <span className="font-nunito font-extrabold text-black dark:text-white text-lg">Bu Hafta</span>
                         </div>
-                        <span className="text-white/40 text-xs">
+                        <span className="text-black/60 dark:text-white/60 font-bold text-xs bg-gray-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border-2 border-black/10 border-dashed">
                             {stats.thisWeek.avgScore > stats.lastWeek.avgScore && stats.lastWeek.avgScore > 0
                                 ? '🎉 Gelişim var!'
                                 : stats.thisWeek.plays >= 5
@@ -343,32 +353,32 @@ const UserGameStats: React.FC = () => {
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-slate-700/60 rounded-lg p-2 text-center">
-                            <p className="text-lg font-black text-white">{stats.thisWeek.plays}</p>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-gray-100 dark:bg-slate-800 border-2 border-black/10 dark:border-white/10 rounded-xl p-3 text-center">
+                            <p className="text-2xl font-extrabold text-black dark:text-white font-nunito leading-none mb-1">{stats.thisWeek.plays}</p>
                             <div className="flex items-center justify-center gap-1">
-                                <span className="text-white/50 text-[10px]">oyun</span>
+                                <span className="text-black/50 dark:text-white/50 text-[10px] uppercase font-bold tracking-wider">oyun</span>
                                 {stats.lastWeek.plays > 0 && stats.thisWeek.plays !== stats.lastWeek.plays && (
-                                    <span className={`text-[10px] ${stats.thisWeek.plays > stats.lastWeek.plays ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    <span className={`text-[10px] font-extrabold ${stats.thisWeek.plays > stats.lastWeek.plays ? 'text-[#14F195]' : 'text-[#FF2745]'}`}>
                                         {stats.thisWeek.plays > stats.lastWeek.plays ? '↑' : '↓'}
                                     </span>
                                 )}
                             </div>
                         </div>
-                        <div className="bg-slate-700/60 rounded-lg p-2 text-center">
-                            <p className="text-lg font-black bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">{stats.thisWeek.score}</p>
+                        <div className="bg-gray-100 dark:bg-slate-800 border-2 border-black/10 dark:border-white/10 rounded-xl p-3 text-center">
+                            <p className="text-2xl font-extrabold text-[#FFD700] dark:text-[#FFD700] font-nunito leading-none drop-shadow-sm mb-1">{stats.thisWeek.score}</p>
                             <div className="flex items-center justify-center gap-1">
-                                <span className="text-white/50 text-[10px]">puan</span>
+                                <span className="text-black/50 dark:text-white/50 text-[10px] uppercase font-bold tracking-wider">puan</span>
                                 {stats.lastWeek.score > 0 && stats.thisWeek.score !== stats.lastWeek.score && (
-                                    <span className={`text-[10px] ${stats.thisWeek.score > stats.lastWeek.score ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    <span className={`text-[10px] font-extrabold ${stats.thisWeek.score > stats.lastWeek.score ? 'text-[#14F195]' : 'text-[#FF2745]'}`}>
                                         {stats.thisWeek.score > stats.lastWeek.score ? '↑' : '↓'}
                                     </span>
                                 )}
                             </div>
                         </div>
-                        <div className="bg-slate-700/60 rounded-lg p-2 text-center">
-                            <p className="text-lg font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">{stats.thisWeek.avgScore}</p>
-                            <span className="text-white/50 text-[10px]">ortalama</span>
+                        <div className="bg-gray-100 dark:bg-slate-800 border-2 border-black/10 dark:border-white/10 rounded-xl p-3 text-center">
+                            <p className="text-2xl font-extrabold text-[#14F195] dark:text-[#14F195] font-nunito leading-none mb-1">{stats.thisWeek.avgScore}</p>
+                            <span className="text-black/50 dark:text-white/50 text-[10px] uppercase font-bold tracking-wider">ortalama</span>
                         </div>
                     </div>
                 </motion.div>
@@ -380,27 +390,27 @@ const UserGameStats: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="bg-slate-800/90 border border-purple-500/30 rounded-xl overflow-hidden"
+                    className="bg-white dark:bg-slate-900 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-sm "
                 >
                     <button
                         onClick={() => toggleSection('intelligence')}
-                        className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+                        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors focus:outline-none"
                     >
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-violet-500 rounded-lg flex items-center justify-center">
-                                <Brain className="w-4 h-4 text-white" />
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-purple-500 border-2 border-black/10 dark:border-white/10 rounded-xl flex items-center justify-center shadow-neo-sm">
+                                <Brain className="w-5 h-5 text-white" />
                             </div>
                             <div className="text-left">
-                                <h3 className="font-bold text-white text-sm">Zeka Dağılımı</h3>
-                                <p className="text-purple-300/60 text-[10px]">
+                                <h3 className="font-nunito font-extrabold text-black dark:text-white text-base leading-tight">Zeka Dağılımı</h3>
+                                <p className="text-black/60 dark:text-white/60 font-bold text-[10px] uppercase tracking-wider mt-0.5">
                                     {Object.keys(stats.intelligenceBreakdown).length} tür
                                 </p>
                             </div>
                         </div>
                         {expandedSections.intelligence ? (
-                            <ChevronUp className="w-4 h-4 text-purple-400" />
+                            <ChevronUp className="w-5 h-5 text-black dark:text-white" />
                         ) : (
-                            <ChevronDown className="w-4 h-4 text-purple-400" />
+                            <ChevronDown className="w-5 h-5 text-black dark:text-white" />
                         )}
                     </button>
 
@@ -415,28 +425,28 @@ const UserGameStats: React.FC = () => {
                             >
 
                                 {Object.keys(stats.intelligenceBreakdown).length === 0 ? (
-                                    <p className="text-white/40 text-sm text-center py-4">Henüz veri yok</p>
+                                    <p className="text-black/40 dark:text-white/40 font-bold text-xs text-center py-4">Henüz veri yok</p>
                                 ) : (
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 px-4 pb-4">
                                         {Object.entries(stats.intelligenceBreakdown)
                                             .sort((a, b) => b[1] - a[1])
                                             .slice(0, 4)
                                             .map(([type, count]) => {
                                                 const info = ZEKA_ACIKLAMALARI[type];
                                                 return (
-                                                    <div key={type} className="flex items-center gap-2 p-2 bg-slate-700/60 rounded-lg">
-                                                        <span className="text-base">{info?.icon || '🧠'}</span>
+                                                    <div key={type} className="flex items-center gap-3 p-2.5 bg-gray-100 dark:bg-slate-800 border border-black/5 dark:border-white/5 rounded-xl">
+                                                        <span className="text-xl bg-white dark:bg-slate-700 w-8 h-8 flex items-center justify-center rounded-lg border-2 border-black/10">{info?.icon || '🧠'}</span>
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-white font-medium text-xs truncate">{type}</span>
-                                                                <span className="text-white/60 text-[10px]">{count}</span>
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <span className="text-black dark:text-white font-extrabold text-xs truncate">{type}</span>
+                                                                <span className="text-black/60 dark:text-white/60 font-bold text-[10px]">{count}</span>
                                                             </div>
-                                                            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mt-1">
+                                                            <div className="h-2 bg-white border-2 border-black/10 rounded-full overflow-hidden">
                                                                 <div
-                                                                    className="h-full rounded-full"
+                                                                    className="h-full border-r-2 border-black/10"
                                                                     style={{
                                                                         width: `${(count / maxIntelligence) * 100}%`,
-                                                                        backgroundColor: ZEKA_RENKLERI[type as ZekaTuru] || '#6366F1'
+                                                                        backgroundColor: ZEKA_RENKLERI[type as ZekaTuru] || '#14F195'
                                                                     }}
                                                                 />
                                                             </div>
@@ -456,27 +466,27 @@ const UserGameStats: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="bg-slate-800/90 border border-emerald-500/30 rounded-xl overflow-hidden"
+                    className="bg-white dark:bg-slate-900 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-sm "
                 >
                     <button
                         onClick={() => toggleSection('recentGames')}
-                        className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+                        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors focus:outline-none"
                     >
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
-                                <TrendingUp className="w-4 h-4 text-white" />
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#3374FF] border-2 border-black/10 dark:border-white/10 rounded-xl flex items-center justify-center shadow-neo-sm">
+                                <TrendingUp className="w-5 h-5 text-white" />
                             </div>
                             <div className="text-left">
-                                <h3 className="font-bold text-white text-sm">Son Oyunlar</h3>
-                                <p className="text-emerald-300/60 text-[10px]">
+                                <h3 className="font-nunito font-extrabold text-black dark:text-white text-base leading-tight">Son Oyunlar</h3>
+                                <p className="text-black/60 dark:text-white/60 font-bold text-[10px] uppercase tracking-wider mt-0.5">
                                     {stats.recentGames.length} oyun
                                 </p>
                             </div>
                         </div>
                         {expandedSections.recentGames ? (
-                            <ChevronUp className="w-4 h-4 text-emerald-400" />
+                            <ChevronUp className="w-5 h-5 text-black dark:text-white" />
                         ) : (
-                            <ChevronDown className="w-4 h-4 text-emerald-400" />
+                            <ChevronDown className="w-5 h-5 text-black dark:text-white" />
                         )}
                     </button>
 
@@ -490,19 +500,21 @@ const UserGameStats: React.FC = () => {
                                 className="px-3 pb-3 overflow-hidden"
                             >
                                 {stats.recentGames.length === 0 ? (
-                                    <p className="text-white/40 text-xs text-center py-2">Henüz oyun yok</p>
+                                    <p className="text-black/40 dark:text-white/40 font-bold text-xs text-center py-2">Henüz oyun yok</p>
                                 ) : (
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-2 px-4 pb-4">
                                         {stats.recentGames.slice(0, 3).map((game, idx) => (
                                             <div
                                                 key={idx}
-                                                className="flex items-center justify-between p-2 bg-slate-700/60 rounded-lg"
+                                                className="flex items-center justify-between p-2.5 bg-gray-100 dark:bg-slate-800 border border-black/5 dark:border-white/5 rounded-xl"
                                             >
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="text-white font-medium text-xs truncate">{game.game_name}</p>
-                                                    <p className="text-white/40 text-[10px]">{formatDate(game.created_at)}</p>
+                                                    <p className="text-black dark:text-white font-extrabold text-xs truncate">{game.game_name}</p>
+                                                    <p className="text-black/50 dark:text-white/50 font-bold text-[10px] mt-0.5">{formatDate(game.created_at)}</p>
                                                 </div>
-                                                <p className="text-amber-400 font-bold text-sm ml-2">{game.score}</p>
+                                                <div className="bg-[#FFD700] px-2 py-1 rounded-lg border-2 border-black/10 shadow-neo-sm">
+                                                    <p className="text-black font-extrabold text-sm leading-none">{game.score}</p>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -519,27 +531,27 @@ const UserGameStats: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="bg-slate-800/90 border border-amber-500/30 rounded-xl overflow-hidden"
+                    className="bg-white dark:bg-slate-900 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-sm  lg:col-span-2"
                 >
                     <button
                         onClick={() => toggleSection('gameProgress')}
-                        className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+                        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors focus:outline-none"
                     >
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
-                                <Award className="w-4 h-4 text-white" />
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#FFD700] border-2 border-black/10 dark:border-white/10 rounded-xl flex items-center justify-center shadow-neo-sm">
+                                <Award className="w-5 h-5 text-black" />
                             </div>
                             <div className="text-left">
-                                <h3 className="font-bold text-white text-sm">Gelişim</h3>
-                                <p className="text-amber-300/60 text-[10px]">
+                                <h3 className="font-nunito font-extrabold text-black dark:text-white text-base leading-tight">Gelişim</h3>
+                                <p className="text-black/60 dark:text-white/60 font-bold text-[10px] uppercase tracking-wider mt-0.5">
                                     {stats.gameProgress.filter(g => g.improvement > 0).length} oyun ↑
                                 </p>
                             </div>
                         </div>
                         {expandedSections.gameProgress ? (
-                            <ChevronUp className="w-4 h-4 text-amber-400" />
+                            <ChevronUp className="w-5 h-5 text-black dark:text-white" />
                         ) : (
-                            <ChevronDown className="w-4 h-4 text-amber-400" />
+                            <ChevronDown className="w-5 h-5 text-black dark:text-white" />
                         )}
                     </button>
 
@@ -552,37 +564,37 @@ const UserGameStats: React.FC = () => {
                                 transition={{ duration: 0.2 }}
                                 className="px-3 pb-3 overflow-hidden"
                             >
-                                <div className="space-y-2">
+                                <div className="space-y-3 px-4 pb-4">
                                     {stats.gameProgress.slice(0, 2).map((game, idx) => (
                                         <div
                                             key={idx}
-                                            className="p-2 bg-slate-700/60 rounded-lg"
+                                            className="p-3 bg-gray-100 dark:bg-slate-800 border border-black/5 dark:border-white/5 rounded-xl"
                                         >
-                                            <div className="flex items-center justify-between mb-1.5">
+                                            <div className="flex items-center justify-between mb-2">
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="text-white font-medium text-xs truncate">{game.game_name}</p>
-                                                    <p className="text-white/40 text-[10px]">{game.playCount}x</p>
+                                                    <p className="text-black dark:text-white font-extrabold text-xs truncate">{game.game_name}</p>
+                                                    <p className="text-black/50 dark:text-white/50 font-bold text-[10px] uppercase">{game.playCount} oynama</p>
                                                 </div>
-                                                <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${game.improvement > 0 ? 'bg-emerald-500/20 text-emerald-400' :
-                                                    game.improvement < 0 ? 'bg-red-500/20 text-red-400' :
-                                                        'bg-white/10 text-white/50'
+                                                <div className={`flex items-center gap-0.5 px-2 py-1 border-2 border-black/10 rounded-lg text-[10px] font-extrabold shadow-neo-sm ${game.improvement > 0 ? 'bg-[#14F195] text-black' :
+                                                    game.improvement < 0 ? 'bg-[#FF2745] text-white' :
+                                                        'bg-gray-200 dark:bg-slate-600 text-black dark:text-white'
                                                     }`}>
                                                     {game.improvement > 0 ? `+${game.improvement}%` : game.improvement < 0 ? `${game.improvement}%` : '='}
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-3 gap-1 text-center">
-                                                <div className="bg-slate-600/50 rounded p-1">
-                                                    <p className="text-white/40 text-[8px]">İlk</p>
-                                                    <p className="text-white font-bold text-xs">{game.firstScore}</p>
+                                            <div className="grid grid-cols-3 gap-2 text-center mt-3 border-t-2 border-black/10 dark:border-white/10 pt-3">
+                                                <div className="">
+                                                    <p className="text-black/40 dark:text-white/40 font-bold uppercase tracking-wider text-[8px] mb-0.5">İlk</p>
+                                                    <p className="text-black dark:text-white font-extrabold text-sm">{game.firstScore}</p>
                                                 </div>
-                                                <div className="bg-slate-600/50 rounded p-1">
-                                                    <p className="text-white/40 text-[8px]">Son</p>
-                                                    <p className="text-amber-400 font-bold text-xs">{game.lastScore}</p>
+                                                <div className="border-x-2 border-black/10 dark:border-white/10">
+                                                    <p className="text-black/40 dark:text-white/40 font-bold uppercase tracking-wider text-[8px] mb-0.5">Son</p>
+                                                    <p className="text-black dark:text-white font-extrabold text-sm">{game.lastScore}</p>
                                                 </div>
-                                                <div className="bg-amber-500/20 rounded p-1 border border-amber-500/20">
-                                                    <p className="text-amber-400/60 text-[8px]">🏆</p>
-                                                    <p className="text-amber-400 font-bold text-xs">{game.bestScore}</p>
+                                                <div className="">
+                                                    <p className="text-black/40 dark:text-white/40 font-bold uppercase tracking-wider text-[8px] mb-0.5">En İyi</p>
+                                                    <p className="text-black dark:text-white font-extrabold text-sm">{game.bestScore}</p>
                                                 </div>
                                             </div>
                                         </div>

@@ -129,35 +129,35 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
                         <div className="text-center space-y-4">
                             <button
                                 onClick={onBack}
-                                className="inline-flex items-center gap-2 text-pink-400 font-bold hover:text-pink-300 transition-colors mb-4 uppercase text-xs tracking-widest"
+                                className="inline-flex items-center gap-2 text-black dark:text-white hover:text-cyber-pink transition-all mb-6 font-nunito font-extrabold uppercase text-sm tracking-widest bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/20 px-4 py-2 rounded-xl shadow-neo-xs hover:-translate-y-1 hover:shadow-neo-sm"
                             >
-                                <ChevronLeft size={16} />
+                                <ChevronLeft size={16} strokeWidth={3} />
                                 Atölye Sayfasına Dön
                             </button>
-                            <h2 className="text-4xl md:text-5xl font-black text-white">Bir Görev Seç</h2>
-                            <p className="text-slate-400 text-lg font-medium">Hayal gücünü hangi macera ile başlatmak istersin?</p>
+                            <h2 className="text-4xl md:text-5xl lg:text-7xl font-nunito font-extrabold text-black dark:text-white uppercase tracking-tighter">Bir Görev <span className="text-cyber-pink">Seç</span></h2>
+                            <p className="text-slate-700 dark:text-slate-400 text-lg font-bold font-chivo">Hayal gücünü hangi macera ile başlatmak istersin?</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             <ModeCard
                                 title="3 Kelime Challenge"
                                 desc="Sana vereceğimiz 3 gizemli kelimeyi aynı resimde buluştur!"
-                                icon={<Sparkles />}
-                                color="from-pink-500 to-purple-600"
+                                icon={<Sparkles strokeWidth={2.5} size={40} />}
+                                color="bg-cyber-pink"
                                 onClick={() => startTask(ActivityMode.THREE_WORDS)}
                             />
                             <ModeCard
                                 title="Hikayeyi Tamamla"
                                 desc="Yarım kalmış bir hikayeyi oku ve devamını hayalinle çiz!"
-                                icon={<BookOpen />}
-                                color="from-purple-500 to-indigo-600"
+                                icon={<BookOpen strokeWidth={2.5} size={40} />}
+                                color="bg-cyber-purple"
                                 onClick={() => startTask(ActivityMode.STORY_CONTINUATION)}
                             />
                             <ModeCard
                                 title="Siyah Beyaz Masa"
                                 desc="Masadaki nesneleri dikkatle incele ve aynısını çizmeye çalış."
-                                icon={<Utensils />}
-                                color="from-indigo-500 to-blue-600"
+                                icon={<Utensils strokeWidth={2.5} size={40} />}
+                                color="bg-cyber-blue"
                                 onClick={() => startTask(ActivityMode.STILL_LIFE)}
                             />
                         </div>
@@ -173,11 +173,11 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
                         className="flex flex-col items-center justify-center py-20 space-y-8"
                     >
                         <div className="relative">
-                            <div className="w-24 h-24 border-4 border-pink-500/20 border-t-pink-500 rounded-full animate-spin"></div>
-                            <Palette className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-pink-500" size={32} />
+                            <div className="w-32 h-32 border-4 border-black/10 dark:border-white/20 border-t-cyber-pink rounded-full animate-spin shadow-neo-md"></div>
+                            <Palette className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-black dark:text-white" size={48} strokeWidth={2.5} />
                         </div>
-                        <p className="text-2xl font-bold text-white text-center animate-pulse">
-                            Öğretmeniniz senin için harika bir görev hazırlıyor...
+                        <p className="text-3xl font-nunito font-extrabold text-black dark:text-white text-center animate-pulse uppercase tracking-tight">
+                            Harika bir görev hazırlanıyor...
                         </p>
                     </motion.div>
                 )}
@@ -187,20 +187,22 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
                         key="active"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white/5 backdrop-blur-2xl rounded-[3rem] border border-white/10 p-8 md:p-12 shadow-2xl relative overflow-hidden"
+                        className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/20 p-8 md:p-12 rounded-2xl shadow-neo-lg relative overflow-hidden"
                     >
-                        <div className="absolute top-0 right-0 p-8">
+                        <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-20">
                             <Timer durationSeconds={2400} onTimeUp={() => { }} />
                         </div>
 
-                        <div className="space-y-12">
-                            <div className="bg-gradient-to-br from-pink-500/10 to-purple-600/10 rounded-3xl p-8 border border-pink-500/20">
+                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.3) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+
+                        <div className="space-y-12 relative z-10 pt-20 sm:pt-0">
+                            <div className="bg-white dark:bg-slate-900 p-8 border-2 border-black/10 dark:border-white/20 rounded-2xl shadow-neo-md">
                                 {state.mode === ActivityMode.THREE_WORDS && (
-                                    <div className="text-center space-y-6">
-                                        <p className="text-pink-400 font-black uppercase tracking-[0.2em] text-sm">Bu Kelimeleri Resminde Kullan</p>
-                                        <div className="flex justify-center gap-4 flex-wrap">
+                                    <div className="text-center space-y-8">
+                                        <p className="text-white font-nunito font-extrabold uppercase tracking-[0.2em] text-sm bg-cyber-pink inline-block px-4 py-2 rounded-xl">Bu Kelimeleri Resminde Kullan</p>
+                                        <div className="flex justify-center gap-6 flex-wrap">
                                             {state.promptData?.words?.map(word => (
-                                                <span key={word} className="px-8 py-3 bg-white/10 rounded-2xl border border-white/20 text-white font-black text-2xl shadow-xl backdrop-blur-md">
+                                                <span key={word} className="px-8 py-4 bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/20 text-black dark:text-white font-nunito font-extrabold text-3xl rounded-xl shadow-neo-sm uppercase transform -rotate-2 hover:rotate-0 transition-transform">
                                                     {word}
                                                 </span>
                                             ))}
@@ -208,86 +210,90 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
                                     </div>
                                 )}
                                 {state.mode === ActivityMode.STORY_CONTINUATION && (
-                                    <div className="text-center space-y-6">
-                                        <p className="text-purple-400 font-black uppercase tracking-[0.2em] text-sm">Hikayenin Başı</p>
-                                        <p className="text-2xl md:text-3xl font-medium text-white italic leading-relaxed">
-                                            "{state.promptData?.story}"
-                                        </p>
-                                        <p className="text-indigo-400 font-bold text-lg">...peki sonra ne oldu? Çizerek göster!</p>
+                                    <div className="text-center space-y-8">
+                                        <p className="text-white font-nunito font-extrabold uppercase tracking-[0.2em] text-sm bg-cyber-purple inline-block px-4 py-2 rounded-xl">Hikayenin Başı</p>
+                                        <div className="bg-white dark:bg-slate-800 p-8 border-2 border-black/10 dark:border-white/20 rounded-2xl shadow-neo-sm transform rotate-1">
+                                            <p className="text-2xl md:text-3xl font-chivo font-bold text-black dark:text-white italic leading-relaxed">
+                                                "{state.promptData?.story}"
+                                            </p>
+                                        </div>
+                                        <p className="text-cyber-pink font-nunito font-extrabold text-2xl uppercase tracking-wider">...peki sonra ne oldu? Çizerek göster!</p>
                                     </div>
                                 )}
                                 {state.mode === ActivityMode.STILL_LIFE && (
-                                    <div className="text-center space-y-6">
-                                        <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-sm">Bu Masayı Çiz</p>
-                                        <img src={state.promptData?.imageUrl} alt="Still Life Reference" className="mx-auto rounded-3xl shadow-2xl border-8 border-white/5 max-h-80 object-cover" />
+                                    <div className="text-center space-y-8">
+                                        <p className="text-white font-nunito font-extrabold uppercase tracking-[0.2em] text-sm bg-cyber-blue inline-block px-4 py-2 rounded-xl">Bu Resmi Çiz</p>
+                                        <div className="inline-block border-3 border-black/10 rounded-2xl shadow-neo-md transform -rotate-1 hover:rotate-0 transition-transform bg-white p-2 overflow-hidden">
+                                            <img src={state.promptData?.imageUrl} alt="Still Life Reference" className="max-h-80 object-cover rounded-xl" />
+                                        </div>
                                     </div>
                                 )}
                             </div>
 
                             <div className="flex flex-col items-center space-y-8">
-                                <p className="text-slate-400 text-lg font-medium text-center max-w-lg">
-                                    Resmini kağıda yap, bitince fotoğrafını çekip buraya yükle!
+                                <p className="text-slate-800 dark:text-slate-200 text-xl font-bold font-chivo text-center max-w-lg bg-white/80 dark:bg-slate-800/80 p-4 border-l-4 border-cyber-emerald">
+                                    Resmini kağıda çiz, bitince fotoğrafını çekip buraya yükle!
                                 </p>
 
                                 {!state.uploadedImage ? (
                                     <label className="w-full max-w-xl cursor-pointer group">
-                                        <div className="border-4 border-dashed border-white/10 rounded-[2.5rem] p-16 flex flex-col items-center transition-all duration-300 group-hover:border-pink-500/50 group-hover:bg-pink-500/5">
-                                            <div className="w-20 h-20 bg-pink-500/20 text-pink-500 rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                                                <Camera size={40} />
+                                        <div className="bg-white dark:bg-slate-800 border-2 border-dashed border-black/20 dark:border-white/20 rounded-2xl p-16 flex flex-col items-center transition-all duration-300 group-hover:border-solid group-hover:border-cyber-pink/30 hover:shadow-neo-md hover:-translate-y-2">
+                                            <div className="w-24 h-24 bg-cyber-pink/10 rounded-2xl text-cyber-pink flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform">
+                                                <Camera size={48} strokeWidth={2.5} />
                                             </div>
-                                            <span className="text-white font-black text-xl mb-2">Resmini Seç veya Fotoğraf Çek</span>
-                                            <span className="text-slate-500 font-medium text-sm">PNG, JPG veya JPEG</span>
+                                            <span className="text-black dark:text-white font-nunito font-extrabold text-2xl mb-2 text-center uppercase">Resmini Seç veya <br /> Fotoğraf Çek</span>
+                                            <span className="text-slate-500 font-bold text-sm bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-lg mt-4">PNG, JPG veya JPEG</span>
                                             <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
                                         </div>
                                     </label>
                                 ) : (
                                     <div className="w-full flex flex-col items-center space-y-8">
-                                        <div className="relative group">
-                                            <img src={state.uploadedImage} className="max-h-[500px] rounded-3xl shadow-2xl border-8 border-white/10 object-contain" alt="Çizimin" />
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
+                                        <div className="relative group inline-block">
+                                            <img src={state.uploadedImage} className="max-h-[500px] border-3 border-black/10 rounded-2xl shadow-neo-md object-contain bg-white dark:bg-slate-700 p-2 transform rotate-1" alt="Çizimin" />
+                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm m-2">
                                                 <button
                                                     onClick={() => setState(prev => ({ ...prev, uploadedImage: undefined }))}
-                                                    className="bg-white text-slate-900 font-black py-3 px-8 rounded-full flex items-center gap-2 hover:scale-105 transition-transform"
+                                                    className="bg-cyber-yellow text-black font-nunito font-extrabold text-xl uppercase tracking-widest py-4 px-8 border-2 border-black/10 rounded-xl flex items-center gap-3 shadow-neo-sm hover:shadow-neo-md hover:-translate-y-1 transition-all"
                                                 >
-                                                    <RotateCcw size={18} /> Değiştir
+                                                    <RotateCcw size={24} strokeWidth={3} /> Değiştir
                                                 </button>
                                             </div>
                                         </div>
                                         {/* Kalan hak bilgisi */}
                                         {!isTeacher && analysisQuota !== null && (
-                                            <p className="text-center text-sm text-slate-400 mb-2">
-                                                Kalan analiz hakkı: <span className="font-bold text-pink-400">{analysisQuota}</span>
+                                            <p className="text-center font-nunito font-extrabold uppercase p-3 bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/20 rounded-xl shadow-neo-xs transform -rotate-1">
+                                                Kalan analiz hakkı: <span className="font-black text-cyber-pink text-xl">{analysisQuota}</span>
                                             </p>
                                         )}
 
                                         {analysisQuota !== null && analysisQuota <= 0 && !isTeacher ? (
-                                            <div className="space-y-3 text-center">
+                                            <div className="space-y-4 text-center">
                                                 <button
                                                     disabled
-                                                    className="group relative inline-flex items-center justify-center gap-4 px-16 py-6 bg-slate-600/50 text-slate-400 font-black text-2xl rounded-full cursor-not-allowed overflow-hidden"
+                                                    className="group relative inline-flex items-center justify-center gap-4 px-12 py-6 bg-slate-200 dark:bg-slate-700 text-slate-400 font-nunito font-extrabold text-2xl uppercase rounded-2xl border-2 border-slate-300 shadow-neo-md cursor-not-allowed"
                                                 >
                                                     <span className="relative flex items-center gap-3">
-                                                        <Lock className="w-6 h-6" /> Analiz Hakkınız Bitti
+                                                        <Lock className="w-8 h-8" strokeWidth={3} /> Analiz Hakkınız Bitti
                                                     </span>
                                                 </button>
-                                                <p className="text-rose-400 text-sm font-medium">
-                                                    Analiz hakkınız tükendi. Daha fazla hak için öğretmeninize başvurun.
+                                                <p className="text-red-500 font-bold bg-white dark:bg-slate-800 border-2 border-red-500/30 rounded-xl px-4 py-2">
+                                                    Daha fazla hak için öğretmeninize başvurun.
                                                 </p>
                                             </div>
                                         ) : (
                                             <button
                                                 onClick={submitDrawing}
                                                 disabled={state.status === 'ANALYZING'}
-                                                className="group relative inline-flex items-center justify-center gap-4 px-16 py-6 bg-gradient-to-r from-pink-600 to-purple-700 text-white font-black text-2xl rounded-full hover:shadow-2xl hover:shadow-pink-500/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="group relative inline-flex items-center justify-center gap-4 px-12 py-6 bg-cyber-emerald text-black font-nunito font-extrabold text-2xl uppercase tracking-wider rounded-2xl border-2 border-black/10 shadow-neo-md hover:shadow-neo-lg hover:-translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 {state.status === 'ANALYZING' ? (
                                                     <span className="flex items-center gap-4">
-                                                        <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                        <div className="w-8 h-8 border-2 border-black/10 border-t-white rounded-full animate-spin"></div>
                                                         Öğretmen Bakıyor...
                                                     </span>
                                                 ) : (
                                                     <span className="flex items-center gap-4">
-                                                        Öğretmene Gönder! <Send className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                                        Öğretmene Gönder! <Send size={28} strokeWidth={3} className="group-hover:translate-x-2 group-hover:-translate-y-2 transition-transform" />
                                                     </span>
                                                 )}
                                             </button>
@@ -306,40 +312,42 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
                         animate={{ opacity: 1, y: 0 }}
                         className="space-y-12"
                     >
-                        <div className="text-center space-y-4">
-                            <h2 className="text-5xl font-black text-white tracking-tight">Harika İş Çıkardın! 🌟</h2>
-                            <p className="text-slate-400 text-xl font-medium">Resim öğretmenin senin çalışmanı inceledi.</p>
+                        <div className="bg-cyber-yellow border-2 border-black/10 rounded-2xl p-10 shadow-neo-md text-center">
+                            <h2 className="text-3xl md:text-5xl lg:text-6xl font-nunito font-extrabold text-black tracking-tight uppercase mb-4">Harika İş Çıkardın! 🌟</h2>
+                            <p className="text-black/80 text-xl font-bold font-chivo">Resim öğretmenin senin çalışmanı inceledi.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-pink-400 font-bold uppercase tracking-widest text-xs ml-2">
-                                    <User size={14} /> Senin Eserin
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3 text-black dark:text-white font-nunito font-extrabold uppercase tracking-widest bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/20 rounded-xl p-4 shadow-neo-xs w-max">
+                                    <User size={24} strokeWidth={3} className="text-cyber-pink" /> Senin Eserin
                                 </div>
-                                <img src={state.uploadedImage} className="w-full rounded-[2.5rem] shadow-2xl border-8 border-white/5 object-contain max-h-[600px] bg-slate-900" alt="Sonuç" />
+                                <div className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/20 rounded-2xl p-4 shadow-neo-md">
+                                    <img src={state.uploadedImage} className="w-full border-2 border-black/10 rounded-xl object-contain max-h-[600px] bg-slate-100 dark:bg-slate-900" alt="Sonuç" />
+                                </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-purple-400 font-bold uppercase tracking-widest text-xs ml-2">
-                                    <MessageCircle size={14} /> Öğretmenin Yorumu
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3 text-black dark:text-white font-nunito font-extrabold uppercase tracking-widest bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/20 rounded-xl p-4 shadow-neo-xs w-max">
+                                    <MessageCircle size={24} strokeWidth={3} className="text-cyber-blue" /> Öğretmenin Yorumu
                                 </div>
-                                <div className="bg-white/5 backdrop-blur-xl rounded-[2.5rem] p-10 border border-white/10 shadow-2xl relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
-                                    <div className="text-slate-200 leading-relaxed text-xl whitespace-pre-wrap font-medium relative z-10">
+                                <div className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/20 rounded-2xl p-8 md:p-12 shadow-neo-md relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 -mr-6 -mt-6 opacity-10 blur-xl w-32 h-32 bg-cyber-pink pointer-events-none" />
+                                    <div className="text-slate-800 dark:text-slate-200 font-chivo leading-relaxed text-lg md:text-xl whitespace-pre-wrap font-bold relative z-10">
                                         {state.feedback}
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-4">
+                                <div className="flex flex-col gap-6 mt-8">
                                     <button
                                         onClick={() => setState(prev => ({ ...prev, status: 'DRAWING', uploadedImage: undefined, feedback: undefined }))}
-                                        className="w-full py-6 bg-white/10 text-white font-bold text-xl rounded-[2rem] border border-white/20 hover:bg-white/20 transition-all duration-300"
+                                        className="w-full py-5 bg-white dark:bg-slate-800 text-black dark:text-white font-nunito font-extrabold text-xl uppercase tracking-widest rounded-2xl border-2 border-black/10 dark:border-white/20 shadow-neo-sm hover:shadow-neo-md hover:-translate-y-1 transition-all"
                                     >
                                         Bu Görev İçin Yeni Resim Yükle
                                     </button>
                                     <button
                                         onClick={reset}
-                                        className="w-full py-8 bg-gradient-to-r from-pink-600 to-purple-700 text-white font-black text-2xl rounded-[2rem] hover:shadow-2xl hover:shadow-pink-500/40 transition-all duration-300 transform hover:-translate-y-1 active:scale-95"
+                                        className="w-full py-6 bg-cyber-pink text-white font-nunito font-extrabold text-2xl uppercase tracking-widest rounded-2xl border-2 border-black/10 shadow-neo-md hover:shadow-neo-lg hover:-translate-y-1 transition-all"
                                     >
                                         Yeni Bir Göreve Başla!
                                     </button>
@@ -354,10 +362,10 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-8 bg-red-500/20 backdrop-blur-md border border-red-500/50 text-white px-8 py-4 rounded-2xl flex items-center justify-between"
+                    className="mt-8 bg-white border-2 border-red-500/30 rounded-2xl shadow-neo-sm px-8 py-6 flex items-center justify-between"
                 >
-                    <span className="font-bold">{state.error}</span>
-                    <button onClick={() => setState(prev => ({ ...prev, error: undefined }))} className="text-white/60 hover:text-white">Kapat</button>
+                    <span className="font-nunito font-extrabold text-red-500 text-xl uppercase tracking-wider">{state.error}</span>
+                    <button onClick={() => setState(prev => ({ ...prev, error: undefined }))} className="text-black bg-slate-200 px-4 py-2 border-2 border-black/10 rounded-xl font-bold uppercase text-sm hover:bg-slate-300 transition-colors">Kapat</button>
                 </motion.div>
             )}
         </div>
@@ -366,22 +374,20 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
 
 const ModeCard: React.FC<{ title: string; desc: string; icon: React.ReactNode; color: string; onClick: () => void }> = ({ title, desc, icon, color, onClick }) => (
     <motion.button
-        whileHover={{ y: -10 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ y: -8, x: -8 }}
+        whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        className="group relative bg-white/5 backdrop-blur-xl p-10 rounded-[3.5rem] border border-white/10 shadow-2xl hover:border-white/20 transition-all duration-500 text-left flex flex-col h-full overflow-hidden"
+        className={`group relative bg-white dark:bg-slate-800 p-8 rounded-2xl border-2 border-black/10 dark:border-white/20 shadow-neo-md hover:shadow-neo-lg transition-all duration-300 text-left flex flex-col h-full overflow-hidden`}
     >
-        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-10 blur-3xl transition-opacity duration-500`} />
-
-        <div className={`w-20 h-20 bg-gradient-to-br ${color} text-white rounded-[1.75rem] flex items-center justify-center mb-8 text-4xl shadow-2xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3`}>
+        <div className={`w-24 h-24 ${color} rounded-2xl border-2 border-black/10 text-white flex items-center justify-center mb-8 shadow-neo-sm transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110`}>
             {icon}
         </div>
 
-        <h3 className="text-2xl font-black mb-4 text-white group-hover:text-pink-400 transition-colors">{title}</h3>
-        <p className="text-slate-400 font-medium leading-relaxed mb-8 flex-grow">{desc}</p>
+        <h3 className="text-3xl font-nunito font-extrabold mb-4 text-black dark:text-white uppercase leading-none tracking-tight">{title}</h3>
+        <p className="text-slate-700 dark:text-slate-400 font-bold font-chivo leading-relaxed mb-8 flex-grow">{desc}</p>
 
-        <div className="flex items-center gap-3 text-pink-500 font-black uppercase tracking-widest text-sm">
-            Hemen Başla <ChevronLeft className="rotate-180 translate-x-0 group-hover:translate-x-2 transition-transform" size={18} />
+        <div className="flex items-center gap-3 text-black dark:text-white font-nunito font-extrabold uppercase tracking-widest text-sm bg-slate-100 dark:bg-slate-700 p-3 rounded-xl border-2 border-black/10 dark:border-white/10 w-max">
+            Hemen Başla <ChevronLeft strokeWidth={3} className="rotate-180 transition-transform group-hover:translate-x-2" size={18} />
         </div>
     </motion.button>
 );

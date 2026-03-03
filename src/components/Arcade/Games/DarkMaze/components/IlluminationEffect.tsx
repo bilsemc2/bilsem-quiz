@@ -35,7 +35,7 @@ const IlluminationEffect: React.FC<IlluminationEffectProps> = ({ isIlluminated }
                     className="w-48 h-48 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]"
                     alt="Power Up"
                 />
-                <h2 className="text-4xl font-black text-white italic tracking-tighter mt-4 shadow-lg uppercase">BEYNİNİ KULLAN!</h2>
+                <h2 className="text-4xl sm:text-5xl font-black text-white tracking-widest mt-6 uppercase drop-shadow-neo-sm rotate-2 bg-rose-500 px-6 py-2 rounded-2xl border-2 border-black/10 shadow-neo-sm">BEYNİNİ KULLAN!</h2>
             </motion.div>
         </motion.div>
     );

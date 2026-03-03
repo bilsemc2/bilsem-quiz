@@ -205,10 +205,22 @@ export const generateSmartPositions = (
   const pathCells: GridPos[] = [];
   const nonPathCells: GridPos[] = [];
 
+  // BAŞLA/BİTİŞ butonları 2 hücre genişliğinde — komşu hücreleri de exclude et
+  const excludedCells: GridPos[] = [
+    start,
+    goal,
+    // Start button komşusu (yatay)
+    { row: start.row, col: start.col + (start.col === 0 ? 1 : -1) },
+    // Goal button komşusu (yatay)
+    { row: goal.row, col: goal.col + (goal.col === 0 ? 1 : -1) },
+  ];
+  const isExcluded = (r: number, c: number) =>
+    excludedCells.some(e => e.row === r && e.col === c);
+
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
-      // Skip start and goal
-      if ((r === start.row && c === start.col) || (r === goal.row && c === goal.col)) {
+      // Skip start/goal and their adjacent cells (BAŞLA/BİTİŞ span)
+      if (isExcluded(r, c)) {
         continue;
       }
 

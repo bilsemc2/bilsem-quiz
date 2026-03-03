@@ -112,7 +112,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`game-grid relative aspect-square w-full max-w-md mx-auto select-none touch-none
+      className={`game-grid relative aspect-square w-full max-w-md mx-auto select-none touch-none bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-slate-700 rounded-3xl shadow-neo-sm dark:shadow-[12px_12px_0_#0f172a] overflow-hidden rotate-1 transition-colors duration-300
         ${isDrawing ? 'cursor-crosshair' : 'cursor-default'}`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -127,6 +127,17 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       <svg className="absolute inset-0 pointer-events-none w-full h-full z-20" viewBox="0 0 100 100" preserveAspectRatio="none">
         {currentPath.length >= 1 && (
           <>
+            {/* Draw outline for line to simulate border */}
+            {currentPath.length > 1 && (
+              <polyline
+                points={currentPath.map(p => `${(p.col + 0.5) * (100 / GRID_SIZE)},${(p.row + 0.5) * (100 / GRID_SIZE)}`).join(' ')}
+                fill="none"
+                stroke="#000"
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
             {/* Draw line connecting path points */}
             {currentPath.length > 1 && (
               <polyline
@@ -136,20 +147,24 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
               />
             )}
             {/* Draw circles at each path point for visibility */}
             {currentPath.map((p, i) => (
-              <circle
-                key={i}
-                cx={(p.col + 0.5) * (100 / GRID_SIZE)}
-                cy={(p.row + 0.5) * (100 / GRID_SIZE)}
-                r="2.5"
-                fill="#f97316"
-                stroke="white"
-                strokeWidth="0.5"
-              />
+              <g key={i}>
+                <circle
+                  cx={(p.col + 0.5) * (100 / GRID_SIZE)}
+                  cy={(p.row + 0.5) * (100 / GRID_SIZE)}
+                  r="3.5"
+                  fill="#000"
+                />
+                <circle
+                  cx={(p.col + 0.5) * (100 / GRID_SIZE)}
+                  cy={(p.row + 0.5) * (100 / GRID_SIZE)}
+                  r="2.5"
+                  fill="#f97316"
+                />
+              </g>
             ))}
           </>
         )}
@@ -162,16 +177,18 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         return (
           <div
             key={i}
-            className={`absolute flex items-center justify-center text-2xl font-black rounded-2xl border-4 shadow-md pointer-events-none transition-transform
-              ${colorHex ? '' : 'bg-white border-blue-100 text-blue-900'}`}
+            className={`absolute flex items-center justify-center z-40 text-3xl font-black rounded-xl border-4 shadow-neo-sm dark:shadow-[4px_4px_0_#0f172a] pointer-events-none transition-transform
+              ${colorHex ? '' : 'bg-slate-200 dark:bg-slate-700 border-black/10 dark:border-slate-800 text-black dark:text-white'}`}
             style={{
               width: `${100 / GRID_SIZE}%`,
               height: `${100 / GRID_SIZE}%`,
               top: `${pos.row * (100 / GRID_SIZE)}%`,
               left: `${pos.col * (100 / GRID_SIZE)}%`,
-              backgroundColor: colorHex || 'white',
+              backgroundColor: colorHex || undefined,
               color: colorHex ? 'white' : undefined,
-              borderColor: colorHex ? 'rgba(255,255,255,0.4)' : undefined,
+              borderColor: colorHex ? 'black' : undefined,
+              transform: `scale(0.8) rotate(${i % 2 === 0 ? '3deg' : '-3deg'})`,
+              textShadow: colorHex ? '2px 2px 0 #000' : 'none'
             }}
           >
             {colorHex ? '' : val}
@@ -179,37 +196,31 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         );
       })}
 
-      {/* Start Point - More visible with green background */}
+      {/* Start Point */}
       <div
-        className={`absolute flex items-center justify-center z-30 pointer-events-none rounded-xl
+        className={`absolute flex items-center justify-center z-30 pointer-events-none rounded-2xl bg-emerald-400 border-2 border-black/10 dark:border-slate-800 shadow-neo-sm dark:shadow-neo-sm -rotate-3 transition-colors duration-300
           ${!isDrawing && currentPath.length === 0 ? 'animate-pulse' : ''}`}
         style={{
-          width: `${100 / GRID_SIZE}%`,
+          width: `${(100 / GRID_SIZE) * 2}%`,
           height: `${100 / GRID_SIZE}%`,
           top: `${startPos.row * (100 / GRID_SIZE)}%`,
-          left: `${startPos.col * (100 / GRID_SIZE)}%`,
-          backgroundColor: 'rgba(34, 197, 94, 0.9)',
-          boxShadow: '0 0 20px rgba(34, 197, 94, 0.6)',
-          border: '3px solid rgba(255, 255, 255, 0.5)',
+          left: `${Math.max(0, startPos.col - 0.5) * (100 / GRID_SIZE)}%`,
         }}
       >
-        <span className="text-white text-xs font-black uppercase drop-shadow-lg">🏁 BAŞLA</span>
+        <span className="text-black text-[10px] sm:text-xs font-black uppercase">🏁 BAŞLA</span>
       </div>
 
-      {/* End Point - More visible with red background */}
+      {/* End Point */}
       <div
-        className="absolute flex items-center justify-center z-30 pointer-events-none rounded-xl"
+        className="absolute flex items-center justify-center z-30 pointer-events-none rounded-2xl bg-rose-400 border-2 border-black/10 dark:border-slate-800 shadow-neo-sm dark:shadow-[4px_4px_0_#0f172a] rotate-3 transition-colors duration-300"
         style={{
-          width: `${100 / GRID_SIZE}%`,
+          width: `${(100 / GRID_SIZE) * 2}%`,
           height: `${100 / GRID_SIZE}%`,
           top: `${goalPos.row * (100 / GRID_SIZE)}%`,
-          left: `${goalPos.col * (100 / GRID_SIZE)}%`,
-          backgroundColor: 'rgba(239, 68, 68, 0.9)',
-          boxShadow: '0 0 20px rgba(239, 68, 68, 0.6)',
-          border: '3px solid rgba(255, 255, 255, 0.5)',
+          left: `${Math.min(GRID_SIZE - 2, goalPos.col - 0.5) * (100 / GRID_SIZE)}%`,
         }}
       >
-        <span className="text-white text-xs font-black uppercase drop-shadow-lg">🎯 BİTİŞ</span>
+        <span className="text-black text-[10px] sm:text-xs font-black uppercase">🎯 BİTİŞ</span>
       </div>
 
       {/* Animated Brain Character */}

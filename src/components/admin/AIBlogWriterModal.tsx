@@ -101,65 +101,65 @@ Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokla
     return (
         <Dialog.Root open={isOpen} onOpenChange={onClose}>
             <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[100]" />
-                <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[2.5rem] shadow-2xl p-8 z-[101] outline-none overflow-y-auto max-h-[90vh]">
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
+                <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]" />
+                <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white border-3 border-black/10 rounded-2xl shadow-neo-lg p-8 z-[101] outline-none overflow-y-auto max-h-[90vh]">
+                    <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-black/10">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-[#FF00EA] border-2 border-black/10 rounded-xl flex items-center justify-center shadow-neo-xs">
                                 <Bot className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <Dialog.Title className="text-xl font-black text-white">
+                                <Dialog.Title className="text-2xl font-black font-nunito text-black uppercase">
                                     {mode === 'beautify' ? 'AI Yazı Güzelleştirici' : 'AI Blog Yazarı'}
                                 </Dialog.Title>
-                                <p className="text-xs text-slate-400 font-medium">
+                                <p className="text-sm text-black/60 font-bold">
                                     {mode === 'beautify'
                                         ? 'Mevcut metninizi profesyonel bir blog yazısına dönüştürün.'
                                         : 'Asistanınız ile birlikte yazılarınızı dakikalar içinde hazırlayın.'}
                                 </p>
                             </div>
                         </div>
-                        <Dialog.Close className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                            <X className="w-5 h-5 text-slate-400" />
+                        <Dialog.Close className="p-2 border-2 border-black/10 rounded-lg hover:bg-gray-100 hover:-translate-y-1 transition-all">
+                            <X className="w-6 h-6 text-black" />
                         </Dialog.Close>
                     </div>
 
                     <div className="space-y-8">
                         {/* Step 1: Configuration */}
-                        <section className="space-y-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">1</span>
-                                <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest">Özellikler</h3>
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <span className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center text-sm font-black  transform -rotate-3">1</span>
+                                <h3 className="text-lg font-nunito font-extrabold text-black uppercase tracking-wider">Özellikler</h3>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 {mode === 'generate' && (
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">Konu / Tema</label>
+                                        <label className="block text-xs font-black text-black mb-2 uppercase tracking-wide">Konu / Tema</label>
                                         <input
                                             type="text"
                                             value={topic}
                                             onChange={(e) => setTopic(e.target.value)}
                                             placeholder="Örn: Yapay Zeka ve Çocuk Eğitimi..."
-                                            className="w-full px-5 py-3 bg-slate-800/50 border border-white/10 rounded-xl text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
+                                            className="w-full px-5 py-4 bg-gray-50 border-2 border-black/10 rounded-xl text-black placeholder:text-black/40 outline-none focus:-translate-y-1 shadow-neo-xs focus:shadow-neo-xs transition-all font-bold"
                                         />
                                     </div>
                                 )}
 
                                 <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">Hedef Yazım Tonu</label>
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                                    <label className="block text-xs font-black text-black mb-3 uppercase tracking-wide">Hedef Yazım Tonu</label>
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                         {TONES.map((t) => (
                                             <button
                                                 key={t.id}
                                                 onClick={() => setTone(t.id)}
-                                                className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${tone === t.id
-                                                    ? 'bg-indigo-500/10 border-indigo-500 text-white shadow-lg shadow-indigo-500/10'
-                                                    : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
+                                                className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all uppercase tracking-wide ${tone === t.id
+                                                    ? 'bg-[#14F195] border-black/20 text-black shadow-neo-xs -translate-y-1'
+                                                    : 'bg-white border-black/10 text-black hover:-translate-y-1 shadow-neo-xs'
                                                     }`}
                                             >
-                                                <t.icon className={`w-5 h-5 ${tone === t.id ? t.color : ''}`} />
-                                                <span className="text-[10px] font-bold">{t.label}</span>
+                                                <t.icon className={`w-6 h-6 text-black`} />
+                                                <span className="text-xs font-black">{t.label}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -167,36 +167,36 @@ Lütfen bana şu yapıda bir yanıt ver (JSON değil, sadece aşağıdaki blokla
 
                                 <button
                                     onClick={copyPrompt}
-                                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-indigo-900/20"
+                                    className="w-full py-4 bg-[#FFD700] border-2 border-black/10 text-black font-black uppercase rounded-xl hover:-translate-y-1 shadow-neo-xs active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-3"
                                 >
-                                    {copied ? <Check className="w-5 h-5" /> : (mode === 'beautify' ? <Rocket className="w-5 h-5" /> : <Copy className="w-5 h-5" />)}
+                                    {copied ? <Check className="w-6 h-6" /> : (mode === 'beautify' ? <Rocket className="w-6 h-6" /> : <Copy className="w-6 h-6" />)}
                                     {copied ? 'İstem Kopyalandı!' : (mode === 'beautify' ? 'Güzelleştirme İstemini Kopyala' : 'Antigravity İçin İstemi Kopyala')}
                                 </button>
-                                <p className="text-[10px] text-slate-500 text-center font-medium">Bu butona basıp kopyalanan metni sohbete yapıştırarak asistanın yazıyı hazırlamasını sağlayın.</p>
+                                <p className="text-xs text-black/60 text-center font-bold">Bu butona basıp kopyalanan metni sohbete yapıştırarak asistanın yazıyı hazırlamasını sağlayın.</p>
                             </div>
                         </section>
 
                         {/* Step 2: Import */}
-                        <section className="space-y-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">2</span>
-                                <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest">İçeriği İçe Aktar</h3>
+                        <section className="space-y-6 pt-6 border-t-2 border-black/10 border-dashed">
+                            <div className="flex items-center gap-3 mb-4">
+                                <span className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center text-sm font-black  transform rotate-3">2</span>
+                                <h3 className="text-lg font-nunito font-extrabold text-black uppercase tracking-wider">İçeriği İçe Aktar</h3>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 <textarea
                                     value={importedContent}
                                     onChange={(e) => setImportedContent(e.target.value)}
                                     placeholder="Antigravity'nin cevabını buraya yapıştırın..."
-                                    className="w-full h-32 px-5 py-4 bg-slate-800/50 border border-white/10 rounded-2xl text-xs text-slate-300 outline-none focus:border-emerald-500/50 transition-all font-mono leading-relaxed resize-none"
+                                    className="w-full h-32 px-5 py-4 bg-gray-50 border-2 border-black/10 rounded-xl text-black placeholder:text-black/40 outline-none focus:-translate-y-1 shadow-neo-xs focus:shadow-neo-xs transition-all font-mono leading-relaxed resize-none font-bold"
                                 />
 
                                 <button
                                     onClick={handleImport}
                                     disabled={!importedContent.trim()}
-                                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-emerald-900/20"
+                                    className="w-full py-4 bg-[#14F195] border-2 border-black/10 text-black uppercase font-black rounded-xl hover:-translate-y-1 shadow-neo-xs active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3"
                                 >
-                                    <Import className="w-5 h-5" />
+                                    <Import className="w-6 h-6" />
                                     {mode === 'beautify' ? 'Güzelleştirilmiş Hali Uygula' : 'Yazıyı Taslağa Uygula'}
                                 </button>
                             </div>

@@ -1,16 +1,598 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, RotateCcw, Star, Timer, CheckCircle2, XCircle, ChevronLeft, Zap, Target, AlertCircle, Heart, Eye } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useGamePersistence } from '../../hooks/useGamePersistence';
-import { useSound } from '../../hooks/useSound';
-import { useExam } from '../../contexts/ExamContext';
-import { useGameFeedback } from '../../hooks/useGameFeedback';
-import GameFeedbackBanner from './shared/GameFeedbackBanner'; type Phase = 'welcome' | 'playing' | 'game_over' | 'victory';
-type GameMode = 'simple' | 'selective';
-type RoundState = 'waiting' | 'ready' | 'go' | 'early' | 'result'; const INITIAL_LIVES = 5;
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { motion } from "framer-motion";
+import {
+  Timer,
+  CheckCircle2,
+  XCircle,
+  ChevronLeft,
+  Zap,
+  Target,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useSound } from "../../hooks/useSound";
+import BrainTrainerShell from "./shared/BrainTrainerShell";
+import { useGameEngine } from "./shared/useGameEngine";
+import { useGameFeedback } from "../../hooks/useGameFeedback";
+import { GAME_COLORS } from './shared/gameColors';
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
+
+type GameMode = "simple" | "selective";
+type RoundState = "waiting" | "ready" | "go" | "early" | "result";
+
+const INITIAL_LIVES = 5;
 const TIME_LIMIT = 180;
-const MAX_LEVEL = 20; const COLORS = [ { name: 'Yeşil', value: 'green', hex: '#10b981' }, { name: 'Kırmızı', value: 'red', hex: '#ef4444' }, { name: 'Mavi', value: 'blue', hex: '#3b82f6' }, { name: 'Sarı', value: 'yellow', hex: '#eab308' },
-]; interface ReactionTimeGameProps { examMode?: boolean;
-} const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ examMode: examModeProp = false }) => { const { playSound } = useSound(); const { saveGamePlay } = useGamePersistence(); const location = useLocation(); const navigate = useNavigate(); const { submitResult } = useExam(); const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1000 }); const examMode = examModeProp || location.state?.examMode === true; const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT; const [phase, setPhase] = useState<Phase>('welcome'); const [gameMode, setGameMode] = useState<GameMode>('simple'); const [roundState, setRoundState] = useState<RoundState>('waiting'); const [level, setLevel] = useState(1); const [score, setScore] = useState(0); const [lives, setLives] = useState(INITIAL_LIVES); const [timeLeft, setTimeLeft] = useState(TIME_LIMIT); const [correctCount, setCorrectCount] = useState(0); const [wrongCount, setWrongCount] = useState(0); const [streak, setStreak] = useState(0); const [bestStreak, setBestStreak] = useState(0); const [targetColor] = useState<string>('green'); const [currentColor, setCurrentColor] = useState<string>('red'); const [currentReactionTime, setCurrentReactionTime] = useState<number | null>(null); const timerRef = useRef<NodeJS.Timeout | null>(null); const timeoutRef = useRef<NodeJS.Timeout | null>(null); const gameStartTimeRef = useRef<number>(0); const roundStartTimeRef = useRef<number>(0); const reactionTimesRef = useRef<number[]>([]); const hasSavedRef = useRef<boolean>(false); const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme"; const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri"; const handleGameOver = useCallback(async () => { if (hasSavedRef.current) return; hasSavedRef.current = true; setPhase('game_over'); const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000); const avgReaction = reactionTimesRef.current.length > 0 ? Math.round(reactionTimesRef.current.reduce((a, b) => a + b, 0) / reactionTimesRef.current.length) : 0; if (examMode) { const accuracy = correctCount + wrongCount > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0; const passed = accuracy >= 60 && correctCount >= 8; await submitResult(passed, score, 1000, durationSeconds); navigate('/atolyeler/sinav-simulasyonu/devam'); return; } await saveGamePlay({ game_id: 'tepki-suresi', score_achieved: score, duration_seconds: durationSeconds, metadata: { game_mode: gameMode, correct_count: correctCount, wrong_count: wrongCount, best_streak: bestStreak, average_reaction_ms: avgReaction, total_rounds: level, accuracy: correctCount + wrongCount > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0, game_name: 'Tepki Süresi', } }); }, [level, score, correctCount, wrongCount, bestStreak, saveGamePlay, examMode, navigate, submitResult, gameMode]); const handleVictory = useCallback(async () => { if (hasSavedRef.current) return; hasSavedRef.current = true; setPhase('victory'); const durationSeconds = Math.floor((Date.now() - gameStartTimeRef.current) / 1000); const avgReaction = reactionTimesRef.current.length > 0 ? Math.round(reactionTimesRef.current.reduce((a, b) => a + b, 0) / reactionTimesRef.current.length) : 0; if (examMode) { await submitResult(true, score, 1000, durationSeconds); navigate('/atolyeler/sinav-simulasyonu/devam'); return; } await saveGamePlay({ game_id: 'tepki-suresi', score_achieved: score, duration_seconds: durationSeconds, metadata: { correct_count: correctCount, wrong_count: wrongCount, best_streak: bestStreak, average_reaction_ms: avgReaction, levels_completed: MAX_LEVEL, victory: true, game_name: 'Tepki Süresi', } }); }, [score, correctCount, wrongCount, bestStreak, saveGamePlay, examMode, navigate, submitResult]); useEffect(() => { if (phase === 'playing' && timeLeft > 0) { timerRef.current = setTimeout(() => setTimeLeft(prev => prev - 1), 1000); } else if (timeLeft === 0 && phase === 'playing') { handleGameOver(); } return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, [phase, timeLeft, handleGameOver]); const startRound = useCallback(() => { setRoundState('waiting'); setCurrentReactionTime(null); const waitTime = 1500 + Math.random() * 2500; timeoutRef.current = setTimeout(() => { setRoundState('ready'); if (gameMode === 'selective') { const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)]; setCurrentColor(randomColor.value); } timeoutRef.current = setTimeout(() => { setRoundState('go'); roundStartTimeRef.current = performance.now(); }, 200 + Math.random() * 300); }, waitTime); }, [gameMode]); const handleStart = useCallback((mode: GameMode = 'simple') => { window.scrollTo(0, 0); setGameMode(mode); setPhase('playing'); setRoundState('waiting'); setLevel(1); setScore(0); setLives(INITIAL_LIVES); setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT); setCorrectCount(0); setWrongCount(0); reactionTimesRef.current = []; setStreak(0); setBestStreak(0); gameStartTimeRef.current = Date.now(); hasSavedRef.current = false; setTimeout(() => startRound(), 500); }, [startRound, examMode, examTimeLimit]); useEffect(() => { if ((location.state?.autoStart || examMode) && phase === 'welcome') { handleStart('simple'); } }, [location.state, phase, handleStart, examMode]); useEffect(() => { return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }; }, []); const handleClick = useCallback(() => { if (phase !== 'playing') return; if (roundState === 'waiting' || roundState === 'ready') { setRoundState('early'); playSound('incorrect'); showFeedback(false); setWrongCount(prev => prev + 1); setStreak(0); setLives(l => l - 1); if (timeoutRef.current) clearTimeout(timeoutRef.current); setTimeout(() => { dismissFeedback(); if (lives <= 1) { handleGameOver(); } else if (level < MAX_LEVEL) { setLevel(prev => prev + 1); startRound(); } else { handleVictory(); } }, 1200); } else if (roundState === 'go') { const reactionTime = performance.now() - roundStartTimeRef.current; setCurrentReactionTime(Math.round(reactionTime)); if (gameMode === 'selective' && currentColor !== targetColor) { setRoundState('result'); playSound('incorrect'); showFeedback(false); setWrongCount(prev => prev + 1); setStreak(0); setLives(l => l - 1); } else { setRoundState('result'); playSound('correct'); showFeedback(true); setCorrectCount(prev => prev + 1); setStreak(prev => { const newStreak = prev + 1; if (newStreak > bestStreak) setBestStreak(newStreak); return newStreak; }); reactionTimesRef.current.push(Math.round(reactionTime)); const timeScore = Math.max(0, 500 - Math.round(reactionTime)); setScore(prev => prev + Math.round(timeScore / 2) + 50 + (streak * 10)); } setTimeout(() => { dismissFeedback(); const isCorrect = !(gameMode === 'selective' && currentColor !== targetColor); if (lives <= 1 && !isCorrect) { handleGameOver(); } else if (level >= MAX_LEVEL) { handleVictory(); } else { setLevel(prev => prev + 1); startRound(); } }, 1200); } }, [phase, roundState, level, gameMode, currentColor, targetColor, startRound, lives, streak, bestStreak, playSound, showFeedback, dismissFeedback, handleGameOver, handleVictory]); const handleWait = useCallback(() => { if (phase !== 'playing' || gameMode !== 'selective' || roundState !== 'go') return; if (currentColor !== targetColor) { setRoundState('result'); setCurrentReactionTime(null); playSound('correct'); showFeedback(true); setCorrectCount(prev => prev + 1); setStreak(prev => { const newStreak = prev + 1; if (newStreak > bestStreak) setBestStreak(newStreak); return newStreak; }); setScore(prev => prev + 75 + (streak * 5)); setTimeout(() => { dismissFeedback(); if (level >= MAX_LEVEL) { handleVictory(); } else { setLevel(prev => prev + 1); startRound(); } }, 1200); } }, [phase, gameMode, roundState, currentColor, targetColor, level, startRound, streak, bestStreak, playSound, showFeedback, dismissFeedback, handleVictory]); useEffect(() => { if (gameMode === 'selective' && roundState === 'go') { const timeout = setTimeout(() => { if (roundState === 'go') handleWait(); }, 1500); return () => clearTimeout(timeout); } }, [gameMode, roundState, handleWait]); const averageReaction = reactionTimesRef.current.length > 0 ? Math.round(reactionTimesRef.current.reduce((a, b) => a + b, 0) / reactionTimesRef.current.length) : 0; const accuracy = correctCount + wrongCount > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0; const bestReaction = reactionTimesRef.current.length > 0 ? Math.min(...reactionTimesRef.current) : 0; const getColorHex = (color: string) => { switch (color) { case 'green': return '#10b981'; case 'red': return '#ef4444'; case 'blue': return '#3b82f6'; case 'yellow': return '#eab308'; default: return '#10b981'; } }; return ( <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black text-white"> <div className="fixed inset-0 overflow-hidden pointer-events-none"> <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" /> <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" /> </div> <div className="relative z-10 p-4 pt-20"> <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4"> <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"> <ChevronLeft size={20} /> <span>{backLabel}</span> </Link> {phase === 'playing' && ( <div className="flex items-center gap-4 flex-wrap"> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.1)]"> <Star className="text-amber-400 fill-amber-400" size={18} /> <span className="font-bold text-amber-400">{score}</span> </div> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.1)]"> {Array.from({ length: INITIAL_LIVES }).map((_, i) => ( <Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} /> ))} </div> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.1)]"> <Timer className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /> <span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span> </div> <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.1)]"> <Target className="text-amber-400" size={18} /> <span className="font-bold text-amber-400">{level}/{MAX_LEVEL}</span> </div> {streak > 1 && ( <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/30 border border-amber-500/50 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2)]"> <Zap className="text-amber-400" size={18} /> <span className="font-bold text-amber-400">x{streak}</span> </div> )} </div> )} </div> </div> <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4"> <AnimatePresence mode="wait"> {phase === 'welcome' && ( <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-xl"> <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)] bg-slate-50 dark:bg-slate-800 border-4 border-black shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)]" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}> <Zap size={52} className="text-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" /> </motion.div> <h1 className="text-4xl font-bold mb-4 bg-slate-50 dark:bg-slate-800 border-4 border-black bg-clip-text text-transparent">⚡ Tepki Süresi</h1> <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 mb-6 text-left border border-2 border-black"> <h3 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2"><Eye size={20} /> Mod Seç</h3> </div> <div className="space-y-4 mb-6 text-left"> <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={() => handleStart('simple')} className="w-full p-5 rounded-2xl bg-emerald-500/20 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2)] border-2 border-emerald-500/50"> <div className="flex items-center gap-4"> <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-slate-50 dark:bg-slate-800 border-4 border-black shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),inset_0_4px_8px_rgba(255,255,255,0.2)]"><Zap size={28} className="text-white" /></div> <div><h3 className="text-xl font-bold text-emerald-300">Basit Tepki</h3><p className="text-slate-400 text-sm">Yeşil görünce hemen tıkla!</p></div> </div> </motion.button> <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} onClick={() => handleStart('selective')} className="w-full p-5 rounded-2xl bg-amber-500/20 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2)] border-2 border-amber-500/50"> <div className="flex items-center gap-4"> <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-slate-50 dark:bg-slate-800 border-4 border-black shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),inset_0_4px_8px_rgba(255,255,255,0.2)]"><Target size={28} className="text-white" /></div> <div><h3 className="text-xl font-bold text-amber-300">Seçmeli Tepki</h3><p className="text-slate-400 text-sm">Sadece yeşile tıkla, diğerlerinde bekle!</p></div> </div> </motion.button> </div> <div className="bg-amber-500/10 text-amber-300 text-xs px-4 py-2 rounded-full inline-block border border-amber-500/30">TUZÖ 8.1.1 Tepki Hızı</div> </motion.div> )} {phase === 'playing' && ( <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-xl"> {gameMode === 'selective' && ( <div className="rounded-2xl p-4 mb-4 flex items-center justify-center gap-3 bg-emerald-500/20 border border-emerald-500/30"> <span className="text-slate-400">Hedef:</span> <div className="w-10 h-10 rounded-lg bg-emerald-500" /> <span className="text-emerald-400 font-bold">YEŞİL</span> </div> )} <motion.button onClick={handleClick} className="w-full aspect-video rounded-3xl flex flex-col items-center justify-center cursor-pointer transition-all" style={{ background: roundState === 'waiting' ? 'linear-gradient(135deg, #374151 0%, #1F2937 100%)' : roundState === 'ready' ? 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)' : roundState === 'go' ? `linear-gradient(135deg, ${getColorHex(gameMode === 'selective' ? currentColor : 'green')} 0%, ${getColorHex(gameMode === 'selective' ? currentColor : 'green')}CC 100%)` : roundState === 'early' ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)' : 'linear-gradient(135deg, #374151 0%, #1F2937 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.1), 0 8px 24px rgba(0,0,0,0.3)' }} whileHover={{ scale: roundState === 'go' ? 1.02 : 1 }} whileTap={{ scale: 0.98 }}> {roundState === 'waiting' && <><Timer className="w-16 h-16 text-slate-400 mx-auto mb-4" /><p className="text-2xl font-bold text-slate-300">Bekle...</p></>} {roundState === 'ready' && <><AlertCircle className="w-16 h-16 text-amber-900 mx-auto mb-4 animate-pulse" /><p className="text-2xl font-bold text-amber-900">Hazırlan!</p></>} {roundState === 'go' && <><Zap className="w-20 h-20 text-white mx-auto mb-4" /><p className="text-4xl font-black text-white">{gameMode === 'selective' && currentColor !== targetColor ? 'BEKLEME!' : 'TIKLA!'}</p></>} {roundState === 'early' && <><XCircle className="w-16 h-16 text-white mx-auto mb-4" /><p className="text-2xl font-bold text-white">Çok Erken!</p></>} {roundState === 'result' && ( <div className="text-center"> {currentReactionTime !== null ? <><CheckCircle2 className="w-16 h-16 text-emerald-400 mx-auto mb-4" /><p className="text-4xl font-black text-emerald-400">{currentReactionTime} ms</p></> : <><CheckCircle2 className="w-16 h-16 text-emerald-400 mx-auto mb-4" /><p className="text-2xl font-bold text-emerald-400">Doğru Bekleme!</p></>} </div> )} </motion.button> <div className="flex justify-center items-center gap-6 mt-6 text-sm text-slate-400"> <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /><span>{correctCount} Başarılı</span></div> {bestReaction > 0 && <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-amber-400" /><span>En iyi: {bestReaction}ms</span></div>} </div> </motion.div> )} {(phase === 'game_over' || phase === 'victory') && ( <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl"> <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" style={{ background: phase === 'victory' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={phase === 'victory' ? { y: [0, -10, 0], rotate: [0, 5, -5, 0] } : { rotate: [0, 5, -5, 0] }} transition={{ duration: 2, repeat: Infinity }}><Trophy size={52} className="text-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" /></motion.div> <h2 className="text-3xl font-black text-amber-300 mb-2">{phase === 'victory' ? '🎖️ Muhteşem Zafer!' : 'Oyun Bitti!'}</h2> <p className="text-slate-400 mb-6">{phase === 'victory' ? 'Tüm seviyeleri başarıyla tamamladın!' : accuracy >= 80 ? 'Harika tepki süresi!' : 'Biraz daha pratik yap!'}</p> <div className="rounded-2xl p-6 mb-8 bg-white dark:bg-slate-800 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),0_4px_16px_rgba(0,0,0,0.2)] border border-2 border-black"> <div className="grid grid-cols-2 gap-4"> <div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div> <div className="text-center"><p className="text-slate-400 text-sm">Ortalama</p><p className="text-2xl font-bold text-sky-400 font-mono">{averageReaction}ms</p></div> <div className="text-center"><p className="text-slate-400 text-sm">En İyi</p><p className="text-2xl font-bold text-emerald-400 font-mono">{bestReaction}ms</p></div> <div className="text-center"><p className="text-slate-400 text-sm">Başarılı</p><p className="text-2xl font-bold text-purple-400">{correctCount}/{MAX_LEVEL}</p></div> </div> </div> <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setPhase('welcome')} className="w-full px-6 py-4 rounded-2xl font-bold text-lg mb-4 bg-slate-50 dark:bg-slate-800 border-4 border-black shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),inset_0_4px_8px_rgba(255,255,255,0.2),0_8px_24px_rgba(251,191,36,0.4)]"> <div className="flex items-center justify-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div> </motion.button> <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link> </motion.div> )} </AnimatePresence> <GameFeedbackBanner feedback={feedbackState} /> </div> </div> );
-}; export default ReactionTimeGame;
+const MAX_LEVEL = 20;
+const GAME_ID = "tepki-suresi";
+
+const COLORS = [
+  { name: "Yeşil", value: "green", hex: GAME_COLORS.emerald, class: "bg-cyber-green" },
+  { name: "Kırmızı", value: "red", hex: GAME_COLORS.incorrect, class: "bg-cyber-pink" },
+  { name: "Mavi", value: "blue", hex: GAME_COLORS.blue, class: "bg-cyber-blue" },
+  { name: "Sarı", value: "yellow", hex: GAME_COLORS.yellow, class: "bg-cyber-yellow" },
+];
+
+const ReactionTimeGame: React.FC = () => {
+  const { playSound } = useSound();
+  const safeTimeout = useSafeTimeout();
+  const location = useLocation();
+
+  const engine = useGameEngine({
+    gameId: GAME_ID,
+    timeLimit: TIME_LIMIT,
+    maxLevel: MAX_LEVEL,
+    initialLives: INITIAL_LIVES,
+    disableAutoStart: true, // This game has custom welcome with mode selection
+  });
+  const { phase, level, lives, score, addScore, loseLife, nextLevel, setGamePhase, handleStart, examMode } = engine;
+
+  const feedback = useGameFeedback({ duration: 1000 });
+  const { feedbackState, showFeedback, dismissFeedback } = feedback;
+
+  const [gameMode, setGameMode] = useState<GameMode>("simple");
+  const [roundState, setRoundState] = useState<RoundState>("waiting");
+  const [currentColor, setCurrentColor] = useState<string>("red");
+  const [currentReactionTime, setCurrentReactionTime] = useState<number | null>(null);
+
+  // Consolidated stats — useRef to avoid unnecessary re-renders
+  const statsRef = useRef({ correct: 0, wrong: 0, streak: 0, bestStreak: 0 });
+  const [statsVersion, setStatsVersion] = useState(0); // trigger re-render when stats change
+  const targetColor = "green";
+
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const roundStartTimeRef = useRef<number>(0);
+  const reactionTimesRef = useRef<number[]>([]);
+
+  // Internal restart logic wrapping engine.handleStart
+  const clearTransitionTimeout = useCallback(() => {
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
+  }, []);
+
+  const startCustomGame = useCallback(
+    (mode: GameMode = "simple") => {
+      window.scrollTo(0, 0);
+      setGameMode(mode);
+      setRoundState("waiting");
+      statsRef.current = { correct: 0, wrong: 0, streak: 0, bestStreak: 0 };
+      reactionTimesRef.current = [];
+      setStatsVersion(0);
+      handleStart();
+    },
+    [handleStart]
+  );
+
+  // Use a ref for phase inside timeout callbacks to avoid stale closures
+  const phaseRef = useRef(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  const startRound = useCallback(() => {
+    setRoundState("waiting");
+    setCurrentReactionTime(null);
+    const waitTime = 1500 + Math.random() * 2500;
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = safeTimeout(() => {
+      if (phaseRef.current !== "playing") return;
+      setRoundState("ready");
+      if (gameMode === "selective") {
+        const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+        setCurrentColor(randomColor.value);
+      } else {
+        setCurrentColor("green");
+      }
+
+      timeoutRef.current = safeTimeout(
+        () => {
+          if (phaseRef.current !== "playing") return;
+          setRoundState("go");
+          roundStartTimeRef.current = performance.now();
+        },
+        300 + Math.random() * 500,
+      );
+    }, waitTime);
+  }, [gameMode, safeTimeout]);
+
+  // Start round immediately when game starts playing and is waiting
+  useEffect(() => {
+    if (phase === "playing" && roundState === "waiting" && score === 0 && statsRef.current.correct === 0 && statsRef.current.wrong === 0) {
+      startRound();
+    }
+  }, [phase, roundState, score, startRound]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+    };
+  }, []);
+
+  // Dismiss feedback and clear timeouts when game ends
+  useEffect(() => {
+    if (phase === "game_over" || phase === "victory") {
+      dismissFeedback();
+      if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+      if (transitionTimeoutRef.current) { clearTimeout(transitionTimeoutRef.current); transitionTimeoutRef.current = null; }
+    }
+  }, [phase, dismissFeedback]);
+
+  const handleClick = useCallback(() => {
+    if (phase !== "playing" || feedbackState) return;
+
+    if (roundState === "waiting" || roundState === "ready") {
+      // Early click — lose life but do NOT advance level
+      setRoundState("early");
+      playSound("wrong");
+      showFeedback(false);
+      statsRef.current.wrong++;
+      statsRef.current.streak = 0;
+      setStatsVersion(v => v + 1);
+      loseLife();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      clearTransitionTimeout();
+
+      transitionTimeoutRef.current = safeTimeout(() => {
+        dismissFeedback();
+        if (lives > 1) {
+          startRound(); // retry same level, no nextLevel()
+        }
+      }, 1200);
+    } else if (roundState === "go") {
+      const reactionTime = performance.now() - roundStartTimeRef.current;
+      setCurrentReactionTime(Math.round(reactionTime));
+
+      if (gameMode === "selective" && currentColor !== targetColor) {
+        // Clicked wrong color — lose life, no level advance
+        setRoundState("result");
+        playSound("wrong");
+        showFeedback(false);
+        statsRef.current.wrong++;
+        statsRef.current.streak = 0;
+        setStatsVersion(v => v + 1);
+        loseLife();
+        clearTransitionTimeout();
+
+        transitionTimeoutRef.current = safeTimeout(() => {
+          dismissFeedback();
+          if (lives > 1) {
+            startRound(); // retry same level
+          }
+        }, 1200);
+      } else {
+        // Correct reaction
+        setRoundState("result");
+        playSound("correct");
+        showFeedback(true);
+        statsRef.current.correct++;
+        statsRef.current.streak++;
+        if (statsRef.current.streak > statsRef.current.bestStreak) statsRef.current.bestStreak = statsRef.current.streak;
+        setStatsVersion(v => v + 1);
+        reactionTimesRef.current.push(Math.round(reactionTime));
+        const timeScore = Math.max(0, 500 - Math.round(reactionTime));
+        addScore(Math.round(timeScore / 2) + 50 + statsRef.current.streak * 10);
+        clearTransitionTimeout();
+
+        transitionTimeoutRef.current = safeTimeout(() => {
+          dismissFeedback();
+          if (level >= MAX_LEVEL) {
+            setGamePhase("victory");
+          } else {
+            nextLevel();
+            startRound();
+          }
+        }, 1200);
+      }
+    }
+  }, [
+    phase,
+    feedbackState,
+    roundState,
+    gameMode,
+    currentColor,
+    targetColor,
+    level,
+    lives,
+    startRound,
+    clearTransitionTimeout,
+    playSound,
+    showFeedback,
+    dismissFeedback,
+    loseLife,
+    addScore,
+    nextLevel,
+    setGamePhase,
+    safeTimeout,
+  ]);
+
+  const handleWait = useCallback(() => {
+    if (
+      phase !== "playing" ||
+      gameMode !== "selective" ||
+      roundState !== "go" ||
+      feedbackState
+    )
+      return;
+
+    if (currentColor !== targetColor) {
+      setRoundState("result");
+      setCurrentReactionTime(null);
+      playSound("correct");
+      showFeedback(true);
+      statsRef.current.correct++;
+      statsRef.current.streak++;
+      if (statsRef.current.streak > statsRef.current.bestStreak) statsRef.current.bestStreak = statsRef.current.streak;
+      setStatsVersion(v => v + 1);
+      addScore(75 + statsRef.current.streak * 5);
+
+      clearTransitionTimeout();
+      transitionTimeoutRef.current = safeTimeout(() => {
+        dismissFeedback();
+        if (level >= MAX_LEVEL) {
+          setGamePhase("victory");
+        } else {
+          nextLevel();
+          startRound();
+        }
+      }, 1200);
+    }
+  }, [
+    phase,
+    feedbackState,
+    gameMode,
+    roundState,
+    currentColor,
+    targetColor,
+    level,
+    startRound,
+    clearTransitionTimeout,
+    playSound,
+    showFeedback,
+    dismissFeedback,
+    addScore,
+    nextLevel,
+    setGamePhase,
+    safeTimeout,
+  ]);
+
+  useEffect(() => {
+    if (gameMode === "selective" && roundState === "go") {
+      const waitTime = Math.max(1000, 2000 - level * 50); // Gets slightly faster
+      const timeout = safeTimeout(() => {
+        if (roundState === "go") handleWait();
+      }, waitTime);
+      return () => clearTimeout(timeout);
+    }
+  }, [gameMode, roundState, handleWait, level, safeTimeout]);
+
+  const averageReaction = useMemo(() =>
+    reactionTimesRef.current.length > 0
+      ? Math.round(reactionTimesRef.current.reduce((a, b) => a + b, 0) / reactionTimesRef.current.length)
+      : 0,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [statsVersion]);
+
+  const bestReaction = useMemo(() =>
+    reactionTimesRef.current.length > 0
+      ? Math.min(...reactionTimesRef.current)
+      : 0,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [statsVersion]);
+
+  const getButtonClass = () => {
+    if (roundState === "waiting") return "bg-slate-200 dark:bg-slate-700";
+    if (roundState === "ready") return "bg-cyber-yellow";
+    if (roundState === "go") {
+      const col = COLORS.find((c) => c.value === currentColor);
+      return col ? col.class : "bg-cyber-green";
+    }
+    if (roundState === "early") return "bg-cyber-pink";
+    if (roundState === "result") {
+      if (currentReactionTime === null) return "bg-cyber-green"; // Wait correctly
+      if (gameMode === "selective" && currentColor !== targetColor)
+        return "bg-cyber-pink"; // Clicked wrong color
+      return "bg-cyber-green"; // Clicked green correctly
+    }
+    return "bg-slate-200 dark:bg-slate-700";
+  };
+
+  const backLink = examMode
+    ? "/atolyeler/sinav-simulasyonu/devam"
+    : location.state?.arcadeMode
+      ? "/bilsem-zeka"
+      : "/individual-assessment/attention-memory";
+  const backLabel = examMode
+    ? "Sınavı Bitir"
+    : location.state?.arcadeMode
+      ? "Arcade"
+      : "Geri Dön";
+
+  const WelcomeScreen = (
+    <div className="min-h-[100dvh] bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 flex flex-col items-center justify-center p-4 sm:p-6 overflow-hidden relative">
+      <div className="relative z-10 w-full max-w-xl">
+        <div className="w-full flex items-center justify-start mb-6 -ml-2">
+          <Link
+            to={backLink}
+            className="flex items-center gap-2 text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white transition-colors bg-white dark:bg-slate-800 border-2 border-black/10 px-4 py-2 rounded-xl shadow-neo-sm active:translate-y-[2px] active:translate-x-[2px] active:shadow-none font-nunito font-bold"
+          >
+            <ChevronLeft size={20} className="stroke-[3]" />
+            <span>{backLabel}</span>
+          </Link>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border-2 border-black/10 shadow-neo-sm"
+        >
+          <motion.div
+            className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 bg-cyber-yellow border-2 border-black/10 shadow-neo-sm rounded-2xl flex items-center justify-center"
+            animate={{ y: [0, -8, 0], rotate: [3, 8, 3] }}
+            transition={{
+              duration: 2.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            <Zap size={56} className="text-black fill-black" strokeWidth={2.5} />
+          </motion.div>
+
+          <h1 className="text-4xl sm:text-5xl font-nunito font-black mb-4 uppercase text-black dark:text-white tracking-tight drop-shadow-sm">
+            Tepki Süresi
+          </h1>
+
+          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 mb-6 border-2 border-black/10 shadow-neo-sm text-left">
+            <h3 className="text-xl font-nunito font-black text-cyber-blue mb-4 flex items-center gap-2 uppercase">
+              <Sparkles size={24} className="stroke-[3]" /> Mod Seçimi
+            </h3>
+
+            <div className="space-y-4">
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => startCustomGame("simple")}
+                className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-black/10 shadow-neo-sm flex items-center gap-3 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-cyber-green border-2 border-black/10">
+                  <Zap size={24} className="text-black fill-black/50" />
+                </div>
+                <div className="text-left font-nunito">
+                  <h3 className="text-lg font-bold text-black dark:text-white group-hover:text-cyber-green transition-colors">
+                    Basit Tepki
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">
+                    Yeşil görünce hemen tıkla!
+                  </p>
+                </div>
+              </motion.button>
+
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => startCustomGame("selective")}
+                className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-black/10 shadow-neo-sm flex items-center gap-3 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-cyber-pink border-2 border-black/10">
+                  <Target size={24} className="text-black" strokeWidth={2.5} />
+                </div>
+                <div className="text-left font-nunito">
+                  <h3 className="text-lg font-bold text-black dark:text-white group-hover:text-cyber-pink transition-colors">
+                    Seçmeli Tepki
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">
+                    Sadece yeşile tıkla, diğerlerinde bekle!
+                  </p>
+                </div>
+              </motion.button>
+            </div>
+          </div>
+
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyber-yellow border-2 border-black/10 text-black rounded-lg shadow-neo-sm">
+            <span className="text-xs font-nunito font-black uppercase tracking-widest text-black">
+              TUZÖ 8.1.1 Tepki Hızı
+            </span>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+
+  return (
+    <BrainTrainerShell
+      engine={engine}
+      feedback={feedback}
+      config={{
+        title: "Tepki Süresi",
+        description: "",
+        howToPlay: [],
+        icon: Zap,
+        tuzoCode: "TUZÖ 8.1.1 Tepki Hızı",
+        customWelcome: WelcomeScreen,
+        onRestart: () => {
+          // Reset game-specific state and go back to mode selection
+          setRoundState("waiting");
+          setCurrentReactionTime(null);
+          statsRef.current = { correct: 0, wrong: 0, streak: 0, bestStreak: 0 };
+          reactionTimesRef.current = [];
+          setStatsVersion(0);
+          if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+          clearTransitionTimeout();
+          setGamePhase("welcome");
+        },
+        extraHudItems: statsRef.current.streak > 1 ? (
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-cyber-purple border-2 border-black/10 rounded-xl shadow-neo-sm animate-pulse">
+            <Zap className="text-white fill-white/50" size={18} />
+            <span className="font-nunito font-black text-white">x{statsRef.current.streak}</span>
+          </div>
+        ) : null,
+        extraGameOverActions: (
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-2 rounded-xl border-2 border-slate-200 dark:border-slate-600 overflow-hidden">
+              <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold uppercase tracking-wider text-[9px] sm:text-[10px] mb-0.5">
+                Ortalama
+              </p>
+              <p className="text-base sm:text-lg font-black text-cyber-purple truncate">
+                {averageReaction}<span className="text-[9px] ml-0.5">ms</span>
+              </p>
+            </div>
+            <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-2 rounded-xl border-2 border-slate-200 dark:border-slate-600 overflow-hidden">
+              <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold uppercase tracking-wider text-[9px] sm:text-[10px] mb-0.5">
+                En İyi
+              </p>
+              <p className="text-base sm:text-lg font-black text-cyber-green truncate">
+                {bestReaction > 0 ? bestReaction : "-"}<span className="text-[9px] ml-0.5">ms</span>
+              </p>
+            </div>
+            <div className="text-center bg-slate-50 dark:bg-slate-700/50 p-2 rounded-xl border-2 border-slate-200 dark:border-slate-600 overflow-hidden">
+              <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold uppercase tracking-wider text-[9px] sm:text-[10px] mb-0.5">
+                Doğru/Yanlış
+              </p>
+              <p className="text-base sm:text-lg font-black text-black dark:text-white truncate">
+                <span className="text-cyber-green">{statsRef.current.correct}</span>
+                <span className="text-slate-300 dark:text-slate-600 mx-0.5">/</span>
+                <span className="text-cyber-pink">{statsRef.current.wrong}</span>
+              </p>
+            </div>
+          </div>
+        ),
+      }}
+    >
+      {({ phase }) => (
+        <div className="relative z-10 flex flex-col items-center justify-center p-2 flex-1 w-full">
+          {phase === "playing" && (
+            <motion.div
+              key="playing"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-2xl px-2"
+            >
+              {gameMode === "selective" && (
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-3 mb-4 border-2 border-black/10 shadow-neo-sm text-center inline-flex items-center gap-3 relative justify-center mx-auto flex max-w-[220px]">
+                  <span className="text-slate-500 font-nunito font-bold uppercase tracking-widest text-sm">
+                    Hedef:
+                  </span>
+                  <div className="w-8 h-8 rounded-lg bg-cyber-green border-2 border-black/10 shadow-neo-sm" />
+                  <span className="font-nunito font-black text-black dark:text-white uppercase tracking-wider text-lg">
+                    YEŞİL
+                  </span>
+                </div>
+              )}
+
+              <motion.button
+                onClick={handleClick}
+                className={`w-full aspect-[4/3] sm:aspect-video rounded-2xl border-2 border-black/10 shadow-neo-sm transition-colors duration-100 flex flex-col items-center justify-center cursor-pointer relative overflow-hidden ${getButtonClass()}`}
+                whileTap={{ scale: 0.98, y: 4 }}
+              >
+                <div
+                  className="absolute inset-0 opacity-10 pointer-events-none"
+                  style={{
+                    backgroundImage:
+                      "radial-gradient(#000 10%, transparent 10%)",
+                    backgroundSize: "20px 20px",
+                  }}
+                />
+
+                {roundState === "waiting" && (
+                  <div className="relative z-10">
+                    <Timer className="w-16 h-16 text-slate-400 mx-auto mb-4 drop-shadow-sm" />
+                    <p className="text-2xl font-nunito font-black text-slate-500 uppercase tracking-widest">
+                      Bekle...
+                    </p>
+                  </div>
+                )}
+                {roundState === "ready" && (
+                  <div className="relative z-10">
+                    <AlertCircle
+                      className="w-16 h-16 text-black mx-auto mb-4 animate-pulse"
+                      strokeWidth={2.5}
+                    />
+                    <p className="text-2xl sm:text-4xl font-nunito font-black text-black uppercase tracking-widest text-center px-4">
+                      Hazırlan!
+                    </p>
+                  </div>
+                )}
+                {roundState === "go" && (
+                  <div className="relative z-10">
+                    <Zap
+                      className={`w-20 h-20 ${currentColor === "yellow" ? "text-black" : "text-white"} mx-auto mb-4`}
+                      strokeWidth={2.5}
+                    />
+                    <p
+                      className={`text-3xl sm:text-5xl font-nunito font-black ${currentColor === "yellow" ? "text-black" : "text-white"} uppercase tracking-widest text-center px-4`}
+                    >
+                      {gameMode === "selective" && currentColor !== targetColor
+                        ? "BEKLEME!"
+                        : "TIKLA!"}
+                    </p>
+                  </div>
+                )}
+                {roundState === "early" && (
+                  <div className="relative z-10">
+                    <XCircle
+                      className="w-16 h-16 text-black mx-auto mb-4"
+                      strokeWidth={2.5}
+                    />
+                    <p className="text-2xl sm:text-4xl font-nunito font-black text-black uppercase tracking-widest text-center px-4">
+                      Çok Erken!
+                    </p>
+                  </div>
+                )}
+                {roundState === "result" && (
+                  <div className="text-center relative z-10">
+                    {currentReactionTime !== null ? (
+                      <>
+                        <CheckCircle2
+                          className="w-16 h-16 text-black mx-auto mb-4"
+                          strokeWidth={2.5}
+                        />
+                        <p className="text-4xl sm:text-5xl font-nunito font-black text-black uppercase tracking-widest mb-1 px-2">
+                          {currentReactionTime}
+                        </p>
+                        <p className="text-xs font-nunito font-bold text-black uppercase tracking-widest">
+                          Milisaniye
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2
+                          className="w-16 h-16 text-black mx-auto mb-4"
+                          strokeWidth={2.5}
+                        />
+                        <p className="text-2xl sm:text-4xl font-nunito font-black text-black uppercase tracking-widest text-center px-4">
+                          Doğru Bekleme!
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </motion.button>
+            </motion.div>
+          )}
+        </div>
+      )}
+    </BrainTrainerShell >
+  );
+};
+
+export default ReactionTimeGame;

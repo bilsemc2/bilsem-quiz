@@ -14,7 +14,7 @@ export type BalloonState = {
     position: number; // 0-indexed position from left
 };
 
-export type GamePhase = 'idle' | 'watching' | 'popping' | 'guessing' | 'result';
+export type GamePhase = 'idle' | 'watching' | 'popping' | 'guessing' | 'result' | 'gameover';
 
 export enum QuestionType {
     COLOR = 'COLOR',

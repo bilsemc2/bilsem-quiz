@@ -1,14 +1,27 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    Trophy, RotateCcw, Play, Star, Timer, Target,
-    XCircle, ChevronLeft, Zap, Lightbulb, Heart, Home
-} from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Lightbulb } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
 import { GamePhase, Cell, ColorType } from './types';
 import { GAME_CONFIG, LEVEL_CONFIG, COLORS, COLOR_LABELS } from './constants';
 import { generateGrid } from './utils';
+import ArcadeGameShell from '../../Shared/ArcadeGameShell';
+import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
+import { ARCADE_FEEDBACK_TEXTS, ARCADE_SCORE_FORMULA } from '../../Shared/ArcadeConstants';
+
+// ── Phase → GameState Status Mapping ────────────────────────────────────────
+const getShellStatus = (phase: GamePhase): 'START' | 'PLAYING' | 'GAME_OVER' | 'SUCCESS' => {
+    switch (phase) {
+        case 'idle': return 'START';
+        case 'game_over': return 'GAME_OVER';
+        case 'victory': return 'SUCCESS';
+        default: return 'PLAYING'; // memorizing, playing, revealing
+    }
+};
+
+// ── Score base for this game (standart formül: base × level) ────────────────
+const SCORE_BASE = 10;
 
 const RenkliLambalar: React.FC = () => {
     const location = useLocation();
@@ -16,7 +29,8 @@ const RenkliLambalar: React.FC = () => {
 
     // Persistence Hook
     const { saveGamePlay } = useGamePersistence();
-    const hasSavedRef = useRef(false);
+    const hasSavedRef = useRef<boolean>(false);
+    const isResolvingRef = useRef<boolean>(false);
 
     // Core State
     const [phase, setPhase] = useState<GamePhase>('idle');
@@ -24,6 +38,9 @@ const RenkliLambalar: React.FC = () => {
     const [lives, setLives] = useState(GAME_CONFIG.INITIAL_LIVES);
     const [level, setLevel] = useState(1);
     const [streak, setStreak] = useState(0);
+
+    // Feedback Banner State
+    const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
     // Game-Specific State
     const [grid, setGrid] = useState<Cell[]>([]);
@@ -36,6 +53,21 @@ const RenkliLambalar: React.FC = () => {
     // Refs
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const startTimeRef = useRef<number>(0);
+
+    // Global Unmount Cleanup (Zorunlu)
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, []);
+
+    // Auto-clear feedback banner
+    useEffect(() => {
+        if (feedback) {
+            const t = setTimeout(() => setFeedback(null), 1000);
+            return () => clearTimeout(t);
+        }
+    }, [feedback]);
 
     // Auto-start for arcade mode
     useEffect(() => {
@@ -81,8 +113,10 @@ const RenkliLambalar: React.FC = () => {
         setLevel(1);
         setStreak(0);
         setTargetColor(null);
+        setFeedback(null);
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
+        isResolvingRef.current = false;
     }, []);
 
     // Next Level
@@ -94,9 +128,11 @@ const RenkliLambalar: React.FC = () => {
         setPhase('memorizing');
         setCountdown(levelConfig.memorizeTime);
         setTargetColor(null);
+        setFeedback(null);
+        isResolvingRef.current = false;
     }, []);
 
-    // Game Over Handler
+    // Game Over Handler (Idempotent)
     const handleGameOver = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
@@ -117,7 +153,7 @@ const RenkliLambalar: React.FC = () => {
         });
     }, [saveGamePlay, score, level, lives, streak]);
 
-    // Victory Handler
+    // Victory Handler (Idempotent)
     const handleVictory = useCallback(async () => {
         if (hasSavedRef.current) return;
         hasSavedRef.current = true;
@@ -138,12 +174,17 @@ const RenkliLambalar: React.FC = () => {
         });
     }, [saveGamePlay, score, streak]);
 
-    // Cell Click Handler
+    // Cell Click Handler (with Callback Lock Pattern)
     const handleCellClick = useCallback((cellId: number) => {
         if (phase !== 'playing' || !targetColor) return;
+        if (isResolvingRef.current) return;
+        isResolvingRef.current = true;
 
         const cell = grid[cellId];
-        if (cell.isRevealed) return;
+        if (cell.isRevealed) {
+            isResolvingRef.current = false;
+            return;
+        }
 
         if (cell.color === targetColor) {
             // Correct!
@@ -153,8 +194,12 @@ const RenkliLambalar: React.FC = () => {
 
             const newFound = foundTargets + 1;
             setFoundTargets(newFound);
-            setScore(prev => prev + 10 * level);
+            setScore(prev => prev + ARCADE_SCORE_FORMULA(SCORE_BASE, level));
             setStreak(prev => prev + 1);
+
+            // Feedback Banner
+            const msg = ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES[Math.floor(Math.random() * ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES.length)];
+            setFeedback({ message: msg, type: 'success' });
 
             if (newFound === totalTargets) {
                 // Round complete!
@@ -166,6 +211,8 @@ const RenkliLambalar: React.FC = () => {
                     setTimeout(() => startNextLevel(nextLevel), 1000);
                 }
             }
+
+            setTimeout(() => { isResolvingRef.current = false; }, 300);
         } else {
             // Wrong!
             const updatedGrid = [...grid];
@@ -175,6 +222,10 @@ const RenkliLambalar: React.FC = () => {
 
             const newLives = lives - 1;
             setLives(newLives);
+
+            // Feedback Banner
+            const errMsg = ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES[Math.floor(Math.random() * ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES.length)];
+            setFeedback({ message: errMsg, type: 'error' });
 
             // Brief error shake
             setTimeout(() => {
@@ -192,334 +243,132 @@ const RenkliLambalar: React.FC = () => {
                     handleGameOver();
                 }, 2500);
             }
+
+            setTimeout(() => { isResolvingRef.current = false; }, 500);
         }
     }, [phase, targetColor, grid, foundTargets, totalTargets, level, lives, handleVictory, handleGameOver, startNextLevel]);
 
+    // Derive Shell status from internal phase
+    const shellStatus = getShellStatus(phase);
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 text-white touch-none [-webkit-tap-highlight-color:transparent]">
-            {/* Decorative Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-10 left-10 w-32 h-32 bg-yellow-400/10 blur-3xl rounded-full" />
-                <div className="absolute bottom-20 right-10 w-48 h-48 bg-blue-500/10 blur-3xl rounded-full" />
-                <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-red-500/10 blur-3xl rounded-full" />
-            </div>
+        <ArcadeGameShell
+            gameState={{ score, level, lives, status: shellStatus }}
+            gameMetadata={{
+                id: 'renkli-lambalar',
+                title: 'RENKLi LAMBALAR',
+                description: <p>Renkleri ezberle ve doğru renkteki lambaları bul!</p>,
+                tuzoCode: '5.4.2 Görsel Bellek',
+                icon: <Lightbulb className="w-14 h-14 text-black" strokeWidth={3} />,
+                iconBgColor: 'bg-yellow-400',
+                containerBgColor: 'bg-sky-200 dark:bg-slate-900'
+            }}
+            onStart={handleStart}
+            onRestart={handleStart}
+            showLevel={true}
+            showLives={true}
+        >
+            <div className="h-full w-full text-black dark:text-white transition-colors duration-300 touch-none [-webkit-tap-highlight-color:transparent] overflow-hidden flex flex-col">
+                {/* Decorative Background */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-50 dark:opacity-20 transition-opacity duration-300">
+                    <div className="absolute top-10 left-10 w-32 h-32 bg-yellow-400 rounded-full border-2 border-black/10 shadow-neo-sm" />
+                    <div className="absolute bottom-20 right-10 w-48 h-48 bg-blue-400 rounded-full border-2 border-black/10 shadow-neo-sm" />
+                    <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-red-400 rounded-full border-2 border-black/10 shadow-neo-sm" />
+                </div>
 
-            {/* Header */}
-            <div className="relative z-10 p-2 sm:p-4 pt-16 sm:pt-4">
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <Link
-                        to="/bilsem-zeka"
-                        className="flex items-center gap-1.5 sm:gap-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
-                        <span className="text-xs sm:text-base">BİLSEM</span>
-                    </Link>
+                {/* Spacer for ArcadeGameShell HUD */}
+                <div className="h-20 sm:h-24" />
 
-                    {phase === 'playing' && (
-                        <div className="flex items-center gap-2 sm:gap-4">
-                            {/* Score */}
-                            <div className="flex items-center gap-1.5 sm:gap-2 bg-amber-500/20 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl">
-                                <Star className="text-amber-400 w-4 h-4 sm:w-[18px] sm:h-[18px]" />
-                                <span className="font-bold text-amber-400 text-sm sm:text-base">{score}</span>
-                            </div>
+                {/* Feedback Banner */}
+                <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
 
-                            {/* Lives */}
-                            <div className="flex items-center gap-0.5 sm:gap-1 bg-red-500/20 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl">
-                                {Array.from({ length: GAME_CONFIG.INITIAL_LIVES }).map((_, i) => (
-                                    <Heart
-                                        key={i}
-                                        className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i < lives ? 'text-red-400 fill-red-400' : 'text-red-400/30'}`}
-                                    />
-                                ))}
-                            </div>
+                {/* Main Content */}
+                <div className="relative z-10 flex flex-col items-center justify-center flex-1 p-2 sm:p-4">
+                    <AnimatePresence mode="wait">
+                        {/* Memorizing & Playing & Revealing */}
+                        {(phase === 'memorizing' || phase === 'playing' || phase === 'revealing') && (
+                            <motion.div
+                                key="game"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="w-full max-w-lg flex flex-col items-center"
+                            >
+                                {/* Status Bar */}
+                                <div className="mb-2 h-10 flex items-center justify-center">
+                                    {phase === 'memorizing' && (
+                                        <motion.p
+                                            initial={{ scale: 0.8 }}
+                                            animate={{ scale: 1 }}
+                                            className="text-xl sm:text-3xl font-black text-black bg-yellow-300 px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border-3 sm:border-2 border-black/10 dark:border-slate-800 shadow-neo-sm sm:shadow-neo-sm rotate-2 transition-colors duration-300"
+                                        >
+                                            Ezberle! <span className="text-2xl sm:text-4xl ml-1.5 sm:ml-2 bg-white dark:bg-slate-800 text-black dark:text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg sm:rounded-xl border-2 border-black/10 dark:border-slate-700 inline-block -rotate-3 transition-colors duration-300">{countdown}</span>
+                                        </motion.p>
+                                    )}
+                                    {phase === 'playing' && targetColor && (
+                                        <p className="text-base sm:text-2xl font-black bg-white dark:bg-slate-800 text-black dark:text-white px-3 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl border-3 sm:border-2 border-black/10 dark:border-slate-700 shadow-neo-sm sm:shadow-neo-sm flex items-center gap-1.5 sm:gap-2 -rotate-1 transition-colors duration-300">
+                                            Hedef: <span
+                                                className="font-black px-3 sm:px-4 py-0.5 sm:py-1 rounded-lg sm:rounded-xl border-3 sm:border-2 border-black/10 dark:border-slate-700 uppercase tracking-wider sm:tracking-widest text-sm sm:text-xl shadow-neo-sm rotate-2 transition-colors duration-300"
+                                                style={{ backgroundColor: COLORS[targetColor], color: '#000' }}
+                                            >
+                                                {COLOR_LABELS[targetColor]}
+                                            </span> ({foundTargets}/{totalTargets})
+                                        </p>
+                                    )}
+                                </div>
 
-                            {/* Level */}
-                            <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-500/20 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl">
-                                <Zap className="text-emerald-400 w-4 h-4 sm:w-[18px] sm:h-[18px]" />
-                                <span className="font-bold text-emerald-400 text-sm sm:text-base">Lv.{level}</span>
-                            </div>
-                        </div>
-                    )}
+                                {/* Game Grid - Solid Blocks */}
+                                <div
+                                    className="grid gap-1.5 sm:gap-3 p-3 sm:p-6 bg-slate-100 dark:bg-slate-800 rounded-2xl sm:rounded-[2rem] border-6 sm:border-2 border-black/10 dark:border-slate-700 shadow-neo-sm sm:shadow-neo-sm dark:shadow-[8px_8px_0_#0f172a] sm:dark:shadow-[12px_12px_0_#0f172a] mx-auto rotate-1 transition-colors duration-300"
+                                    style={{
+                                        gridTemplateColumns: `repeat(${currentGridSize}, minmax(0, 1fr))`,
+                                        width: 'min(80vw, 400px)',
+                                        aspectRatio: '1',
+                                    }}
+                                >
+                                    {grid.map((cell) => {
+                                        // Show colors during memorizing, revealing, or if already found
+                                        const isVisible = phase === 'memorizing' || phase === 'revealing' || cell.isRevealed;
+                                        const isRevealing = phase === 'revealing';
+
+                                        return (
+                                            <motion.button
+                                                key={cell.id}
+                                                onClick={() => handleCellClick(cell.id)}
+                                                disabled={phase !== 'playing' || cell.isRevealed}
+                                                whileHover={phase === 'playing' && !cell.isRevealed ? { scale: 1.05, y: -2 } : {}}
+                                                whileTap={phase === 'playing' && !cell.isRevealed ? { scale: 0.95 } : {}}
+                                                animate={isRevealing ? {
+                                                    scale: [1, 1.1, 1],
+                                                    transition: { duration: 0.3 }
+                                                } : {}}
+                                                className={`
+                                                relative rounded-xl sm:rounded-2xl transition-all duration-300 overflow-hidden border-2 border-black/10 dark:border-slate-700
+                                                ${cell.isError ? 'animate-shake' : ''}
+                                                ${phase === 'playing' && !cell.isRevealed ? 'cursor-pointer hover:shadow-neo-sm' : 'shadow-none'}
+                                                ${isVisible ? '' : 'shadow-neo-sm dark:shadow-[4px_4px_0_#0f172a]'}
+                                            `}
+                                                style={{
+                                                    aspectRatio: '1',
+                                                    backgroundColor: isVisible ? cell.hex : '#94a3b8', // slate-400 for unrevealed dark compatible
+                                                    transform: isVisible ? 'translateY(4px)' : 'translateY(0)',
+                                                    boxShadow: isVisible ? 'none' : '4px 4px 0 #000',
+                                                }}
+                                            >
+                                                {/* Solid Highlight */}
+                                                {isVisible && (
+                                                    <div className="absolute top-1 left-2 w-3 h-3 sm:w-4 sm:h-4 bg-white/60 rounded-full" />
+                                                )}
+                                            </motion.button>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
-
-            {/* Main Content */}
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-4">
-                <AnimatePresence mode="wait">
-                    {/* Welcome Screen */}
-                    {phase === 'idle' && (
-                        <motion.div
-                            key="idle"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-pink-500 to-purple-600 rounded-3xl flex items-center justify-center">
-                                <Lightbulb size={48} className="text-white" />
-                            </div>
-
-                            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-pink-400 via-yellow-400 to-cyan-400 bg-clip-text text-transparent">
-                                Renkli Lambalar
-                            </h1>
-
-                            <p className="text-slate-400 mb-8">
-                                Renkli solucanların yollarını ezberle ve hedef renkteki tüm hücreleri bul!
-                            </p>
-
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                <div className="flex gap-2 bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl">
-                                    {Object.values(COLORS).map(c => (
-                                        <div key={c} className="w-6 h-6 rounded-full shadow-lg" style={{ backgroundColor: c }} />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2">
-                                    <Heart className="text-red-400" size={16} />
-                                    <span className="text-sm text-slate-300">{GAME_CONFIG.INITIAL_LIVES} Can</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2">
-                                    <Timer className="text-blue-400" size={16} />
-                                    <span className="text-sm text-slate-300">Kolaydan Zora</span>
-                                </div>
-                                <div className="bg-slate-800/50 backdrop-blur-xl px-4 py-2 rounded-xl flex items-center gap-2">
-                                    <Target className="text-emerald-400" size={16} />
-                                    <span className="text-sm text-slate-300">{GAME_CONFIG.MAX_LEVEL} Seviye</span>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleStart}
-                                className="px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl font-bold text-lg shadow-lg shadow-pink-500/25"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Play size={24} />
-                                    <span>Başla</span>
-                                </div>
-                            </motion.button>
-                        </motion.div>
-                    )}
-
-                    {/* Memorizing & Playing & Revealing */}
-                    {(phase === 'memorizing' || phase === 'playing' || phase === 'revealing') && (
-                        <motion.div
-                            key="game"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full max-w-lg flex flex-col items-center"
-                        >
-                            {/* Status Bar */}
-                            <div className="mb-6 h-12 flex items-center justify-center">
-                                {phase === 'memorizing' && (
-                                    <motion.p
-                                        initial={{ scale: 0.8 }}
-                                        animate={{ scale: 1 }}
-                                        className="text-2xl font-bold text-yellow-300 animate-pulse"
-                                    >
-                                        Ezberle! <span className="text-4xl ml-2">{countdown}</span>
-                                    </motion.p>
-                                )}
-                                {phase === 'playing' && targetColor && (
-                                    <p className="text-xl font-semibold">
-                                        Tüm <span
-                                            className="font-bold px-2 mx-1 rounded"
-                                            style={{ color: COLORS[targetColor] }}
-                                        >
-                                            {COLOR_LABELS[targetColor]}
-                                        </span> lambaları bul! ({foundTargets}/{totalTargets})
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Game Grid - Soft Candy Gummies */}
-                            <div
-                                className="grid gap-2.5 p-6 bg-gradient-to-br from-rose-100/10 to-sky-100/10 backdrop-blur-xl rounded-[2rem] border border-white/20 shadow-xl"
-                                style={{
-                                    gridTemplateColumns: `repeat(${currentGridSize}, minmax(0, 1fr))`,
-                                    width: 'min(90vw, 400px)',
-                                    aspectRatio: '1',
-                                }}
-                            >
-                                {grid.map((cell) => {
-                                    // Show colors during memorizing, revealing, or if already found
-                                    const isVisible = phase === 'memorizing' || phase === 'revealing' || cell.isRevealed;
-                                    const isRevealing = phase === 'revealing';
-
-                                    return (
-                                        <motion.button
-                                            key={cell.id}
-                                            onClick={() => handleCellClick(cell.id)}
-                                            disabled={phase !== 'playing' || cell.isRevealed}
-                                            whileHover={phase === 'playing' && !cell.isRevealed ? { scale: 1.12, y: -3 } : {}}
-                                            whileTap={phase === 'playing' && !cell.isRevealed ? { scale: 0.92 } : {}}
-                                            animate={isRevealing ? {
-                                                scale: [1, 1.1, 1],
-                                                transition: { duration: 0.3 }
-                                            } : {}}
-                                            className={`
-                                                relative rounded-[40%] transition-all duration-400 overflow-hidden
-                                                ${cell.isError ? 'animate-shake' : ''}
-                                                ${phase === 'playing' && !cell.isRevealed ? 'cursor-pointer' : ''}
-                                            `}
-                                            style={{
-                                                aspectRatio: '1',
-                                                background: isVisible
-                                                    ? `linear-gradient(145deg, ${cell.hex} 0%, ${cell.hex}dd 100%)`
-                                                    : 'linear-gradient(145deg, #6b7280 0%, #4b5563 100%)',
-                                                boxShadow: isVisible
-                                                    ? `
-                                                        0 6px 20px ${cell.hex}50,
-                                                        inset 0 2px 4px rgba(255,255,255,0.4),
-                                                        inset 0 -4px 8px ${cell.hex}aa
-                                                    `
-                                                    : `
-                                                        0 4px 12px rgba(0,0,0,0.2),
-                                                        inset 0 2px 4px rgba(255,255,255,0.1),
-                                                        inset 0 -3px 6px rgba(0,0,0,0.2)
-                                                    `,
-                                                transform: isVisible ? 'translateY(-2px)' : 'translateY(0)',
-                                            }}
-                                        >
-                                            {/* Soft Candy Highlight - Matte Shine */}
-                                            <div
-                                                className="absolute rounded-[40%]"
-                                                style={{
-                                                    top: '6%',
-                                                    left: '10%',
-                                                    width: '50%',
-                                                    height: '30%',
-                                                    background: 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 100%)',
-                                                    borderRadius: '40%',
-                                                    filter: 'blur(3px)',
-                                                }}
-                                            />
-
-                                            {/* Subtle inner glow for lit candies */}
-                                            {isVisible && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, scale: 0.8 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    transition={{ duration: 0.3 }}
-                                                    className="absolute inset-0 rounded-[40%]"
-                                                    style={{
-                                                        background: `radial-gradient(circle at 50% 60%, rgba(255,255,255,0.2) 0%, transparent 50%)`,
-                                                    }}
-                                                />
-                                            )}
-                                        </motion.button>
-                                    );
-                                })}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Game Over Screen */}
-                    {phase === 'game_over' && (
-                        <motion.div
-                            key="game_over"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-3xl flex items-center justify-center">
-                                <XCircle size={48} className="text-white" />
-                            </div>
-
-                            <h2 className="text-3xl font-bold text-red-400 mb-4">Oyun Bitti!</h2>
-
-                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Skor</p>
-                                        <p className="text-2xl font-bold text-amber-400">{score}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-slate-400 text-sm">Seviye</p>
-                                        <p className="text-2xl font-bold text-emerald-400">{level}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-4 justify-center">
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleStart}
-                                    className="px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl font-bold text-lg"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <RotateCcw size={24} />
-                                        <span>Tekrar Dene</span>
-                                    </div>
-                                </motion.button>
-
-                                <Link
-                                    to="/bilsem-zeka"
-                                    className="px-6 py-4 bg-slate-700 hover:bg-slate-600 rounded-2xl font-bold transition-colors"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <Home size={20} />
-                                        <span>Arcade</span>
-                                    </div>
-                                </Link>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Victory Screen */}
-                    {phase === 'victory' && (
-                        <motion.div
-                            key="victory"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="text-center max-w-xl"
-                        >
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-3xl flex items-center justify-center animate-bounce">
-                                <Trophy size={48} className="text-white" />
-                            </div>
-
-                            <h2 className="text-3xl font-bold text-amber-400 mb-4">🎉 Şampiyon!</h2>
-
-                            <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-6">
-                                <p className="text-4xl font-bold text-amber-400">{score}</p>
-                                <p className="text-slate-400">Toplam Puan</p>
-                            </div>
-
-                            <div className="flex gap-4 justify-center">
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleStart}
-                                    className="px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl font-bold text-lg"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <RotateCcw size={24} />
-                                        <span>Tekrar Oyna</span>
-                                    </div>
-                                </motion.button>
-
-                                <Link
-                                    to="/bilsem-zeka"
-                                    className="px-6 py-4 bg-slate-700 hover:bg-slate-600 rounded-2xl font-bold transition-colors"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <Home size={20} />
-                                        <span>Arcade</span>
-                                    </div>
-                                </Link>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </div >
+        </ArcadeGameShell>
     );
 };
 

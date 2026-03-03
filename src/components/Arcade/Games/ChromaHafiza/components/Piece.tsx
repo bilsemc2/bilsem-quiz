@@ -46,12 +46,12 @@ const Piece: React.FC<PieceProps> = ({
         bevelSegments: 4
     }), [piece.depth]);
 
-    // Animation logic - #4A4A5E is visible against dark background
+    // Animation logic - Solid plastic look
     const { color, positionZ, emissiveIntensity } = useSpring({
-        color: isRevealed || isFilled ? piece.targetColor : '#5A5A6E',
-        positionZ: isRevealed || isFilled ? 0.3 : 0,
-        emissiveIntensity: isRevealed ? 0.25 : (hovered ? 0.15 : 0.05),
-        config: { mass: 1, tension: 120, friction: 14 }
+        color: isRevealed || isFilled ? piece.targetColor : '#ffffff', // White when hidden
+        positionZ: isRevealed || isFilled ? 0.4 : 0,
+        emissiveIntensity: isRevealed ? 0.3 : (hovered ? 0.2 : 0),
+        config: { mass: 1, tension: 150, friction: 15 }
     });
 
     return (
@@ -69,15 +69,12 @@ const Piece: React.FC<PieceProps> = ({
             onPointerOut={onPointerOut}
         >
             <extrudeGeometry args={[shape, extrudeSettings]} />
-            <animated.meshPhysicalMaterial
+            <animated.meshStandardMaterial
                 color={color}
                 emissive={color}
                 emissiveIntensity={emissiveIntensity}
-                roughness={0.1}
-                metalness={0.6}
-                clearcoat={1}
-                clearcoatRoughness={0.1}
-                reflectivity={1}
+                roughness={0.8}
+                metalness={0.1}
             />
         </animated.mesh>
     );

@@ -1,7 +1,17 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
 import type { Package, UserSubscription } from '../../types/package';
 import { toast } from 'sonner';
+import { profileRepository } from '@/server/repositories/profileRepository';
+import { adminPackageRepository } from '@/server/repositories/adminPackageRepository';
+import { adminSubscriptionRepository } from '@/server/repositories/adminSubscriptionRepository';
+import {
+    applyPackageDefaults,
+    attachUsersToSubscriptions,
+    toSubscriptionMutationInput,
+    toSubscriptionUserOptions,
+    type SubscriptionFormData,
+    type SubscriptionUserOption
+} from '@/features/admin/model/subscriptionManagementUseCases';
 import {
     Box,
     Paper,
@@ -28,12 +38,6 @@ import {
 } from '@mui/material';
 import { Edit, Add, CheckCircle, Cancel, AccessTime, Pending } from '@mui/icons-material';
 
-interface User {
-    id: string;
-    name: string;
-    email: string;
-}
-
 const statusLabels = {
     pending: { label: 'Beklemede', color: 'warning' as const, icon: Pending },
     active: { label: 'Aktif', color: 'success' as const, icon: CheckCircle },
@@ -44,11 +48,11 @@ const statusLabels = {
 export default function SubscriptionManagement() {
     const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
     const [packages, setPackages] = useState<Package[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useState<SubscriptionUserOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingSub, setEditingSub] = useState<UserSubscription | null>(null);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<SubscriptionFormData>({
         user_id: '',
         package_id: '',
         status: 'pending' as UserSubscription['status'],
@@ -58,7 +62,7 @@ export default function SubscriptionManagement() {
         payment_reference: '',
         notes: '',
     });
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [selectedUser, setSelectedUser] = useState<SubscriptionUserOption | null>(null);
 
     useEffect(() => {
         fetchData();
@@ -66,44 +70,17 @@ export default function SubscriptionManagement() {
 
     const fetchData = async () => {
         try {
-            // Fetch subscriptions with package info only (user fetched separately)
-            const { data: subs, error: subsError } = await supabase
-                .from('user_subscriptions')
-                .select(`
-          *,
-          package:packages(*)
-        `)
-                .order('created_at', { ascending: false });
+            const [subs, pkgs, recipientRows] = await Promise.all([
+                adminSubscriptionRepository.listSubscriptionsWithPackages(),
+                adminPackageRepository.listActivePackages(),
+                profileRepository.listMessageRecipients()
+            ]);
 
-            if (subsError) throw subsError;
+            const userOptions = toSubscriptionUserOptions(recipientRows);
 
-            // Fetch packages
-            const { data: pkgs, error: pkgsError } = await supabase
-                .from('packages')
-                .select('*')
-                .eq('is_active', true)
-                .order('sort_order');
-
-            if (pkgsError) throw pkgsError;
-
-            // Fetch users
-            const { data: usrs, error: usrsError } = await supabase
-                .from('profiles')
-                .select('id, name, email')
-                .order('name');
-
-            if (usrsError) throw usrsError;
-
-            // Merge user info into subscriptions
-            const userMap = new Map(usrs?.map(u => [u.id, u]) || []);
-            const subsWithUsers = (subs || []).map(sub => ({
-                ...sub,
-                user: userMap.get(sub.user_id) || null
-            }));
-
-            setSubscriptions(subsWithUsers);
-            setPackages(pkgs || []);
-            setUsers(usrs || []);
+            setSubscriptions(attachUsersToSubscriptions(subs, userOptions));
+            setPackages(pkgs);
+            setUsers(userOptions);
         } catch (error) {
             console.error('Veri yüklenirken hata:', error);
             toast.error('Veriler yüklenemedi');
@@ -115,7 +92,11 @@ export default function SubscriptionManagement() {
     const handleOpenDialog = (sub?: UserSubscription) => {
         if (sub) {
             setEditingSub(sub);
-            setSelectedUser(sub.user || null);
+            setSelectedUser(sub.user ? {
+                id: sub.user.id,
+                name: sub.user.name,
+                email: sub.user.email
+            } : null);
             setFormData({
                 user_id: sub.user_id,
                 package_id: sub.package_id,
@@ -145,45 +126,19 @@ export default function SubscriptionManagement() {
 
     const handlePackageChange = (packageId: string) => {
         const pkg = packages.find(p => p.id === packageId);
-        if (pkg) {
-            setFormData(prev => ({
-                ...prev,
-                package_id: packageId,
-                credits_remaining: pkg.initial_credits || 0,
-                xp_remaining: pkg.xp_required || 0,
-                expires_at: pkg.type === 'time_based' || pkg.type === 'bundle'
-                    ? '2026-04-06' // Default to exam date
-                    : '',
-            }));
-        }
+        if (!pkg) return;
+        setFormData((prev) => applyPackageDefaults(packageId, packages, prev));
     };
 
     const handleSave = async () => {
         try {
-            const subData = {
-                user_id: formData.user_id,
-                package_id: formData.package_id,
-                status: formData.status,
-                credits_remaining: formData.credits_remaining || null,
-                xp_remaining: formData.xp_remaining || null,
-                expires_at: formData.expires_at || null,
-                payment_reference: formData.payment_reference || null,
-                notes: formData.notes || null,
-                activated_at: formData.status === 'active' ? new Date().toISOString() : null,
-            };
+            const subData = toSubscriptionMutationInput(formData);
 
             if (editingSub) {
-                const { error } = await supabase
-                    .from('user_subscriptions')
-                    .update(subData)
-                    .eq('id', editingSub.id);
-                if (error) throw error;
+                await adminSubscriptionRepository.updateSubscription(editingSub.id, subData);
                 toast.success('Abonelik güncellendi');
             } else {
-                const { error } = await supabase
-                    .from('user_subscriptions')
-                    .insert(subData);
-                if (error) throw error;
+                await adminSubscriptionRepository.createSubscription(subData);
                 toast.success('Abonelik oluşturuldu');
             }
 
@@ -197,15 +152,7 @@ export default function SubscriptionManagement() {
 
     const activateSubscription = async (sub: UserSubscription) => {
         try {
-            const { error } = await supabase
-                .from('user_subscriptions')
-                .update({
-                    status: 'active',
-                    activated_at: new Date().toISOString(),
-                })
-                .eq('id', sub.id);
-
-            if (error) throw error;
+            await adminSubscriptionRepository.activateSubscription(sub.id, new Date().toISOString());
             toast.success('Abonelik aktif edildi');
             fetchData();
         } catch {

@@ -1,250 +1,247 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Star, Trophy, Timer as TimerIcon, RotateCcw, ChevronLeft, Play, Target, Sparkles, Heart, Eye, Palette, Zap } from 'lucide-react';
-import { useSound } from '../../hooks/useSound';
-import { useGamePersistence } from '../../hooks/useGamePersistence';
-import { useGameFeedback } from '../../hooks/useGameFeedback';
-import GameFeedbackBanner from './shared/GameFeedbackBanner';
-import { useExam } from '../../contexts/ExamContext';
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Target, Palette } from "lucide-react";
+import { useSound } from "../../hooks/useSound";
+import { useGameFeedback } from "../../hooks/useGameFeedback";
+import { useGameEngine } from "./shared/useGameEngine";
+import BrainTrainerShell from "./shared/BrainTrainerShell";
+import { GAME_COLORS } from './shared/gameColors';
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 
-// Renk sabitleri
+const GAME_ID = "renk-algilama";
+const GAME_TITLE = "Renk Algılama";
+const GAME_DESCRIPTION = "Ekranda beliren renkleri hızla ezberle ve doğru seç! Görsel işlem hızını ve belleğini geliştir.";
+const TUZO_TEXT = "TUZÖ 5.4.1 Görsel Kısa Süreli Bellek";
+
 const COLORS: Record<string, string> = {
-  kırmızı: '#FF5252',
-  mavi: '#4285F4',
-  sarı: '#FFC107',
-  yeşil: '#0F9D58',
-  pembe: '#E91E63',
-  turuncu: '#FF9800',
-  mor: '#9C27B0',
-  turkuaz: '#00BCD4'
+  kırmızı: "#FF5252",
+  mavi: "#4285F4",
+  sarı: "#FFC107",
+  yeşil: "#0F9D58",
+  pembe: GAME_COLORS.pink,
+  turuncu: "#FF9800",
+  mor: "#9C27B0",
+  turkuaz: "#00BCD4",
 };
 
-const INITIAL_LIVES = 5;
-const TIME_LIMIT = 180;
-const MAX_LEVEL = 20;
-
-type Phase = 'welcome' | 'playing' | 'showing' | 'feedback' | 'game_over' | 'victory';
+type LocalPhase = "showing" | "guessing" | "idle";
 
 const ColorPerception: React.FC = () => {
+  const engine = useGameEngine({
+    gameId: GAME_ID,
+    maxLevel: 20,
+    initialLives: 5,
+    timeLimit: 180,
+  });
+
   const { playSound } = useSound();
-  const { saveGamePlay } = useGamePersistence();
-  const { submitResult } = useExam();
-  const { feedbackState, showFeedback, dismissFeedback } = useGameFeedback({ duration: 1000 });
-  const location = useLocation();
-  const navigate = useNavigate();
+  const safeTimeout = useSafeTimeout();
+  const feedback = useGameFeedback({ duration: 1000 });
+  const { feedbackState, showFeedback, dismissFeedback } = feedback;
 
-  const examMode = location.state?.examMode || false;
-  const examTimeLimit = location.state?.examTimeLimit || TIME_LIMIT;
+  const {
+    phase,
+    level,
+    addScore,
+    loseLife,
+    nextLevel,
+  } = engine;
 
-  const [phase, setPhase] = useState<Phase>('welcome');
-  const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(INITIAL_LIVES);
-  const [level, setLevel] = useState(1);
-  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("idle");
   const [currentColors, setCurrentColors] = useState<string[]>([]);
   const [userSelections, setUserSelections] = useState<string[]>([]);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number>(0);
-  const hasSavedRef = useRef(false);
-
-  const backLink = location.state?.arcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
-  const backLabel = location.state?.arcadeMode ? "Arcade" : "Geri";
+  const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
   useEffect(() => {
-    if (phase !== 'welcome' && phase !== 'game_over' && phase !== 'victory' && timeLeft > 0) {
-      timerRef.current = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
-    } else if (timeLeft === 0 && (phase === 'playing' || phase === 'showing')) {
-      handleGameOver();
-    }
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [phase, timeLeft]);
+    const timeouts = timeoutsRef.current;
+    return () => timeouts.forEach(clearTimeout);
+  }, []);
 
   const generateColors = useCallback((lvl: number) => {
     const colorNames = Object.keys(COLORS);
     const shuffled = [...colorNames].sort(() => 0.5 - Math.random());
-    // Level 1-5: 2 colors, 6-10: 3 colors, 11-15: 4 colors, 16+: 5 colors
     const colorCount = lvl <= 5 ? 2 : lvl <= 10 ? 3 : lvl <= 15 ? 4 : 5;
     const selectedColors = shuffled.slice(0, colorCount);
 
     setCurrentColors(selectedColors);
     setUserSelections([]);
-    setPhase('showing');
+    setLocalPhase("showing");
 
-    const displayDuration = Math.max(800, 4000 - (lvl * 150)); // Faster as levels increase
+    const displayDuration = Math.max(800, 4000 - lvl * 150);
 
-    setTimeout(() => {
-      setPhase('playing');
+    const t = safeTimeout(() => {
+      setLocalPhase("guessing");
     }, displayDuration);
+    timeoutsRef.current.push(t);
   }, []);
 
-  const handleStart = useCallback(() => {
-    window.scrollTo(0, 0);
-    setScore(0);
-    setLives(INITIAL_LIVES);
-    setLevel(1);
-    setTimeLeft(examMode ? examTimeLimit : TIME_LIMIT);
-    startTimeRef.current = Date.now();
-    hasSavedRef.current = false;
-    generateColors(1);
-  }, [generateColors, examMode, examTimeLimit]);
-
   useEffect(() => {
-    if ((location.state?.autoStart || examMode) && phase === 'welcome') handleStart();
-  }, [location.state, examMode, phase, handleStart]);
-
-  const handleGameOver = useCallback(async () => {
-    if (hasSavedRef.current) return;
-    hasSavedRef.current = true;
-    setPhase('game_over');
-    const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-    if (examMode) {
-      await submitResult(level >= 5, score, MAX_LEVEL * 100, duration);
-      navigate('/atolyeler/sinav-simulasyonu/devam');
-      return;
+    if (phase === "playing" && localPhase === "idle") {
+      generateColors(level);
+    } else if (phase === "welcome") {
+      setLocalPhase("idle");
+      setCurrentColors([]);
+      setUserSelections([]);
     }
-    await saveGamePlay({
-      game_id: 'renk-algilama',
-      score_achieved: score,
-      duration_seconds: duration,
-      metadata: { levels_completed: level, final_lives: lives, game_name: 'Renk Algılama' },
-    });
-  }, [saveGamePlay, score, level, lives, examMode, submitResult, navigate]);
-
-  const handleVictory = useCallback(async () => {
-    if (hasSavedRef.current) return;
-    hasSavedRef.current = true;
-    setPhase('victory');
-    const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-    if (examMode) {
-      await submitResult(true, score, MAX_LEVEL * 100, duration);
-      navigate('/atolyeler/sinav-simulasyonu/devam');
-      return;
-    }
-    await saveGamePlay({
-      game_id: 'renk-algilama',
-      score_achieved: score,
-      duration_seconds: duration,
-      metadata: { levels_completed: MAX_LEVEL, victory: true, game_name: 'Renk Algılama' },
-    });
-  }, [saveGamePlay, score, examMode, submitResult, navigate]);
+  }, [phase, level, localPhase, generateColors]);
 
   const handleColorSelect = (colorName: string) => {
-    if (phase !== 'playing') return;
+    if (localPhase !== "guessing" || phase !== "playing" || !!feedbackState) return;
+
+    // Prevent selecting the same color twice
+    if (userSelections.includes(colorName)) return;
 
     const newUserSelections = [...userSelections, colorName];
     setUserSelections(newUserSelections);
-    playSound('select');
+    playSound("select");
 
     if (newUserSelections.length === currentColors.length) {
       const correctSet = new Set(currentColors);
-      const isCorrect = newUserSelections.every(color => correctSet.has(color));
+      const isCorrect = newUserSelections.every((color) => correctSet.has(color));
 
       showFeedback(isCorrect);
-      setPhase('feedback');
+      playSound(isCorrect ? "correct" : "incorrect");
 
-      if (isCorrect) {
-        playSound('correct');
-        setScore(s => s + level * 100);
-      } else {
-        playSound('incorrect');
-        setLives(l => l - 1);
-      }
-
-      setTimeout(() => {
+      const t = safeTimeout(() => {
         dismissFeedback();
-        const nl = isCorrect ? lives : lives - 1;
-        if (!isCorrect && nl <= 0) { handleGameOver(); return; }
-        if (isCorrect && level >= MAX_LEVEL) { handleVictory(); return; }
 
-        if (isCorrect) setLevel(l => l + 1);
-        generateColors(isCorrect ? level + 1 : level);
+        if (isCorrect) {
+          addScore(level * 100);
+          nextLevel();
+          setLocalPhase("idle");
+        } else {
+          loseLife();
+          if (engine.lives > 1) { // It has not updated locally immediately
+            setLocalPhase("idle");
+          }
+        }
       }, 1000);
+      timeoutsRef.current.push(t);
     }
   };
 
-  const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  const gameConfig = {
+    title: GAME_TITLE,
+    description: GAME_DESCRIPTION,
+    tuzoCode: TUZO_TEXT,
+    icon: Palette,
+    accentColor: "cyber-pink",
+    maxLevel: 20,
+    howToPlay: [
+      "Ekranda bir grup rengi göreceksin, onları aklında tut",
+      "Renkler kaybolunca, gördüğün tüm renkleri butonlardan seç",
+      "İlerledikçe renk sayısı artacak ve süre kısalacak!"
+    ]
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-800 border-4 border-black text-white">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl" /><div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-      </div>
-      <div className="relative z-10 p-4 pt-20">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link to={backLink} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"><ChevronLeft size={20} /><span>{backLabel}</span></Link>
-          {(phase === 'playing' || phase === 'showing' || phase === 'feedback') && (
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30"><Star className="text-amber-400 fill-amber-400" size={18} /><span className="font-bold text-amber-400">{score}</span></div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/30">{Array.from({ length: INITIAL_LIVES }).map((_, i) => (<Heart key={i} size={18} className={i < lives ? 'text-red-400 fill-red-400' : 'text-red-900'} />))}</div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30"><TimerIcon className={timeLeft < 30 ? 'text-red-400 animate-pulse' : 'text-blue-400'} size={18} /><span className={`font-bold ${timeLeft < 30 ? 'text-red-400' : 'text-blue-400'}`}>{formatTime(timeLeft)}</span></div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%)', border: '1px solid rgba(139, 92, 246, 0.3)' }}><Zap className="text-violet-400" size={18} /><span className="font-bold text-violet-400">{level}/{MAX_LEVEL}</span></div>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-4">
-        <AnimatePresence mode="wait">
-          {phase === 'welcome' && (
-            <motion.div key="welcome" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-              <motion.div className="w-28 h-28 rounded-[40%] flex items-center justify-center mx-auto mb-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.3)] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.2),inset_0_8px_16px_rgba(255,255,255,0.3)]" style={{ background: 'linear-gradient(135deg, #E879F9 0%, #C026D3 100%)', boxShadow: 'inset 0 -8px 16px rgba(0,0,0,0.2), inset 0 8px 16px rgba(255,255,255,0.3), 0 8px 24px rgba(0,0,0,0.3)' }} animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}><Palette size={52} className="text-white drop-shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a]" /></motion.div>
-              <h1 className="text-4xl font-bold mb-4 bg-slate-50 dark:bg-slate-800 border-4 border-black bg-clip-text text-transparent">Renk Algılama</h1>
-              <p className="text-slate-400 mb-8">Ekranda beliren renkleri hızla ezberle ve doğru seç! Görsel işlem hızını ve belleğini geliştir.</p>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 mb-6 text-left border border-2 border-black">
-                <h3 className="text-lg font-bold text-fuchsia-300 mb-3 flex items-center gap-2"><Eye size={20} /> Nasıl Oynanır?</h3>
-                <ul className="space-y-2 text-slate-300 text-sm">
-                  <li className="flex items-center gap-2"><Sparkles size={14} className="text-fuchsia-400" /><span>Ekranda bir grup rengi göreceksin, onları aklında tut</span></li>
-                  <li className="flex items-center gap-2"><Sparkles size={14} className="text-fuchsia-400" /><span>Renkler kaybolunca, gördüğün tüm renkleri butonlardan seç</span></li>
-                  <li className="flex items-center gap-2"><Sparkles size={14} className="text-fuchsia-400" /><span>İlerledikçe renk sayısı artacak ve süre kısalacak!</span></li>
-                </ul>
-              </div>
-              <div className="bg-fuchsia-500/10 text-fuchsia-300 text-[10px] px-4 py-2 rounded-full mb-6 inline-block border border-fuchsia-500/30 font-bold uppercase tracking-widest">TUZÖ 5.4.1 Görsel Kısa Süreli Bellek</div>
-              <motion.button whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 rounded-2xl font-bold text-xl" style={{ background: 'linear-gradient(135deg, #E879F9 0%, #C026D3 100%)', boxShadow: '0 8px 32px rgba(232, 121, 249, 0.4)' }}><div className="flex items-center gap-3"><Play size={28} className="fill-white" /><span>Başla</span></div></motion.button>
-            </motion.div>
-          )}
-          {(phase === 'playing' || phase === 'showing' || phase === 'feedback') && (
-            <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-md">
-              <div className="rounded-[40px] overflow-hidden mb-8 aspect-square relative shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a] border-4 border-2 border-black bg-slate-800 ">
+    <BrainTrainerShell config={gameConfig} engine={engine} feedback={feedback}>
+      {() => (
+        <div className="relative z-10 flex flex-col items-center justify-center flex-1 p-2 w-full">
+          {phase === "playing" && (
+            <motion.div
+              key={`game-${level}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6"
+            >
+              <div className="rounded-2xl overflow-hidden aspect-square relative shadow-neo-sm border-2 border-black/10 bg-white dark:bg-slate-800 p-2">
                 <AnimatePresence>
-                  {phase === 'showing' && (
-                    <motion.div key="colors" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 flex flex-col">
-                      {currentColors.map((colorName, idx) => (<div key={idx} className="flex-1 w-full" style={{ backgroundColor: COLORS[colorName] }} />))}
+                  {localPhase === "showing" && (
+                    <motion.div
+                      key="colors"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                      className="absolute inset-0 flex flex-col sm:flex-row gap-1.5 p-1.5"
+                    >
+                      {currentColors.map((colorName, idx) => (
+                        <div
+                          key={idx}
+                          className="flex-1 w-full h-full rounded-xl border-2 border-black/10 mx-0.5 mb-0.5 sm:mb-0 shadow-inner"
+                          style={{ backgroundColor: COLORS[colorName] }}
+                        />
+                      ))}
                     </motion.div>
                   )}
                 </AnimatePresence>
-                {phase === 'playing' && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-8 space-y-6">
-                    <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1, repeat: Infinity }} className="w-20 h-20 rounded-3xl flex items-center justify-center bg-slate-50 dark:bg-slate-800 border-4 border-black shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a] shadow-fuchsia-500/40"><Target size={40} className="text-white" /></motion.div>
-                    <h4 className="text-2xl font-black text-white">Renkleri Seç!</h4>
-                    <div className="flex gap-4">
-                      {currentColors.map((_, i) => (<div key={i} className="w-16 h-16 rounded-2xl transition-all duration-300" style={{ background: userSelections[i] ? COLORS[userSelections[i]] : 'rgba(255,255,255,0.05)', border: userSelections[i] ? '4px solid white' : '4px dashed rgba(255,255,255,0.2)' }} />))}
+
+                {localPhase === "guessing" && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 space-y-6">
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center bg-cyber-pink border-2 border-black/10 shadow-neo-sm"
+                    >
+                      <Target
+                        size={40}
+                        className="text-black"
+                        strokeWidth={2.5}
+                      />
+                    </motion.div>
+                    <h4 className="text-xl sm:text-2xl font-nunito font-black text-black dark:text-white uppercase tracking-tighter">
+                      Renkleri Seç!
+                    </h4>
+                    <div className="flex gap-2 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl border-2 border-black/10 shadow-neo-sm flex-wrap justify-center">
+                      {currentColors.map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg transition-all duration-300 border-2 border-black/10 shadow-neo-sm"
+                          style={{
+                            background: userSelections[i]
+                              ? COLORS[userSelections[i]]
+                              : "rgba(0,0,0,0.1)",
+                            borderColor: userSelections[i]
+                              ? "#000"
+                              : "rgba(0,0,0,0.3)",
+                            borderStyle: userSelections[i] ? "solid" : "dashed",
+                          }}
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
-                {phase === 'showing' && (<div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/40 rounded-full text-xs font-black tracking-widest text-fuchsia-300 border border-2 border-black uppercase animate-pulse">Ezberle!</div>)}
+                {localPhase === "showing" && (
+                  <div className="absolute top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white dark:bg-slate-800 rounded-xl text-sm font-nunito font-black tracking-widest text-black dark:text-white border-2 border-black/10 uppercase shadow-neo-sm z-20">
+                    EZBERLE!
+                  </div>
+                )}
               </div>
-              <div className={`grid grid-cols-2 gap-4 transition-all duration-500 ${phase === 'playing' ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>
-                {Object.entries(COLORS).map(([name, code]) => (
-                  <motion.button key={name} whileHover={{ scale: 0.98, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => handleColorSelect(name)} className="p-6 rounded-2xl font-black text-white uppercase shadow-[6px_6px_0_#000] dark:shadow-[6px_6px_0_#0f172a] border border-2 border-black transition-shadow-[4px_4px_0_#000] dark:shadow-[4px_4px_0_#0f172a] hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]" style={{ backgroundColor: code }}>{name}</motion.button>
-                ))}
+
+              <div
+                className={`grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 transition-all duration-300 ${localPhase === "guessing" ? "opacity-100 scale-100" : "opacity-30 scale-95 pointer-events-none"} md:h-full md:content-center`}
+              >
+                {Object.entries(COLORS).map(([name, code]) => {
+                  const isSelected = userSelections.includes(name);
+                  return (
+                    <motion.button
+                      key={name}
+                      whileTap={!isSelected ? { scale: 0.95 } : {}}
+                      onClick={() => handleColorSelect(name)}
+                      disabled={isSelected}
+                      className={`aspect-square sm:aspect-auto sm:p-4 mb-1 rounded-xl font-nunito font-black text-black uppercase shadow-neo-sm border-2 border-black/10 transition-all ${!isSelected ? "" : "opacity-50 shadow-neo-sm translate-y-1"} bg-white`}
+                    >
+                      <div
+                        className="w-full h-full sm:h-10 rounded-lg border-2 border-black/10 mb-1 shadow-[inset_-2px_-4px_0_rgba(0,0,0,0.2)]"
+                        style={{ backgroundColor: code }}
+                      />
+                      <span className="hidden sm:block text-xs sm:text-sm tracking-widest text-black">
+                        {name}
+                      </span>
+                    </motion.button>
+                  );
+                })}
               </div>
             </motion.div>
           )}
-          {(phase === 'game_over' || phase === 'victory') && (
-            <motion.div key="finished" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="text-center max-w-xl">
-              <motion.div className="w-24 h-24 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-[40%] flex items-center justify-center shadow-[12px_12px_0_#000] dark:shadow-[12px_12px_0_#0f172a]" animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}><Trophy size={48} className="text-white" /></motion.div>
-              <h2 className="text-3xl font-bold text-amber-400 mb-2">{phase === 'victory' ? '🎖️ Renklerin Efendisi!' : 'Tebrikler!'}</h2>
-              <p className="text-slate-400 mb-6">{phase === 'victory' ? 'Bütün renkleri kusursuz algıladın!' : 'Harika bir performans sergiledin!'}</p>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 mb-6 border border-2 border-black"><div className="grid grid-cols-2 gap-4"><div className="text-center"><p className="text-slate-400 text-sm">Skor</p><p className="text-2xl font-bold text-amber-400">{score}</p></div><div className="text-center"><p className="text-slate-400 text-sm">Seviye</p><p className="text-2xl font-bold text-emerald-400">{level}/{MAX_LEVEL}</p></div></div></div>
-              <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleStart} className="px-10 py-5 bg-slate-50 dark:bg-slate-800 border-4 border-black rounded-2xl font-bold text-xl mb-4" style={{ boxShadow: '0 8px 32px rgba(232, 121, 249, 0.4)' }}><div className="flex items-center gap-3"><RotateCcw size={24} /><span>Tekrar Oyna</span></div></motion.button>
-              <Link to={backLink} className="block text-slate-500 hover:text-white transition-colors">{location.state?.arcadeMode ? 'Bilsem Zeka' : 'Geri Dön'}</Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <GameFeedbackBanner feedback={feedbackState} />
-      </div>
-    </div>
+        </div>
+      )}
+    </BrainTrainerShell>
   );
 };
 

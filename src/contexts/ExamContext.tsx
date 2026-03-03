@@ -198,7 +198,7 @@ export const ExamProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const bzpScore = Math.round(Math.max(70, Math.min(145, 100 + (avgWeighted - 0.5) * 60)));
 
         try {
-            await supabase.from('exam_sessions').insert({
+            await supabase.from('exam_sessions').upsert({
                 id: session.id,
                 user_id: user.id,
                 started_at: session.startedAt,
@@ -208,7 +208,7 @@ export const ExamProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 final_score: Math.round((totalScore / maxPossibleScore) * 100),
                 bzp_score: bzpScore,
                 ability_estimate: abilityEstimate.toFixed(2)
-            });
+            }, { onConflict: 'id' });
         } catch (error) {
             console.error('Sınav sonuçları kaydedilemedi:', error);
         }

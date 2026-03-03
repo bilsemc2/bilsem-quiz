@@ -54,7 +54,6 @@ const GununSorusu: React.FC = () => {
             loadQuestionImage(data[index].image_url);
           }
         } else {
-          console.log('Hiç soru bulunamadı');
         }
       } catch (error) {
         console.error('Günün sorusu yüklenirken hata:', error);

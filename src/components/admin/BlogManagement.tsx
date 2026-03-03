@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, X, Loader2, FileText, Eye, EyeOff, Wand2, Bot } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -12,73 +11,24 @@ import ImageUploader from './ImageUploader';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import AIBlogWriterModal from './AIBlogWriterModal';
-
-const createSlug = (title: string) => {
-  if (!title) return '';
-
-  // Türkçe karakterleri ÖNCE dönüştür (toLowerCase'dan önce!)
-  const turkishMap: { [key: string]: string } = {
-    'ç': 'c', 'Ç': 'c', 'ğ': 'g', 'Ğ': 'g', 'ı': 'i', 'İ': 'i',
-    'ö': 'o', 'Ö': 'o', 'ş': 's', 'Ş': 's', 'ü': 'u', 'Ü': 'u'
-  };
-
-  let result = title;
-
-  // Önce Türkçe karakterleri ASCII'ye çevir
-  Object.keys(turkishMap).forEach(key => {
-    result = result.split(key).join(turkishMap[key]);
-  });
-
-  // Sonra küçük harfe çevir
-  result = result.toLowerCase();
-
-  // Harf ve rakam dışındaki karakterleri temizle, boşlukları tire yap
-  result = result
-    .replace(/[^a-z0-9\s-]/g, '') // Özel karakterleri sil
-    .trim()
-    .replace(/\s+/g, '-')        // Boşlukları tire yap
-    .replace(/-+/g, '-');        // Birden fazla tireyi teke indir
-
-  console.log('Slugified:', result);
-  return result;
-};
-
-interface BlogPost {
-  id: string;
-  title: string;
-  content: string;
-  published: boolean;
-  created_at: string;
-  updated_at: string;
-  author_id: string;
-  slug: string;
-  image_url?: string;
-  category?: string;
-}
-
-interface BlogFormData {
-  title: string;
-  content: string;
-  published: boolean;
-  image_url: string;
-  category: string;
-}
+import { adminBlogRepository, type AdminBlogPost } from '@/server/repositories/adminBlogRepository';
+import {
+  createEmptyBlogFormData,
+  shouldShowFixMarkdownAction,
+  toCreateBlogPostInput,
+  toUpdateBlogPostInput,
+  type BlogFormData
+} from '@/features/admin/model/blogManagementUseCases';
 
 const BlogManagement = () => {
   const { user } = useAuth();
-  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [posts, setPosts] = useState<AdminBlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isAIWriterOpen, setIsAIWriterOpen] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
-  const [formData, setFormData] = useState<BlogFormData>({
-    title: '',
-    content: '',
-    published: false,
-    image_url: '',
-    category: '',
-  });
+  const [editingPost, setEditingPost] = useState<AdminBlogPost | null>(null);
+  const [formData, setFormData] = useState<BlogFormData>(createEmptyBlogFormData());
   const [aiWriterMode, setAIWriterMode] = useState<'generate' | 'beautify'>('generate');
   const [aiWriterInitialContent, setAIWriterInitialContent] = useState('');
 
@@ -88,12 +38,8 @@ const BlogManagement = () => {
 
   const fetchPosts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setPosts(data || []);
+      const data = await adminBlogRepository.listPosts();
+      setPosts(data);
     } catch (error) {
       console.error('Blog yazıları yüklenirken hata:', error);
       toast.error('Blog yazıları yüklenemedi');
@@ -102,19 +48,19 @@ const BlogManagement = () => {
     }
   };
 
-  const handleOpenDialog = (post?: BlogPost) => {
+  const handleOpenDialog = (post?: AdminBlogPost) => {
     if (post) {
       setEditingPost(post);
       setFormData({
         title: post.title,
         content: post.content,
         published: post.published,
-        image_url: post.image_url || '',
-        category: post.category || '',
+        image_url: post.image_url,
+        category: post.category,
       });
     } else {
       setEditingPost(null);
-      setFormData({ title: '', content: '', published: false, image_url: '', category: '' });
+      setFormData(createEmptyBlogFormData());
     }
     setOpenDialog(true);
   };
@@ -122,7 +68,7 @@ const BlogManagement = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingPost(null);
-    setFormData({ title: '', content: '', published: false, image_url: '', category: '' });
+    setFormData(createEmptyBlogFormData());
   };
 
   const handleSave = async () => {
@@ -133,43 +79,21 @@ const BlogManagement = () => {
 
     try {
       setIsSaving(true);
-      // Slug sadece yeni yazılarda veya başlık değiştiğinde güncellensin (SEO için opsiyonel ama burada basitlik için her seferinde yapıyoruz)
-      // Ancak mevcut yazının slug'ını değiştirmek linkleri kırabilir.
-      const slug = createSlug(formData.title);
-
       if (editingPost) {
-        const { error } = await supabase
-          .from('blog_posts')
-          .update({
-            title: formData.title,
-            content: formData.content,
-            published: formData.published,
-            updated_at: new Date().toISOString(),
-            slug,
-            image_url: formData.image_url,
-            category: formData.category,
-          })
-          .eq('id', editingPost.id);
-        if (error) throw error;
+        await adminBlogRepository.updatePost(editingPost.id, toUpdateBlogPostInput(formData));
         toast.success('Blog yazısı güncellendi');
       } else {
-        const { error } = await supabase
-          .from('blog_posts')
-          .insert({
-            title: formData.title,
-            content: formData.content,
-            published: formData.published,
-            author_id: user?.id,
-            slug,
-            image_url: formData.image_url,
-            category: formData.category,
-          });
-        if (error) throw error;
+        if (!user?.id) {
+          toast.error('Oturum bulunamadı');
+          return;
+        }
+
+        await adminBlogRepository.createPost(toCreateBlogPostInput(formData, user.id));
         toast.success('Blog yazısı oluşturuldu');
       }
 
       handleCloseDialog();
-      fetchPosts();
+      await fetchPosts();
     } catch (error: unknown) {
       console.error('Blog yazısı kaydedilirken hata:', error);
       toast.error('Blog yazısı kaydedilemedi: ' + (error instanceof Error ? error.message : 'Hata oluştu'));
@@ -178,16 +102,12 @@ const BlogManagement = () => {
     }
   };
 
-  const handleDelete = async (post: BlogPost) => {
+  const handleDelete = async (post: AdminBlogPost) => {
     if (window.confirm('Bu blog yazısını silmek istediğinizden emin misiniz?')) {
       try {
-        const { error } = await supabase
-          .from('blog_posts')
-          .delete()
-          .eq('id', post.id);
-        if (error) throw error;
+        await adminBlogRepository.deletePost(post.id);
         toast.success('Blog yazısı silindi');
-        fetchPosts();
+        await fetchPosts();
       } catch (error) {
         console.error('Blog yazısı silinirken hata:', error);
         toast.error('Blog yazısı silinemedi');
@@ -195,22 +115,14 @@ const BlogManagement = () => {
     }
   };
 
-  const handleFixMarkdown = async (post: BlogPost) => {
+  const handleFixMarkdown = async (post: AdminBlogPost) => {
     try {
       // Markdown'dan HTML'e dönüştür
-      const htmlContent = marked.parse(post.content);
+      const htmlContent = await marked.parse(post.content);
 
-      const { error } = await supabase
-        .from('blog_posts')
-        .update({
-          content: htmlContent,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', post.id);
-
-      if (error) throw error;
+      await adminBlogRepository.updatePostContent(post.id, htmlContent, new Date().toISOString());
       toast.success('Görünüm düzeltildi (HTML\'e dönüştürüldü)');
-      fetchPosts();
+      await fetchPosts();
     } catch (error: unknown) {
       console.error('Dönüştürme hatası:', error);
       toast.error('Düzeltme yapılamadı: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
@@ -227,9 +139,9 @@ const BlogManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <FileText className="w-6 h-6 text-indigo-500" />
+      <div className="flex justify-between items-center bg-white border-2 border-black/10 rounded-2xl p-6 shadow-neo-md mb-8">
+        <h1 className="text-3xl font-nunito font-extrabold text-black flex items-center gap-4 uppercase">
+          <FileText className="w-8 h-8 text-[#FF00EA]" />
           Blog Yönetimi
         </h1>
         <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -239,14 +151,14 @@ const BlogManagement = () => {
               setAIWriterInitialContent('');
               setIsAIWriterOpen(true);
             }}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#FF00EA] border-2 border-black/10 text-white px-6 py-3 rounded-xl font-black uppercase shadow-neo-xs hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all"
           >
             <Bot className="w-5 h-5" />
             AI ile Yazı Yaz
           </button>
           <button
             onClick={() => handleOpenDialog()}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-indigo-600 border-2 border-indigo-600 px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-50 transition-all active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#3374FF] border-2 border-black/10 text-white px-6 py-3 rounded-xl font-black uppercase shadow-neo-xs hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all"
           >
             <Plus className="w-5 h-5" />
             Yeni Yazı Ekle
@@ -255,61 +167,61 @@ const BlogManagement = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="bg-white rounded-2xl border-2 border-black/10 shadow-neo-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-[#14F195]/20 border-b-2 border-black/10">
               <tr>
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">Başlık</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">Oluşturulma Tarihi</th>
-                <th className="text-center py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">Durum</th>
-                <th className="text-center py-4 px-6 text-xs font-bold text-slate-600 uppercase tracking-wider">İşlemler</th>
+                <th className="text-left py-4 px-6 text-sm font-black text-black uppercase tracking-wider">Başlık</th>
+                <th className="text-left py-4 px-6 text-sm font-black text-black uppercase tracking-wider">Oluşturulma Tarihi</th>
+                <th className="text-center py-4 px-6 text-sm font-black text-black uppercase tracking-wider">Durum</th>
+                <th className="text-center py-4 px-6 text-sm font-black text-black uppercase tracking-wider">İşlemler</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y-2 divide-black/5">
               {posts.map((post, idx) => (
                 <motion.tr
                   key={post.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: idx * 0.03 }}
-                  className="hover:bg-slate-50 transition-colors"
+                  className="hover:bg-gray-100 transition-colors"
                 >
-                  <td className="py-4 px-6 font-medium text-slate-800">{post.title}</td>
-                  <td className="py-4 px-6 text-slate-500 text-sm">
+                  <td className="py-4 px-6 font-bold text-black">{post.title}</td>
+                  <td className="py-4 px-6 text-black/70 font-bold text-sm">
                     {format(new Date(post.created_at), 'd MMMM yyyy', { locale: tr })}
                   </td>
                   <td className="py-4 px-6 text-center">
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${post.published
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-slate-100 text-slate-600'
+                    <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-xl border-2 border-black/10 text-xs font-black uppercase  ${post.published
+                      ? 'bg-[#14F195] text-black'
+                      : 'bg-gray-200 text-black'
                       }`}>
-                      {post.published ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                      {post.published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       {post.published ? 'Yayında' : 'Taslak'}
                     </span>
                   </td>
                   <td className="py-4 px-6">
-                    <div className="flex justify-center gap-1">
-                      {!post.content.includes('<p') && !post.content.includes('<div') && (
+                    <div className="flex justify-center gap-2">
+                      {shouldShowFixMarkdownAction(post.content) && (
                         <button
                           onClick={() => handleFixMarkdown(post)}
-                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          className="p-2 bg-[#FFD700] border-2 border-black/10 rounded-lg hover:-translate-y-1 transition-all"
                           title="Markdown Yazımını Düzelt"
                         >
-                          <Wand2 className="w-4 h-4" />
+                          <Wand2 className="w-5 h-5 text-black" />
                         </button>
                       )}
                       <button
                         onClick={() => handleOpenDialog(post)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        className="p-2 bg-[#3374FF] text-white border-2 border-black/10 rounded-lg hover:-translate-y-1 transition-all"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => handleDelete(post)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 bg-[#FF2745] text-white border-2 border-black/10 rounded-lg hover:-translate-y-1 transition-all"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   </td>
@@ -324,18 +236,18 @@ const BlogManagement = () => {
       <Dialog.Root open={openDialog} onOpenChange={setOpenDialog}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto z-50">
-            <div className="flex items-center justify-between mb-6 sticky top-0 bg-white py-2 z-20 border-b border-slate-100 -mx-6 px-6">
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white border-3 border-black/10 rounded-2xl shadow-neo-lg p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto z-50">
+            <div className="flex items-center justify-between mb-8 sticky top-0 bg-white py-4 z-20 border-b-2 border-black/10 -mx-8 px-8">
               <div className="flex items-center gap-4">
-                <Dialog.Title className="text-xl font-bold text-slate-900">
-                  {editingPost ? 'Blog Yazısını Düzenle' : 'Yeni Blog Yazısı'}
+                <Dialog.Title className="text-3xl font-nunito font-extrabold text-black uppercase">
+                  {editingPost ? 'Yazıyı Düzenle' : 'Yeni Yazı'}
                 </Dialog.Title>
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="px-4 py-1.5 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2.5 bg-[#14F195] border-2 border-black/10 text-black text-sm font-black uppercase rounded-xl hover:-translate-y-1 shadow-neo-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {isSaving && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                   Kaydet
                 </button>
               </div>
@@ -343,30 +255,30 @@ const BlogManagement = () => {
                 Blog yazısı içerik ve ayarlarını buradan yönetebilirsiniz.
               </Dialog.Description>
               <Dialog.Close asChild>
-                <button className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-600" /></button>
+                <button className="p-2 border-2 border-black/10 rounded-xl hover:bg-gray-100 hover:-translate-y-1 transition-all"><X className="w-6 h-6 text-black" /></button>
               </Dialog.Close>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold text-slate-900 mb-1.5">Başlık</label>
+                <label className="block text-sm font-black text-black mb-2 uppercase tracking-wide">Başlık</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none placeholder:text-slate-400"
+                  className="w-full px-5 py-3 border-2 border-black/10 rounded-xl focus:-translate-y-1 focus:shadow-neo-xs  transition-all text-black font-bold outline-none placeholder:text-black/40"
                   placeholder="Yazı başlığı"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-900 mb-1.5">Kategori</label>
+                  <label className="block text-sm font-black text-black mb-2 uppercase tracking-wide">Kategori</label>
                   <input
                     type="text"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-slate-900 font-medium outline-none placeholder:text-slate-400"
+                    className="w-full px-5 py-3 border-2 border-black/10 rounded-xl focus:-translate-y-1 focus:shadow-neo-xs  transition-all text-black font-bold outline-none placeholder:text-black/40"
                     placeholder="Örn: BİLSEM, Eğitim"
                   />
                 </div>
@@ -380,9 +292,9 @@ const BlogManagement = () => {
                 </div>
               </div>
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-bold text-slate-900">İçerik</label>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-black text-black uppercase tracking-wide">İçerik</label>
+                  <div className="flex items-center gap-3">
                     {formData.content && (
                       <button
                         type="button"
@@ -391,14 +303,14 @@ const BlogManagement = () => {
                           setAIWriterInitialContent(formData.content);
                           setIsAIWriterOpen(true);
                         }}
-                        className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100 transition-colors uppercase tracking-tight"
+                        className="flex items-center gap-2 text-xs font-black text-black bg-[#FFD700] border-2 border-black/10 hover:-translate-y-1 px-3 py-1.5 rounded-lg transition-all uppercase"
                         title="AI ile Yazıyı Güzelleştir"
                       >
-                        <Bot className="w-3 h-3" />
+                        <Bot className="w-4 h-4" />
                         AI ile Güzelleştir
                       </button>
                     )}
-                    {formData.content && !formData.content.includes('<p') && !formData.content.includes('<div') && (
+                    {formData.content && shouldShowFixMarkdownAction(formData.content) && (
                       <button
                         type="button"
                         onClick={async () => {
@@ -406,57 +318,59 @@ const BlogManagement = () => {
                           setFormData({ ...formData, content: html });
                           toast.success('Markdown HTML\'e dönüştürüldü');
                         }}
-                        className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 hover:text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 transition-colors uppercase tracking-tight"
+                        className="flex items-center gap-2 text-xs font-black text-white bg-[#FF2745] border-2 border-black/10 hover:-translate-y-1 px-3 py-1.5 rounded-lg transition-all uppercase"
                         title="Markdown'ı HTML'e Çevir"
                       >
-                        <Wand2 className="w-3 h-3" />
+                        <Wand2 className="w-4 h-4" />
                         Görünümü Düzelt
                       </button>
                     )}
                   </div>
                 </div>
-                <BlogRichTextEditor
-                  key={editingPost?.id || 'new'}
-                  content={formData.content}
-                  onChange={(content) => setFormData({ ...formData, content })}
-                />
-                <p className="text-xs text-slate-500 mt-1">Zengin metin editörü ile yazılarınızı düzenleyebilirsiniz</p>
+                <div className="border-2 border-black/10 rounded-xl overflow-hidden shadow-neo-xs">
+                  <BlogRichTextEditor
+                    key={editingPost?.id || 'new'}
+                    content={formData.content}
+                    onChange={(content) => setFormData({ ...formData, content })}
+                  />
+                </div>
+                <p className="text-xs text-black/60 font-bold mt-2">Zengin metin editörü ile yazılarınızı düzenleyebilirsiniz</p>
               </div>
 
               {/* Toggle */}
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex items-center gap-4 cursor-pointer p-4 border-2 border-black/10 rounded-xl bg-gray-100 shadow-neo-xs">
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, published: !formData.published })}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${formData.published ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                  className={`relative w-14 h-8 rounded-full border-2 border-black/10 transition-colors ${formData.published ? 'bg-[#14F195]' : 'bg-white'}`}
                 >
-                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${formData.published ? 'translate-x-7' : 'translate-x-1'}`} />
+                  <span className={`absolute top-1 w-5 h-5 bg-black rounded-full transition-transform ${formData.published ? 'translate-x-7' : 'translate-x-1'}`} />
                 </button>
-                <span className="text-slate-900 font-bold">Yayınla</span>
+                <span className="text-black font-black uppercase tracking-wider text-sm">{formData.published ? 'YAYINDA' : 'TASLAK DURUMUNDA'}</span>
               </label>
 
               {/* Preview */}
               {formData.content && (
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 mb-2">Önizleme:</h3>
+                <div className="mt-8">
+                  <h3 className="text-sm font-black text-black mb-4 uppercase tracking-wide">Önizleme:</h3>
                   <div
-                    className="p-6 bg-slate-50 rounded-xl border border-slate-300 shadow-inner prose prose-slate max-w-none"
+                    className="p-8 bg-white rounded-2xl border-2 border-black/10 shadow-neo-md prose prose-lg max-w-none text-black font-medium prose-headings:font-nunito prose-headings:font-black"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formData.content) }}
                   />
                 </div>
               )}
             </div>
 
-            <div className="flex justify-end gap-3 mt-8">
+            <div className="flex justify-end gap-4 mt-10">
               <Dialog.Close asChild>
-                <button disabled={isSaving} className="px-5 py-2.5 text-slate-700 font-medium hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50">İptal</button>
+                <button disabled={isSaving} className="px-6 py-3 bg-white border-2 border-black/10 text-black font-black uppercase rounded-xl hover:-translate-y-1 shadow-neo-xs active:translate-y-1 active:shadow-none transition-all disabled:opacity-50">İptal</button>
               </Dialog.Close>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-8 py-3 bg-[#14F195] border-2 border-black/10 text-black font-black uppercase rounded-xl hover:-translate-y-1 shadow-neo-xs active:translate-y-1 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
               >
-                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
                 {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
               </button>
             </div>

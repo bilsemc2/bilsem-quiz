@@ -9,9 +9,13 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { ArcadeMachine } from '../../components/Arcade/ArcadeMachine';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
 import XPWarning from '../../components/XPWarning';
 import { ARCADE_GAMES, CATEGORY_INFO, GameCategory, getGamesByCategory } from '../../data/arcade/games';
+import { loadXPRequirementsMap } from '@/features/xp/model/xpUseCases';
+
+// ═══════════════════════════════════════════════
+// 🎮 ArcadeHubPage — Kid-UI Çocuk Dostu Tasarım
+// ═══════════════════════════════════════════════
 
 const CATEGORIES: GameCategory[] = ['memory', 'spatial', 'flexibility'];
 
@@ -22,23 +26,21 @@ const ArcadeHubPage: React.FC = () => {
     const [warningData, setWarningData] = React.useState<{ required: number; current: number; title: string } | null>(null);
 
     React.useEffect(() => {
-        const fetchCosts = async () => {
-            const paths = ARCADE_GAMES.map(g => g.link);
-            const { data, error } = await supabase
-                .from('xp_requirements')
-                .select('page_path, required_xp')
-                .in('page_path', paths);
+        let isActive = true;
 
-            if (!error && data) {
-                const costsMap = data.reduce((acc, curr) => {
-                    acc[curr.page_path] = curr.required_xp;
-                    return acc;
-                }, {} as Record<string, number>);
+        const fetchCosts = async () => {
+            const paths = ARCADE_GAMES.map((game) => game.link);
+            const costsMap = await loadXPRequirementsMap(paths);
+            if (isActive) {
                 setGameCosts(costsMap);
             }
         };
 
         fetchCosts();
+
+        return () => {
+            isActive = false;
+        };
     }, []);
 
     const getGameCost = (game: typeof ARCADE_GAMES[0]) => {
@@ -46,69 +48,60 @@ const ArcadeHubPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 pt-24 pb-12 px-4 md:px-6 relative overflow-hidden">
-            {/* Background Effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px]" />
-                <div className="absolute top-1/2 left-1/3 w-[30%] h-[30%] bg-cyan-500/5 rounded-full blur-[100px]" />
-            </div>
+        <div className="min-h-screen overflow-hidden transition-colors duration-300">
+            {/* Background pattern — dots */}
+            <div className="fixed inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
-            <div className="container mx-auto max-w-6xl relative z-10">
-                {/* Header Section - 3D Gummy Style */}
+            <div className="container mx-auto max-w-6xl relative z-10 pt-24 pb-12 px-4 md:px-6">
+                {/* Header Section */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10"
+                    className="flex flex-col md:flex-row items-center justify-between gap-6 mb-14"
                 >
                     <div className="text-center md:text-left">
                         <Link
                             to="/"
-                            className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors mb-4 font-bold uppercase text-xs tracking-[0.15em]"
+                            className="inline-flex items-center gap-2 text-black dark:text-white font-nunito font-extrabold uppercase text-xs tracking-widest bg-white dark:bg-slate-800 border-3 border-black/10 rounded-xl px-4 py-2 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-md transition-all mb-6"
                         >
-                            <ChevronLeft size={16} /> Ana Sayfa
+                            <ChevronLeft size={14} strokeWidth={3} /> Ana Sayfa
                         </Link>
 
                         <div className="flex flex-col md:flex-row items-center gap-5">
-                            {/* 3D Gummy Icon */}
+                            {/* Icon Container */}
                             <motion.div
-                                className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[40%] flex items-center justify-center"
-                               
-                                animate={{ y: [0, -6, 0] }}
-                                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                                className="w-16 h-16 md:w-20 md:h-20 bg-cyber-pink/10 border-3 border-cyber-pink/30 rounded-2xl flex items-center justify-center"
+                                animate={{ rotate: [-3, 3, -3] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                             >
-                                <Gamepad2 size={40} className="text-white" />
+                                <Gamepad2 size={36} className="text-cyber-pink" strokeWidth={2} />
                             </motion.div>
                             <div>
-                                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                                <h1 className="text-4xl md:text-5xl lg:text-6xl font-nunito font-black text-black dark:text-white uppercase tracking-tight leading-none mb-2">
                                     BİLSEM Zeka
                                 </h1>
-                                <p className="text-slate-400 font-bold mt-1 uppercase tracking-[0.2em] flex items-center gap-2 justify-center md:justify-start text-sm">
-                                    <Sparkles size={14} className="text-amber-400" /> Arcade Oyun Salonu
-                                </p>
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyber-gold/10 border-2 border-cyber-gold/30 rounded-lg font-nunito font-extrabold text-cyber-gold text-xs uppercase tracking-widest">
+                                    <Sparkles size={12} /> Arcade Oyun Salonu
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Stats Card - Glassmorphism */}
+                    {/* Stats Card */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-3xl flex items-center gap-5"
-                        style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
+                        className="bg-white dark:bg-slate-800 border-3 border-black/10 rounded-2xl p-5 shadow-neo-md flex items-center gap-4"
                     >
                         <div className="text-right">
-                            <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Bakiye</div>
-                            <div className="text-3xl font-black text-white flex items-center justify-end gap-1">
+                            <div className="text-slate-400 font-nunito font-extrabold text-xs uppercase tracking-widest mb-1">Bakiye</div>
+                            <div className="text-3xl font-nunito font-black text-black dark:text-white flex items-baseline justify-end gap-1">
                                 {profile?.experience || 0}
-                                <span className="text-amber-500 text-sm">XP</span>
+                                <span className="text-cyber-pink text-lg ml-1">XP</span>
                             </div>
                         </div>
-                        <div
-                            className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-[40%] flex items-center justify-center"
-                            style={{ boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.3)' }}
-                        >
-                            <Trophy className="text-white" size={22} />
+                        <div className="w-12 h-12 bg-cyber-gold/10 border-2 border-cyber-gold/30 rounded-xl flex items-center justify-center">
+                            <Trophy className="text-cyber-gold" size={24} strokeWidth={2} />
                         </div>
                     </motion.div>
                 </motion.div>
@@ -124,19 +117,20 @@ const ArcadeHubPage: React.FC = () => {
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: catIndex * 0.15 }}
-                            className="mb-12"
+                            className="mb-14"
                         >
                             {/* Category Header */}
-                            <div className="flex items-center gap-3 mb-6">
+                            <div className="flex items-center gap-3 mb-6 overflow-hidden">
                                 <div
-                                    className={`w-10 h-10 bg-gradient-to-br ${categoryInfo.color} rounded-[40%] flex items-center justify-center text-xl`}
-                                    style={{ boxShadow: 'inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 4px 8px rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.3)' }}
+                                    className={`shrink-0 w-10 h-10 border-2 border-black/10 ${categoryInfo.color} rounded-xl flex items-center justify-center text-lg`}
                                 >
-                                    {categoryInfo.icon}
+                                    <span className="text-black dark:text-white font-black mix-blend-plus-darker">
+                                        {categoryInfo.icon}
+                                    </span>
                                 </div>
-                                <h2 className="text-2xl font-black text-white">{categoryInfo.title}</h2>
-                                <div className="flex-1 h-px bg-gradient-to-r from-white/20 to-transparent" />
-                                <span className="text-slate-500 text-sm font-bold">{games.length} oyun</span>
+                                <h2 className="shrink-0 text-xl md:text-2xl font-nunito font-extrabold text-black dark:text-white uppercase tracking-tight">{categoryInfo.title}</h2>
+                                <div className="flex-1 h-px bg-black/5 dark:bg-white/5 hidden sm:block" />
+                                <span className="shrink-0 bg-black/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-nunito font-extrabold px-3 py-1 text-xs tracking-wider rounded-lg uppercase">{games.length} Oyun</span>
                             </div>
 
                             {/* Games Grid */}
@@ -175,11 +169,18 @@ const ArcadeHubPage: React.FC = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.6 }}
-                    className="mt-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-center"
+                    className="mt-8"
                 >
-                    <Gamepad2 size={48} className="text-slate-700 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-slate-500 mb-2">Daha Fazla Oyun Geliyor!</h3>
-                    <p className="text-slate-600 text-sm">Yeni zeka oyunları çok yakında...</p>
+                    <div className="bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-lg">
+                        <div className="h-2.5 bg-cyber-gold" />
+                        <div className="p-8 text-center">
+                            <div className="w-14 h-14 bg-cyber-gold/10 border-2 border-cyber-gold/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <Gamepad2 size={28} className="text-cyber-gold" strokeWidth={2} />
+                            </div>
+                            <h3 className="text-2xl font-nunito font-extrabold text-black dark:text-white mb-2 uppercase tracking-tight">Daha Fazla Oyun Geliyor!</h3>
+                            <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold text-sm">Yeni zeka oyunları çok yakında...</p>
+                        </div>
+                    </div>
                 </motion.div>
             </div>
 
@@ -190,7 +191,7 @@ const ArcadeHubPage: React.FC = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-sm"
+                        className="fixed inset-0 z-[100] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md"
                     >
                         <XPWarning
                             requiredXP={warningData.required}

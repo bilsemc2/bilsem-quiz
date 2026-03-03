@@ -115,64 +115,62 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
     return (
         <div className="w-full h-full flex flex-col lg:flex-row gap-4 sm:gap-6 items-center px-2 sm:px-0">
             {/* Grid World */}
-            <div className="flex-shrink-0 w-full aspect-square max-w-[280px] sm:max-w-[400px] lg:max-w-[500px] bg-slate-900 border-2 sm:border-4 border-slate-800 rounded-2xl sm:rounded-3xl p-2 sm:p-4 relative grid grid-cols-8 grid-rows-8 gap-0.5 sm:gap-1 shadow-2xl overflow-hidden">
+            <div className="flex-shrink-0 w-full aspect-square max-w-[280px] sm:max-w-[400px] lg:max-w-[500px] bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-slate-700 rounded-3xl p-2 sm:p-4 relative grid grid-cols-8 grid-rows-8 gap-0.5 sm:gap-1 shadow-neo-sm dark:shadow-[12px_12px_0_#0f172a] overflow-hidden -rotate-1 transition-colors duration-300">
                 {[...Array(GRID_SIZE * GRID_SIZE)].map((_, i) => (
-                    <div key={i} className="border border-slate-800/20 rounded-sm sm:rounded-md" />
+                    <div key={i} className="bg-sky-50 dark:bg-slate-700/50 border-2 border-black/10 dark:border-black/30 rounded-md transition-colors duration-300" />
                 ))}
 
                 {/* Target */}
                 <div
-                    className="absolute transition-all duration-500 ease-in-out flex items-center justify-center"
+                    className="absolute transition-all duration-500 ease-in-out flex items-center justify-center p-1"
                     style={{
                         width: `${100 / GRID_SIZE}%`,
                         height: `${100 / GRID_SIZE}%`,
                         left: `${(targetPos.x / GRID_SIZE) * 100}%`,
-                        top: `${(targetPos.y / GRID_SIZE) * 100}%`,
-                        padding: '2px'
+                        top: `${(targetPos.y / GRID_SIZE) * 100}%`
                     }}
                 >
-                    <div className="w-full h-full bg-emerald-500/20 border sm:border-2 border-emerald-500 rounded sm:rounded-lg flex items-center justify-center animate-pulse">
-                        <Target className="text-emerald-400 w-1/2 h-1/2 sm:w-2/3 sm:h-2/3" />
+                    <div className="w-full h-full bg-emerald-200 border-2 border-black/10 dark:border-slate-800 rounded-xl flex items-center justify-center shadow-neo-sm rotate-3 animate-pulse transition-colors duration-300">
+                        <Target className="text-black w-2/3 h-2/3" strokeWidth={3} />
                     </div>
                 </div>
 
                 {/* Player */}
                 <div
-                    className="absolute transition-all duration-300 ease-out flex items-center justify-center z-10"
+                    className="absolute transition-all duration-300 ease-out flex items-center justify-center z-10 p-1"
                     style={{
                         width: `${100 / GRID_SIZE}%`,
                         height: `${100 / GRID_SIZE}%`,
                         left: `${(playerPos.x / GRID_SIZE) * 100}%`,
-                        top: `${(playerPos.y / GRID_SIZE) * 100}%`,
-                        padding: '2px'
+                        top: `${(playerPos.y / GRID_SIZE) * 100}%`
                     }}
                 >
-                    <div className={`w-full h-full rounded sm:rounded-lg shadow-lg flex items-center justify-center transition-all duration-200 ${feedback === 'correct' ? 'bg-emerald-500 scale-110' : feedback === 'wrong' ? 'animate-shake bg-red-600 scale-90' : 'bg-indigo-600'}`}>
-                        <Navigation2 className="text-white w-1/2 h-1/2 sm:w-2/3 sm:h-2/3 fill-current rotate-45" />
+                    <div className={`w-full h-full border-2 border-black/10 dark:border-slate-800 rounded-xl flex items-center justify-center transition-all duration-200 shadow-neo-sm ${feedback === 'correct' ? 'bg-emerald-400 scale-110' : feedback === 'wrong' ? 'animate-shake bg-rose-500 scale-90' : 'bg-indigo-400 -rotate-3'}`}>
+                        <Navigation2 className="text-black w-2/3 h-2/3 fill-current rotate-45" strokeWidth={3} />
                     </div>
                 </div>
 
-                <div className="absolute top-2 sm:top-4 left-2 sm:left-4 flex items-center gap-1 sm:gap-2 bg-slate-950/90 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-slate-700 backdrop-blur-sm z-20">
-                    <ChevronRight className="w-2 h-2 sm:w-3 sm:h-3 text-indigo-400" />
-                    <span className="text-[8px] sm:text-[10px] font-bold text-slate-300 uppercase tracking-tighter">Hedefe İlerle</span>
+                <div className="absolute top-2 sm:top-4 left-2 sm:left-4 flex items-center gap-1 sm:gap-2 bg-yellow-300 dark:bg-yellow-500 px-3 py-1 rounded-xl border-2 border-black/10 dark:border-slate-800 shadow-neo-sm z-20 rotate-1 transition-colors duration-300">
+                    <ChevronRight className="w-4 h-4 text-black dark:text-slate-900 transition-colors duration-300" strokeWidth={3} />
+                    <span className="text-[10px] sm:text-xs font-black text-black dark:text-slate-900 uppercase tracking-widest transition-colors duration-300">Hedefe İlerle</span>
                 </div>
             </div>
 
             {/* Controls */}
             <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm flex flex-col items-center justify-center gap-4 sm:gap-8 py-2 sm:py-6">
-                <div className="text-center bg-slate-900/40 p-3 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-800 w-full">
-                    <p className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-2 sm:mb-4">GİTMEK İSTEDİĞİN YÖN</p>
-                    <div className={`text-4xl sm:text-6xl font-black transition-all duration-300 ${feedback === 'wrong' ? 'text-red-500' : feedback === 'correct' ? 'text-emerald-500' : 'text-white'}`}>
+                <div className="text-center bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl border-2 border-black/10 dark:border-slate-700 shadow-neo-sm dark:shadow-[12px_12px_0_#0f172a] w-full rotate-2 transition-colors duration-300">
+                    <p className="inline-block bg-sky-200 dark:bg-slate-700 text-black dark:text-white border-2 border-black/10 dark:border-slate-800 shadow-neo-sm px-3 py-1 rounded-xl text-xs font-black uppercase tracking-[0.2em] mb-4 -rotate-2 transition-colors duration-300">GİTMEK İSTEDİĞİN YÖN</p>
+                    <div className={`text-5xl sm:text-7xl font-black transition-all duration-300 uppercase drop-shadow-[4px_4px_0_rgba(0,0,0,0.1)] ${feedback === 'wrong' ? 'text-rose-500' : feedback === 'correct' ? 'text-emerald-500' : 'text-indigo-600 dark:text-indigo-400'}`}>
                         {currentMove?.word}
                     </div>
-                    <div className="mt-3 sm:mt-6 flex flex-col gap-2">
-                        <span className="inline-block px-2 sm:px-3 py-0.5 sm:py-1 bg-red-500/10 text-red-400 text-[8px] sm:text-[10px] font-bold rounded-full border border-red-500/20">
-                            KURAL: OKLAR TERS ÇALIŞIR!
+                    <div className="mt-6 flex flex-col gap-2">
+                        <span className="inline-block px-4 py-2 bg-rose-200 dark:bg-rose-900/50 text-black dark:text-white text-xs font-black rounded-xl border-2 border-black/10 dark:border-slate-800 shadow-neo-sm rotate-1 transition-colors duration-300">
+                            AŞAĞIDAKİ OKLAR TERS ÇALIŞIR!
                         </span>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 sm:gap-4 w-full">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
                     {currentMove?.buttons.map((btn, idx) => (
                         <button
                             key={idx}
@@ -181,13 +179,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
                                 e.preventDefault();
                                 handleDirectionClick(btn.iconDirection);
                             }}
-                            className={`group h-16 sm:h-24 rounded-2xl sm:rounded-3xl border-2 transition-all flex items-center justify-center active:scale-90 shadow-xl touch-none
-                ${feedback === 'wrong' ? 'border-red-600 bg-red-600/10' : 'border-slate-800 bg-slate-900 hover:border-indigo-500 hover:bg-indigo-500/10'}
+                            className={`group h-20 sm:h-28 rounded-3xl border-4 transition-all flex items-center justify-center active:translate-y-2 active:shadow-none shadow-neo-sm touch-none
+                ${feedback === 'wrong' ? 'border-black/10 dark:border-slate-800 bg-rose-400' : 'border-black/10 dark:border-slate-800 bg-white dark:bg-slate-700 hover:-translate-y-1 hover:shadow-neo-sm dark:hover:shadow-[12px_12px_0_#0f172a]'}
               `}
-                           
+
                         >
-                            <div className={`transition-colors ${feedback === 'wrong' ? 'text-red-500' : 'text-slate-400 group-hover:text-indigo-400'}`}>
-                                {renderArrowIcon(btn.iconDirection)}
+                            <div className={`transition-colors duration-300 ${feedback === 'wrong' ? 'text-black dark:text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-black dark:group-hover:text-white'}`}>
+                                {React.cloneElement(renderArrowIcon(btn.iconDirection) as React.ReactElement, { strokeWidth: 4 })}
                             </div>
                         </button>
                     ))}

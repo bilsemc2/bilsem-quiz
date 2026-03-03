@@ -25,11 +25,11 @@ export const Timer: React.FC<TimerProps> = ({ durationSeconds, onTimeUp }) => {
     const seconds = timeLeft % 60;
 
     return (
-        <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 shadow-lg inline-flex items-center space-x-2 animate-pulse">
-            <span className="text-2xl font-black text-white">
+        <div className="bg-white dark:bg-slate-800 px-6 py-3 border-2 border-black/10 dark:border-white/10 rounded-xl shadow-neo-xs inline-flex items-center gap-3">
+            <span className="text-2xl font-nunito font-extrabold text-black dark:text-white">
                 {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
             </span>
-            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Kaldı</span>
+            <span className="text-[10px] text-cyber-pink font-black uppercase tracking-widest bg-cyber-pink/10 px-2 py-1 rounded-md relative -top-1">Kaldı</span>
         </div>
     );
 };

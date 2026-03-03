@@ -76,10 +76,9 @@ export default function HomeworkPage() {
 
       try {
         setLoading(true);
-        console.log('Fetching data for user:', user.id);
 
         // Load user profile
-        const { data: profileData, error: profileError } = await supabase
+        const { error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
@@ -90,8 +89,6 @@ export default function HomeworkPage() {
           throw profileError;
         }
 
-        console.log('User profile:', profileData);
-        // setUserGrade(profileData.grade);
         // setIsAdmin(profileData.is_admin);
 
         // Load quizzes for user's grade
@@ -103,18 +100,6 @@ export default function HomeworkPage() {
           console.error('Quiz error:', quizError);
           throw quizError;
         }
-
-        // Quiz verilerini detaylı logla
-        console.log('Fetched quizzes:', quizData);
-        quizData?.forEach(quiz => {
-          if (quiz.id === '1d4c4e4d-d751-414e-9df4-6cb36bd375eb') {
-            console.log('Target quiz found:', {
-              id: quiz.id,
-              questions: quiz.questions,
-              questionCount: quiz.questions?.length
-            });
-          }
-        });
 
         setQuizzes(quizData || []);
       } catch (error) {
@@ -204,7 +189,6 @@ export default function HomeworkPage() {
   };
 
   const startQuiz = async (quiz: Quiz) => {
-    console.log('Starting quiz:', quiz);
 
     // Soruları doğru resim yollarıyla güncelle ve karıştır
     const questionsWithImages = shuffleArray(quiz.questions.map((question: Question) => {

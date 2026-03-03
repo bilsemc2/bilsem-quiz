@@ -1,140 +1,69 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import React, { useCallback, useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  MailOpen,
-  Trash2,
-  CheckCircle2,
-  Inbox,
-  Calendar,
-  Bell
-} from 'lucide-react';
-
-interface Message {
-  id: string;
-  message: string;
-  sender_id: string;
-  created_at: string;
-  read: boolean;
-  sender_name?: string;
-}
+import { MailOpen, Trash2, CheckCircle2, Inbox, Calendar, Bell } from 'lucide-react';
+import { adminMessageRepository } from '@/server/repositories/adminMessageRepository';
+import { toUserMessageItems, type UserMessageItem } from '@/features/content/model/adminMessagingUseCases';
 
 interface UserMessagesProps {
   userId?: string;
 }
 
 const UserMessages: React.FC<UserMessagesProps> = ({ userId }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<UserMessageItem[]>([]);
   const [activeTab, setActiveTab] = useState<'unread' | 'read'>('unread');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (userId) {
-      fetchMessages();
-
-      const channel = supabase
-        .channel(`user-messages-${userId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'admin_messages',
-            filter: `receiver_id=eq.${userId}`
-          },
-          () => {
-            fetchMessages();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        channel.unsubscribe();
-      };
-    }
-  }, [userId]);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!userId) return;
 
     try {
-      const { data, error } = await supabase
-        .from('admin_messages')
-        .select(`
-          id,
-          message,
-          sender_id,
-          receiver_id,
-          created_at,
-          read,
-          sender:profiles!admin_messages_sender_id_fkey(name)
-        `)
-        .eq('receiver_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (data) {
-        const formattedMessages = data.map(msg => ({
-          id: msg.id,
-          message: msg.message,
-          sender_id: msg.sender_id,
-          created_at: msg.created_at,
-          read: msg.read,
-          sender_name: (msg.sender && typeof msg.sender === 'object' && 'name' in msg.sender) ? (msg.sender as { name?: string }).name || 'Admin' : 'Admin'
-        }));
-        setMessages(formattedMessages);
-      }
+      const data = await adminMessageRepository.listMessagesByReceiverId(userId);
+      setMessages(toUserMessageItems(data));
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    void fetchMessages();
+    const subscription = adminMessageRepository.subscribeMessageChanges(() => {
+      void fetchMessages();
+    }, userId);
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [userId, fetchMessages]);
 
   const handleMarkAsRead = async (messageId: string) => {
     try {
-      const { error } = await supabase
-        .from('admin_messages')
-        .update({ read: true })
-        .eq('id', messageId);
-
-      if (error) throw error;
-
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === messageId ? { ...msg, read: true } : msg
-        )
-      );
+      await adminMessageRepository.markMessageAsRead(messageId);
+      setMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, read: true } : msg));
       toast.success('Mesaj okundu olarak işaretlendi');
-    } catch {
-      toast.error('Mesaj güncellenirken hata oluştu');
-    }
+    } catch { toast.error('Mesaj güncellenirken hata oluştu'); }
   };
 
   const handleDelete = async (messageId: string) => {
     try {
-      const { error } = await supabase
-        .from('admin_messages')
-        .delete()
-        .eq('id', messageId);
-
-      if (error) throw error;
-
+      await adminMessageRepository.deleteMessage(messageId);
       setMessages(prev => prev.filter(msg => msg.id !== messageId));
       toast.success('Mesaj silindi');
-    } catch {
-      toast.error('Mesaj silinirken hata oluştu');
-    }
+    } catch { toast.error('Mesaj silinirken hata oluştu'); }
   };
 
-  const formatDate = (date: string) => {
-    return format(new Date(date), "d MMMM yyyy HH:mm", { locale: tr });
-  };
-
+  const formatDate = (date: string) => format(new Date(date), "d MMMM yyyy HH:mm", { locale: tr });
   const unreadMessages = messages.filter(msg => !msg.read);
   const readMessages = messages.filter(msg => msg.read);
   const currentMessages = activeTab === 'unread' ? unreadMessages : readMessages;
@@ -142,111 +71,73 @@ const UserMessages: React.FC<UserMessagesProps> = ({ userId }) => {
   if (loading && messages.length === 0) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-black/10 border-t-cyber-blue rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800/50 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-xl">
-      {/* Tabs Header */}
-      <div className="flex border-b border-white/5 bg-white/5">
-        <button
-          onClick={() => setActiveTab('unread')}
-          className={`flex-1 py-4 px-6 flex items-center justify-center gap-2 text-sm font-bold transition-all relative ${activeTab === 'unread' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
-            }`}
-        >
-          <Inbox className={`w-4 h-4 ${activeTab === 'unread' ? 'text-indigo-400' : 'text-slate-500'}`} />
+    <div className="bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-sm">
+      {/* Tabs */}
+      <div className="flex border-b-2 border-black/10 dark:border-white/10">
+        <button onClick={() => setActiveTab('unread')}
+          className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 font-nunito font-extrabold text-sm transition-all relative ${activeTab === 'unread' ? 'text-black dark:text-white bg-cyber-gold/10' : 'text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+          <Inbox className={`w-4 h-4 ${activeTab === 'unread' ? 'text-cyber-gold' : 'text-slate-400'}`} />
           Okunmamış
           {unreadMessages.length > 0 && (
-            <span className="absolute top-3 right-4 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full shadow-lg border border-white/20">
+            <span className="w-5 h-5 bg-red-500 text-white text-[9px] font-extrabold flex items-center justify-center rounded-full">
               {unreadMessages.length}
             </span>
           )}
-          {activeTab === 'unread' && (
-            <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500" />
-          )}
+          {activeTab === 'unread' && <motion.div layoutId="msg-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyber-gold" />}
         </button>
-        <button
-          onClick={() => setActiveTab('read')}
-          className={`flex-1 py-4 px-6 flex items-center justify-center gap-2 text-sm font-bold transition-all relative ${activeTab === 'read' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
-            }`}
-        >
-          <MailOpen className={`w-4 h-4 ${activeTab === 'read' ? 'text-indigo-400' : 'text-slate-500'}`} />
+        <button onClick={() => setActiveTab('read')}
+          className={`flex-1 flex items-center justify-center gap-2 font-nunito font-extrabold text-sm transition-all relative border-l border-black/5 dark:border-white/5 ${activeTab === 'read' ? 'text-black dark:text-white bg-cyber-emerald/10' : 'text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+          <MailOpen className={`w-4 h-4 ${activeTab === 'read' ? 'text-cyber-emerald' : 'text-slate-400'}`} />
           Okunmuş
-          {activeTab === 'read' && (
-            <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500" />
-          )}
+          {activeTab === 'read' && <motion.div layoutId="msg-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyber-emerald" />}
         </button>
       </div>
 
-      {/* Messages List */}
-      <div className="p-4 sm:p-6 min-h-[300px]">
+      {/* Messages */}
+      <div className="p-4 sm:p-5 min-h-[200px]">
         <AnimatePresence mode="wait">
           {currentMessages.length === 0 ? (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="flex flex-col items-center justify-center py-12 text-center"
-            >
-              <div className="w-16 h-16 bg-slate-700/50 rounded-2xl flex items-center justify-center mb-4 border border-white/5 text-slate-500">
-                <Bell className="w-8 h-8" />
+            <motion.div key="empty" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="w-12 h-12 bg-gray-50 dark:bg-slate-700/50 rounded-xl flex items-center justify-center mb-3 border border-black/5 dark:border-white/5">
+                <Bell className="w-6 h-6 text-slate-400" />
               </div>
-              <p className="text-slate-400 font-medium">
+              <p className="text-slate-400 font-nunito font-bold text-sm">
                 {activeTab === 'unread' ? 'Yeni mesajınız bulunmuyor' : 'Okunmuş mesajınız yok'}
               </p>
             </motion.div>
           ) : (
-            <motion.div
-              key="list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-4"
-            >
+            <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
               {currentMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`group relative bg-slate-700/30 hover:bg-slate-700/50 border border-white/5 rounded-2xl p-4 sm:p-5 transition-all duration-300 ${!msg.read ? 'ring-1 ring-indigo-500/30' : ''
-                    }`}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="flex-1 space-y-2">
+                <div key={msg.id}
+                  className={`group relative bg-white dark:bg-slate-700/30 border-2 rounded-xl p-4 transition-all hover:-translate-y-0.5 ${!msg.read ? 'border-cyber-blue/30 bg-cyber-blue/5 shadow-neo-sm' : 'border-black/5 dark:border-white/5'}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="flex-1 space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{msg.sender_name}</span>
-                        {!msg.read && (
-                          <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
-                        )}
+                        <span className="font-nunito font-extrabold text-black dark:text-white text-sm">{msg.senderName}</span>
+                        {!msg.read && <span className="w-2 h-2 bg-cyber-blue rounded-full animate-pulse" />}
                       </div>
-                      <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-                        {msg.message}
-                      </p>
-                      <div className="flex items-center gap-4 text-[11px] text-slate-500 font-medium pt-1">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>{formatDate(msg.created_at)}</span>
-                        </div>
+                      <p className="font-nunito font-bold text-slate-600 dark:text-slate-300 text-xs leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                      <div className="flex items-center gap-1 text-[9px] font-nunito font-extrabold text-slate-400 uppercase tracking-wider">
+                        <Calendar className="w-3 h-3" /><span>{formatDate(msg.createdAt)}</span>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2 sm:self-start opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1.5 sm:self-start opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                       {!msg.read && (
-                        <button
-                          onClick={() => handleMarkAsRead(msg.id)}
-                          className="p-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white rounded-xl transition-all shadow-lg shadow-indigo-500/10"
-                          title="Okundu olarak işaretle"
-                        >
-                          <CheckCircle2 className="w-5 h-5" />
+                        <button onClick={() => handleMarkAsRead(msg.id)} title="Okundu"
+                          className="p-1.5 bg-cyber-emerald/10 text-cyber-emerald border border-cyber-emerald/20 hover:bg-cyber-emerald hover:text-black rounded-lg transition-all">
+                          <CheckCircle2 className="w-4 h-4" />
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDelete(msg.id)}
-                        className="p-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-lg shadow-red-500/10"
-                        title="Sil"
-                      >
-                        <Trash2 className="w-5 h-5" />
+                      <button onClick={() => handleDelete(msg.id)} title="Sil"
+                        className="p-1.5 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white rounded-lg transition-all">
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
