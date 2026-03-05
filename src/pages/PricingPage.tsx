@@ -296,7 +296,7 @@ export default function PricingPage() {
               </li>
               <li className="flex items-start gap-3 bg-gray-50 dark:bg-slate-700 p-3 rounded-xl border border-black/5 dark:border-white/5">
                 <span className="text-lg mt-0.5">🔄</span>
-                <span><strong className="text-black dark:text-white">İade Politikası:</strong> Programın temel amacı öğrenciyi sürece hazırlamaktır. 1. aşama sınavını kazanamaması durumunda ücret iadesi yapılmamaktadır.</span>
+                <span><strong className="text-black dark:text-white">İade Politikası:</strong> Programın temel amacı öğrenciyi sürece hazırlamaktır.</span>
               </li>
               <li className="flex items-start gap-3 bg-gray-50 dark:bg-slate-700 p-3 rounded-xl border border-black/5 dark:border-white/5">
                 <span className="text-lg mt-0.5">📋</span>

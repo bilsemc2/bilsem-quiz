@@ -31,6 +31,7 @@ const TabletAssessmentPage: React.FC = () => {
                 backLink="/atolyeler/bireysel-degerlendirme"
                 backLabel="Bireysel Değerlendirme Sayfasına Dön"
                 iconType="shield"
+                requiredIncludes={['genel_yetenek']}
             />
         );
     }

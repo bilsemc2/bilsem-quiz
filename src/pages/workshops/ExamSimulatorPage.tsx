@@ -56,7 +56,7 @@ const ExamSimulatorPage: React.FC = () => {
 
     if (!profile) return <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center"><div className="w-12 h-12 border-4 border-cyber-emerald border-t-transparent rounded-full animate-spin" /></div>;
 
-    if (!hasExamAccess(profile?.yetenek_alani)) return <AccessDeniedScreen requiredTalent="Genel Yetenek" backLink="/atolyeler/bireysel-degerlendirme" backLabel="Bireysel Değerlendirme" additionalMessage="Yakında diğer yetenek alanları için de simülasyonlar eklenecek! 🚀" />;
+    if (!hasExamAccess(profile?.yetenek_alani)) return <AccessDeniedScreen requiredTalent="Genel Yetenek" backLink="/atolyeler/bireysel-degerlendirme" backLabel="Bireysel Değerlendirme" additionalMessage="Yakında diğer yetenek alanları için de simülasyonlar eklenecek! 🚀" requiredIncludes={['genel_yetenek']} />;
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-800 pt-20 pb-12 px-4 sm:px-6 relative overflow-hidden transition-colors duration-300">

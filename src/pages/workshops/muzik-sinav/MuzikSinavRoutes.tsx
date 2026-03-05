@@ -57,7 +57,7 @@ function TestLayout() {
         </div>
     );
 
-    if (!hasMusicTalent) return <AccessDeniedScreen requiredTalent="Müzik" backLink="/atolyeler/muzik-sinav" backLabel="Tanıtım Sayfasına Dön" userTalents={userTalents.length > 0 ? userTalents : undefined} />;
+    if (!hasMusicTalent) return <AccessDeniedScreen requiredTalent="Müzik" backLink="/atolyeler/muzik-sinav" backLabel="Tanıtım Sayfasına Dön" userTalents={userTalents.length > 0 ? userTalents : undefined} requiredIncludes={['muzik']} />;
 
     return (
         <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">

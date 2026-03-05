@@ -6,7 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ResimGame from '../../components/Workshops/Resim/ResimGame';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import AccessDeniedModal from '../../components/AccessDeniedModal';
+import AccessDeniedScreen from '../../components/AccessDeniedScreen';
 
 const ResimPage: React.FC = () => {
     const navigate = useNavigate();
@@ -16,7 +16,7 @@ const ResimPage: React.FC = () => {
     const [userTalents, setUserTalents] = useState<string[]>([]);
     const [analysisQuota, setAnalysisQuota] = useState<number | null>(null);
     const [isTeacher, setIsTeacher] = useState(false);
-    const [showTalentWarning, setShowTalentWarning] = useState(false);
+    const [showAccessDenied, setShowAccessDenied] = useState(false);
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
     useEffect(() => {
@@ -54,6 +54,19 @@ const ResimPage: React.FC = () => {
         { icon: <Layout strokeWidth={2.5} size={28} />, title: "Kompozisyon", desc: "Dengeli ve etkileyici sahneler kurgulama yeteneği.", color: "bg-cyber-gold/10 border-cyber-gold/20 text-cyber-gold" },
         { icon: <PenTool strokeWidth={2.5} size={28} />, title: "Yaratıcı Çizim", desc: "Hayal gücünü kağıda dökme ve özgünlük geliştirme.", color: "bg-cyber-emerald/10 border-cyber-emerald/20 text-cyber-emerald" },
     ];
+
+    if (showAccessDenied) {
+        return (
+            <AccessDeniedScreen
+                requiredTalent="Resim"
+                backLink="/atolyeler/resim"
+                backLabel="Resim Atölyesine Dön"
+                userTalents={userTalents.length > 0 ? userTalents : undefined}
+                requiredIncludes={['resim']}
+                onBack={() => { setShowAccessDenied(false); window.scrollTo(0, 0); }}
+            />
+        );
+    }
 
     if (isActive) {
         return (
@@ -171,7 +184,7 @@ const ResimPage: React.FC = () => {
                                     onClick={() => {
                                         if (!user) { setShowLoginPrompt(true); }
                                         else if (hasTalentAccess) { setIsActive(true); window.scrollTo(0, 0); }
-                                        else { setShowTalentWarning(true); }
+                                        else { window.scrollTo(0, 0); setShowAccessDenied(true); }
                                     }}
                                     className="group inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-black font-nunito font-extrabold text-xl uppercase tracking-wider border-2 border-black/10 rounded-xl shadow-neo-md hover:-translate-y-1 hover:shadow-neo-lg transition-all">
                                     Atölyeye Gir <Rocket strokeWidth={2.5} className="group-hover:translate-x-1 transition-transform" size={22} />
@@ -182,9 +195,7 @@ const ResimPage: React.FC = () => {
                 </motion.div>
             </div>
 
-            <AccessDeniedModal isOpen={showTalentWarning} onClose={() => setShowTalentWarning(false)}
-                workshopName="Resim Atölyesi" requiredTalent="Resim"
-                userTalents={userTalents.length > 0 ? userTalents : undefined} accentColor="pink" />
+
 
             {showLoginPrompt && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-4">

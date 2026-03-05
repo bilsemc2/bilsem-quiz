@@ -5,7 +5,7 @@ import EditProfileModal from '../components/EditProfileModal';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import {
-    Gift, Zap, Sparkles, Ticket, Mail, BarChart3, Brain, ChevronRight, ShieldCheck, CheckCircle2
+    Gift, Zap, Sparkles, Ticket, Mail, BarChart3, Brain, ChevronRight, ShieldCheck, CheckCircle2, Lock as LockIcon, Languages
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { UserProfile, QuizStats } from '@/types/profile';
@@ -362,25 +362,73 @@ export const ProfilePage: React.FC = () => {
                     {/* Üst satır: 2 featured kart */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Bireysel Değerlendirme */}
+                        {(() => {
+                            // Kullanıcının aktif aboneliği veya genel_yetenek yetkisi var mı kontrol et
+                            const talentsInput = userData.yetenek_alani;
+                            let talents: string[] = [];
+                            if (Array.isArray(talentsInput)) talents = talentsInput;
+                            else if (typeof talentsInput === 'string') talents = talentsInput.split(/[,,;]/).map(t => t.trim()).filter(Boolean);
+                            const hasAccess = talents.some(t => t.toLowerCase().includes('genel yetenek') || t.toLowerCase().includes('genel_yetenek'));
+
+                            if (hasAccess) {
+                                return (
+                                    <Link
+                                        to="/atolyeler/bireysel-degerlendirme"
+                                        className="group flex items-center gap-4 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl p-5 transition-all shadow-neo-md hover:-translate-y-0.5 hover:shadow-neo-lg active:translate-y-0.5 active:shadow-neo-sm focus:outline-none"
+                                    >
+                                        <div className="w-14 h-14 bg-cyber-blue border-2 border-black/10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-neo-sm flex-shrink-0">
+                                            <Brain className="w-7 h-7 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-nunito font-extrabold text-black dark:text-white text-lg tracking-tight">Bireysel Değerlendirme</h3>
+                                            <p className="font-nunito font-bold text-slate-400 text-xs">2. Aşama simülasyonları</p>
+                                        </div>
+                                        <span className="bg-cyber-emerald text-white text-[9px] font-nunito font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border-2 border-black/10 shadow-sm flex-shrink-0">Yetkili</span>
+                                        <div className="bg-gray-50 dark:bg-slate-700 border-2 border-black/10 dark:border-white/10 rounded-xl p-2.5 group-hover:translate-x-1 transition-all flex-shrink-0">
+                                            <ChevronRight className="w-5 h-5 text-black dark:text-white" />
+                                        </div>
+                                    </Link>
+                                );
+                            }
+
+                            return (
+                                <Link
+                                    to="/atolyeler/bireysel-degerlendirme"
+                                    className="group flex items-center gap-4 bg-gray-100 dark:bg-slate-800/50 border-2 border-black/5 dark:border-white/5 rounded-2xl p-5 opacity-60 transition-all shadow-none hover:opacity-80 hover:shadow-neo-sm focus:outline-none"
+                                >
+                                    <div className="w-14 h-14 bg-slate-300 dark:bg-slate-600 border-2 border-black/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <Brain className="w-7 h-7 text-white" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-nunito font-extrabold text-slate-400 dark:text-slate-500 text-lg tracking-tight">Bireysel Değerlendirme</h3>
+                                        <p className="font-nunito font-bold text-slate-300 dark:text-slate-600 text-xs">Detayları incele</p>
+                                    </div>
+                                    <span className="bg-slate-300 dark:bg-slate-600 text-white text-[9px] font-nunito font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border-2 border-black/5 flex-shrink-0 flex items-center gap-1">
+                                        <LockIcon size={10} strokeWidth={3} /> Kilitli
+                                    </span>
+                                </Link>
+                            );
+                        })()}
+
+                        {/* BİLSEM Zeka Oyunları */}
+                        <QuickAccessSection />
+
+                        {/* Deyimler Atölyesi */}
                         <Link
-                            to="/atolyeler/bireysel-degerlendirme"
+                            to="/deyimler"
                             className="group flex items-center gap-4 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl p-5 transition-all shadow-neo-md hover:-translate-y-0.5 hover:shadow-neo-lg active:translate-y-0.5 active:shadow-neo-sm focus:outline-none"
                         >
-                            <div className="w-14 h-14 bg-cyber-blue border-2 border-black/10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-neo-sm flex-shrink-0">
-                                <Brain className="w-7 h-7 text-white" />
+                            <div className="w-14 h-14 bg-cyber-pink border-2 border-black/20 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-neo-sm flex-shrink-0">
+                                <Languages className="w-7 h-7 text-white" />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-nunito font-extrabold text-black dark:text-white text-lg tracking-tight">Bireysel Değerlendirme</h3>
-                                <p className="font-nunito font-bold text-slate-400 text-xs">2. Aşama simülasyonları</p>
+                                <h3 className="font-nunito font-extrabold text-black dark:text-white text-lg tracking-tight">Deyimler Atölyesi</h3>
+                                <p className="font-nunito font-bold text-slate-400 text-xs">Karikatürlerle deyim öğren!</p>
                             </div>
-                            <span className="bg-red-500 text-white text-[9px] font-nunito font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border-2 border-red-600/30 shadow-sm flex-shrink-0">Yetkili</span>
                             <div className="bg-gray-50 dark:bg-slate-700 border-2 border-black/10 dark:border-white/10 rounded-xl p-2.5 group-hover:translate-x-1 transition-all flex-shrink-0">
                                 <ChevronRight className="w-5 h-5 text-black dark:text-white" />
                             </div>
                         </Link>
-
-                        {/* BİLSEM Zeka Oyunları */}
-                        <QuickAccessSection />
                     </div>
 
                     {/* Alt satır: Müzik + Resim (varsa) */}

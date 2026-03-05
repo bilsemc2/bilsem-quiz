@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Brain, Star, ChevronLeft, Rocket, Trophy, Lightbulb, Radio, Search, Cpu, Hash,
     LayoutGrid, TrendingUp, ArrowLeftRight, Languages, Grid3X3, Eye, Compass, Smile,
@@ -97,9 +97,45 @@ const CYBER_CLASSES: Record<string, { bg: string; bgLight: string; border: strin
     'cyber-gold': { bg: 'bg-cyber-gold', bgLight: 'bg-cyber-gold/10', border: 'border-cyber-gold/20', text: 'text-cyber-gold', strip: 'bg-cyber-gold' },
 };
 
+const TUZO_CATEGORIES: Record<string, string> = {
+    '1': 'Sözel Yetenek',
+    '2': 'Sayısal Yetenek',
+    '3': 'Görsel-Uzamsal',
+    '4': 'Hafıza',
+    '5': 'Akıl Yürütme',
+    '6': 'İşlem Hızı',
+    '7': 'Dikkat',
+    '8': 'Bilişsel Esneklik',
+    '9': 'Çalışma Belleği',
+    '10': 'Sosyal Zeka'
+};
+
+const getTuzoCategory = (tuzoStr?: string) => {
+    if (!tuzoStr) return 'Diğer';
+    const match = tuzoStr.match(/^5\.(\d+)\./);
+    if (match && match[1]) {
+        return TUZO_CATEGORIES[match[1]] || 'Diğer';
+    }
+    return 'Diğer';
+};
+
 const IndividualAssessmentPage: React.FC = () => {
     const { profile, loading } = useAuth();
     const canAccess = hasIndividualAccess(profile?.yetenek_alani);
+    const [activeCategory, setActiveCategory] = useState<string>('Hepsi');
+
+    const categories = useMemo(() => {
+        const cats = new Set<string>();
+        MODULES.forEach(m => {
+            if (m.tuzo) cats.add(getTuzoCategory(m.tuzo));
+        });
+        return ['Hepsi', ...Array.from(cats).sort()];
+    }, []);
+
+    const filteredModules = useMemo(() => {
+        if (activeCategory === 'Hepsi') return MODULES;
+        return MODULES.filter(m => getTuzoCategory(m.tuzo) === activeCategory);
+    }, [activeCategory]);
 
     if (loading) {
         return (
@@ -116,6 +152,7 @@ const IndividualAssessmentPage: React.FC = () => {
                 backLink="/atolyeler/genel-yetenek"
                 backLabel="Genel Yetenek Sayfasına Dön"
                 iconType="shield"
+                requiredIncludes={['genel_yetenek']}
             />
         );
     }
@@ -224,66 +261,87 @@ const IndividualAssessmentPage: React.FC = () => {
                     </Link>
                 </motion.div>
 
+                {/* Filter Bar */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-8">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x">
+                        {categories.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setActiveCategory(cat)}
+                                className={`shrink-0 px-4 py-2 rounded-xl font-nunito font-extrabold text-xs sm:text-sm tracking-widest uppercase transition-all shadow-neo-sm hover:-translate-y-1 snap-start border-2 ${activeCategory === cat
+                                    ? 'bg-black text-cyber-gold border-black'
+                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-black/10 hover:border-cyber-pink hover:text-cyber-pink'
+                                    }`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                </motion.div>
+
                 {/* Modüller Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {MODULES.map((mod, i) => {
-                        const cyberColor = getCyberColor(mod.color);
-                        const cc = CYBER_CLASSES[cyberColor] ?? CYBER_CLASSES['cyber-gold'];
-                        const shouldAnimate = i < 6; // Only animate first 6 (above fold)
-                        return (
-                            <motion.div key={mod.id}
-                                initial={shouldAnimate ? { opacity: 0, y: 20 } : false}
-                                animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined}
-                                transition={shouldAnimate ? { delay: i * 0.02 } : undefined}
-                                className="group h-full relative">
-                                <div className="h-full bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden transition-all duration-300 flex flex-col justify-between shadow-neo-sm hover:shadow-neo-md hover:-translate-y-1">
-                                    {/* Accent strip */}
-                                    <div className={`h-1.5 ${cc.strip}`} />
+                <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <AnimatePresence mode="popLayout">
+                        {filteredModules.map((mod) => {
+                            const cyberColor = getCyberColor(mod.color);
+                            const cc = CYBER_CLASSES[cyberColor] ?? CYBER_CLASSES['cyber-gold'];
+                            return (
+                                <motion.div key={mod.id}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.8 }}
+                                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                                    className="group h-full relative">
+                                    <div className="h-full bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden transition-all duration-300 flex flex-col justify-between shadow-neo-sm hover:shadow-neo-md hover:-translate-y-1">
+                                        {/* Accent strip */}
+                                        <div className={`h-1.5 ${cc.strip}`} />
 
-                                    <div className="p-6 space-y-4 flex-1">
-                                        <div className="flex items-start justify-between">
-                                            <div className={`w-12 h-12 ${cc.bgLight} border-2 ${cc.border} rounded-xl flex items-center justify-center ${cc.text} group-hover:scale-110 transition-transform`}>
-                                                {React.cloneElement(mod.icon as React.ReactElement, { strokeWidth: 2.5, size: 24 })}
+                                        <div className="p-6 space-y-4 flex-1">
+                                            <div className="flex items-start justify-between">
+                                                <div className={`w-12 h-12 ${cc.bgLight} border-2 ${cc.border} rounded-xl flex items-center justify-center ${cc.text} group-hover:scale-110 transition-transform`}>
+                                                    {React.cloneElement(mod.icon as React.ReactElement, { strokeWidth: 2.5, size: 24 })}
+                                                </div>
+                                                <span className="px-2.5 py-1 bg-gray-50 dark:bg-slate-700 border border-black/5 text-[10px] font-nunito font-extrabold uppercase text-slate-500 dark:text-slate-400 tracking-widest rounded-lg">
+                                                    {mod.difficulty}
+                                                </span>
                                             </div>
-                                            <span className="px-2.5 py-1 bg-gray-50 dark:bg-slate-700 border border-black/5 text-[10px] font-nunito font-extrabold uppercase text-slate-500 dark:text-slate-400 tracking-widest rounded-lg">
-                                                {mod.difficulty}
-                                            </span>
-                                        </div>
 
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <h3 className="text-lg font-nunito font-extrabold text-black dark:text-white uppercase tracking-tight leading-tight">{mod.title}</h3>
-                                                {(mod as { isNew?: boolean }).isNew && (
-                                                    <span className="px-1.5 py-0.5 bg-cyber-emerald/10 border border-cyber-emerald/30 text-cyber-emerald text-[9px] font-extrabold uppercase animate-pulse rounded-md">YENİ</span>
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h3 className="text-lg font-nunito font-extrabold text-black dark:text-white uppercase tracking-tight leading-tight">{mod.title}</h3>
+                                                    {(mod as { isNew?: boolean }).isNew && (
+                                                        <span className="px-1.5 py-0.5 bg-cyber-emerald/10 border border-cyber-emerald/30 text-cyber-emerald text-[9px] font-extrabold uppercase animate-pulse rounded-md">YENİ</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-slate-500 dark:text-slate-400 text-xs font-nunito font-bold leading-relaxed">{mod.desc}</p>
+
+                                                {mod.tuzo && (
+                                                    <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 bg-cyber-purple/5 border border-cyber-purple/20 rounded-lg">
+                                                        <span className="text-[9px] font-extrabold text-cyber-purple uppercase tracking-widest">TUZÖ</span>
+                                                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">{mod.tuzo}</span>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <p className="text-slate-500 dark:text-slate-400 text-xs font-nunito font-bold leading-relaxed">{mod.desc}</p>
+                                        </div>
 
-                                            {mod.tuzo && (
-                                                <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 bg-cyber-purple/5 border border-cyber-purple/20 rounded-lg">
-                                                    <span className="text-[9px] font-extrabold text-cyber-purple uppercase tracking-widest">TUZÖ</span>
-                                                    <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">{mod.tuzo}</span>
-                                                </div>
-                                            )}
+                                        <div className="px-6 pb-5 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between flex-col sm:flex-row gap-3">
+                                            <div className="text-slate-400 text-[10px] font-nunito font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 bg-cyber-emerald rounded-full animate-pulse" /> Simülatör Hazır
+                                            </div>
+                                            <Link to={mod.link} state={{ autoStart: true }}
+                                                className="w-full sm:w-auto px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black font-nunito font-extrabold text-xs uppercase text-center border-3 border-black/10 rounded-xl shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-md transition-all flex items-center justify-center gap-2 group/btn">
+                                                BAŞLAT <Rocket size={14} strokeWidth={2.5} className="group-hover/btn:translate-x-1 transition-transform" />
+                                            </Link>
                                         </div>
                                     </div>
-
-                                    <div className="px-6 pb-5 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between flex-col sm:flex-row gap-3">
-                                        <div className="text-slate-400 text-[10px] font-nunito font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-                                            <div className="w-1.5 h-1.5 bg-cyber-emerald rounded-full animate-pulse" /> Simülatör Hazır
-                                        </div>
-                                        <Link to={mod.link} state={{ autoStart: true }}
-                                            className="w-full sm:w-auto px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black font-nunito font-extrabold text-xs uppercase text-center border-3 border-black/10 rounded-xl shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-md transition-all flex items-center justify-center gap-2 group/btn">
-                                            BAŞLAT <Rocket size={14} strokeWidth={2.5} className="group-hover/btn:translate-x-1 transition-transform" />
-                                        </Link>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        );
-                    })}
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
 
                     {/* Info Card */}
-                    <div
+                    <motion.div layout
                         className="lg:col-span-1 bg-cyber-purple border-2 border-black/10 rounded-2xl overflow-hidden shadow-neo-md relative group">
                         <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
                         <div className="relative z-10 p-8 space-y-5">
@@ -300,8 +358,8 @@ const IndividualAssessmentPage: React.FC = () => {
                                 <Trophy size={16} className="text-cyber-gold" strokeWidth={2.5} /> Üstün Başarı Hedefi
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </motion.div>
+                </motion.div>
             </div>
         </div>
     );

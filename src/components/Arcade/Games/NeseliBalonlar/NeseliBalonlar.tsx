@@ -320,9 +320,9 @@ const NeseliBalonlar: React.FC = () => {
             showLevel={true}
             showLives={true}
         >
-            <div className="h-full bg-sky-200 dark:bg-slate-900 flex flex-col items-center p-1 sm:p-2 md:p-4 overflow-hidden relative transition-colors duration-300">
+            <div className="h-full bg-sky-200 dark:bg-slate-900 flex flex-col items-center p-1 sm:p-2 md:p-4 overflow-y-auto relative transition-colors duration-300">
                 {/* Spacer for Shell HUD */}
-                <div className="h-14 sm:h-16" />
+                <div className="h-14 sm:h-16 shrink-0" />
 
                 {/* Feedback Banner */}
                 <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />

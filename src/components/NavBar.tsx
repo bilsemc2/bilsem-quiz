@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Sun, Moon, Menu, X, User, LogOut, Zap, ChevronDown, Crown, Sparkles, Gamepad2 } from 'lucide-react';
+import { Sun, Moon, Menu, X, User, LogOut, Zap, ChevronDown, Crown, Sparkles, Gamepad2, Languages } from 'lucide-react';
 import { User as AuthUser } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authRepository } from '@/server/repositories/authRepository';
@@ -41,8 +41,8 @@ const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropd
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 p-1.5 pr-3 rounded-2xl border-2 border-black/10 transition-all duration-200 ${isOpen || isActive("/profile")
-            ? "bg-cyber-gold shadow-neo-sm"
-            : "bg-white dark:bg-slate-800 hover:bg-cyber-yellow/10 shadow-neo-sm"
+          ? "bg-cyber-gold shadow-neo-sm"
+          : "bg-white dark:bg-slate-800 hover:bg-cyber-yellow/10 shadow-neo-sm"
           }`}
       >
         <div className="relative">
@@ -117,6 +117,17 @@ const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropd
                 </div>
                 <span className="uppercase">BİLSEM Zeka</span>
                 <Sparkles className="w-3 h-3 text-cyber-gold animate-pulse ml-auto" />
+              </Link>
+
+              <Link
+                to="/deyimler"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-nunito font-bold text-sm tracking-wide text-black dark:text-white hover:bg-cyber-pink/10 transition-colors group"
+              >
+                <div className="w-9 h-9 bg-cyber-pink/10 border-2 border-cyber-pink/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Languages className="w-4 h-4 text-cyber-pink" />
+                </div>
+                <span className="uppercase">Deyimler</span>
               </Link>
 
               <div className="my-1 border-t-2 border-dashed border-black/10 dark:border-white/10" />
@@ -204,16 +215,15 @@ const NavBar = () => {
   const menuItems = [
     { name: "Bilsem", path: "/bilsem" },
     { name: "BİLSEM Zeka", path: "/bilsem-zeka", showWhenAuth: true },
-    { name: "Hakkımızda", path: "/about" },
-    { name: "İletişim", path: "/contact" },
+    { name: "Deyimler", path: "/deyimler", showWhenAuth: true },
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
-    { name: "Fiyatlandırma", path: "/pricing", hideWhenVip: true },
+    { name: "Fiyatlandırma", path: "/pricing", hideWhenAuth: true },
   ];
 
   const shouldShowItem = (item: typeof menuItems[0]) => {
     if (item.showWhenAuth && !user) return false;
     if (item.adminOnly && !isAdmin) return false;
-    if (item.hideWhenVip && isVip) return false;
+    if (item.hideWhenAuth && user) return false;
     return true;
   };
 
@@ -241,8 +251,8 @@ const NavBar = () => {
                 key={item.path}
                 to={item.path}
                 className={`text-sm font-nunito font-extrabold uppercase tracking-wider px-4 py-2 rounded-xl border-2 transition-all duration-200 ${isActive(item.path)
-                    ? "bg-cyber-gold text-black border-black/10 shadow-neo-sm"
-                    : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-cyber-yellow/10 hover:border-black/20 dark:hover:border-white/20"
+                  ? "bg-cyber-gold text-black border-black/10 shadow-neo-sm"
+                  : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-cyber-yellow/10 hover:border-black/20 dark:hover:border-white/20"
                   }`}
               >
                 {item.name}
@@ -335,8 +345,8 @@ const NavBar = () => {
                     to={item.path}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`block px-5 py-3.5 rounded-xl font-nunito font-extrabold uppercase tracking-wider text-sm transition-all duration-200 ${isActive(item.path)
-                        ? "bg-cyber-gold text-black border-2 border-black/10 shadow-neo-sm"
-                        : "bg-gray-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-2 border-transparent hover:border-black/20"
+                      ? "bg-cyber-gold text-black border-2 border-black/10 shadow-neo-sm"
+                      : "bg-gray-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-2 border-transparent hover:border-black/20"
                       }`}
                   >
                     {item.name}
@@ -355,8 +365,8 @@ const NavBar = () => {
                       to="/profile"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`block px-5 py-3.5 rounded-xl font-nunito font-extrabold uppercase tracking-wider text-sm ${isActive('/profile')
-                          ? "bg-cyber-gold text-black border-2 border-black/10 shadow-neo-sm"
-                          : "bg-gray-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-2 border-transparent"
+                        ? "bg-cyber-gold text-black border-2 border-black/10 shadow-neo-sm"
+                        : "bg-gray-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-2 border-transparent"
                         }`}
                     >
                       Profil
