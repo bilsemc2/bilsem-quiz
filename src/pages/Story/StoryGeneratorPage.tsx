@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { generateQuestions, generateStory } from './services/gpt';
+import { generateStory } from './services/gpt';
 import { saveStory } from './services/stories';
 import { StoryTheme } from './types';
 import { ThemeSelector } from './components/ThemeSelector';
@@ -32,24 +32,12 @@ export default function StoryGeneratorPage() {
         duration: 3000,
       });
 
-      setGenerationStep('Sorular oluşturuluyor...');
-      const generatedQuestions = await generateQuestions({
-        title: storyData.title,
-        content: storyData.content,
-        theme: selectedTheme,
-        locale: 'tr',
-        questionCount: 5
-      });
-
-      const finalQuestions =
-        Array.isArray(generatedQuestions) && generatedQuestions.length > 0
-          ? generatedQuestions
-          : storyData.questions;
-
+      // generateStory zaten hikayeyle uyumlu 5 soru üretiyor — 
+      // ayrıca generateQuestions çağırmaya gerek yok
       setGenerationStep('Hikaye kaydediliyor...');
       const savedStory = await saveStory({
         ...storyData,
-        questions: finalQuestions
+        questions: storyData.questions
       });
 
       // Görüntü oluşturma adımı (ileride implement edilebilir)

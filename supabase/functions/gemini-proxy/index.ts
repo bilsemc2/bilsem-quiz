@@ -560,32 +560,70 @@ async function generateStory(apiKey: string, theme: StoryTheme): Promise<StoryDa
         friendship: 'Arkadaşlığın önemi ve birlikte çalışmak hakkında',
         'life-lessons': 'Günlük hayattan öğrenilen dersler hakkında'
     };
+    // Rastgelelik: Her çağrıda farklı hikaye üretmek için
+    const locations = ['bir orman kenarında', 'deniz kıyısında', 'dağın tepesinde', 'küçük bir köyde', 'büyük bir şehirde', 'bir çiftlikte', 'nehir kenarında', 'bir adada', 'eski bir kalede', 'bulutların üstünde', 'bir bahçede', 'okul bahçesinde', 'bir pazarda', 'tren istasyonunda', 'bir gemide'];
+    const childNames = ['Ersan', 'Ali', 'Zeynep', 'Mert', 'Defne', 'Ege', 'Deniz', 'Yağmur', 'Can', 'Cemre', 'Berk', 'İrem', 'Kerem', 'Sude', 'Arda'];
+    const animals = ['kedi', 'köpek', 'tavşan', 'kuş', 'kaplumbağa', 'sincap', 'ayı', 'tilki', 'baykuş', 'karınca', 'arı', 'kelebek', 'balık', 'fare', 'papağan'];
+    const colorPatterns = ['kırmızı-mavi-yeşil', 'sarı-turuncu-mor', 'beyaz-siyah-gri', 'pembe-turkuaz-lila', 'altın-gümüş-bronz'];
+    const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+    const randomChild = childNames[Math.floor(Math.random() * childNames.length)];
+    const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
+    const randomColors = colorPatterns[Math.floor(Math.random() * colorPatterns.length)];
+    const randomNumber = Math.floor(Math.random() * 7) + 3; // 3-9 arası
+    const randomSeed = Math.floor(Math.random() * 99999);
 
     const prompt = `
 7-12 yaş arası çocuklar için ${themeSpecificContent[theme] || 'eğlenceli bir konu'} bir hikaye yaz (100-200 kelime).
+Hikaye ${randomLocation} geçmeli, ana karakter "${randomChild}" adında bir çocuk olmalı ve yanında "${randomAnimal}" adında/türünde bir hayvan arkadaşı olmalı.
+Hikayede ${randomNumber} adet sayılabilir nesne ve ${randomColors} renk sırası/örüntüsü kullan.
+(Rastgele tohum: ${randomSeed} — her seferinde TAMAMEN FARKLI bir hikaye yaz)
 Hikaye şu özelliklere sahip olmalı:
 
-- Açık ve net bir başlangıç, gelişme ve sonuç bölümü olmalı
-- Olumlu mesajlar ve öğretici unsurlar içermeli
-- Çocuk dostu bir dil kullanılmalı
-- İlgi çekici ve betimleyici olmalı
-- Türkçe karakterler doğru kullanılmalı (ç, ş, ı, ğ, ü, ö, İ)
-- Hikaye için ÖZELLİKLE çarpıcı, ilgi çekici ve hikayeyi yansıtan bir başlık oluştur
-- Başlık kısa, akılda kalıcı ve hikayeye uygun olmalı
-- Başlık 2-6 kelime arasında olmalı
-- Karakterlerin isimleri ve özellikleri net olmalı
-- Hayvan karakterler varsa özellikleri ve rolleri açıkça belirtilmeli
+	Hikaye başlangıç, gelişme ve sonuç bölümlerinden oluşmalıdır.
+	•	Hikaye olumlu mesajlar ve öğretici unsurlar içermelidir.
+	•	Çocuk dostu bir dil kullanılmalıdır.
+	•	Hikaye ilgi çekici ve betimleyici olmalıdır.
+	•	Türkçe karakterler doğru kullanılmalıdır (ç, ş, ı, ğ, ü, ö, İ).
+	•	Hikaye için çarpıcı ve ilgi çekici bir başlık oluşturulmalıdır.
+    Başlık Kuralları
+	•	Başlık 2-6 kelime arasında olmalıdır.
+	•	Kısa, akılda kalıcı ve hikâyeyi yansıtmalıdır.
 
-Ayrıca hikaye için 5 adet çoktan seçmeli soru oluştur. Soruların dağılımı BİLSEM yetenek sınavı mantığına uygun olarak BİREBİR şu şekilde olmalıdır:
-1. Okuduğunu anlama (Hikayenin ana fikri veya bir detayı)
-2. Sözel Mantık (Karakterlerin kimlikleri veya eylemleri üzerinden bir mantık çıkarımı)
-3. Matematiksel Akıl Yürütme (Hikayeye gizlenmiş basit dört işlem veya sayma sorusu)
-4. Görsel/Uzamsal Algı (Hikayedeki yönler, şekiller veya konumlar üzerinden zihinsel canlandırma sorusu)
-5. Örüntü Tanıma (Hikayedeki olayların, renklerin veya nesnelerin dizilimi ile ilgili bir kural bulma sorusu)
+Karakter Kuralları
+	•	Karakterlerin isimleri ve özellikleri net olmalıdır.
+	•	Eğer hayvan karakterler varsa özellikleri ve rolleri açıkça belirtilmelidir.
 
-Soruların zorluk seviyesi 7-12 yaş için düşündürücü ama çözülebilir olmalıdır.
-- Her soru için 4 seçenek olmalı
-- Doğru cevap için olumlu, yanlış cevap için yapıcı geri bildirim içermeli
+Hikaye İçeriği Kuralları
+
+Hikayede mutlaka aşağıdaki unsurlar bulunmalıdır:
+	•	En az 2 karakter
+	•	En az 1 hayvan karakter
+	•	En az bir yön veya konum bilgisi (sağ, sol, ön, arka, yukarı vb.)
+	•	En az bir sayı veya sayılabilir nesne
+	•	En az bir tekrar eden örüntü veya sıra (renk, nesne veya olay sırası)
+
+Bu unsurlar sonradan sorulacak soruların temelini oluşturacaktır.
+
+SORU OLUŞTURMA KURALLARI
+
+Hikayeden sonra tam 5 adet çoktan seçmeli soru oluştur. Her soru FARKLI bir türde olmalıdır.
+
+Çok önemli kurallar:
+	•	Soruların cevabı mutlaka hikâyede bulunmalıdır.
+	•	Sorular hikâyede geçen olay, sayı, yön, karakter veya nesnelerden oluşturulmalıdır.
+	•	Hikâyede olmayan hiçbir bilgi sorulamaz.
+	•	Her soruda 4 seçenek olmalıdır.
+	•	Her sorunun türü (questionType) mutlaka belirtilmelidir.
+
+SORU TÜRLERİ (Bu sırada olmalı, her biri FARKLI bir tür):
+
+1. questionType: "Okuduğunu Anlama" → Hikâyenin ana fikri veya önemli bir detayını sor. Örnek: "Hikâyede Elif neden ormana gitti?"
+2. questionType: "Sözel Mantık" → Karakterlerin davranışları veya ilişkileri üzerinden mantık çıkarımı yap. Örnek: "Ali kediye yardım ettiyse, Ali nasıl biridir?"
+3. questionType: "Matematiksel Akıl Yürütme" → Hikâyede geçen sayıları kullanarak toplama, çıkarma veya sayma sorusu sor. Örnek: "Bahçede 3 elma ve 4 armut varsa toplam kaç meyve vardır?"
+4. questionType: "Görsel Uzamsal Algı" → Hikâyede geçen yön, konum veya mekân ilişkisi sor. Örnek: "Kedi ağacın sağında, köpek solundaysa, kediye göre köpek nerededir?"
+5. questionType: "Örüntü Tanıma" → Hikâyede geçen tekrar eden renk, nesne veya olay dizisinden kural bul. Örnek: "Kırmızı, mavi, kırmızı, mavi... sıradaki ne olur?"
+
+ÖNEMLİ: 5 sorunun 5'i de FARKLI türde olmalıdır. Aynı türden birden fazla soru YASAKTIR.
 
 Yanıtı aşağıdaki JSON yapısında formatla (sadece JSON döndür, başka metin ekleme):
 {
@@ -594,6 +632,7 @@ Yanıtı aşağıdaki JSON yapısında formatla (sadece JSON döndür, başka me
   "summary": "Resim oluşturma için detaylı sahne özeti (karakterler, ortam ve eylemler)",
   "questions": [
     {
+      "questionType": "Okuduğunu Anlama",
       "text": "Soru metni",
       "options": ["Seçenek 1", "Seçenek 2", "Seçenek 3", "Seçenek 4"],
       "correctAnswer": 0,
@@ -601,6 +640,34 @@ Yanıtı aşağıdaki JSON yapısında formatla (sadece JSON döndür, başka me
         "correct": "Doğru cevap için açıklama",
         "incorrect": "Yanlış cevap için açıklama"
       }
+    },
+    {
+      "questionType": "Sözel Mantık",
+      "text": "...",
+      "options": ["...", "...", "...", "..."],
+      "correctAnswer": 0,
+      "feedback": { "correct": "...", "incorrect": "..." }
+    },
+    {
+      "questionType": "Matematiksel Akıl Yürütme",
+      "text": "...",
+      "options": ["...", "...", "...", "..."],
+      "correctAnswer": 0,
+      "feedback": { "correct": "...", "incorrect": "..." }
+    },
+    {
+      "questionType": "Görsel Uzamsal Algı",
+      "text": "...",
+      "options": ["...", "...", "...", "..."],
+      "correctAnswer": 0,
+      "feedback": { "correct": "...", "incorrect": "..." }
+    },
+    {
+      "questionType": "Örüntü Tanıma",
+      "text": "...",
+      "options": ["...", "...", "...", "..."],
+      "correctAnswer": 0,
+      "feedback": { "correct": "...", "incorrect": "..." }
     }
   ]
 }`;
@@ -612,11 +679,11 @@ Yanıtı aşağıdaki JSON yapısında formatla (sadece JSON döndür, başka me
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 systemInstruction: {
-                    parts: [{ text: 'Sen yetenekli bir çocuk hikayesi yazarısın. Eğlenceli, eğitici ve çarpıcı başlıkları olan yaşa uygun çocuklara uygun mantık veya matematik sorularından oluşan hikayeler yarat. Soruların cevaplarını yine hikayede ver. Başlıklar kısa, akılda kalıcı ve hikayenin özünü yansıtan nitelikte olmalı. Yanıtını sadece JSON formatında ver.' }]
+                    parts: [{ text: 'Sen yetenekli bir çocuk hikayesi yazarısın. Eğlenceli, eğitici ve çarpıcı başlıkları olan çocuklara uygun hikayeler yarat. Hikayeden sonra 5 FARKLI türde soru üret: Okuduğunu Anlama, Sözel Mantık, Matematiksel Akıl Yürütme, Görsel Uzamsal Algı ve Örüntü Tanıma. ÇOK ÖNEMLİ: Her sorunun cevabı MUTLAKA hikaye metninde açıkça geçmeli. Hikayede geçmeyen sayı, isim, yön veya bilgi ASLA sorulmamalı. Önce hikayeyi yaz, sonra hikayeyi tekrar oku ve sadece hikayedeki bilgilere dayanan sorular oluştur. Yanıtını sadece JSON formatında ver.' }]
                 },
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
-                    temperature: 0.7,
+                    temperature: 0.85,
                     maxOutputTokens: 4000,
                     responseMimeType: 'application/json'
                 }
