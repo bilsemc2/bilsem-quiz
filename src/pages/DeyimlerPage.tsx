@@ -34,7 +34,7 @@ const LazyImage = ({ src, alt, onClick, onError }: { src: string; alt: string; o
     useEffect(() => {
         const observer = new IntersectionObserver(
             ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.disconnect(); } },
-            { rootMargin: '200px' }
+            { rootMargin: '500px' }
         );
         if (imgRef.current) observer.observe(imgRef.current);
         return () => observer.disconnect();
@@ -49,6 +49,9 @@ const LazyImage = ({ src, alt, onClick, onError }: { src: string; alt: string; o
                     src={currentSrc}
                     alt={alt}
                     loading="lazy"
+                    decoding="async"
+                    width={300}
+                    height={300}
                     onLoad={() => setLoaded(true)}
                     onError={() => {
                         if (!useFallback) {
