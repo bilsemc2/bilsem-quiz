@@ -85,12 +85,20 @@ export const useAuthSessionController = (): AuthContextValue => {
     }, [syncAuthState]);
 
     const signOut = useCallback(async () => {
-        await signOutUser();
-
-        activeUserIdRef.current = null;
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
+        try {
+            await signOutUser();
+        } catch (err) {
+            // Session zaten yoksa (AuthSessionMissingError) sessizce devam et
+            const isSessionMissing = err instanceof Error && err.name === 'AuthSessionMissingError';
+            if (!isSessionMissing) {
+                throw err;
+            }
+        } finally {
+            activeUserIdRef.current = null;
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+        }
     }, []);
 
     const refreshProfile = useCallback(async () => {
