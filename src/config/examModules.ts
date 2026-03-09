@@ -123,7 +123,7 @@ export const EXAM_MODULES: ExamModule[] = [
         active: true
     },
     {
-        id: 'number-cipher',
+        id: 'sayisal-sifre',
         title: 'Sayısal Şifre',
         link: '/games/sayisal-sifre',
         tuzo: '5.2.3 Soyut Sayısal Mantık',
@@ -215,7 +215,7 @@ export const EXAM_MODULES: ExamModule[] = [
         active: true
     },
     {
-        id: 'noise-filter',
+        id: 'gurultu-filtresi',
         title: 'Gürültü Filtresi',
         link: '/games/gurultu-filtresi',
         tuzo: '5.7.1 Seçici Dikkat',
@@ -320,7 +320,7 @@ export const EXAM_MODULES: ExamModule[] = [
 
     // ALGI
     {
-        id: 'pattern-painter',
+        id: 'desen-boyama',
         title: 'Desen Boyama',
         link: '/games/desen-boyama',
         tuzo: '5.3.2 Desen Analizi',
@@ -365,6 +365,153 @@ export const EXAM_MODULES: ExamModule[] = [
         link: '/games/labirent',
         tuzo: '5.3.3 Uzamsal İlişki Çözümleme',
         category: 'perception',
+        timeLimit: 120,
+        active: true
+    },
+
+    // ═══ Yeni Eklenenler (Bireysel Değerlendirme'den) ═══
+
+    // BELLEK
+    {
+        id: 'gorsel-hafiza',
+        title: 'Görsel Hafıza',
+        link: '/games/gorsel-hafiza',
+        tuzo: '5.4.2 Görsel Kısa Süreli Bellek',
+        category: 'memory',
+        timeLimit: 120,
+        active: true
+    },
+    {
+        id: 'invisible-tower',
+        title: 'Görünmez Kule',
+        link: '/games/gorunmez-kule',
+        tuzo: '5.9.2 Çalışma Belleği (Güncelleme)',
+        category: 'memory',
+        timeLimit: 120,
+        active: true
+    },
+    {
+        id: 'stream-sum',
+        title: 'Akışkan Toplam',
+        link: '/games/akiskan-toplam',
+        tuzo: '5.9.2 Çalışma Belleği (Güncelleme)',
+        category: 'memory',
+        timeLimit: 120,
+        active: true
+    },
+    {
+        id: 'number-memory',
+        title: 'Sayısal Hafıza',
+        link: '/games/sayisal-hafiza',
+        tuzo: '5.4.1 Sayısal Kısa Süreli Bellek',
+        category: 'memory',
+        timeLimit: 120,
+        active: true
+    },
+
+    // MANTIK
+    {
+        id: 'matematik-grid',
+        title: 'Matematik Grid',
+        link: '/games/matematik-grid',
+        tuzo: '5.2.1 Sayısal Akıl Yürütme',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
+    {
+        id: 'matris-bulmaca',
+        title: 'Matris Bulmaca',
+        link: '/games/matris-bulmaca',
+        tuzo: '5.5.2 Kural Çıkarsama',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
+    {
+        id: 'sekil-cebiri',
+        title: 'Şekil Cebiri',
+        link: '/games/sekil-cebiri',
+        tuzo: '5.5.2 Kural Çıkarsama',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
+    {
+        id: 'lazer-labirent',
+        title: 'Lazer Labirent',
+        link: '/games/lazer-labirent',
+        tuzo: '5.3.3 Uzamsal İlişki Çözümleme',
+        category: 'logic',
+        timeLimit: 120,
+        active: true
+    },
+
+    // DİKKAT
+    {
+        id: 'pencil-stroop',
+        title: 'Renkli Kalemler',
+        link: '/games/renkli-kalemler',
+        tuzo: '5.8.1 Bilişsel Esneklik',
+        category: 'attention',
+        timeLimit: 90,
+        active: true
+    },
+    {
+        id: 'emoji-stroop',
+        title: 'Emoji Stroop',
+        link: '/games/emoji-stroop',
+        tuzo: '5.8.2 Tepki Kontrolü (İnhibisyon)',
+        category: 'attention',
+        timeLimit: 90,
+        active: true
+    },
+    {
+        id: 'direction-stroop',
+        title: 'Yön Stroop',
+        link: '/games/yon-stroop',
+        tuzo: '5.8.1 Bilişsel Esneklik',
+        category: 'attention',
+        timeLimit: 90,
+        active: true
+    },
+
+    // SÖZEL
+    {
+        id: 'idioms',
+        title: 'Deyimler Oyunu',
+        link: '/games/deyimler-oyunu',
+        tuzo: '5.1.3 Sözlü Anlama',
+        category: 'verbal',
+        timeLimit: 120,
+        active: true
+    },
+    {
+        id: 'story-quiz',
+        title: 'Hikaye Quiz',
+        link: '/stories/quiz-game',
+        tuzo: '5.1.3 Sözlü Anlama',
+        category: 'verbal',
+        timeLimit: 180,
+        active: true
+    },
+
+    // HIZ
+    {
+        id: 'kelime-avi',
+        title: 'Kelime Avı',
+        link: '/games/kelime-avi',
+        tuzo: '5.6.1 Algısal İşlem Hızı',
+        category: 'speed',
+        timeLimit: 120,
+        active: true
+    },
+    {
+        id: 'zaman-gezgini',
+        title: 'Zaman Gezgini',
+        link: '/games/zaman-gezgini',
+        tuzo: '5.2.1 Sayısal Akıl Yürütme',
+        category: 'logic',
         timeLimit: 120,
         active: true
     },
