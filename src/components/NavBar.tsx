@@ -1,8 +1,8 @@
 // NavBar.tsx — Faz 3: Kid-UI Çocuk Dostu Tasarım
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Sun, Moon, Menu, X, User, LogOut, Zap, ChevronDown, Crown, Sparkles, Gamepad2, Languages } from 'lucide-react';
+import { useAuth } from '@/contexts/auth/useAuth';
+import { Sun, Moon, Menu, X, User, LogOut, Zap, ChevronDown, Crown, Sparkles, Gamepad2, Languages, BookOpen } from 'lucide-react';
 import { User as AuthUser } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authRepository } from '@/server/repositories/authRepository';
@@ -120,6 +120,17 @@ const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropd
               </Link>
 
               <Link
+                to="/stories"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-nunito font-bold text-sm tracking-wide text-black dark:text-white hover:bg-cyber-purple/10 transition-colors group"
+              >
+                <div className="w-9 h-9 bg-cyber-purple/10 border-2 border-cyber-purple/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <BookOpen className="w-4 h-4 text-cyber-purple" />
+                </div>
+                <span className="uppercase">Hikayeler</span>
+              </Link>
+
+              <Link
                 to="/deyimler"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl font-nunito font-bold text-sm tracking-wide text-black dark:text-white hover:bg-cyber-pink/10 transition-colors group"
@@ -159,7 +170,6 @@ const NavBar = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isVip, setIsVip] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     document.documentElement.classList.contains('dark') ? 'dark' : 'light'
@@ -192,17 +202,14 @@ const NavBar = () => {
     const checkUser = async () => {
       if (!user) {
         setIsAdmin(false);
-        setIsVip(false);
         return;
       }
       try {
         const profile = await authRepository.getProfileByUserId(user.id);
         setIsAdmin(profile?.is_admin || false);
-        setIsVip(profile?.is_vip || false);
       } catch (error) {
         console.error("Kullanıcı bilgileri kontrol edilirken hata:", error);
         setIsAdmin(false);
-        setIsVip(false);
       }
     };
 
@@ -215,6 +222,7 @@ const NavBar = () => {
   const menuItems = [
     { name: "Bilsem", path: "/bilsem" },
     { name: "BİLSEM Zeka", path: "/bilsem-zeka", showWhenAuth: true },
+    { name: "Hikayeler", path: "/stories", showWhenAuth: true },
     { name: "Deyimler", path: "/deyimler", showWhenAuth: true },
     { name: "Admin", path: "/admin", showWhenAuth: true, adminOnly: true },
     { name: "Fiyatlandırma", path: "/pricing", hideWhenAuth: true },
