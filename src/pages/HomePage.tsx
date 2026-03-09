@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { KidButton, KidCard, KidBadge } from '../components/kid-ui';
 import { loadStudentCountLabel } from '@/features/content/model/homeUseCases';
+import ClothReceipt3D from '../components/ClothReceipt3D';
 
 // ═══════════════════════════════════════════════
 // Floating decoration component
@@ -233,39 +234,14 @@ const HomePage: React.FC = () => {
               </motion.a>
             </motion.div>
 
-            {/* Right mascot area */}
+            {/* Right — Interactive 3D Receipt */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.7, type: 'spring', stiffness: 100 }}
-              className="relative"
+              className="relative hidden lg:block"
             >
-              <div className="relative w-64 h-64 lg:w-80 lg:h-80">
-                <img
-                  src="images/logo2.webp"
-                  alt="Beynini Kullan!"
-                  width={400}
-                  height={400}
-                  loading="eager"
-                  className="w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(126,48,225,0.3)]"
-                />
-
-                {/* Floating badges around logo */}
-                <motion.div
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 2.5, repeat: Infinity }}
-                  className="absolute -top-4 -right-4"
-                >
-                  <KidBadge variant="xp">⭐ {studentCount} Öğrenci</KidBadge>
-                </motion.div>
-                <motion.div
-                  animate={{ y: [0, 8, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-                  className="absolute -bottom-2 -left-4"
-                >
-                  <KidBadge variant="level">🎮 57+ Oyun</KidBadge>
-                </motion.div>
-              </div>
+              <ClothReceipt3D className="w-80 h-[420px] lg:w-96 lg:h-[500px]" />
             </motion.div>
           </div>
 
