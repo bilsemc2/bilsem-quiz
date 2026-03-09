@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CheckCircle2, XCircle, ArrowRight, RotateCcw, Trophy, Star } from 'lucide-react';
 
 interface Question {
@@ -102,6 +103,12 @@ export function QuizSection({ questions, onComplete, onBackToStory }: QuizSectio
                 <ArrowRight className="w-4 h-4 rotate-180" /> Hikayeye Dön
               </button>
             )}
+            <Link
+              to="/stories"
+              className="w-full py-3.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl font-bold transition-all hover:bg-purple-100 dark:hover:bg-purple-900/30 text-sm flex items-center justify-center gap-2 border-2 border-purple-200 dark:border-purple-800"
+            >
+              📚 Hikayelere Dön
+            </Link>
           </div>
         </div>
       </div>
