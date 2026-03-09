@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Drawer,
@@ -183,6 +183,7 @@ const AdminPage: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(!isMobile);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>(BASE_MENU_ITEMS);
+  const verifiedUserIdRef = useRef<string | null>(null);
 
   const checkNotifications = useCallback(async () => {
     if (!auth.user?.id) return;
@@ -200,6 +201,12 @@ const AdminPage: React.FC = () => {
     if (!auth.user?.id) {
       setError('Bu sayfaya erişim yetkiniz yok');
       setLoading(false);
+      verifiedUserIdRef.current = null;
+      return;
+    }
+
+    // Aynı kullanıcı zaten doğrulanmışsa tekrar loading gösterme
+    if (verifiedUserIdRef.current === auth.user.id) {
       return;
     }
 
@@ -213,6 +220,7 @@ const AdminPage: React.FC = () => {
         return;
       }
 
+      verifiedUserIdRef.current = auth.user.id;
       await checkNotifications();
     } catch (err) {
       console.error('Admin kontrolü yapılırken hata:', err);

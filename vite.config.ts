@@ -165,7 +165,7 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true
+        enabled: false
       }
     })
   ],
@@ -227,6 +227,6 @@ export default defineConfig({
     },
   },
   esbuild: {
-    drop: ['console', 'debugger'],
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
 });

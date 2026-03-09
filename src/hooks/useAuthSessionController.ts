@@ -24,6 +24,12 @@ export const useAuthSessionController = (): AuthContextValue => {
 
     const syncAuthState = useCallback(async (nextUser: User | null) => {
         const previousUserId = activeUserIdRef.current;
+
+        // Aynı kullanıcı ID'si varsa (örn. TOKEN_REFRESHED) gereksiz re-render'ı önle
+        if (nextUser?.id && previousUserId === nextUser.id) {
+            return;
+        }
+
         activeUserIdRef.current = nextUser?.id ?? null;
 
         setUser(nextUser);

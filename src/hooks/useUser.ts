@@ -37,7 +37,10 @@ export const useUser = () => {
         getCurrentUser();
 
         // Auth durumu değiştiğinde yeniden kontrol et
-        const subscription = authRepository.onAuthStateChange((authUser) => {
+        // TOKEN_REFRESHED event'ini atla (tab geçişlerinde gereksiz re-render önlenir)
+        const subscription = authRepository.onAuthStateChange((authUser, event) => {
+            if (event === 'TOKEN_REFRESHED') return;
+
             if (authUser) {
                 getCurrentUser();
             } else {
