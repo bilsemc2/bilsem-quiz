@@ -54,13 +54,6 @@ const AynaUstasi: React.FC = () => {
     const totalHits = currentLevel?.targets.filter(t => t.hit).length || 0;
     const totalTargets = currentLevel?.targets.length || 0;
 
-    // Auto-start from Arcade Hub
-    useEffect(() => {
-        if (location.state?.autoStart && gamePhase === 'idle') {
-            startGame();
-        }
-    }, [location.state]);
-
     const startGame = useCallback(() => {
         window.scrollTo(0, 0);
         setGamePhase('playing');
@@ -77,6 +70,13 @@ const AynaUstasi: React.FC = () => {
         isResolvingRef.current = false;
         gameStartTimeRef.current = Date.now();
     }, []);
+
+    // Auto-start from Arcade Hub
+    useEffect(() => {
+        if (location.state?.autoStart && gamePhase === 'idle') {
+            startGame();
+        }
+    }, [gamePhase, location.state, startGame]);
 
     const generateProceduralLevel = (num: number): Level => {
         const targetCount = Math.min(3 + Math.floor(num / 1.5), 12);

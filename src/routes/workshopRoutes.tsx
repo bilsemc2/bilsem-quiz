@@ -1,6 +1,6 @@
 import React from 'react';
 import { Route, Navigate } from 'react-router-dom';
-import RequireAuth from '@/components/RequireAuth';
+import { protectElement } from '@/components/guards/protectElement';
 
 // Workshop Pages (Lazy)
 const GenelYetenekPage = React.lazy(() => import('@/pages/workshops/GenelYetenekPage'));
@@ -26,9 +26,9 @@ export const workshopRoutes = [
     // Music Exam (AI-powered)
     <Route key="muzik-sinav" path="/atolyeler/muzik-sinav" element={<MuzikSinavRoutes />} />,
     <Route key="muzik-sinav-sub" path="/atolyeler/muzik-sinav/*" element={<MuzikSinavRoutes />} />,
-    <Route key="tablet" path="/atolyeler/tablet-degerlendirme" element={<RequireAuth><TabletAssessmentPage /></RequireAuth>} />,
-    <Route key="bireysel" path="/atolyeler/bireysel-degerlendirme" element={<RequireAuth><IndividualAssessmentPage /></RequireAuth>} />,
-    <Route key="simul" path="/atolyeler/sinav-simulasyonu" element={<RequireAuth><ExamSimulatorPage /></RequireAuth>} />,
-    <Route key="devam" path="/atolyeler/sinav-simulasyonu/devam" element={<RequireAuth><ExamContinuePage /></RequireAuth>} />,
-    <Route key="sonuc" path="/atolyeler/sinav-simulasyonu/sonuc" element={<RequireAuth><ExamResultPage /></RequireAuth>} />,
+    <Route key="tablet" path="/atolyeler/tablet-degerlendirme" element={protectElement(<TabletAssessmentPage />)} />,
+    <Route key="bireysel" path="/atolyeler/bireysel-degerlendirme" element={protectElement(<IndividualAssessmentPage />)} />,
+    <Route key="simul" path="/atolyeler/sinav-simulasyonu" element={protectElement(<ExamSimulatorPage />)} />,
+    <Route key="devam" path="/atolyeler/sinav-simulasyonu/devam" element={protectElement(<ExamContinuePage />)} />,
+    <Route key="sonuc" path="/atolyeler/sinav-simulasyonu/sonuc" element={protectElement(<ExamResultPage />)} />,
 ];

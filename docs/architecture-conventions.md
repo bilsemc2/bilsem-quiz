@@ -4,6 +4,7 @@ Bu dokuman, `CLEAN_CODE_ARCHITECTURE_PLAN.md` icindeki Faz 1 hedeflerini kod duz
 
 ## Klasor Katmanlari
 
+- `src/app`: bootstrap, provider composition, router shell.
 - `src/shared`: framework-agnostic ortak tipler, saf util fonksiyonlar, sabitler.
 - `src/features`: domain odakli is kurallari ve use-case'ler.
 - `src/server`: veri erisimi ve AI provider adapter'lari.
@@ -11,7 +12,10 @@ Bu dokuman, `CLEAN_CODE_ARCHITECTURE_PLAN.md` icindeki Faz 1 hedeflerini kod duz
 
 ## Import Sinirlari
 
+- `src/app` en ust katmandir; bootstrap ve route composition burada kalir.
+- `src/shared` hicbir ust katmani import etmez.
 - `src/features` ve `src/server` katmanlari `src/pages` veya `src/components` icinden import etmez.
+- `src/features` ve `src/server` katmanlari `src/app`, `src/contexts`, `src/hooks`, `src/routes` icinden import etmez.
 - Feature kodu UI tiplerine ihtiyac duyarsa tipler `src/shared` altina tasinmalidir.
 - AI provider cagrilari yalnizca `src/server/ai` katmanindan yapilir.
 

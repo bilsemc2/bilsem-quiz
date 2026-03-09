@@ -3,8 +3,9 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { Trophy, BarChart3, CheckCircle2, XCircle, Clock, Target, Repeat, Home, TrendingUp } from 'lucide-react';
-import { useExam } from '../../contexts/ExamContext';
+import { useExam } from '../../contexts/exam/useExam';
 import { ExamCategory } from '../../types/examTypes';
+import { summarizeExamSession } from '@/features/exam/model/examSessionModel';
 
 const CATEGORY_LABELS: Record<ExamCategory, { label: string }> = {
     memory: { label: 'Bellek' }, logic: { label: 'Mantık' }, attention: { label: 'Dikkat' },
@@ -24,26 +25,15 @@ const ExamResultPage: React.FC = () => {
 
     if (!session || session.results.length === 0) return null;
 
-    const passedCount = session.results.filter(r => r.passed).length;
-    const failedCount = session.results.filter(r => !r.passed).length;
-    const totalScore = session.results.reduce((sum, r) => sum + r.score, 0);
-    const maxScore = session.results.reduce((sum, r) => sum + r.maxScore, 0);
-    const scorePercentage = Math.round((totalScore / maxScore) * 100);
-    const totalDuration = session.results.reduce((sum, r) => sum + r.duration, 0);
-    const avgLevel = (session.results.reduce((sum, r) => sum + r.level, 0) / session.results.length).toFixed(1);
-
-    const categoryStats: Record<string, { passed: number; total: number }> = {};
-    session.results.forEach(r => {
-        if (!categoryStats[r.category]) categoryStats[r.category] = { passed: 0, total: 0 };
-        categoryStats[r.category].total++;
-        if (r.passed) categoryStats[r.category].passed++;
-    });
-
-    // BİLSEMc2 Zeka Puanı (BZP)
-    const DIFF: Record<number, number> = { 1: 0.7, 2: 0.85, 3: 1.0, 4: 1.15, 5: 1.3 };
-    const ws = session.results.map(r => (r.maxScore > 0 ? r.score / r.maxScore : 0) * (DIFF[r.level] || 1.0));
-    const avg = ws.reduce((s, v) => s + v, 0) / ws.length;
-    const bzpScore = Math.round(Math.max(70, Math.min(145, 100 + (avg - 0.5) * 60)));
+    const summary = summarizeExamSession(session);
+    const passedCount = summary.passedCount;
+    const failedCount = summary.failedCount;
+    const totalScore = summary.totalScore;
+    const scorePercentage = summary.scorePercentage;
+    const totalDuration = summary.totalDuration;
+    const avgLevel = summary.averageLevel.toFixed(1);
+    const categoryStats = summary.categoryStats;
+    const bzpScore = summary.bzpScore;
 
     const getBZP = (s: number) => {
         if (s >= 130) return { label: 'Üstün', bg: 'bg-cyber-pink', text: 'text-white', desc: 'Olağanüstü bilişsel yetenek' };
@@ -106,7 +96,7 @@ const ExamResultPage: React.FC = () => {
                     {[
                         { icon: Clock, value: Math.round(totalDuration / 60), label: 'Dakika', color: 'text-cyber-blue' },
                         { icon: Target, value: session.modules.length, label: 'Modül', color: 'text-cyber-pink' },
-                        { icon: TrendingUp, value: Math.max(...session.results.map(r => r.level)), label: 'Max Seviye', color: 'text-cyber-emerald' },
+                        { icon: TrendingUp, value: summary.maxLevelReached, label: 'Max Seviye', color: 'text-cyber-emerald' },
                         { icon: BarChart3, value: totalScore, label: 'Toplam Puan', color: 'text-cyber-gold' }
                     ].map((s, i) => (
                         <div key={i} className="bg-white dark:bg-slate-800 border-3 border-black/10 rounded-2xl p-5 text-center hover:-translate-y-1 transition-transform">

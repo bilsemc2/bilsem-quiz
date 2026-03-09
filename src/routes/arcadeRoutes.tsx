@@ -1,6 +1,6 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
-import RequireAuth from '@/components/RequireAuth';
+import { protectElement } from '@/components/guards/protectElement';
 
 // Arcade Games (Lazy)
 const ArcadeHubPage = React.lazy(() => import('@/pages/Arcade/ArcadeHubPage'));
@@ -24,19 +24,19 @@ const SevimliMantik = React.lazy(() => import('@/components/Arcade/Games/Sevimli
  * All /bilsem-zeka/* routes - protected, require authentication
  */
 export const arcadeRoutes = [
-    <Route key="hub" path="/bilsem-zeka" element={<RequireAuth><ArcadeHubPage /></RequireAuth>} />,
-    <Route key="karanlik" path="/bilsem-zeka/karanlik-labirent" element={<RequireAuth><DarkMaze /></RequireAuth>} />,
-    <Route key="balon" path="/bilsem-zeka/renkli-balon" element={<RequireAuth><RenkliBalon /></RequireAuth>} />,
-    <Route key="ters" path="/bilsem-zeka/ters-navigator" element={<RequireAuth><TersNavigator /></RequireAuth>} />,
-    <Route key="ayna" path="/bilsem-zeka/ayna-ustasi" element={<RequireAuth><AynaUstasi /></RequireAuth>} />,
-    <Route key="kraft" path="/bilsem-zeka/kraft-origami" element={<RequireAuth><KraftOrigami /></RequireAuth>} />,
-    <Route key="labirent" path="/bilsem-zeka/labirent-ustasi" element={<RequireAuth><LabirentUstasi /></RequireAuth>} />,
-    <Route key="top" path="/bilsem-zeka/oruntulu-top" element={<RequireAuth><OruntuluTop /></RequireAuth>} />,
-    <Route key="kart" path="/bilsem-zeka/kart-dedektifi" element={<RequireAuth><KartDedektifi /></RequireAuth>} />,
-    <Route key="neseli" path="/bilsem-zeka/neseli-balonlar" element={<RequireAuth><NeseliBalonlar /></RequireAuth>} />,
-    <Route key="chroma" path="/bilsem-zeka/chromabreak" element={<RequireAuth><ChromaBreak /></RequireAuth>} />,
-    <Route key="yol" path="/bilsem-zeka/yol-bulmaca" element={<RequireAuth><YolBulmaca /></RequireAuth>} />,
-    <Route key="lambalar" path="/bilsem-zeka/renkli-lambalar" element={<RequireAuth><RenkliLambalar /></RequireAuth>} />,
-    <Route key="hafiza" path="/bilsem-zeka/chroma-hafiza" element={<RequireAuth><ChromaHafiza /></RequireAuth>} />,
-    <Route key="sevimli" path="/bilsem-zeka/sevimli-mantik" element={<RequireAuth><SevimliMantik /></RequireAuth>} />,
+    <Route key="hub" path="/bilsem-zeka" element={protectElement(<ArcadeHubPage />)} />,
+    <Route key="karanlik" path="/bilsem-zeka/karanlik-labirent" element={protectElement(<DarkMaze />)} />,
+    <Route key="balon" path="/bilsem-zeka/renkli-balon" element={protectElement(<RenkliBalon />)} />,
+    <Route key="ters" path="/bilsem-zeka/ters-navigator" element={protectElement(<TersNavigator />)} />,
+    <Route key="ayna" path="/bilsem-zeka/ayna-ustasi" element={protectElement(<AynaUstasi />)} />,
+    <Route key="kraft" path="/bilsem-zeka/kraft-origami" element={protectElement(<KraftOrigami />)} />,
+    <Route key="labirent" path="/bilsem-zeka/labirent-ustasi" element={protectElement(<LabirentUstasi />)} />,
+    <Route key="top" path="/bilsem-zeka/oruntulu-top" element={protectElement(<OruntuluTop />)} />,
+    <Route key="kart" path="/bilsem-zeka/kart-dedektifi" element={protectElement(<KartDedektifi />)} />,
+    <Route key="neseli" path="/bilsem-zeka/neseli-balonlar" element={protectElement(<NeseliBalonlar />)} />,
+    <Route key="chroma" path="/bilsem-zeka/chromabreak" element={protectElement(<ChromaBreak />)} />,
+    <Route key="yol" path="/bilsem-zeka/yol-bulmaca" element={protectElement(<YolBulmaca />)} />,
+    <Route key="lambalar" path="/bilsem-zeka/renkli-lambalar" element={protectElement(<RenkliLambalar />)} />,
+    <Route key="hafiza" path="/bilsem-zeka/chroma-hafiza" element={protectElement(<ChromaHafiza />)} />,
+    <Route key="sevimli" path="/bilsem-zeka/sevimli-mantik" element={protectElement(<SevimliMantik />)} />,
 ];

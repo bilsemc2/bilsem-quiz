@@ -1,0 +1,40 @@
+import {
+  Anchor,
+  Circle,
+  Cloud,
+  Crown,
+  Diamond,
+  Flower,
+  Ghost,
+  Heart,
+  Hexagon,
+  Moon,
+  Music,
+  Square,
+  Star,
+  Sun,
+  Triangle,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
+
+import type { IconType } from "./types";
+
+export const ICON_MAP: Record<IconType, LucideIcon> = {
+  Star,
+  Circle,
+  Square,
+  Triangle,
+  Hexagon,
+  Diamond,
+  Heart,
+  Cloud,
+  Sun,
+  Moon,
+  Zap,
+  Anchor,
+  Music,
+  Ghost,
+  Flower,
+  Crown,
+};

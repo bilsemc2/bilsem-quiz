@@ -7,15 +7,20 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, CheckCircle, Sparkles, Loader2 } from 'lucide-react';
 import { useMicrophone } from '../hooks/useMicrophone';
-import { useExam } from '../contexts/ExamContext';
-import { useAIMuzik } from '../contexts/MusicAIContext';
+import { useExam } from '../contexts/exam/useExam';
+import { useAIMuzik } from '../contexts/musicAI/useAIMuzik';
 import { MicrophoneButton } from '../components/MicrophoneButton';
 
 const TOTAL_PROMPTS = 2;
 type Phase = 'intro' | 'loading' | 'listen' | 'create' | 'result';
 
 export default function UretkenlikPage() {
-    const ai = useAIMuzik();
+    const {
+        piano,
+        initPiano,
+        requestContent,
+        requestAnalysis
+    } = useAIMuzik();
     const mic = useMicrophone();
     const { submitModuleScore, isModuleComplete } = useExam();
 
@@ -24,11 +29,11 @@ export default function UretkenlikPage() {
     const [scores, setScores] = useState<number[]>([]);
     const [aiTheme, setAiTheme] = useState<{ theme: string; inspiration: string; hints: string[] } | null>(null);
 
-    useEffect(() => { ai.initPiano(); }, []);
+    useEffect(() => { initPiano(); }, [initPiano]);
 
     const startPrompt = useCallback(async () => {
         setPhase('loading');
-        const content = await ai.requestContent('uretkenlik', currentPrompt, TOTAL_PROMPTS);
+        const content = await requestContent('uretkenlik', currentPrompt, TOTAL_PROMPTS);
         const creativity = content.creativity;
         setAiTheme(creativity ? { theme: creativity.theme, inspiration: creativity.inspiration, hints: creativity.hints } : null);
 
@@ -36,9 +41,9 @@ export default function UretkenlikPage() {
         const inspirationNotes = ['C4', 'E4', 'G4', 'A4'];
         const inspirationDurations = [0.5, 0.5, 0.5, 0.5];
         setPhase('listen');
-        if (ai.piano?.isReady) await ai.piano.playMelody(inspirationNotes, inspirationDurations);
+        if (piano?.isReady) await piano.playMelody(inspirationNotes, inspirationDurations);
         setTimeout(() => setPhase('create'), 800);
-    }, [currentPrompt, ai]);
+    }, [currentPrompt, piano, requestContent]);
 
     const handleMicToggle = useCallback(async () => {
         if (mic.isListening) {
@@ -53,7 +58,7 @@ export default function UretkenlikPage() {
 
             // Get audio recording for AI multimodal creativity analysis
             const audioData = await mic.getRecordingBase64();
-            ai.requestAnalysis(
+            requestAnalysis(
                 'uretkenlik',
                 { promptIndex: currentPrompt },
                 { capturedNotes: mic.capturedNotes, uniqueNotes, length, creativityPoints },
@@ -75,7 +80,7 @@ export default function UretkenlikPage() {
             mic.resetCapture();
             await mic.startListening();
         }
-    }, [mic, currentPrompt, scores, submitModuleScore, ai]);
+    }, [currentPrompt, mic, requestAnalysis, scores, submitModuleScore]);
 
     const completed = isModuleComplete('uretkenlik');
     const totalScore = Math.min(15, scores.reduce((a, b) => a + b, 0));

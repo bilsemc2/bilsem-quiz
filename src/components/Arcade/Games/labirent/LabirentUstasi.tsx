@@ -61,13 +61,6 @@ const LabirentUstasi: React.FC = () => {
     const MOVE_THRESHOLD = 25;
     const MOVE_COOLDOWN = 150;
 
-    // Auto-start from Arcade Hub
-    useEffect(() => {
-        if (location.state?.autoStart && gamePhase === 'idle') {
-            startGame();
-        }
-    }, [location.state]);
-
     const startGame = useCallback(() => {
         window.scrollTo(0, 0);
         setGamePhase('playing');
@@ -81,6 +74,13 @@ const LabirentUstasi: React.FC = () => {
         gameStartTimeRef.current = Date.now();
         generateLevel(0);
     }, []);
+
+    // Auto-start from Arcade Hub
+    useEffect(() => {
+        if (location.state?.autoStart && gamePhase === 'idle') {
+            startGame();
+        }
+    }, [gamePhase, location.state, startGame]);
 
     const generateLevel = (levelIdx: number) => {
         const level = LEVELS[levelIdx];
@@ -154,7 +154,7 @@ const LabirentUstasi: React.FC = () => {
                 }, 1200);
             }
         }
-    }, [playerPosition, grid, gamePhase, currentLevel, showLevelWin, moves]);
+    }, [currentLevel, gamePhase, grid, playerPosition, showLevelWin]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {

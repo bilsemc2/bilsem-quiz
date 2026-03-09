@@ -1,4 +1,10 @@
 import { supabase } from '@/lib/supabase';
+import {
+    gamePlayRepository,
+    type GamePlayRecord,
+    type GamePlayRecentWorkshopRecord,
+    type GamePlayWorkshopRecord
+} from '@/server/repositories/gamePlayRepository';
 
 export interface AdminStatisticsStudentRecord {
     id: string;
@@ -11,32 +17,27 @@ export interface AdminStatisticsStudentRecord {
     created_at: string;
 }
 
-export interface AdminStatisticsGamePlayRecord {
-    id: string;
-    game_id: string;
-    score_achieved: number | null;
-    duration_seconds: number | null;
-    intelligence_type: string | null;
-    workshop_type: string | null;
-    created_at: string;
-}
+export type AdminStatisticsGamePlayRecord = GamePlayRecord;
 
-export interface AdminStatisticsWorkshopPlayRecord {
-    user_id: string;
-    workshop_type: string | null;
-    intelligence_type: string | null;
-}
+export type AdminStatisticsWorkshopPlayRecord = GamePlayWorkshopRecord;
 
-export interface AdminStatisticsRecentWorkshopPlayRecord {
-    user_id: string;
-    score_achieved: number | null;
-    game_id: string | null;
-    created_at: string;
-}
+export type AdminStatisticsRecentWorkshopPlayRecord = GamePlayRecentWorkshopRecord;
 
 export interface AdminStatisticsProfileNameRecord {
     id: string;
     name: string | null;
+}
+
+export interface AdminAdaptiveQuestionAttemptRecord {
+    id: string;
+    user_id: string;
+    topic: string;
+    difficulty_level: number | null;
+    was_correct: boolean;
+    response_ms: number | null;
+    source: 'ai' | 'fallback' | 'bank' | null;
+    question_payload: Record<string, unknown> | null;
+    created_at: string;
 }
 
 export interface AdminStatisticsRepository {
@@ -45,6 +46,7 @@ export interface AdminStatisticsRepository {
     listWorkshopGamePlays: () => Promise<AdminStatisticsWorkshopPlayRecord[]>;
     listRecentWorkshopGamePlays: (limit: number) => Promise<AdminStatisticsRecentWorkshopPlayRecord[]>;
     listProfilesByIds: (profileIds: string[]) => Promise<AdminStatisticsProfileNameRecord[]>;
+    listRecentAdaptiveQuestionAttempts: (limit: number) => Promise<AdminAdaptiveQuestionAttemptRecord[]>;
 }
 
 const listStudents = async (): Promise<AdminStatisticsStudentRecord[]> => {
@@ -64,60 +66,17 @@ const listStudents = async (): Promise<AdminStatisticsStudentRecord[]> => {
 };
 
 const listGamePlaysByUserId = async (userId: string): Promise<AdminStatisticsGamePlayRecord[]> => {
-    const { data, error } = await supabase
-        .from('game_plays')
-        .select('id, game_id, score_achieved, duration_seconds, intelligence_type, workshop_type, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-    if (error || !data) {
-        if (error) {
-            console.error('student gameplay fetch failed:', error);
-        }
-        return [];
-    }
-
-    return data as AdminStatisticsGamePlayRecord[];
+    return gamePlayRepository.listGamePlaysByUserId(userId);
 };
 
 const listWorkshopGamePlays = async (): Promise<AdminStatisticsWorkshopPlayRecord[]> => {
-    const { data, error } = await supabase
-        .from('game_plays')
-        .select('user_id, workshop_type, intelligence_type')
-        .not('workshop_type', 'is', null);
-
-    if (error || !data) {
-        if (error) {
-            console.error('workshop gameplay list fetch failed:', error);
-        }
-        return [];
-    }
-
-    return data as AdminStatisticsWorkshopPlayRecord[];
+    return gamePlayRepository.listWorkshopGamePlays();
 };
 
 const listRecentWorkshopGamePlays = async (
     limit: number
 ): Promise<AdminStatisticsRecentWorkshopPlayRecord[]> => {
-    if (!Number.isFinite(limit) || limit <= 0) {
-        return [];
-    }
-
-    const { data, error } = await supabase
-        .from('game_plays')
-        .select('user_id, score_achieved, game_id, created_at')
-        .not('workshop_type', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(Math.floor(limit));
-
-    if (error || !data) {
-        if (error) {
-            console.error('recent workshop gameplay fetch failed:', error);
-        }
-        return [];
-    }
-
-    return data as AdminStatisticsRecentWorkshopPlayRecord[];
+    return gamePlayRepository.listRecentWorkshopGamePlays(limit);
 };
 
 const listProfilesByIds = async (
@@ -142,10 +101,31 @@ const listProfilesByIds = async (
     return data as AdminStatisticsProfileNameRecord[];
 };
 
+const listRecentAdaptiveQuestionAttempts = async (
+    limit: number
+): Promise<AdminAdaptiveQuestionAttemptRecord[]> => {
+    const safeLimit = Math.max(1, Math.min(Math.round(limit), 500));
+    const { data, error } = await supabase
+        .from('question_attempt')
+        .select('id, user_id, topic, difficulty_level, was_correct, response_ms, source, question_payload, created_at')
+        .order('created_at', { ascending: false })
+        .limit(safeLimit);
+
+    if (error || !data) {
+        if (error) {
+            console.error('adaptive question attempts fetch failed:', error);
+        }
+        return [];
+    }
+
+    return data as AdminAdaptiveQuestionAttemptRecord[];
+};
+
 export const adminStatisticsRepository: AdminStatisticsRepository = {
     listStudents,
     listGamePlaysByUserId,
     listWorkshopGamePlays,
     listRecentWorkshopGamePlays,
-    listProfilesByIds
+    listProfilesByIds,
+    listRecentAdaptiveQuestionAttempts
 };

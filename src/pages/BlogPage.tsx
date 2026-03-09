@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -51,18 +51,6 @@ const BlogPage: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [selectedPost]);
 
-  useEffect(() => {
-    fetchBlogPosts();
-  }, []);
-
-  useEffect(() => {
-    if (slug) {
-      fetchSinglePost(slug);
-    } else {
-      setSelectedPost(null);
-    }
-  }, [slug]);
-
   // AI SEO: Inject JSON-LD Structured Data
   useEffect(() => {
     if (selectedPost) {
@@ -107,7 +95,7 @@ const BlogPage: React.FC = () => {
     }
   }, [selectedPost]);
 
-  const fetchBlogPosts = async () => {
+  const fetchBlogPosts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('blog_posts')
@@ -123,7 +111,7 @@ const BlogPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const filtered = blogPosts.filter(post =>
@@ -133,12 +121,12 @@ const BlogPage: React.FC = () => {
     setFilteredPosts(filtered);
   }, [searchQuery, blogPosts]);
 
-  const fetchSinglePost = async (slug: string) => {
+  const fetchSinglePost = useCallback(async (postSlug: string) => {
     try {
       const { data, error } = await supabase
         .from('blog_posts')
         .select('*')
-        .eq('slug', slug)
+        .eq('slug', postSlug)
         .eq('published', true)
         .maybeSingle();
 
@@ -161,7 +149,19 @@ const BlogPage: React.FC = () => {
       toast.error('Blog yazısı yüklenemedi');
       navigate('/blog');
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    fetchBlogPosts();
+  }, [fetchBlogPosts]);
+
+  useEffect(() => {
+    if (slug) {
+      fetchSinglePost(slug);
+    } else {
+      setSelectedPost(null);
+    }
+  }, [fetchSinglePost, slug]);
 
   const formatDate = (date: string) => {
     return format(new Date(date), "d MMMM yyyy", { locale: tr });

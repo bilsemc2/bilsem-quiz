@@ -1,4 +1,10 @@
 import { supabase } from '@/lib/supabase';
+import {
+    examSessionRepository,
+    type ExamSessionSummary
+} from '@/server/repositories/examSessionRepository';
+
+export type { ExamSessionSummary } from '@/server/repositories/examSessionRepository';
 
 interface ClassInfoRow {
     id: string;
@@ -24,20 +30,6 @@ export interface ProfileWithClassesRow {
     yetenek_alani: string | string[] | null;
     resim_analiz_hakki?: number | null;
     class_students?: ClassStudentRow[] | null;
-}
-
-export interface ExamSessionSummary {
-    bzp_score: number | null;
-    final_score: number;
-    results: Array<{
-        passed: boolean;
-        score: number;
-        maxScore: number;
-        level: number;
-        moduleTitle?: string;
-        moduleId?: string;
-    }>;
-    completed_at: string;
 }
 
 export interface PromoCode {
@@ -99,23 +91,7 @@ const getProfileWithClasses = async (userId: string): Promise<ProfileWithClasses
 };
 
 const getLatestCompletedExamSession = async (userId: string): Promise<ExamSessionSummary | null> => {
-    const { data, error } = await supabase
-        .from('exam_sessions')
-        .select('bzp_score, final_score, results, completed_at')
-        .eq('user_id', userId)
-        .not('completed_at', 'is', null)
-        .order('completed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-    if (error || !data) {
-        if (error) {
-            console.error('latest exam session fetch failed:', error);
-        }
-        return null;
-    }
-
-    return data as ExamSessionSummary;
+    return examSessionRepository.getLatestCompletedExamSession(userId);
 };
 
 const updateReferralCode = async (userId: string, referralCode: string): Promise<void> => {

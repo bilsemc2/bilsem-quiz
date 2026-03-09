@@ -3,8 +3,8 @@ import {
     authRepository,
     type AuthProfileRecord,
     type AuthRepository
-} from '@/server/repositories/authRepository';
-import { xpRepository, type XPRepository } from '@/server/repositories/xpRepository';
+} from '../../../server/repositories/authRepository.ts';
+import { xpRepository, type XPRepository } from '../../../server/repositories/xpRepository.ts';
 
 export const loadSessionUser = async (
     deps: Pick<AuthRepository, 'getSessionUser'> = authRepository

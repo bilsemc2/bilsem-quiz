@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useExam } from '../contexts/ExamContext';
+import { useExam } from '../contexts/exam/useExam';
 
 const menuItems = [
     { path: 'tek-ses', label: 'Tek Ses', icon: '🎵', module: 'tek-ses' as const, maxPoints: 10 },

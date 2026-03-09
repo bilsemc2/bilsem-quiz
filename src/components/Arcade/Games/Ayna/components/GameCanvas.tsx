@@ -38,7 +38,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
     setCurrentPath([]);
   }, [resetTrigger]);
 
-  const drawGrid = (ctx: CanvasRenderingContext2D) => {
+  const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
     ctx.strokeStyle = '#cbd5e1'; // slate-300 grid
     ctx.lineWidth = 2;
     const gridSize = 40;
@@ -48,7 +48,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
     for (let i = 0; i <= canvasSize.h; i += gridSize) {
       ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvasSize.w, i); ctx.stroke();
     }
-  };
+  }, [canvasSize.h, canvasSize.w]);
 
   const drawAll = useCallback(() => {
     const lCtx = leftCanvasRef.current?.getContext('2d');
@@ -136,7 +136,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ targets, onTargetHit, onDrawCom
         rCtx.fillText("✓", tx, ty + 2);
       }
     });
-  }, [paths, currentPath, targets, canvasSize]);
+  }, [canvasSize, currentPath, drawGrid, paths, targets]);
 
   useEffect(() => {
     drawAll();

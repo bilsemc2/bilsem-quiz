@@ -32,6 +32,38 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/shared/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/app/*', '**/app/**'],
+              message: 'Shared katmani app katmanindan import etmemelidir.'
+            },
+            {
+              group: ['@/features/*', '**/features/**'],
+              message: 'Shared katmani feature katmanindan import etmemelidir.'
+            },
+            {
+              group: ['@/server/*', '**/server/**'],
+              message: 'Shared katmani server katmanindan import etmemelidir.'
+            },
+            {
+              group: ['@/pages/*', '**/pages/**', '@/components/*', '**/components/**'],
+              message: 'Shared katmani UI katmanindan import etmemelidir.'
+            },
+            {
+              group: ['@/contexts/*', '**/contexts/**', '@/hooks/*', '**/hooks/**', '@/routes/*', '**/routes/**'],
+              message: 'Shared katmani orchestration katmanlarindan import etmemelidir.'
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/features/**/*.{ts,tsx}', 'src/server/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
@@ -45,6 +77,14 @@ export default tseslint.config(
             {
               group: ['@/components/*', '**/components/**'],
               message: 'Features/server katmani UI components katmanindan import etmemelidir.'
+            },
+            {
+              group: ['@/contexts/*', '**/contexts/**', '@/hooks/*', '**/hooks/**', '@/routes/*', '**/routes/**'],
+              message: 'Features/server katmani orchestration katmanlarindan import etmemelidir.'
+            },
+            {
+              group: ['@/app/*', '**/app/**'],
+              message: 'Features/server katmani app katmanindan import etmemelidir.'
             },
           ],
         },

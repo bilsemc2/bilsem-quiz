@@ -1,6 +1,6 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
-import RequireAuth from '@/components/RequireAuth';
+import { protectElement } from '@/components/guards/protectElement';
 
 // Admin Page (Lazy)
 const AdminPage = React.lazy(() => import('@/pages/AdminPage'));
@@ -10,5 +10,5 @@ const AdminPage = React.lazy(() => import('@/pages/AdminPage'));
  * Protected admin routes - require admin privileges
  */
 export const adminRoutes = [
-    <Route key="admin" path="/admin/*" element={<RequireAuth requireAdmin><AdminPage /></RequireAuth>} />,
+    <Route key="admin" path="/admin/*" element={protectElement(<AdminPage />, { requireAdmin: true })} />,
 ];

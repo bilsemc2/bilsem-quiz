@@ -4,7 +4,7 @@
  * Test pages require login + Müzik talent.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Routes, Route, Outlet, useLocation } from 'react-router-dom';
 import { Music, Menu, X, Loader2 } from 'lucide-react';
 import { ExamProvider } from './contexts/ExamContext';
@@ -18,37 +18,14 @@ import RitimPage from './pages/RitimPage';
 import SarkiPage from './pages/SarkiPage';
 import UretkenlikPage from './pages/UretkenlikPage';
 import ReportPage from './pages/ReportPage';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useTalentAccess } from '@/hooks/useTalentAccess';
 import AccessDeniedScreen from '../../../components/AccessDeniedScreen';
-import { authRepository } from '@/server/repositories/authRepository';
-import { normalizeTalents } from '@/features/auth/model/accessControlUseCase';
 
 function TestLayout() {
-    const { user } = useAuth();
-    const [hasMusicTalent, setHasMusicTalent] = useState<boolean | null>(null);
-    const [userTalents, setUserTalents] = useState<string[]>([]);
+    const { loading, hasAccess, userTalents } = useTalentAccess('Müzik');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    useEffect(() => {
-        const checkTalent = async () => {
-            if (!user) { setHasMusicTalent(false); return; }
-            const profile = await authRepository.getProfileByUserId(user.id);
-            if (profile) {
-                if (profile.is_admin || profile.role === 'teacher') { setHasMusicTalent(true); return; }
-                const talents = normalizeTalents(profile.yetenek_alani);
-                setUserTalents(talents);
-                setHasMusicTalent(
-                    talents.some((talent) => {
-                        const normalized = talent.toLocaleLowerCase('tr-TR');
-                        return normalized === 'müzik' || normalized === 'muzik';
-                    })
-                );
-            } else { setHasMusicTalent(false); }
-        };
-        checkTalent();
-    }, [user]);
-
-    if (hasMusicTalent === null) return (
+    if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
             <div className="text-center">
                 <Loader2 className="w-10 h-10 text-cyber-blue animate-spin mx-auto mb-4" />
@@ -57,7 +34,7 @@ function TestLayout() {
         </div>
     );
 
-    if (!hasMusicTalent) return <AccessDeniedScreen requiredTalent="Müzik" backLink="/atolyeler/muzik-sinav" backLabel="Tanıtım Sayfasına Dön" userTalents={userTalents.length > 0 ? userTalents : undefined} requiredIncludes={['muzik']} />;
+    if (!hasAccess) return <AccessDeniedScreen requiredTalent="Müzik" backLink="/atolyeler/muzik-sinav" backLabel="Tanıtım Sayfasına Dön" userTalents={userTalents.length > 0 ? userTalents : undefined} requiredIncludes={['muzik']} />;
 
     return (
         <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">

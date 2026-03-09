@@ -102,7 +102,7 @@ const SentenceSynonymGame: React.FC = () => {
       dismissFeedback();
       fetchQuestions();
     }
-  }, [engine.phase, questions.length, isFetching, fetchQuestions]);
+  }, [dismissFeedback, engine.phase, questions.length, isFetching, fetchQuestions]);
 
 
 

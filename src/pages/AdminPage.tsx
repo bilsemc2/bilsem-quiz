@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import {
   Box,
   Drawer,
@@ -32,35 +32,145 @@ import {
   CalendarMonth as CalendarIcon,
   Tune as TuneIcon,
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { useTheme, useMediaQuery } from '@mui/material';
-import AdminDashboard from '../components/admin/AdminDashboard';
-import UserManagement from '../components/admin/UserManagement';
-
-import XPRequirementsManagement from '../components/admin/XPRequirementsManagement';
-import BlogManagement from '../components/admin/BlogManagement';
-import PromoCodeManagement from '../components/admin/PromoCodeManagement';
-import SendMessage from '../components/admin/SendMessage';
-import TalentAnalytics from '../components/admin/TalentAnalytics';
-import StudentStatistics from '../components/admin/StudentStatistics';
-import StoryGeneratorPage from './Story/StoryGeneratorPage';
-import PackageManagement from '../components/admin/PackageManagement';
-import PushNotificationAdmin from '../components/admin/PushNotificationAdmin';
-import DersPlanla from '../components/admin/DersPlanla';
-import AIQuestionPoolSettingsManagement from '../components/admin/AIQuestionPoolSettingsManagement';
 import { authRepository } from '@/server/repositories/authRepository';
 import { notificationRepository } from '@/server/repositories/notificationRepository';
 import { applyNotificationBadges } from '@/features/admin/model/adminPageUseCases';
 import { toast } from 'sonner';
 
+const AdminDashboard = lazy(() => import('../components/admin/AdminDashboard'));
+const UserManagement = lazy(() => import('../components/admin/UserManagement'));
+const XPRequirementsManagement = lazy(() => import('../components/admin/XPRequirementsManagement'));
+const BlogManagement = lazy(() => import('../components/admin/BlogManagement'));
+const PromoCodeManagement = lazy(() => import('../components/admin/PromoCodeManagement'));
+const SendMessage = lazy(() => import('../components/admin/SendMessage'));
+const TalentAnalytics = lazy(() => import('../components/admin/TalentAnalytics'));
+const AdaptiveDifficultyAnalytics = lazy(() => import('../components/admin/AdaptiveDifficultyAnalytics'));
+const AIOperationsAnalytics = lazy(() => import('../components/admin/AIOperationsAnalytics'));
+const StudentStatistics = lazy(() => import('../components/admin/StudentStatistics'));
+const StoryGeneratorPage = lazy(() => import('./Story/StoryGeneratorPage'));
+const PackageManagement = lazy(() => import('../components/admin/PackageManagement'));
+const PushNotificationAdmin = lazy(() => import('../components/admin/PushNotificationAdmin'));
+const DersPlanla = lazy(() => import('../components/admin/DersPlanla'));
+const AIQuestionPoolSettingsManagement = lazy(() => import('../components/admin/AIQuestionPoolSettingsManagement'));
+
 interface MenuItem {
   id: string;
   title: string;
   icon: React.ReactNode;
-  component: React.ReactNode;
+  component: React.LazyExoticComponent<React.ComponentType>;
   path: string;
   badge?: number;
 }
+
+const BASE_MENU_ITEMS: MenuItem[] = [
+  {
+    id: 'dashboard',
+    title: 'Dashboard',
+    icon: <DashboardIcon />,
+    component: AdminDashboard,
+    path: '/admin',
+  },
+  {
+    id: 'users',
+    title: 'Kullanıcılar',
+    icon: <PeopleIcon />,
+    component: UserManagement,
+    path: '/admin/users',
+  },
+  {
+    id: 'stories',
+    title: 'Hikayeler',
+    icon: <BookIcon />,
+    component: StoryGeneratorPage,
+    path: '/admin/stories/create',
+  },
+  {
+    id: 'blog',
+    title: 'Blog',
+    icon: <QuizIcon />,
+    component: BlogManagement,
+    path: '/admin/blog',
+  },
+  {
+    id: 'xp-requirements',
+    title: 'XP Gereksinimleri',
+    icon: <SchoolIcon />,
+    component: XPRequirementsManagement,
+    path: '/admin/xp-requirements',
+  },
+  {
+    id: 'promo-codes',
+    title: 'Promo Kodlar',
+    icon: <TicketIcon />,
+    component: PromoCodeManagement,
+    path: '/admin/promo-codes',
+  },
+  {
+    id: 'messages',
+    title: 'Mesaj Gönder',
+    icon: <MenuIcon />,
+    component: SendMessage,
+    path: '/admin/messages',
+  },
+  {
+    id: 'talent-analytics',
+    title: 'Yetenek Analizi',
+    icon: <BrainIcon />,
+    component: TalentAnalytics,
+    path: '/admin/talent-analytics',
+  },
+  {
+    id: 'adaptive-difficulty-analytics',
+    title: 'Adaptif Zorluk',
+    icon: <TuneIcon />,
+    component: AdaptiveDifficultyAnalytics,
+    path: '/admin/adaptive-difficulty',
+  },
+  {
+    id: 'ai-operations',
+    title: 'AI Operasyon',
+    icon: <TuneIcon />,
+    component: AIOperationsAnalytics,
+    path: '/admin/ai-operations',
+  },
+  {
+    id: 'ai-question-pool-settings',
+    title: 'AI Soru Havuzu',
+    icon: <TuneIcon />,
+    component: AIQuestionPoolSettingsManagement,
+    path: '/admin/ai-question-pool-settings',
+  },
+  {
+    id: 'student-statistics',
+    title: 'Öğrenci İstatistikleri',
+    icon: <PeopleIcon />,
+    component: StudentStatistics,
+    path: '/admin/student-statistics',
+  },
+  {
+    id: 'packages',
+    title: 'Paketler',
+    icon: <PackageIcon />,
+    component: PackageManagement,
+    path: '/admin/packages',
+  },
+  {
+    id: 'push-notifications',
+    title: 'Push Bildirim',
+    icon: <NotifIcon />,
+    component: PushNotificationAdmin,
+    path: '/admin/push-notifications',
+  },
+  {
+    id: 'ders-planla',
+    title: 'Ders Planlayıcı',
+    icon: <CalendarIcon />,
+    component: DersPlanla,
+    path: '/admin/ders-planla',
+  },
+];
 
 const AdminPage: React.FC = () => {
   const theme = useTheme();
@@ -72,99 +182,7 @@ const AdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(!isMobile);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([
-    {
-      id: 'dashboard',
-      title: 'Dashboard',
-      icon: <DashboardIcon />,
-      component: <AdminDashboard />,
-      path: '/admin',
-    },
-    {
-      id: 'users',
-      title: 'Kullanıcılar',
-      icon: <PeopleIcon />,
-      component: <UserManagement />,
-      path: '/admin/users',
-    },
-    {
-      id: 'stories',
-      title: 'Hikayeler',
-      icon: <BookIcon />,
-      component: <StoryGeneratorPage />,
-      path: '/admin/stories/create',
-    },
-    {
-      id: 'blog',
-      title: 'Blog',
-      icon: <QuizIcon />,
-      component: <BlogManagement />,
-      path: '/admin/blog',
-    },
-    {
-      id: 'xp-requirements',
-      title: 'XP Gereksinimleri',
-      icon: <SchoolIcon />,
-      component: <XPRequirementsManagement />,
-      path: '/admin/xp-requirements',
-    },
-    {
-      id: 'promo-codes',
-      title: 'Promo Kodlar',
-      icon: <TicketIcon />,
-      component: <PromoCodeManagement />,
-      path: '/admin/promo-codes',
-    },
-    {
-      id: 'messages',
-      title: 'Mesaj Gönder',
-      icon: <MenuIcon />,
-      component: <SendMessage />,
-      path: '/admin/messages',
-    },
-    {
-      id: 'talent-analytics',
-      title: 'Yetenek Analizi',
-      icon: <BrainIcon />,
-      component: <TalentAnalytics />,
-      path: '/admin/talent-analytics',
-    },
-    {
-      id: 'ai-question-pool-settings',
-      title: 'AI Soru Havuzu',
-      icon: <TuneIcon />,
-      component: <AIQuestionPoolSettingsManagement />,
-      path: '/admin/ai-question-pool-settings',
-    },
-    {
-      id: 'student-statistics',
-      title: 'Öğrenci İstatistikleri',
-      icon: <PeopleIcon />,
-      component: <StudentStatistics />,
-      path: '/admin/student-statistics',
-    },
-    {
-      id: 'packages',
-      title: 'Paketler',
-      icon: <PackageIcon />,
-      component: <PackageManagement />,
-      path: '/admin/packages',
-    },
-    {
-      id: 'push-notifications',
-      title: 'Push Bildirim',
-      icon: <NotifIcon />,
-      component: <PushNotificationAdmin />,
-      path: '/admin/push-notifications',
-    },
-    {
-      id: 'ders-planla',
-      title: 'Ders Planlayıcı',
-      icon: <CalendarIcon />,
-      component: <DersPlanla />,
-      path: '/admin/ders-planla',
-    },
-  ]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(BASE_MENU_ITEMS);
 
   const checkNotifications = useCallback(async () => {
     if (!auth.user?.id) return;
@@ -320,18 +338,28 @@ const AdminPage: React.FC = () => {
         </Menu>
 
         {/* Sayfa İçeriği */}
-        <Routes>
-          {menuItems
-            .filter(item => item.component !== null)
-            .map((item) => (
-              <Route
-                key={item.id}
-                path={item.path.replace('/admin', '')}
-                element={<>{item.component}</>}
-              />
-            ))}
-          <Route path="*" element={<Navigate to="/admin" replace />} />
-        </Routes>
+        <Suspense
+          fallback={
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <CircularProgress />
+            </Box>
+          }
+        >
+          <Routes>
+            {menuItems.map((item) => {
+              const Component = item.component;
+
+              return (
+                <Route
+                  key={item.id}
+                  path={item.path.replace('/admin', '')}
+                  element={<Component />}
+                />
+              );
+            })}
+            <Route path="*" element={<Navigate to="/admin" replace />} />
+          </Routes>
+        </Suspense>
       </Box>
     </Box>
   );

@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import { QUESTIONS_CONFIG } from '../config/questions';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { Link } from 'react-router-dom';
 
 const CreatePdfPage: React.FC = () => {
@@ -14,6 +12,7 @@ const CreatePdfPage: React.FC = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [isVip, setIsVip] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
@@ -161,6 +160,7 @@ const CreatePdfPage: React.FC = () => {
       watermarkElement.style.width = '100%';
       watermarkElement.style.textAlign = 'center';
       watermarkElement.style.fontWeight = 'bold';
+      watermarkElement.className = 'watermark';
       watermarkElement.textContent = 'BilsemC2';
       pageElement.style.position = 'relative';
       pageElement.appendChild(watermarkElement);
@@ -170,16 +170,24 @@ const CreatePdfPage: React.FC = () => {
   const generatePDF = async () => {
     if (!contentRef.current) return;
 
+    setIsGeneratingPdf(true);
+
     // Watermark ekle
     addWatermark();
 
     const element = contentRef.current;
     const pages = element.querySelectorAll('.pdf-page');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
 
     try {
+      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas')
+      ]);
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i] as HTMLElement;
 
@@ -210,6 +218,8 @@ const CreatePdfPage: React.FC = () => {
       while (existingWatermarks.length > 0) {
         existingWatermarks[0].remove();
       }
+
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -297,9 +307,10 @@ const CreatePdfPage: React.FC = () => {
             </button>
             <button
               onClick={generatePDF}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              disabled={isGeneratingPdf}
+              className="bg-blue-500 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             >
-              PDF İndir
+              {isGeneratingPdf ? 'PDF Hazırlanıyor...' : 'PDF İndir'}
             </button>
           </div>
 

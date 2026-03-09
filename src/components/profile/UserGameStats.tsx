@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Gamepad2, TrendingUp, Target, Clock, Award, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
+import {
+    buildGameStatsSummary,
+    emptyGameStatsSummary,
+    loadUserGamePlays,
+    type GameStatsSummary
+} from '@/features/games/model/gamePlayUseCases';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { ZEKA_RENKLERI, ZekaTuru } from '../../constants/intelligenceTypes';
 
 // Zeka türü açıklamaları - kullanıcıların anlaması için
@@ -64,42 +69,10 @@ const ZEKA_ACIKLAMALARI: Record<string, { icon: string; desc: string; skill: str
     },
 };
 
-interface GameStats {
-    totalPlays: number;
-    totalScore: number;
-    averageScore: number;
-    totalDuration: number;
-    intelligenceBreakdown: Record<string, number>;
-    recentGames: { game_id: string; score: number; created_at: string; game_name: string }[];
-    // Haftalık karşılaştırma
-    thisWeek: { plays: number; score: number; avgScore: number };
-    lastWeek: { plays: number; score: number; avgScore: number };
-    // Oyun bazında gelişim
-    gameProgress: {
-        game_id: string;
-        game_name: string;
-        playCount: number;
-        firstScore: number;
-        lastScore: number;
-        bestScore: number;
-        improvement: number; // yüzde
-    }[];
-}
-
 const UserGameStats: React.FC = () => {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState<GameStats>({
-        totalPlays: 0,
-        totalScore: 0,
-        averageScore: 0,
-        totalDuration: 0,
-        intelligenceBreakdown: {},
-        recentGames: [],
-        thisWeek: { plays: 0, score: 0, avgScore: 0 },
-        lastWeek: { plays: 0, score: 0, avgScore: 0 },
-        gameProgress: [],
-    });
+    const [stats, setStats] = useState<GameStatsSummary>(emptyGameStatsSummary);
 
     // Collapsible section states
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -112,125 +85,29 @@ const UserGameStats: React.FC = () => {
         setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
     };
 
-    useEffect(() => {
-        if (user) fetchStats();
-    }, [user]);
-
-    const fetchStats = async () => {
+    const fetchStats = useCallback(async () => {
         if (!user) return;
         setLoading(true);
 
         try {
-            // Kullanıcının oyun verilerini çek
-            const { data, error } = await supabase
-                .from('game_plays')
-                .select('game_id, score_achieved, duration_seconds, intelligence_type, created_at, metadata')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            const plays = data || [];
-            const totalScore = plays.reduce((sum, p) => sum + (p.score_achieved || 0), 0);
-            const totalDuration = plays.reduce((sum, p) => sum + (p.duration_seconds || 0), 0);
-
-            // Zeka türü dağılımı
-            const intelligenceBreakdown: Record<string, number> = {};
-            plays.forEach(p => {
-                if (p.intelligence_type) {
-                    intelligenceBreakdown[p.intelligence_type] = (intelligenceBreakdown[p.intelligence_type] || 0) + 1;
-                }
-            });
-
-            // Son oyunlar
-            const recentGames = plays.slice(0, 5).map(p => ({
-                game_id: p.game_id,
-                score: p.score_achieved || 0,
-                created_at: p.created_at,
-                game_name: (p.metadata && typeof p.metadata === 'object' && 'game_name' in p.metadata) ? (p.metadata as { game_name?: string }).game_name || p.game_id : p.game_id,
-            }));
-
-            // Haftalık karşılaştırma
-            const now = new Date();
-            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-            const thisWeekPlays = plays.filter(p => new Date(p.created_at) >= oneWeekAgo);
-            const lastWeekPlays = plays.filter(p => {
-                const date = new Date(p.created_at);
-                return date >= twoWeeksAgo && date < oneWeekAgo;
-            });
-
-            const thisWeekScore = thisWeekPlays.reduce((sum, p) => sum + (p.score_achieved || 0), 0);
-            const lastWeekScore = lastWeekPlays.reduce((sum, p) => sum + (p.score_achieved || 0), 0);
-
-            const thisWeek = {
-                plays: thisWeekPlays.length,
-                score: thisWeekScore,
-                avgScore: thisWeekPlays.length > 0 ? Math.round(thisWeekScore / thisWeekPlays.length) : 0,
-            };
-            const lastWeek = {
-                plays: lastWeekPlays.length,
-                score: lastWeekScore,
-                avgScore: lastWeekPlays.length > 0 ? Math.round(lastWeekScore / lastWeekPlays.length) : 0,
-            };
-
-            // Oyun bazında gelişim hesaplama
-            const gameGroups: Record<string, { scores: { score: number; date: Date }[]; name: string }> = {};
-            plays.forEach(p => {
-                const gameId = p.game_id;
-                const gameName = (p.metadata && typeof p.metadata === 'object' && 'game_name' in p.metadata) ? (p.metadata as { game_name?: string }).game_name || gameId : gameId;
-                if (!gameGroups[gameId]) {
-                    gameGroups[gameId] = { scores: [], name: gameName };
-                }
-                gameGroups[gameId].scores.push({
-                    score: p.score_achieved || 0,
-                    date: new Date(p.created_at)
-                });
-            });
-
-            const gameProgress = Object.entries(gameGroups)
-                .filter((entry) => entry[1].scores.length >= 2) // En az 2 oynama gerekli
-                .map(([gameId, data]) => {
-                    // Tarihe göre sırala (eskiden yeniye)
-                    const sorted = [...data.scores].sort((a, b) => a.date.getTime() - b.date.getTime());
-                    const firstScore = sorted[0].score;
-                    const lastScore = sorted[sorted.length - 1].score;
-                    const bestScore = Math.max(...sorted.map(s => s.score));
-                    const improvement = firstScore > 0
-                        ? Math.round(((lastScore - firstScore) / firstScore) * 100)
-                        : lastScore > 0 ? 100 : 0;
-
-                    return {
-                        game_id: gameId,
-                        game_name: data.name,
-                        playCount: data.scores.length,
-                        firstScore,
-                        lastScore,
-                        bestScore,
-                        improvement,
-                    };
-                })
-                .sort((a, b) => b.playCount - a.playCount) // En çok oynanan önce
-                .slice(0, 5); // En fazla 5 oyun göster
-
-            setStats({
-                totalPlays: plays.length,
-                totalScore,
-                averageScore: plays.length > 0 ? Math.round(totalScore / plays.length) : 0,
-                totalDuration,
-                intelligenceBreakdown,
-                recentGames,
-                thisWeek,
-                lastWeek,
-                gameProgress,
-            });
+            const plays = await loadUserGamePlays(user.id);
+            setStats(buildGameStatsSummary(plays));
         } catch (err) {
             console.error('Stats yüklenirken hata:', err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) {
+            setStats(emptyGameStatsSummary);
+            setLoading(false);
+            return;
+        }
+
+        void fetchStats();
+    }, [user, fetchStats]);
 
     const formatDuration = (seconds: number) => {
         const hours = Math.floor(seconds / 3600);

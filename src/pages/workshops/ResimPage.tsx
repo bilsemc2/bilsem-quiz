@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft, X, LogIn } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import ResimGame from '../../components/Workshops/Resim/ResimGame';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { supabase } from '../../lib/supabase';
 import AccessDeniedScreen from '../../components/AccessDeniedScreen';
 

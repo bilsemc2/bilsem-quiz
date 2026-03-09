@@ -48,23 +48,6 @@ const TersNavigator: React.FC = () => {
         }
     }, [location.state, gameState]);
 
-    useEffect(() => {
-        if (gameState !== GameState.PLAYING) return;
-
-        const timer = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    endGame();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [gameState]);
-
     const endGame = useCallback(() => {
         const finalStats: PerformanceStats = {
             score: stats.score,
@@ -90,6 +73,23 @@ const TersNavigator: React.FC = () => {
             });
         }
     }, [stats.score, highScore, saveGamePlay]);
+
+    useEffect(() => {
+        if (gameState !== GameState.PLAYING) return;
+
+        const timer = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    endGame();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [endGame, gameState]);
 
     const handleRoundComplete = useCallback((isCorrect: boolean, reactionTime: number) => {
         totalRoundsRef.current += 1;

@@ -1,57 +1,35 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import './index.css'
-import { registerSW } from 'virtual:pwa-register'
-import { HelmetProvider } from 'react-helmet-async'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 
-// Tema başlangıcı: localStorage ve sistem tercihine göre dark sınıfı ekle/çıkar
-const rootElement = document.documentElement;
-if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-  rootElement.classList.add('dark');
-} else {
-  rootElement.classList.remove('dark');
-}
+import { hideLoaderAfterRender } from '@/app/bootstrap/loader';
+import { applyInitialTheme } from '@/app/bootstrap/theme';
+import { RootProviders } from '@/app/providers/RootProviders';
 
-import App from './App.tsx'
-import { AuthProvider } from './contexts/AuthContext'
-import { XPProvider } from './contexts/XPContext'
+import './index.css';
+import App from './App.tsx';
+
+applyInitialTheme();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <HelmetProvider>
-      <AuthProvider>
-        <XPProvider>
-          <App />
-        </XPProvider>
-      </AuthProvider>
-    </HelmetProvider>
+    <RootProviders>
+      <App />
+    </RootProviders>
   </React.StrictMode>,
-)
+);
 
-// React yüklendikten sonra loading screen'i kaldır
-const hideLoader = () => {
-  const loader = document.getElementById('app-loader');
-  if (loader) {
-    loader.classList.add('hidden');
-    // Animasyon bittikten sonra DOM'dan kaldır
-    setTimeout(() => loader.remove(), 400);
-  }
-};
+hideLoaderAfterRender();
 
-// React render tamamlandığında çalıştır
-requestAnimationFrame(() => {
-  requestAnimationFrame(hideLoader);
-});
-
-// PWA Service Worker kaydı
 const updateSW = registerSW({
   onNeedRefresh() {
-    // Modern React tabanlı uyarı için event fırlat
-    window.dispatchEvent(new CustomEvent('pwa-refresh-available', {
-      detail: () => updateSW(true)
-    }));
+    window.dispatchEvent(
+      new CustomEvent('pwa-refresh-available', {
+        detail: () => updateSW(true),
+      }),
+    );
   },
   onOfflineReady() {
-
-  }
+    return undefined;
+  },
 });

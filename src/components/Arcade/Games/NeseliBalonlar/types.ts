@@ -16,9 +16,24 @@ export type BalloonState = {
 
 export type GamePhase = 'idle' | 'watching' | 'popping' | 'guessing' | 'result' | 'gameover';
 
-export enum QuestionType {
-    COLOR = 'COLOR',
-    NUMBER = 'NUMBER',
-    POSITION = 'POSITION',
-    ORDER = 'ORDER'
+export const QuestionType = {
+    COLOR: 'COLOR',
+    NUMBER: 'NUMBER',
+    POSITION: 'POSITION',
+    ORDER: 'ORDER'
+} as const;
+
+export type QuestionType = (typeof QuestionType)[keyof typeof QuestionType];
+
+export interface AnswerOption {
+    id: number;
+    label: string;
+    colorDot?: string;
+    isDistractor: boolean;
+}
+
+export interface QuestionText {
+    main: string;
+    highlight: string;
+    rest: string;
 }

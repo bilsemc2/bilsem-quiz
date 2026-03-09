@@ -20,6 +20,7 @@ const getCorsHeaders = (req: Request) => {
 };
 
 type AdaptiveQuestionLocale = 'tr' | 'en';
+type AdaptiveQuestionProviderName = 'gemini' | 'openai';
 
 interface AdaptiveQuestionPromptTemplatePayload {
     version?: string;
@@ -50,6 +51,7 @@ interface AdaptiveQuestionProviderInput {
         consecutiveWrong: number;
     };
     previousQuestionIds: string[];
+    previousQuestionFingerprints?: string[];
 }
 
 interface AdaptiveQuestionResult {
@@ -61,6 +63,19 @@ interface AdaptiveQuestionResult {
     explanation: string;
     difficultyLevel: number;
     source: 'ai';
+}
+
+interface AIProviderUsagePayload {
+    promptTokens: number | null;
+    completionTokens: number | null;
+    totalTokens: number | null;
+    cachedTokens: number | null;
+}
+
+interface AdaptiveQuestionResponseEnvelope {
+    question: AdaptiveQuestionResult;
+    suggestedDifficultyLevel: number;
+    usage?: AIProviderUsagePayload | null;
 }
 
 const clampDifficulty = (value: number): number => {
@@ -80,6 +95,42 @@ const asNonEmptyString = (value: unknown, fallback = ''): string => {
     if (typeof value !== 'string') return fallback;
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : fallback;
+};
+
+const normalizeAdaptiveProviderName = (value: unknown): AdaptiveQuestionProviderName => {
+    return value === 'openai' ? 'openai' : 'gemini';
+};
+
+const normalizeUsageNumber = (value: unknown): number | null => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+};
+
+const createUsagePayload = (
+    promptTokens: unknown,
+    completionTokens: unknown,
+    totalTokens: unknown,
+    cachedTokens: unknown
+): AIProviderUsagePayload | null => {
+    const normalized = {
+        promptTokens: normalizeUsageNumber(promptTokens),
+        completionTokens: normalizeUsageNumber(completionTokens),
+        totalTokens: normalizeUsageNumber(totalTokens),
+        cachedTokens: normalizeUsageNumber(cachedTokens)
+    };
+
+    return Object.values(normalized).every((value) => value === null)
+        ? null
+        : normalized;
+};
+
+const getRequiredEnvValue = (envName: string): string => {
+    const value = Deno.env.get(envName);
+    if (!value) {
+        throw new Error(`${envName} is not configured`);
+    }
+
+    return value;
 };
 
 const normalizeAdaptiveInput = (value: unknown): AdaptiveQuestionProviderInput => {
@@ -122,6 +173,12 @@ const normalizeAdaptiveInput = (value: unknown): AdaptiveQuestionProviderInput =
                 .filter((id): id is string => typeof id === 'string')
                 .map((id) => id.trim())
                 .filter((id) => id.length > 0)
+            : [],
+        previousQuestionFingerprints: Array.isArray(candidate.previousQuestionFingerprints)
+            ? candidate.previousQuestionFingerprints
+                .filter((fingerprint): fingerprint is string => typeof fingerprint === 'string')
+                .map((fingerprint) => fingerprint.trim())
+                .filter((fingerprint) => fingerprint.length > 0)
             : []
     };
 };
@@ -135,6 +192,7 @@ const buildAdaptivePromptFromInput = (input: AdaptiveQuestionProviderInput): {
         : 'Respond in English with clear, child-friendly language.';
 
     const excludedIds = input.previousQuestionIds.join(', ') || '(none)';
+    const excludedFingerprints = input.previousQuestionFingerprints?.join(', ') || '(none)';
     const systemPrompt = [
         'You are an educational assessment assistant for children (ages 7-12).',
         'Generate exactly one multiple-choice question.',
@@ -163,17 +221,21 @@ Create one adaptive question using the profile below:
   - streakCorrect: ${input.sessionPerformance.streakCorrect}
   - consecutiveWrong: ${input.sessionPerformance.consecutiveWrong}
 - Do not repeat these question ids: ${excludedIds}
+- Do not create questions that match these normalized fingerprints: ${excludedFingerprints}
 
 Required output JSON shape:
 {
-  "id": "string",
-  "topic": "string",
-  "stem": "string",
-  "options": ["string", "string", "string", "string"],
-  "correctIndex": 0,
-  "explanation": "string",
-  "difficultyLevel": ${input.difficultyLevel},
-  "source": "ai"
+  "question": {
+    "id": "string",
+    "topic": "string",
+    "stem": "string",
+    "options": ["string", "string", "string", "string"],
+    "correctIndex": 0,
+    "explanation": "string",
+    "difficultyLevel": ${input.difficultyLevel},
+    "source": "ai"
+  },
+  "suggestedDifficultyLevel": ${input.difficultyLevel}
 }
 `.trim();
 
@@ -234,6 +296,85 @@ const normalizeAdaptiveQuestionResult = (
         difficultyLevel: clampDifficulty(asNumber(parsed.difficultyLevel, input.difficultyLevel)),
         source: 'ai'
     };
+};
+
+const normalizeAdaptiveQuestionResponse = (
+    value: unknown,
+    input: AdaptiveQuestionProviderInput
+): AdaptiveQuestionResponseEnvelope => {
+    if (!value || typeof value !== 'object') {
+        return {
+            question: normalizeAdaptiveQuestionResult(value, input),
+            suggestedDifficultyLevel: input.difficultyLevel
+        };
+    }
+
+    const candidate = value as {
+        question?: unknown;
+        suggestedDifficultyLevel?: unknown;
+    };
+    const questionValue = candidate.question ?? value;
+    const suggestedDifficultyLevel = clampDifficulty(
+        asNumber(
+            candidate.suggestedDifficultyLevel,
+            questionValue && typeof questionValue === 'object'
+                ? asNumber((questionValue as { difficultyLevel?: unknown }).difficultyLevel, input.difficultyLevel)
+                : input.difficultyLevel
+        )
+    );
+
+    return {
+        question: normalizeAdaptiveQuestionResult(questionValue, input),
+        suggestedDifficultyLevel
+    };
+};
+
+const extractGeminiUsage = (value: unknown): AIProviderUsagePayload | null => {
+    if (!value || typeof value !== 'object') {
+        return null;
+    }
+
+    const data = value as {
+        usageMetadata?: {
+            promptTokenCount?: unknown;
+            candidatesTokenCount?: unknown;
+            totalTokenCount?: unknown;
+            cachedContentTokenCount?: unknown;
+        };
+    };
+    const usage = data.usageMetadata;
+
+    return createUsagePayload(
+        usage?.promptTokenCount,
+        usage?.candidatesTokenCount,
+        usage?.totalTokenCount,
+        usage?.cachedContentTokenCount
+    );
+};
+
+const extractOpenAIUsage = (value: unknown): AIProviderUsagePayload | null => {
+    if (!value || typeof value !== 'object') {
+        return null;
+    }
+
+    const data = value as {
+        usage?: {
+            prompt_tokens?: unknown;
+            completion_tokens?: unknown;
+            total_tokens?: unknown;
+            prompt_tokens_details?: {
+                cached_tokens?: unknown;
+            };
+        };
+    };
+    const usage = data.usage;
+
+    return createUsagePayload(
+        usage?.prompt_tokens,
+        usage?.completion_tokens,
+        usage?.total_tokens,
+        usage?.prompt_tokens_details?.cached_tokens
+    );
 };
 
 // ── Rate Limiter ──
@@ -336,13 +477,9 @@ Deno.serve(async (req) => {
     }
 
     try {
-        const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-        if (!GEMINI_API_KEY) {
-            throw new Error('GEMINI_API_KEY is not configured');
-        }
-
         const {
             action,
+            provider,
             mode,
             promptData,
             drawingBase64,
@@ -389,40 +526,50 @@ Deno.serve(async (req) => {
         }
 
         let result: string | object;
+        const selectedAdaptiveProvider = normalizeAdaptiveProviderName(provider);
 
         switch (action) {
             case 'generatePrompt':
-                result = await generatePrompt(GEMINI_API_KEY, mode);
+                result = await generatePrompt(getRequiredEnvValue('GEMINI_API_KEY'), mode);
                 break;
             case 'analyzeDrawing':
-                result = await analyzeDrawing(GEMINI_API_KEY, mode, promptData, drawingBase64);
+                result = await analyzeDrawing(getRequiredEnvValue('GEMINI_API_KEY'), mode, promptData, drawingBase64);
                 break;
             case 'generateStory':
-                result = await generateStory(GEMINI_API_KEY, theme);
+                result = await generateStory(getRequiredEnvValue('GEMINI_API_KEY'), theme);
                 break;
             case 'generateQuestions':
-                result = await generateQuestions(GEMINI_API_KEY, story);
+                result = await generateQuestions(getRequiredEnvValue('GEMINI_API_KEY'), story);
                 break;
             case 'generateAdaptiveQuestion':
-                result = await generateAdaptiveQuestion(GEMINI_API_KEY, input, promptTemplate);
+                result = await generateAdaptiveQuestionByProvider(
+                    selectedAdaptiveProvider,
+                    getRequiredEnvValue(
+                        selectedAdaptiveProvider === 'openai'
+                            ? 'OPENAI_API_KEY'
+                            : 'GEMINI_API_KEY'
+                    ),
+                    input,
+                    promptTemplate
+                );
                 break;
             case 'analyzeMusicPerformance':
-                result = await analyzeMusicPerformance(GEMINI_API_KEY, testType, target, detected);
+                result = await analyzeMusicPerformance(getRequiredEnvValue('GEMINI_API_KEY'), testType, target, detected);
                 break;
             case 'generateStillLifeImage':
-                result = await generateStillLifeImage(GEMINI_API_KEY);
+                result = await generateStillLifeImage(getRequiredEnvValue('GEMINI_API_KEY'));
                 break;
             case 'generateMusicOverallReport':
-                result = await generateMusicOverallReport(GEMINI_API_KEY, testResults);
+                result = await generateMusicOverallReport(getRequiredEnvValue('GEMINI_API_KEY'), testResults);
                 break;
             case 'generateMusicExamContent':
-                result = await generateMusicExamContent(GEMINI_API_KEY, musicModule, questionIndex, totalQuestions, difficulty, previousNotes);
+                result = await generateMusicExamContent(getRequiredEnvValue('GEMINI_API_KEY'), musicModule, questionIndex, totalQuestions, difficulty, previousNotes);
                 break;
             case 'analyzeMusicExamPerformance':
-                result = await analyzeMusicExamPerformance(GEMINI_API_KEY, musicModule, target, detected, questionIndex, difficulty, audioBase64, audioMimeType);
+                result = await analyzeMusicExamPerformance(getRequiredEnvValue('GEMINI_API_KEY'), musicModule, target, detected, questionIndex, difficulty, audioBase64, audioMimeType);
                 break;
             case 'generateMusicExamReport':
-                result = await generateMusicExamReport(GEMINI_API_KEY, moduleScores);
+                result = await generateMusicExamReport(getRequiredEnvValue('GEMINI_API_KEY'), moduleScores);
                 break;
             default:
                 throw new Error(`Unknown action: ${action}`);
@@ -712,12 +859,15 @@ Yanıtı aşağıdaki JSON yapısında formatla (sadece JSON döndür, başka me
 async function generateQuestions(
     apiKey: string,
     story: { title: string; content: string }
-): Promise<Array<{
-    text: string;
-    options: string[];
-    correctAnswer: number;
-    feedback: { correct: string; incorrect: string };
-}>> {
+): Promise<{
+    questions: Array<{
+        text: string;
+        options: string[];
+        correctAnswer: number;
+        feedback: { correct: string; incorrect: string };
+    }>;
+    usage: AIProviderUsagePayload | null;
+}> {
     const prompt = `
 Bu hikaye için 5 adet çoktan seçmeli soru oluştur:
 
@@ -782,14 +932,17 @@ Yanıtı aşağıdaki JSON yapısında formatla (sadece JSON döndür):
         throw new Error('Sorular için geçersiz format');
     }
 
-    return questionsData.questions;
+    return {
+        questions: questionsData.questions,
+        usage: extractGeminiUsage(data)
+    };
 }
 
 async function generateAdaptiveQuestion(
     apiKey: string,
     rawInput: unknown,
     promptTemplate?: AdaptiveQuestionPromptTemplatePayload
-): Promise<AdaptiveQuestionResult> {
+): Promise<AdaptiveQuestionResponseEnvelope> {
     const input = normalizeAdaptiveInput(rawInput);
     const { systemPrompt, userPrompt } = resolveAdaptivePrompts(input, promptTemplate);
 
@@ -810,21 +963,28 @@ async function generateAdaptiveQuestion(
                     responseSchema: {
                         type: 'object',
                         properties: {
-                            id: { type: 'string' },
-                            topic: { type: 'string' },
-                            stem: { type: 'string' },
-                            options: {
-                                type: 'array',
-                                items: { type: 'string' },
-                                minItems: 4,
-                                maxItems: 4
+                            question: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    topic: { type: 'string' },
+                                    stem: { type: 'string' },
+                                    options: {
+                                        type: 'array',
+                                        items: { type: 'string' },
+                                        minItems: 4,
+                                        maxItems: 4
+                                    },
+                                    correctIndex: { type: 'integer' },
+                                    explanation: { type: 'string' },
+                                    difficultyLevel: { type: 'number' },
+                                    source: { type: 'string' }
+                                },
+                                required: ['id', 'topic', 'stem', 'options', 'correctIndex', 'explanation', 'difficultyLevel', 'source']
                             },
-                            correctIndex: { type: 'integer' },
-                            explanation: { type: 'string' },
-                            difficultyLevel: { type: 'number' },
-                            source: { type: 'string' }
+                            suggestedDifficultyLevel: { type: 'number' }
                         },
-                        required: ['id', 'topic', 'stem', 'options', 'correctIndex', 'explanation', 'difficultyLevel', 'source']
+                        required: ['question', 'suggestedDifficultyLevel']
                     }
                 }
             }),
@@ -846,7 +1006,131 @@ async function generateAdaptiveQuestion(
     }
 
     const parsed = JSON.parse(textContent) as unknown;
-    return normalizeAdaptiveQuestionResult(parsed, input);
+    return {
+        ...normalizeAdaptiveQuestionResponse(parsed, input),
+        usage: extractGeminiUsage(data)
+    };
+}
+
+const extractOpenAITextContent = (value: unknown): string | null => {
+    if (!value || typeof value !== 'object') {
+        return null;
+    }
+
+    const data = value as {
+        choices?: Array<{
+            message?: {
+                content?: string | Array<{ type?: string; text?: string }>;
+            };
+        }>;
+    };
+    const content = data.choices?.[0]?.message?.content;
+
+    if (typeof content === 'string') {
+        return content;
+    }
+
+    if (Array.isArray(content)) {
+        const text = content
+            .filter((item) => item?.type === 'text' && typeof item.text === 'string')
+            .map((item) => item.text)
+            .join('');
+        return text.length > 0 ? text : null;
+    }
+
+    return null;
+};
+
+async function generateAdaptiveQuestionWithOpenAI(
+    apiKey: string,
+    rawInput: unknown,
+    promptTemplate?: AdaptiveQuestionPromptTemplatePayload
+): Promise<AdaptiveQuestionResponseEnvelope> {
+    const input = normalizeAdaptiveInput(rawInput);
+    const { systemPrompt, userPrompt } = resolveAdaptivePrompts(input, promptTemplate);
+    const model = Deno.env.get('OPENAI_ADAPTIVE_MODEL') || 'gpt-4o-mini';
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model,
+            temperature: 0.4,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ],
+            response_format: {
+                type: 'json_schema',
+                json_schema: {
+                    name: 'adaptive_question',
+                    strict: true,
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            question: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    topic: { type: 'string' },
+                                    stem: { type: 'string' },
+                                    options: {
+                                        type: 'array',
+                                        items: { type: 'string' },
+                                        minItems: 4,
+                                        maxItems: 4
+                                    },
+                                    correctIndex: { type: 'integer' },
+                                    explanation: { type: 'string' },
+                                    difficultyLevel: { type: 'number' },
+                                    source: { type: 'string' }
+                                },
+                                required: ['id', 'topic', 'stem', 'options', 'correctIndex', 'explanation', 'difficultyLevel', 'source']
+                            },
+                            suggestedDifficultyLevel: { type: 'number' }
+                        },
+                        required: ['question', 'suggestedDifficultyLevel']
+                    }
+                }
+            }
+        })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        const errorMessage =
+            data?.error?.message ||
+            data?.error ||
+            'OpenAI adaptive question generation failed';
+        throw new Error(errorMessage);
+    }
+
+    const textContent = extractOpenAITextContent(data);
+    if (!textContent) {
+        throw new Error('OpenAI adaptive question response is empty');
+    }
+
+    const parsed = JSON.parse(textContent) as unknown;
+    return {
+        ...normalizeAdaptiveQuestionResponse(parsed, input),
+        usage: extractOpenAIUsage(data)
+    };
+}
+
+async function generateAdaptiveQuestionByProvider(
+    provider: AdaptiveQuestionProviderName,
+    apiKey: string,
+    rawInput: unknown,
+    promptTemplate?: AdaptiveQuestionPromptTemplatePayload
+): Promise<AdaptiveQuestionResponseEnvelope> {
+    if (provider === 'openai') {
+        return generateAdaptiveQuestionWithOpenAI(apiKey, rawInput, promptTemplate);
+    }
+
+    return generateAdaptiveQuestion(apiKey, rawInput, promptTemplate);
 }
 
 // Music Performance Analysis

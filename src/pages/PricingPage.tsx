@@ -44,7 +44,7 @@ export default function PricingPage() {
     }
   };
 
-  const handleContact = (_pkg: Package) => {
+  const handleContact = () => {
   };
 
   return (

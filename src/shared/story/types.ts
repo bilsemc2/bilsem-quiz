@@ -1,8 +1,11 @@
+import type { QuestionAttemptSource } from '../types/aiEventDtos'
+
 export type StoryTheme = 'animals' | 'adventure' | 'fantasy' | 'science' | 'friendship' | 'life-lessons'
 
 export interface Question {
   id?: string
   aiGeneratedQuestionId?: string
+  source?: QuestionAttemptSource
   text: string
   options: string[]
   correctAnswer: number

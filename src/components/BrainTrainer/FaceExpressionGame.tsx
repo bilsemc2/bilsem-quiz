@@ -6,6 +6,7 @@ import type { FeedbackResult } from "./shared/GameOptionButton";
 import { useSound } from "../../hooks/useSound";
 import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 import { useGameFeedback } from "../../hooks/useGameFeedback";
+import { useGamePerformanceTracker } from "../../hooks/useGamePerformanceTracker";
 import { useGameEngine } from "./shared/useGameEngine";
 import BrainTrainerShell from "./shared/BrainTrainerShell";
 import { GAME_COLORS } from './shared/gameColors';
@@ -47,11 +48,14 @@ interface Question {
 }
 
 const FaceExpressionGame: React.FC = () => {
+  const questionStartedAtRef = React.useRef(0);
+  const { performanceRef, recordAttempt, resetPerformance } = useGamePerformanceTracker();
   const engine = useGameEngine({
     gameId: GAME_ID,
     maxLevel: MAX_LEVEL,
     initialLives: 5,
     timeLimit: 180,
+    getPerformanceSnapshot: () => performanceRef.current,
   });
 
   const { playSound } = useSound();
@@ -79,6 +83,7 @@ const FaceExpressionGame: React.FC = () => {
   const startLevel = useCallback(() => {
     setCurrentQuestion(generateQuestion());
     setSelectedAnswer(null);
+    questionStartedAtRef.current = Date.now();
   }, [generateQuestion]);
 
   useEffect(() => {
@@ -88,14 +93,19 @@ const FaceExpressionGame: React.FC = () => {
       setCurrentQuestion(null);
       setSelectedAnswer(null);
       setStreak(0);
+      resetPerformance();
     }
-  }, [phase, currentQuestion, startLevel]);
+  }, [phase, currentQuestion, startLevel, resetPerformance]);
 
   const handleAnswer = useCallback((emotionId: string) => {
     if (phase !== "playing" || !!feedbackState || !currentQuestion || selectedAnswer !== null) return;
 
     setSelectedAnswer(emotionId);
     const isCorrect = emotionId === currentQuestion.correctEmotion.id;
+    recordAttempt({
+      isCorrect,
+      responseMs: questionStartedAtRef.current > 0 ? Date.now() - questionStartedAtRef.current : null
+    });
     showFeedback(isCorrect);
     playSound(isCorrect ? "correct" : "incorrect");
 
@@ -123,7 +133,7 @@ const FaceExpressionGame: React.FC = () => {
         }
       }, 1000);
     }
-  }, [phase, feedbackState, currentQuestion, selectedAnswer, showFeedback, dismissFeedback, playSound, streak, addScore, level, nextLevel, loseLife, lives, startLevel, safeTimeout, engine]);
+  }, [phase, feedbackState, currentQuestion, selectedAnswer, showFeedback, dismissFeedback, playSound, streak, addScore, level, nextLevel, loseLife, lives, startLevel, safeTimeout, engine, recordAttempt]);
 
   const gameConfig = {
     title: GAME_TITLE,

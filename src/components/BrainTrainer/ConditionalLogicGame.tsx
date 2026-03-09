@@ -1,409 +1,47 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-
+import React from "react";
 import { BrainCircuit } from "lucide-react";
-import { useSound } from "../../hooks/useSound";
-import { useGameFeedback } from "../../hooks/useGameFeedback";
-import { useGameEngine } from "./shared/useGameEngine";
+
+import ConditionalLogicBoard from "./conditionalLogic/ConditionalLogicBoard";
+import {
+  GAME_DESCRIPTION,
+  GAME_TITLE,
+  MAX_LEVEL,
+  TUZO_TEXT,
+} from "./conditionalLogic/constants";
+import { useConditionalLogicController } from "./conditionalLogic/useConditionalLogicController";
 import BrainTrainerShell from "./shared/BrainTrainerShell";
-import { GAME_COLORS } from './shared/gameColors';
-import { useSafeTimeout } from '../../hooks/useSafeTimeout';
-
-const GAME_ID = "kosullu-yonerge";
-const GAME_TITLE = "Koşullu Yönerge";
-const GAME_DESCRIPTION = "Verilen mantıksal koşulu dikkatle oku, sahnedeki nesneleri analiz et ve doğru hedefi seç!";
-const TUZO_TEXT = "TUZÖ 5.2.1 Mantıksal Akıl Yürütme ve Koşullu Yönerge Takibi";
-
-// Variables from original
-type ShapeType = "Circle" | "Square" | "Triangle" | "Star" | "Diamond";
-type ColorType = "Red" | "Blue" | "Green" | "Yellow" | "Purple";
-
-interface GameObject {
-  id: string;
-  shape: ShapeType;
-  color: ColorType;
-}
-
-const SHAPES: ShapeType[] = ["Circle", "Square", "Triangle", "Star", "Diamond"];
-const COLORS: ColorType[] = ["Red", "Blue", "Green", "Yellow", "Purple"];
-
-const SHAPE_NAMES: Record<ShapeType, string> = {
-  Circle: "Daire",
-  Square: "Kare",
-  Triangle: "Üçgen",
-  Star: "Yıldız",
-  Diamond: "Elmas",
-};
-
-const COLOR_NAMES: Record<ColorType, string> = {
-  Red: "Kırmızı",
-  Blue: "Mavi",
-  Green: "Yeşil",
-  Yellow: "Sarı",
-  Purple: "Mor",
-};
-
-const COLOR_VALUES: Record<ColorType, string> = {
-  Red: GAME_COLORS.incorrect,
-  Blue: GAME_COLORS.blue,
-  Green: GAME_COLORS.emerald,
-  Yellow: GAME_COLORS.yellow,
-  Purple: GAME_COLORS.purple,
-};
-
-interface RoundData {
-  objects: GameObject[];
-  instruction: string;
-  targetId: string;
-}
-
-const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-const uid = () => Math.random().toString(36).substring(2, 8);
-
-const generateRound = (level: number, attempt = 0): RoundData => {
-  const count = level <= 5 ? 4 : level <= 12 ? 6 : 8;
-  const objects: GameObject[] = [];
-  for (let i = 0; i < count; i++) {
-    objects.push({ id: uid(), shape: pick(SHAPES), color: pick(COLORS) });
-  }
-  const comboCounts: Record<string, number> = {};
-  objects.forEach((o) => {
-    const key = `${o.color}-${o.shape}`;
-    comboCounts[key] = (comboCounts[key] || 0) + 1;
-  });
-  const singletons = objects.filter(
-    (o) => comboCounts[`${o.color}-${o.shape}`] === 1,
-  );
-  if (singletons.length < 2 && attempt < 20) return generateRound(level, attempt + 1);
-  if (singletons.length < 2) {
-    // Fallback: force two unique objects
-    objects[0] = { id: uid(), shape: "Circle", color: "Red" };
-    objects[1] = { id: uid(), shape: "Square", color: "Blue" };
-    return generateRound(level, 0);
-  }
-
-  const targetA = pick(singletons);
-  let targetB = pick(singletons);
-  while (targetB.id === targetA.id) targetB = pick(singletons);
-
-  const logicType = Math.floor(Math.random() * (level < 5 ? 3 : 6));
-  let condText = "";
-  let condTrue = false;
-
-  switch (logicType) {
-    case 0: {
-      const test =
-        Math.random() > 0.5
-          ? pick(objects)
-          : { color: pick(COLORS), shape: pick(SHAPES) };
-      condTrue = objects.some(
-        (o) => o.color === test.color && o.shape === test.shape,
-      );
-      condText = `bir ${COLOR_NAMES[test.color as ColorType]} ${SHAPE_NAMES[test.shape as ShapeType]} varsa`;
-      break;
-    }
-    case 1: {
-      const c = pick(COLORS);
-      const n = objects.filter((o) => o.color === c).length;
-      const t = Math.max(0, n - 1 + Math.floor(Math.random() * 2));
-      condTrue = n > t;
-      condText = `${t} taneden fazla ${COLOR_NAMES[c]} nesne varsa`;
-      break;
-    }
-    case 2: {
-      const s = pick(SHAPES);
-      const n = objects.filter((o) => o.shape === s).length;
-      const t = Math.max(1, n - 1 + Math.floor(Math.random() * 2));
-      condTrue = n < t;
-      condText = `${t} taneden az ${SHAPE_NAMES[s]} varsa`;
-      break;
-    }
-    case 3: {
-      const c = pick(COLORS);
-      condTrue = objects.filter((o) => o.color === c).length === 0;
-      condText = `hiç ${COLOR_NAMES[c]} nesne yoksa`;
-      break;
-    }
-    case 4: {
-      const c1 = pick(COLORS);
-      let c2 = pick(COLORS);
-      while (c1 === c2) c2 = pick(COLORS);
-      condTrue =
-        objects.filter((o) => o.color === c1).length >
-        objects.filter((o) => o.color === c2).length;
-      condText = `${COLOR_NAMES[c1]} nesne sayısı ${COLOR_NAMES[c2]} olanlardan fazlaysa`;
-      break;
-    }
-    case 5: {
-      const s = pick(SHAPES);
-      const c = pick(COLORS);
-      condTrue =
-        objects.filter((o) => o.shape === s).length ===
-        objects.filter((o) => o.color === c).length;
-      condText = `${SHAPE_NAMES[s]} sayısı ${COLOR_NAMES[c]} nesne sayısına eşitse`;
-      break;
-    }
-  }
-
-  const finalTarget = condTrue ? targetA : targetB;
-  const descA = `${COLOR_NAMES[targetA.color]} ${SHAPE_NAMES[targetA.shape]}`;
-  const descB = `${COLOR_NAMES[targetB.color]} ${SHAPE_NAMES[targetB.shape]}`;
-  const instruction = `Eğer ${condText}, ${descA} nesnesini seç, değilse ${descB} nesnesini seç.`;
-
-  return { objects, instruction, targetId: finalTarget.id };
-};
-
-
-const ShapeIcon: React.FC<{
-  shape: ShapeType;
-  color: ColorType;
-  size?: number;
-}> = ({ shape, color, size = 64 }) => {
-  const fill = COLOR_VALUES[color];
-  const s = size;
-  switch (shape) {
-    case "Circle":
-      return (
-        <svg width={s} height={s} viewBox="0 0 100 100">
-          <circle
-            cx="50"
-            cy="50"
-            r="42"
-            fill={fill}
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth="3"
-          />
-          <ellipse
-            cx="40"
-            cy="35"
-            rx="14"
-            ry="8"
-            fill="rgba(255,255,255,0.25)"
-            transform="rotate(-20 40 35)"
-          />
-        </svg>
-      );
-    case "Square":
-      return (
-        <svg width={s} height={s} viewBox="0 0 100 100">
-          <rect
-            x="12"
-            y="12"
-            width="76"
-            height="76"
-            rx="12"
-            fill={fill}
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth="3"
-          />
-          <rect
-            x="20"
-            y="18"
-            width="28"
-            height="12"
-            rx="4"
-            fill="rgba(255,255,255,0.2)"
-          />
-        </svg>
-      );
-    case "Triangle":
-      return (
-        <svg width={s} height={s} viewBox="0 0 100 100">
-          <polygon
-            points="50,10 90,85 10,85"
-            fill={fill}
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth="3"
-          />
-          <polygon points="50,24 36,55 50,55" fill="rgba(255,255,255,0.2)" />
-        </svg>
-      );
-    case "Star":
-      return (
-        <svg width={s} height={s} viewBox="0 0 100 100">
-          <polygon
-            points="50,5 61,35 95,35 68,55 79,88 50,68 21,88 32,55 5,35 39,35"
-            fill={fill}
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth="3"
-          />
-          <polygon points="50,18 55,33 45,33" fill="rgba(255,255,255,0.2)" />
-        </svg>
-      );
-    case "Diamond":
-      return (
-        <svg width={s} height={s} viewBox="0 0 100 100">
-          <polygon
-            points="50,8 92,50 50,92 8,50"
-            fill={fill}
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth="3"
-          />
-          <polygon points="50,20 38,50 50,50" fill="rgba(255,255,255,0.2)" />
-        </svg>
-      );
-    default:
-      return null;
-  }
-};
-
-
-const MAX_LEVEL = 20;
 
 const ConditionalLogicGame: React.FC = () => {
-  const engine = useGameEngine({
-    gameId: GAME_ID,
-    maxLevel: MAX_LEVEL,
-    initialLives: 5,
-    timeLimit: 180,
-  });
-
-  const { playSound } = useSound();
-  const safeTimeout = useSafeTimeout();
-  const feedback = useGameFeedback({ duration: 1000 });
-  const { feedbackState, showFeedback, dismissFeedback } = feedback;
-
-  const [round, setRound] = useState<RoundData | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
-
-  useEffect(() => {
-    const timeouts = timeoutsRef.current;
-    return () => timeouts.forEach(clearTimeout);
-  }, []);
-
-  useEffect(() => {
-    if (engine.phase === "playing" && !selectedId) {
-      setRound(generateRound(engine.level));
-    } else if (engine.phase === "welcome") {
-      setRound(null);
-      setSelectedId(null);
-    }
-  }, [engine.phase, engine.level, selectedId]);
-
-  const handleObjectClick = useCallback(
-    (id: string) => {
-      if (!round || engine.phase !== "playing" || selectedId || !!feedbackState) return;
-
-      const correct = id === round.targetId;
-      setSelectedId(id);
-      showFeedback(correct);
-      playSound(correct ? "correct" : "incorrect");
-
-      const t = safeTimeout(() => {
-        dismissFeedback();
-        if (correct) {
-          engine.addScore(10 * engine.level);
-          if (engine.level >= MAX_LEVEL) {
-            engine.setGamePhase("victory");
-            playSound("success");
-          } else {
-            engine.nextLevel();
-          }
-        } else {
-          engine.loseLife();
-        }
-        setSelectedId(null);
-      }, 1200);
-      timeoutsRef.current.push(t);
-    },
-    [round, engine, selectedId, feedbackState, showFeedback, playSound, dismissFeedback, safeTimeout],
-  );
-
-  const gameConfig = {
-    title: GAME_TITLE,
-    description: GAME_DESCRIPTION,
-    tuzoCode: TUZO_TEXT,
-    icon: BrainCircuit,
-    accentColor: "cyber-blue",
-    maxLevel: 20,
-    howToPlay: [
-      "Ekranda verilen yönergeyi dikkatle oku",
-      "Yönergedeki koşulun doğru olup olmadığını objelere bakarak test et",
-      "Eğer doğruysa ilk nesneyi, yanlışsa ikinci nesneyi seç",
-      // Remove fourth line, simplify standard
-    ]
-  };
+  const { engine, feedback, round, selectedId, handleObjectClick } =
+    useConditionalLogicController();
 
   return (
-    <BrainTrainerShell config={gameConfig} engine={engine} feedback={feedback}>
-      {() => (
+    <BrainTrainerShell
+      config={{
+        title: GAME_TITLE,
+        description: GAME_DESCRIPTION,
+        tuzoCode: TUZO_TEXT,
+        icon: BrainCircuit,
+        accentColor: "cyber-blue",
+        maxLevel: MAX_LEVEL,
+        howToPlay: [
+          "Ekrandaki koşullu yönergeyi dikkatle oku.",
+          "Sahnedeki nesnelere bakarak koşulun doğru olup olmadığını test et.",
+          "Koşul doğruysa ilk hedefi, yanlışsa ikinci hedefi seç.",
+        ],
+      }}
+      engine={engine}
+      feedback={feedback}
+    >
+      {({ phase }) => (
         <div className="relative z-10 flex flex-col items-center justify-center p-2 flex-1">
-          {engine.phase === "playing" && round && (
-            <div
-              className="w-full max-w-3xl flex flex-col items-center gap-4"
-            >
-              {/* Instruction Card */}
-              <div
-                className="bg-white dark:bg-slate-800 border-2 border-black/10 p-4 sm:p-5 rounded-2xl shadow-neo-sm text-center max-w-xl w-full relative"
-              >
-                <div className="absolute -top-3 -left-3 w-10 h-10 bg-cyber-pink border-2 border-black/10 rounded-full flex items-center justify-center shadow-neo-sm">
-                  <span className="font-nunito font-black text-black">!</span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-nunito font-black text-slate-800 dark:text-slate-100 leading-relaxed italic">
-                  "{round.instruction}"
-                </h3>
-              </div>
-
-              {/* Objects Grid */}
-              <div className="bg-slate-100 dark:bg-slate-800/80 border-2 border-black/10 p-4 sm:p-5 rounded-2xl w-full shadow-[inset_4px_4px_8px_rgba(0,0,0,0.1)]">
-                <div
-                  className={`grid gap-3 sm:gap-4 justify-center ${round.objects.length <= 4
-                    ? "grid-cols-2 sm:grid-cols-4"
-                    : round.objects.length <= 6
-                      ? "grid-cols-3 sm:grid-cols-3"
-                      : "grid-cols-3 sm:grid-cols-4"
-                    }`}
-                >
-                  {round.objects.map((obj, _i) => {
-                    const isSelected = selectedId === obj.id;
-                    const isRevealedTarget =
-                      selectedId && obj.id === round.targetId;
-                    const isMissedTarget =
-                      selectedId &&
-                      selectedId !== obj.id &&
-                      obj.id === round.targetId;
-
-                    let borderClass = "border-black";
-                    let bgClass = "bg-white dark:bg-slate-700";
-                    let opacityClass =
-                      selectedId && !isSelected && !isRevealedTarget
-                        ? "opacity-40"
-                        : "opacity-100";
-                    let animClass = "";
-
-                    if (isSelected) {
-                      if (obj.id === round.targetId) {
-                        borderClass = "border-cyber-green";
-                        bgClass = "bg-green-100 dark:bg-green-900";
-                        animClass = "animate-bounce";
-                      } else {
-                        borderClass = "border-cyber-pink";
-                        bgClass = "bg-red-100 dark:bg-red-900";
-                      }
-                    } else if (isMissedTarget) {
-                      borderClass = "border-cyber-green border-dashed";
-                      opacityClass = "opacity-70";
-                    }
-
-                    return (
-                      <button
-                        key={obj.id}
-                        onClick={() => handleObjectClick(obj.id)}
-                        disabled={!!selectedId}
-                        className={`aspect-square rounded-xl sm:rounded-2xl border-4 flex items-center justify-center p-3 transition-all duration-300 ${borderClass} ${bgClass} ${opacityClass} ${animClass} relative shadow-neo-sm active:scale-95`}
-                      >
-                        <ShapeIcon
-                          shape={obj.shape}
-                          color={obj.color}
-                          size={64}
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+          {phase === "playing" && round ? (
+            <ConditionalLogicBoard
+              round={round}
+              selectedId={selectedId}
+              onSelectObject={handleObjectClick}
+            />
+          ) : null}
         </div>
       )}
     </BrainTrainerShell>

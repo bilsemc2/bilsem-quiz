@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArcadeMachine } from '../../components/Arcade/ArcadeMachine';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import XPWarning from '../../components/XPWarning';
 import { ARCADE_GAMES, CATEGORY_INFO, GameCategory, getGamesByCategory } from '../../data/arcade/games';
 import { loadXPRequirementsMap } from '@/features/xp/model/xpUseCases';

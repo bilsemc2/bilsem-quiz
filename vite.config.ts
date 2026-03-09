@@ -3,6 +3,92 @@ import { resolve } from 'path';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const MANUAL_CHUNK_GROUPS = {
+  react: new Set(['react', 'react-dom', 'react-router-dom']),
+  muiCore: new Set(['@mui/material', '@mui/system', '@mui/utils', '@emotion/react', '@emotion/styled', '@popperjs/core']),
+  muiIcons: new Set(['@mui/icons-material']),
+  antd: new Set(['antd', '@ant-design/icons', '@radix-ui/react-dialog', '@radix-ui/react-tooltip']),
+  charts: new Set(['chart.js', 'react-chartjs-2', 'recharts', 'd3-delaunay']),
+  tiptap: new Set([
+    '@tiptap/react',
+    '@tiptap/starter-kit',
+    '@tiptap/pm',
+    '@tiptap/extension-image',
+    '@tiptap/extension-link',
+    '@tiptap/extension-underline',
+    'marked',
+    'dompurify'
+  ]),
+  jspdfCore: new Set(['jspdf']),
+  jspdfPlugins: new Set(['jspdf-autotable']),
+  htmlCapture: new Set(['html2canvas']),
+  reactPdfRenderer: new Set(['@react-pdf/renderer', '@react-pdf/reconciler']),
+  reactPdfEngine: new Set([
+    '@react-pdf/font',
+    '@react-pdf/fns',
+    '@react-pdf/image',
+    '@react-pdf/layout',
+    '@react-pdf/pdfkit',
+    '@react-pdf/png-js',
+    '@react-pdf/primitives',
+    '@react-pdf/render',
+    '@react-pdf/stylesheet',
+    '@react-pdf/textkit'
+  ]),
+  reactPdfFonts: new Set(['fontkit', 'restructure']),
+  reactPdfVendor: new Set(['yoga-layout', 'unicode-properties', 'unicode-trie', 'linebreak', 'emoji-regex']),
+  threeCore: new Set(['three']),
+  threeReact: new Set(['@react-three/fiber', '@react-three/drei', '@react-spring/three']),
+  audio: new Set(['tone']),
+  supabase: new Set(['@supabase/supabase-js'])
+};
+
+const getPackageName = (id: string) => {
+  const nodeModulesPath = id.split('/node_modules/')[1];
+
+  if (!nodeModulesPath) {
+    return null;
+  }
+
+  const parts = nodeModulesPath.split('/');
+
+  return parts[0].startsWith('@')
+    ? `${parts[0]}/${parts[1]}`
+    : parts[0];
+};
+
+const resolveManualChunk = (id: string) => {
+  if (id.includes('/src/pages/Story/components/StoryPDF.tsx') || id.includes('/src/pages/Story/components/WordGamesPDF.tsx')) {
+    return 'story-pdf-documents';
+  }
+
+  const packageName = getPackageName(id);
+
+  if (!packageName) {
+    return undefined;
+  }
+
+  if (MANUAL_CHUNK_GROUPS.react.has(packageName)) return 'react-vendor';
+  if (MANUAL_CHUNK_GROUPS.muiCore.has(packageName)) return 'mui-core';
+  if (MANUAL_CHUNK_GROUPS.muiIcons.has(packageName)) return 'mui-icons';
+  if (MANUAL_CHUNK_GROUPS.antd.has(packageName)) return 'antd-vendor';
+  if (MANUAL_CHUNK_GROUPS.charts.has(packageName)) return 'charts-vendor';
+  if (MANUAL_CHUNK_GROUPS.tiptap.has(packageName)) return 'editor-vendor';
+  if (MANUAL_CHUNK_GROUPS.jspdfCore.has(packageName)) return 'jspdf-core';
+  if (MANUAL_CHUNK_GROUPS.jspdfPlugins.has(packageName)) return 'jspdf-plugins';
+  if (MANUAL_CHUNK_GROUPS.htmlCapture.has(packageName)) return 'html-capture';
+  if (MANUAL_CHUNK_GROUPS.reactPdfRenderer.has(packageName)) return 'react-pdf-renderer';
+  if (MANUAL_CHUNK_GROUPS.reactPdfEngine.has(packageName)) return 'react-pdf-engine';
+  if (MANUAL_CHUNK_GROUPS.reactPdfFonts.has(packageName)) return 'react-pdf-fonts';
+  if (MANUAL_CHUNK_GROUPS.reactPdfVendor.has(packageName)) return 'react-pdf-vendor';
+  if (MANUAL_CHUNK_GROUPS.threeCore.has(packageName)) return 'three-core';
+  if (MANUAL_CHUNK_GROUPS.threeReact.has(packageName)) return 'three-react';
+  if (MANUAL_CHUNK_GROUPS.audio.has(packageName)) return 'audio-vendor';
+  if (MANUAL_CHUNK_GROUPS.supabase.has(packageName)) return 'supabase-vendor';
+
+  return undefined;
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -121,11 +207,10 @@ export default defineConfig({
   },
   build: {
     assetsDir: 'assets',
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-        },
+        manualChunks: resolveManualChunk,
         assetFileNames: (assetInfo) => {
           if (!assetInfo.name) return 'assets/[name].[hash][extname]';
           if (assetInfo.name.endsWith('.css')) {

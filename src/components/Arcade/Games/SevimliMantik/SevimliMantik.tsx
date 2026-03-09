@@ -194,31 +194,14 @@ const SevimliMantik: React.FC = () => {
 
     const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
-    // Timer
-    useEffect(() => {
-        if ((phase === 'playing' || phase === 'animating') && timeLeft > 0) {
-            timerRef.current = setTimeout(() => setTimeLeft(p => p - 1), 1000);
-        } else if (timeLeft === 0 && (phase === 'playing' || phase === 'animating')) {
-            handleGameOver();
-        }
-        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-    }, [phase, timeLeft]);
-
-    // Generate round when level changes
-    useEffect(() => {
-        if (phase === 'animating' || phase === 'playing') {
-            const newRound = generateRound(level);
-            setRound(newRound);
-            setPhase('animating');
-        }
-    }, [level]);
+    const startRound = useCallback((targetLevel: number) => {
+        setRound(generateRound(targetLevel));
+        setPhase('animating');
+    }, []);
 
     // Start
     const handleStart = useCallback(() => {
         window.scrollTo(0, 0);
-        const newRound = generateRound(1);
-        setRound(newRound);
-        setPhase('animating');
         setScore(0);
         setLives(INITIAL_LIVES);
         setLevel(1);
@@ -227,7 +210,8 @@ const SevimliMantik: React.FC = () => {
         startTimeRef.current = Date.now();
         hasSavedRef.current = false;
         isResolvingRef.current = false;
-    }, []);
+        startRound(1);
+    }, [startRound]);
 
     // Auto-start for arcade mode
     useEffect(() => {
@@ -274,6 +258,16 @@ const SevimliMantik: React.FC = () => {
         await saveGamePlay({ game_id: 'arcade-sevimli-mantik', score_achieved: score, duration_seconds: duration, metadata: { levels_completed: MAX_LEVEL, victory: true } });
     }, [saveGamePlay, score]);
 
+    // Timer
+    useEffect(() => {
+        if ((phase === 'playing' || phase === 'animating') && timeLeft > 0) {
+            timerRef.current = setTimeout(() => setTimeLeft(p => p - 1), 1000);
+        } else if (timeLeft === 0 && (phase === 'playing' || phase === 'animating')) {
+            handleGameOver();
+        }
+        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    }, [handleGameOver, phase, timeLeft]);
+
     // Select option
     const handleOptionSelect = useCallback((optionId: string) => {
         if (!round || phase !== 'playing' || isResolvingRef.current) return;
@@ -294,12 +288,16 @@ const SevimliMantik: React.FC = () => {
             const newLives = correct ? lives : lives - 1;
             if (!correct && newLives <= 0) { handleGameOver(); return; }
             if (correct && level >= MAX_LEVEL) { handleVictory(); return; }
-            if (correct) setLevel(l => l + 1);
-            else { setRound(generateRound(level)); setPhase('animating'); }
-            if (correct) setPhase('animating');
+            if (correct) {
+                const nextLevel = level + 1;
+                setLevel(nextLevel);
+                startRound(nextLevel);
+            } else {
+                startRound(level);
+            }
             isResolvingRef.current = false;
         }, 1500);
-    }, [round, phase, score, lives, level, handleGameOver, handleVictory]);
+    }, [handleGameOver, handleVictory, level, lives, phase, round, startRound]);
 
     // Shell status mapping
     const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' =

@@ -1,27 +1,21 @@
-export type AbilityDimension =
-    | 'memory'
-    | 'logic'
-    | 'attention'
-    | 'verbal'
-    | 'spatial'
-    | 'processing_speed';
+import type {
+    AdaptiveDifficultyDecisionDTO,
+    AdaptiveDifficultyHybridMode,
+    AbilityDimension,
+    AbilitySnapshotDTO,
+    DifficultyLevel,
+    LearningLocale,
+    SessionPerformanceMetricsDTO
+} from '../../../shared/types/aiEventDtos.ts';
 
-export type DifficultyLevel = 1 | 2 | 3 | 4 | 5;
+export type { AbilityDimension, DifficultyLevel };
+export type { AdaptiveDifficultyHybridMode };
 
-export interface AbilitySnapshot {
-    userId: string;
-    overallScore: number; // 0-100
-    dimensions: Record<AbilityDimension, number>; // 0-100
-    updatedAtISO: string;
-}
+export type AbilitySnapshot = AbilitySnapshotDTO;
 
-export interface SessionPerformance {
-    recentAccuracy: number; // 0-1
-    averageResponseMs: number;
-    targetResponseMs: number;
-    streakCorrect: number;
-    consecutiveWrong: number;
-}
+export type SessionPerformance = SessionPerformanceMetricsDTO;
+
+export type AdaptiveDifficultyDecision = AdaptiveDifficultyDecisionDTO;
 
 export interface AdaptiveQuestion {
     id: string;
@@ -34,24 +28,47 @@ export interface AdaptiveQuestion {
     source: 'ai' | 'fallback';
 }
 
+export interface AIQuestionGenerationMetadata {
+    providerName: string | null;
+    modelName: string | null;
+    promptVersion: string | null;
+    promptProfileId: string | null;
+}
+
+export interface AIProviderUsage {
+    promptTokens: number | null;
+    completionTokens: number | null;
+    totalTokens: number | null;
+    cachedTokens: number | null;
+}
+
 export interface AdaptiveQuestionRequest {
     userId: string;
     topic: string;
-    locale: 'tr' | 'en';
+    locale: LearningLocale;
     abilitySnapshot: AbilitySnapshot;
     sessionPerformance: SessionPerformance;
     previousQuestionIds?: string[];
+    previousQuestionFingerprints?: string[];
 }
 
 export interface AIQuestionProviderInput {
     topic: string;
-    locale: 'tr' | 'en';
+    locale: LearningLocale;
     difficultyLevel: DifficultyLevel;
     abilitySnapshot: AbilitySnapshot;
     sessionPerformance: SessionPerformance;
     previousQuestionIds: string[];
+    previousQuestionFingerprints?: string[];
+}
+
+export interface AIQuestionProviderResult {
+    question: AdaptiveQuestion | null;
+    metadata: AIQuestionGenerationMetadata;
+    suggestedDifficultyLevel?: DifficultyLevel | null;
+    usage?: AIProviderUsage | null;
 }
 
 export interface AIQuestionProvider {
-    generateQuestion: (input: AIQuestionProviderInput) => Promise<AdaptiveQuestion | null>;
+    generateQuestion: (input: AIQuestionProviderInput) => Promise<AIQuestionProviderResult>;
 }

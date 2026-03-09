@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useGamePersistence } from '../../../../hooks/useGamePersistence';
 import { GamePhase, PuzzlePiece } from './types';
 import { LEVEL_CONFIGS, GAME_NAME, TUZO_CODE } from './constants';
 import { generatePuzzlePieces } from './utils/patternGenerator';
@@ -10,49 +9,34 @@ import { Target, Info, Brain, ChevronRight } from 'lucide-react';
 import ArcadeGameShell from '../../Shared/ArcadeGameShell';
 import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
 import { ARCADE_SCORE_FORMULA, ARCADE_SCORE_BASE, ARCADE_FEEDBACK_TEXTS } from '../../Shared/ArcadeConstants';
+import { useArcadeGameSession } from '../../Shared/useArcadeGameSession';
 
 const ChromaHafiza: React.FC = () => {
     const location = useLocation();
-    const { saveGamePlay } = useGamePersistence();
-    const gameStartTimeRef = useRef<number>(0);
-    const hasSavedRef = useRef(false);
-    const isResolvingRef = useRef(false);
+    const {
+        sessionState,
+        startSession,
+        addScore,
+        advanceLevel,
+        finishGame,
+        loseLife,
+        recordAttempt
+    } = useArcadeGameSession({ gameId: 'arcade-chroma-hafiza', initialLevel: 0 });
 
-    const [level, setLevel] = useState(0);
+    const isResolvingRef = useRef(false);
+    const roundStartedAtRef = useRef(0);
+
     const [gamePhase, setGamePhase] = useState<GamePhase>('idle');
     const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
     const [targetColor, setTargetColor] = useState<string>('');
     const [isRevealing, setIsRevealing] = useState(false);
-    const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(3);
     const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [showLevelUp, setShowLevelUp] = useState(false);
-
-    // Auto-start
-    useEffect(() => {
-        if (location.state?.autoStart && gamePhase === 'idle') {
-            startGame();
-        }
-    }, [location.state]);
-
-    const startGame = useCallback(() => {
-        window.scrollTo(0, 0);
-        setGamePhase('preview');
-        setLevel(0);
-        setScore(0);
-        setLives(3);
-        setFeedback(null);
-        setShowLevelUp(false);
-        hasSavedRef.current = false;
-        isResolvingRef.current = false;
-        gameStartTimeRef.current = Date.now();
-        initLevel(0);
-    }, []);
 
     const initLevel = useCallback((levelIdx: number) => {
         const config = LEVEL_CONFIGS[levelIdx % LEVEL_CONFIGS.length];
         const newPieces = generatePuzzlePieces(config.pieceCount, config.colorCount);
-        const distinctColors = Array.from(new Set(newPieces.map(p => p.targetColor)));
+        const distinctColors = Array.from(new Set(newPieces.map((piece) => piece.targetColor)));
         const selectedColor = distinctColors[Math.floor(Math.random() * distinctColors.length)];
 
         setPieces(newPieces);
@@ -64,78 +48,105 @@ const ChromaHafiza: React.FC = () => {
         setTimeout(() => {
             setIsRevealing(false);
             setGamePhase('playing');
+            roundStartedAtRef.current = Date.now();
         }, config.previewDuration);
     }, []);
 
-    // ─── Piece click ─────────────────────────────────────────────────────────
-    const handlePieceClick = (id: string) => {
-        if (gamePhase !== 'playing' || isResolvingRef.current) return;
+    const startGame = useCallback(() => {
+        window.scrollTo(0, 0);
+        startSession();
+        setGamePhase('preview');
+        setFeedback(null);
+        setShowLevelUp(false);
+        isResolvingRef.current = false;
+        initLevel(0);
+    }, [initLevel, startSession]);
 
-        setPieces(prev => prev.map(p => {
-            if (p.id === id) {
-                const isCorrect = p.targetColor === targetColor;
-                return { ...p, isSelected: true, isCorrect };
-            }
-            return p;
-        }));
-    };
-
-    // ─── Win/Loss detection ──────────────────────────────────────────────────
     useEffect(() => {
-        if (gamePhase !== 'playing' || isResolvingRef.current) return;
+        if (location.state?.autoStart && sessionState.status === 'START') {
+            startGame();
+        }
+    }, [location.state, sessionState.status, startGame]);
 
-        const piecesForColor = pieces.filter(p => p.targetColor === targetColor);
-        const selectedCorrect = piecesForColor.filter(p => p.isSelected);
-        const lastSelected = pieces.find(p => p.isSelected && !p.isCorrect);
-
-        // ─ Error: wrong piece selected ─
-        if (lastSelected) {
-            isResolvingRef.current = true;
-            setGamePhase('reveal');
-            setIsRevealing(true);
-
-            const msgs = ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES;
-            setFeedback({ message: msgs[Math.floor(Math.random() * msgs.length)], type: 'error' });
-
-            setLives(l => {
-                const newLives = l - 1;
-                setTimeout(() => {
-                    setIsRevealing(false);
-                    setFeedback(null);
-                    if (newLives <= 0) {
-                        setGamePhase('game_over');
-                        // Save result
-                        if (!hasSavedRef.current) {
-                            hasSavedRef.current = true;
-                            const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-                            saveGamePlay({
-                                game_id: 'arcade-chroma-hafiza',
-                                score_achieved: score,
-                                duration_seconds: duration,
-                                metadata: { game_name: GAME_NAME, levels_completed: level, final_level: level + 1 }
-                            });
-                        }
-                    } else {
-                        initLevel(level);
-                    }
-                    isResolvingRef.current = false;
-                }, 2000);
-                return newLives;
-            });
+    const handlePieceClick = useCallback((id: string) => {
+        if (gamePhase !== 'playing' || isResolvingRef.current) {
             return;
         }
 
-        // ─ Win: all correct pieces selected ─
+        const selectedPiece = pieces.find((piece) => piece.id === id);
+        recordAttempt({
+            isCorrect: selectedPiece?.targetColor === targetColor,
+            responseMs: roundStartedAtRef.current > 0 ? Date.now() - roundStartedAtRef.current : null
+        });
+
+        setPieces((previous) => previous.map((piece) => {
+            if (piece.id === id) {
+                const isCorrect = piece.targetColor === targetColor;
+                return { ...piece, isSelected: true, isCorrect };
+            }
+            return piece;
+        }));
+    }, [gamePhase, pieces, recordAttempt, targetColor]);
+
+    useEffect(() => {
+        if (gamePhase !== 'playing' || isResolvingRef.current) {
+            return;
+        }
+
+        const piecesForColor = pieces.filter((piece) => piece.targetColor === targetColor);
+        const selectedCorrect = piecesForColor.filter((piece) => piece.isSelected);
+        const lastSelectedWrongPiece = pieces.find((piece) => piece.isSelected && !piece.isCorrect);
+
+        if (lastSelectedWrongPiece) {
+            isResolvingRef.current = true;
+            setGamePhase('reveal');
+            setIsRevealing(true);
+            setFeedback({
+                message: ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES[
+                    Math.floor(Math.random() * ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES.length)
+                ],
+                type: 'error'
+            });
+
+            const nextSession = loseLife();
+
+            setTimeout(() => {
+                setIsRevealing(false);
+                setFeedback(null);
+
+                if (nextSession.lives <= 0) {
+                    setGamePhase('game_over');
+                    void finishGame({
+                        status: 'GAME_OVER',
+                        metadata: {
+                            game_name: GAME_NAME,
+                            levels_completed: sessionState.level,
+                            final_level: sessionState.level + 1
+                        }
+                    });
+                } else {
+                    initLevel(sessionState.level);
+                }
+
+                isResolvingRef.current = false;
+            }, 2000);
+
+            return;
+        }
+
         if (selectedCorrect.length === piecesForColor.length && piecesForColor.length > 0) {
             isResolvingRef.current = true;
             setGamePhase('reveal');
             setIsRevealing(true);
 
-            const bonus = ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, level + 1);
-            setScore(s => s + bonus);
-
-            const msgs = ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES;
-            setFeedback({ message: msgs[Math.floor(Math.random() * msgs.length)], type: 'success' });
+            const bonus = ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, sessionState.level + 1);
+            addScore(bonus);
+            setFeedback({
+                message: ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES[
+                    Math.floor(Math.random() * ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES.length)
+                ],
+                type: 'success'
+            });
 
             setTimeout(() => {
                 setIsRevealing(false);
@@ -145,22 +156,17 @@ const ChromaHafiza: React.FC = () => {
                 isResolvingRef.current = false;
             }, 2000);
         }
-    }, [pieces, targetColor, gamePhase, level, score, saveGamePlay, initLevel]);
+    }, [addScore, finishGame, gamePhase, initLevel, loseLife, pieces, sessionState.level, targetColor]);
 
-    const nextLevel = () => {
-        setLevel(l => l + 1);
+    const nextLevel = useCallback(() => {
+        const nextSession = advanceLevel();
         setShowLevelUp(false);
-        initLevel(level + 1);
-    };
-
-    // ─── Shell status mapping ────────────────────────────────────────────────
-    const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' | 'SUCCESS' =
-        gamePhase === 'idle' ? 'START' :
-            gamePhase === 'game_over' ? 'GAME_OVER' : 'PLAYING';
+        initLevel(nextSession.level);
+    }, [advanceLevel, initLevel]);
 
     return (
         <ArcadeGameShell
-            gameState={{ score, level: level + 1, lives, status: shellStatus }}
+            gameState={{ ...sessionState, level: sessionState.level + 1 }}
             gameMetadata={{
                 id: 'arcade-chroma-hafiza',
                 title: GAME_NAME,
@@ -181,11 +187,8 @@ const ChromaHafiza: React.FC = () => {
             showLives={true}
         >
             <div className="relative w-full flex flex-col h-[calc(100dvh-4rem)]">
-
-                {/* Feedback Banner */}
                 <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
 
-                {/* Main Gameplay Area */}
                 <main className="flex-1 relative min-h-[50dvh] sm:min-h-[60dvh]">
                     <GameScene
                         pieces={pieces}
@@ -194,7 +197,6 @@ const ChromaHafiza: React.FC = () => {
                         isGameWon={gamePhase === 'success'}
                     />
 
-                    {/* HUD: Target Color */}
                     <AnimatePresence>
                         {(gamePhase === 'playing' || gamePhase === 'reveal') && (
                             <motion.div
@@ -229,7 +231,6 @@ const ChromaHafiza: React.FC = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Level Up overlay (mid-game, not game over) */}
                     <AnimatePresence>
                         {showLevelUp && gamePhase === 'success' && (
                             <motion.div
@@ -242,7 +243,7 @@ const ChromaHafiza: React.FC = () => {
                                     <div className="text-6xl sm:text-7xl">🎉</div>
                                     <h2 className="text-3xl sm:text-4xl font-black text-emerald-500 uppercase tracking-tighter">BAŞARILI!</h2>
                                     <p className="text-black dark:text-white font-black bg-emerald-100 dark:bg-emerald-900/30 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm -rotate-2 transition-colors duration-300">
-                                        +{ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, level + 1)} Puan
+                                        +{ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, sessionState.level + 1)} Puan
                                     </p>
                                     <button
                                         onClick={nextLevel}

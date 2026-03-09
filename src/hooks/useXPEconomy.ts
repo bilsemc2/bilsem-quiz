@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { showXPDeduct, showXPError } from '../components/XPToast';
+import { useAuth } from '@/contexts/auth/useAuth';
+import { showXPDeduct, showXPError } from '../components/xpToastService';
 import { checkXPBalance, performXPTransaction } from '@/features/xp/model/xpUseCases';
 
 interface XPTransactionResult {

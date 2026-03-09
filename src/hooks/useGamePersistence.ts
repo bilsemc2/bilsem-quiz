@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { persistGamePlay } from '@/features/games/model/gamePlayUseCases';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { getZekaTuru, getWorkshopType } from '../constants/intelligenceTypes';
 
 export interface GamePlayData {
@@ -25,20 +25,20 @@ export const useGamePersistence = () => {
             const workshopType = getWorkshopType(data.game_id);
             const intelligenceType = getZekaTuru(data.game_id);
 
-            const { error } = await supabase.from('game_plays').insert({
-                user_id: user.id,
-                game_id: data.game_id,
-                score_achieved: data.score_achieved,
-                difficulty_played: data.difficulty_played || 'orta',
-                duration_seconds: Math.floor(data.duration_seconds),
-                lives_remaining: data.lives_remaining,
-                metadata: data.metadata || {},
-                workshop_type: workshopType,
-                intelligence_type: intelligenceType,
+            const result = await persistGamePlay({
+                userId: user.id,
+                gameId: data.game_id,
+                scoreAchieved: data.score_achieved,
+                difficultyPlayed: data.difficulty_played,
+                durationSeconds: data.duration_seconds,
+                livesRemaining: data.lives_remaining,
+                metadata: data.metadata,
+                workshopType,
+                intelligenceType,
             });
 
-            if (error) {
-                console.error('Error saving game play:', error);
+            if (!result.ok) {
+                console.error('Error saving game play:', result.error.cause ?? result.error.message);
                 return false;
             }
 

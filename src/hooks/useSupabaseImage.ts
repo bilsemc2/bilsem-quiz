@@ -6,8 +6,11 @@ export const useSupabaseImage = (path: string) => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        let currentObjectUrl: string | null = null;
+
         const fetchImage = async () => {
             try {
+                setError(null);
                 const { data, error } = await supabase.storage
                     .from('questions')
                     .download(path);
@@ -17,8 +20,8 @@ export const useSupabaseImage = (path: string) => {
                 }
 
                 if (data) {
-                    const url = URL.createObjectURL(data);
-                    setImageUrl(url);
+                    currentObjectUrl = URL.createObjectURL(data);
+                    setImageUrl(currentObjectUrl);
                 }
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Resim yüklenirken bir hata oluştu');
@@ -29,8 +32,8 @@ export const useSupabaseImage = (path: string) => {
 
         // Cleanup function
         return () => {
-            if (imageUrl) {
-                URL.revokeObjectURL(imageUrl);
+            if (currentObjectUrl) {
+                URL.revokeObjectURL(currentObjectUrl);
             }
         };
     }, [path]);

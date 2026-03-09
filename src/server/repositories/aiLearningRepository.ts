@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase';
-import type { AbilitySnapshot, DifficultyLevel, SessionPerformance } from '@/features/ai/model/types';
+import type {
+    AbilitySnapshotDTO as AbilitySnapshot,
+    QuestionAttemptDTO,
+    SessionPerformanceDTO,
+    SessionPerformanceMetricsDTO as SessionPerformance
+} from '@/shared/types/aiEventDtos';
 
 interface AbilitySnapshotDbRow {
     user_id: string;
@@ -22,8 +27,6 @@ interface SessionPerformanceDbRow {
     consecutive_wrong: number;
 }
 
-export type QuestionAttemptSource = 'ai' | 'fallback' | 'bank';
-
 export interface AbilitySnapshotWriteOptions {
     source?: 'rule_engine' | 'ai' | 'hybrid' | 'manual';
     modelVersion?: string;
@@ -31,17 +34,10 @@ export interface AbilitySnapshotWriteOptions {
     context?: Record<string, unknown>;
 }
 
-export interface CreateSessionPerformancePayload {
-    userId: string;
-    topic: string;
-    locale: 'tr' | 'en';
-    metrics: SessionPerformance;
-    totalQuestions?: number;
-    correctAnswers?: number;
-    startedAtISO?: string;
-    endedAtISO?: string | null;
-    metadata?: Record<string, unknown>;
-}
+export type CreateSessionPerformancePayload = Partial<
+    Pick<SessionPerformanceDTO, 'endedAtISO' | 'metadata'>
+> &
+SessionPerformanceDTO;
 
 export interface UpdateSessionPerformancePayload {
     userId: string;
@@ -53,19 +49,7 @@ export interface UpdateSessionPerformancePayload {
     metadata?: Record<string, unknown>;
 }
 
-export interface QuestionAttemptPayload {
-    userId: string;
-    sessionPerformanceId: string;
-    questionId: string;
-    topic: string;
-    difficultyLevel: DifficultyLevel;
-    wasCorrect: boolean;
-    responseMs: number;
-    selectedIndex?: number | null;
-    correctIndex?: number | null;
-    source?: QuestionAttemptSource;
-    questionPayload?: Record<string, unknown>;
-}
+export type QuestionAttemptPayload = QuestionAttemptDTO;
 
 export interface AILearningRepository {
     getAbilitySnapshot: (userId: string) => Promise<AbilitySnapshot | null>;
@@ -184,7 +168,7 @@ const getLatestSessionPerformance = async (userId: string): Promise<SessionPerfo
 };
 
 const createSessionPerformance = async (payload: CreateSessionPerformancePayload): Promise<string> => {
-    const totalQuestions = payload.totalQuestions ?? 0;
+    const totalQuestions = payload.totalQuestions;
     const derivedCorrectAnswers = Math.round(totalQuestions * payload.metrics.recentAccuracy);
     const correctAnswers = payload.correctAnswers ?? derivedCorrectAnswers;
 

@@ -399,7 +399,7 @@ const BubbleNumbersGame: React.FC = () => {
         setTimeLeft(prev => Math.max(0, prev - 2));
       }
     }
-  }, [level, targetNumber, gameOver, isPaused]);
+  }, [level, targetNumber, gameOver, isPaused, currentTime]);
 
   // Her saniye güçlendirici durumunu güncelle
   useEffect(() => {
@@ -448,22 +448,19 @@ const BubbleNumbersGame: React.FC = () => {
     setBubbles(initialBubbles);
     setTargetNumber(randomBubble.result);
 
-    // Animasyon döngüsünü başlat
-    const startGame = () => {
-        window.scrollTo(0, 0);
-      lastTimeRef.current = performance.now();
-      animationFrameRef.current = requestAnimationFrame(gameLoop);
-    };
+    window.scrollTo(0, 0);
+  }, [level]); // Sadece level değişince çalışsın
 
-    startGame();
+  useEffect(() => {
+    lastTimeRef.current = performance.now();
+    animationFrameRef.current = requestAnimationFrame(gameLoop);
 
-    // Temizlik
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [level]); // Sadece level değişince çalışsın
+  }, [gameLoop]);
 
   // Süre sistemini başlat
   useEffect(() => {

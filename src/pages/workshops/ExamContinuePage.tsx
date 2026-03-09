@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react";
-import { useExam } from "../../contexts/ExamContext";
+import { useExam } from "../../contexts/exam/useExam";
 
 const ExamContinuePage: React.FC = () => {
   const navigate = useNavigate();

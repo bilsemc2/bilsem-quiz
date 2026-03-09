@@ -5,7 +5,7 @@ import { Plus, Trash2, Edit, X, Loader2, ArrowLeft, Brain, Upload, Download } fr
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { authRepository } from '@/server/repositories/authRepository';
 import { isAdminProfile } from '@/features/admin/model/xpRequirementsUseCases';
 import {

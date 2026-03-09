@@ -1,5 +1,15 @@
 import { supabase } from '@/lib/supabase';
-import type { AdaptiveQuestion, DifficultyLevel } from '@/features/ai/model/types';
+import type {
+    AdaptiveQuestion,
+    AIQuestionGenerationMetadata,
+    DifficultyLevel
+} from '@/features/ai/model/types';
+import {
+    attachGenerationMetadata,
+    buildQuestionFingerprint
+} from '@/features/ai/question-generation/model/generationPersistenceModel';
+import { createQuestionPublicationDecisions } from '@/features/ai/question-generation/model/questionPublicationModel';
+import { aiGenerationRepository } from '@/server/repositories/aiGenerationRepository';
 
 type QuestionLocale = 'tr' | 'en';
 
@@ -28,8 +38,9 @@ interface SaveGeneratedQuestionDbRow {
 }
 
 interface ExistingQuestionFingerprintRow {
-    stem: string;
-    options: string[] | string;
+    question_fingerprint?: string | null;
+    stem?: string;
+    options?: string[] | string;
 }
 
 export interface ListPendingQuestionsInput {
@@ -44,6 +55,8 @@ export interface SaveGeneratedQuestionsInput {
     userId: string;
     topic: string;
     locale: QuestionLocale;
+    generationJobId?: string | null;
+    generationMetadata?: Partial<AIQuestionGenerationMetadata> | null;
     questions: AdaptiveQuestion[];
 }
 
@@ -65,16 +78,6 @@ const clampDifficulty = (value: number): DifficultyLevel => {
     return value as DifficultyLevel;
 };
 
-const normalizeQuestionText = (value: string): string => {
-    return value
-        .toLocaleLowerCase('tr-TR')
-        .normalize('NFKD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-};
-
 const toOptions = (value: string[] | string): string[] => {
     if (Array.isArray(value)) {
         return value.filter((item) => typeof item === 'string');
@@ -92,16 +95,6 @@ const toOptions = (value: string[] | string): string[] => {
     return [];
 };
 
-const buildQuestionFingerprint = (input: { stem: string; options: string[] | string }): string => {
-    const stem = normalizeQuestionText(input.stem);
-    const options = toOptions(input.options)
-        .map((option) => normalizeQuestionText(option))
-        .filter((option) => option.length > 0)
-        .sort();
-
-    return `${stem}::${options.join('|')}`;
-};
-
 const loadExistingFingerprints = async (input: {
     userId: string;
     topic: string;
@@ -109,7 +102,7 @@ const loadExistingFingerprints = async (input: {
 }): Promise<Set<string>> => {
     const { data, error } = await supabase
         .from('ai_generated_questions')
-        .select('stem, options')
+        .select('question_fingerprint, stem, options')
         .eq('user_id', input.userId)
         .eq('topic', input.topic)
         .eq('locale', input.locale)
@@ -126,7 +119,16 @@ const loadExistingFingerprints = async (input: {
 
     return new Set(
         (data as unknown as ExistingQuestionFingerprintRow[])
-            .map((row) => buildQuestionFingerprint(row))
+            .map((row) => {
+                if (typeof row.question_fingerprint === 'string' && row.question_fingerprint.length > 0) {
+                    return row.question_fingerprint;
+                }
+
+                return buildQuestionFingerprint({
+                    stem: row.stem ?? '',
+                    options: row.options ?? []
+                });
+            })
             .filter((fingerprint) => fingerprint.length > 0)
     );
 };
@@ -242,6 +244,7 @@ const saveGeneratedQuestions = async (input: SaveGeneratedQuestionsInput): Promi
         locale: input.locale
     });
 
+    const questionFingerprintByExternalId = new Map<string, string>();
     const uniqueQuestions = input.questions.filter((question) => {
         const fingerprint = buildQuestionFingerprint({
             stem: question.stem,
@@ -253,6 +256,7 @@ const saveGeneratedQuestions = async (input: SaveGeneratedQuestionsInput): Promi
         }
 
         existingFingerprints.add(fingerprint);
+        questionFingerprintByExternalId.set(question.id, fingerprint);
         return true;
     });
 
@@ -260,21 +264,146 @@ const saveGeneratedQuestions = async (input: SaveGeneratedQuestionsInput): Promi
         return [];
     }
 
-    const insertRows = uniqueQuestions.map((question) => ({
-        user_id: input.userId,
-        topic: input.topic,
-        locale: input.locale,
-        external_id: question.id,
-        stem: question.stem,
-        options: question.options,
-        correct_index: question.correctIndex,
-        explanation: question.explanation,
-        difficulty_level: question.difficultyLevel,
-        source: question.source,
-        generation_context: {
-            originalTopic: question.topic
-        }
-    }));
+    const reviewedAtISO = new Date().toISOString();
+    const publicationDecisions = createQuestionPublicationDecisions({
+        questions: uniqueQuestions,
+        reviewedAtISO
+    });
+    const publishableDecisions = publicationDecisions.filter(
+        (decision) => decision.publishToPool && typeof decision.fingerprint === 'string'
+    );
+    const aiCandidateQuestions = uniqueQuestions.filter((question) => question.source === 'ai');
+    const aiQuestionIdByFingerprint = new Map<string, string>();
+
+    if (aiCandidateQuestions.length > 0) {
+        const candidateReferences = await aiGenerationRepository.upsertQuestions({
+            userId: input.userId,
+            topic: input.topic,
+            locale: input.locale,
+            generationJobId: input.generationJobId ?? null,
+            generationMetadata: input.generationMetadata,
+            reviewStatus: 'candidate',
+            reviewNotes: {
+                qualityGate: 'pending_review',
+                reviewedAtISO
+            },
+            questions: aiCandidateQuestions
+        });
+
+        candidateReferences.forEach((question) => {
+            aiQuestionIdByFingerprint.set(question.fingerprint, question.id);
+        });
+
+        await aiGenerationRepository.updateQuestionReviews({
+            userId: input.userId,
+            topic: input.topic,
+            locale: input.locale,
+            generationMetadata: input.generationMetadata,
+            reviews: publicationDecisions
+                .filter(
+                    (decision) =>
+                        decision.question.source === 'ai' &&
+                        typeof decision.fingerprint === 'string'
+                )
+                .map((decision) => ({
+                    fingerprint: decision.fingerprint as string,
+                    reviewStatus: decision.reviewStatus,
+                    reviewNotes: decision.reviewNotes
+                }))
+        });
+    }
+
+    const fallbackQuestions = publicationDecisions
+        .filter(
+            (decision) =>
+                decision.publishToPool &&
+                decision.question.source === 'fallback'
+        )
+        .map((decision) => ({
+            question: decision.question,
+            reviewNotes: decision.reviewNotes
+        }));
+
+    if (fallbackQuestions.length > 0) {
+        const fallbackReferences = await aiGenerationRepository.upsertQuestions({
+            userId: input.userId,
+            topic: input.topic,
+            locale: input.locale,
+            generationJobId: input.generationJobId ?? null,
+            generationMetadata: input.generationMetadata,
+            reviewStatus: 'active',
+            reviewNotes: {
+                qualityGate: 'fallback_bypass',
+                reviewedAtISO
+            },
+            questions: fallbackQuestions.map((entry) => entry.question)
+        });
+
+        fallbackReferences.forEach((question) => {
+            aiQuestionIdByFingerprint.set(question.fingerprint, question.id);
+        });
+
+        await aiGenerationRepository.updateQuestionReviews({
+            userId: input.userId,
+            topic: input.topic,
+            locale: input.locale,
+            generationMetadata: input.generationMetadata,
+            reviews: fallbackQuestions
+                .map((entry) => {
+                    const fingerprint = buildQuestionFingerprint({
+                        stem: entry.question.stem,
+                        options: entry.question.options
+                    });
+
+                    return fingerprint
+                        ? {
+                            fingerprint,
+                            reviewStatus: 'active' as const,
+                            reviewNotes: entry.reviewNotes
+                        }
+                        : null;
+                })
+                .filter((entry): entry is {
+                    fingerprint: string;
+                    reviewStatus: 'active';
+                    reviewNotes: Record<string, unknown>;
+                } => entry !== null)
+        });
+    }
+
+    if (publishableDecisions.length === 0) {
+        return [];
+    }
+
+    const insertRows = publishableDecisions.map((decision) => {
+        const question = decision.question;
+        const fingerprint = decision.fingerprint ?? questionFingerprintByExternalId.get(question.id) ?? buildQuestionFingerprint({
+            stem: question.stem,
+            options: question.options
+        });
+
+        return {
+            user_id: input.userId,
+            topic: input.topic,
+            locale: input.locale,
+            external_id: question.id,
+            stem: question.stem,
+            options: question.options,
+            correct_index: question.correctIndex,
+            explanation: question.explanation,
+            difficulty_level: question.difficultyLevel,
+            source: question.source,
+            question_fingerprint: fingerprint,
+            ai_question_id: aiQuestionIdByFingerprint.get(fingerprint) ?? null,
+            generation_job_id: input.generationJobId ?? null,
+            generation_context: attachGenerationMetadata(
+                {
+                    originalTopic: question.topic
+                },
+                input.generationMetadata
+            )
+        };
+    });
 
     const { data, error } = await supabase
         .from('ai_generated_questions')

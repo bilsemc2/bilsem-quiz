@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { supabase } from '../lib/supabase';
 import CircularProgress from '../components/CircularProgress';
 import { Feedback } from '../components/Feedback';
@@ -65,10 +65,10 @@ export default function HomeworkPage() {
     quiz?: { id: string; title: string; description: string; questions: Question[] };
   }>>([]);
 
-  const showFeedback = (message: string, type: FeedbackType) => {
+  const showFeedback = useCallback((message: string, type: FeedbackType) => {
     setFeedback({ message, type, show: true });
     setTimeout(() => setFeedback(prev => ({ ...prev, show: false })), 2000);
-  };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,7 +111,7 @@ export default function HomeworkPage() {
     };
 
     fetchData();
-  }, [user]);
+  }, [showFeedback, user]);
 
   // Quiz sonuçlarını yükle
   useEffect(() => {
@@ -159,24 +159,26 @@ export default function HomeworkPage() {
 
   // Timer effect
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (activeQuiz && timeLeft > 0 && !isAnswered) {
-      timer = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
+    let timer: NodeJS.Timeout | undefined;
 
-      if (timeLeft === 0) {
-        handleTimeUp();
+    if (activeQuiz && !isAnswered) {
+      if (timeLeft <= 0) {
+        setIsAnswered(true);
+        setIsTimeout(true);
+        showFeedback('Süre doldu!', 'error');
+      } else {
+        timer = setInterval(() => {
+          setTimeLeft(prev => prev - 1);
+        }, 1000);
       }
     }
-    return () => clearInterval(timer);
-  }, [timeLeft, isAnswered, activeQuiz]);
 
-  const handleTimeUp = () => {
-    setIsAnswered(true);
-    setIsTimeout(true);
-    showFeedback('Süre doldu!', 'error');
-  };
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [activeQuiz, isAnswered, showFeedback, timeLeft]);
 
   // Diziyi karıştırmak için yardımcı fonksiyon
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -329,7 +331,7 @@ export default function HomeworkPage() {
         showFeedback('Bir hata oluştu!', 'error');
       }
     }
-  }, [activeQuiz, currentQuestionIndex, score, user?.id, navigate]);
+  }, [activeQuiz, currentQuestionIndex, navigate, score, showFeedback, user?.id, userAnswers]);
 
   const currentQuestion = activeQuiz?.questions[currentQuestionIndex];
 

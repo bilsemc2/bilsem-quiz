@@ -15,6 +15,10 @@ import {
     createDefaultAbilitySnapshot,
     updateAbilitySnapshotFromSession
 } from '@/features/ai/adaptive-difficulty/model/abilitySnapshotUpdateUseCase';
+import type { AbilitySnapshot, SessionPerformance } from '@/features/ai/model/types';
+import { getAdaptiveDifficultySettings } from '@/features/ai/adaptive-difficulty/model/adaptiveDifficultySettings';
+import { calculateTargetDifficultyDecision } from '@/features/ai/adaptive-difficulty/model/difficultyEngine';
+import { resolveStoryQuestionAttemptSource } from '@/shared/story/model/questionSource';
 
 const GAME_ID = 'hikaye-quiz';
 const MAX_LEVEL = 10;
@@ -37,6 +41,8 @@ const INITIAL_SESSION_TRACKING: SessionTrackingState = {
     streakCorrect: 0,
     consecutiveWrong: 0
 };
+
+const ADAPTIVE_DIFFICULTY_SETTINGS = getAdaptiveDifficultySettings();
 
 const THEME_ACCENTS: Record<string, { bg: string; text: string; emoji: string; label: string }> = {
     animals: { bg: 'bg-cyber-green', text: 'text-black', emoji: '🦁', label: 'Hayvanlar' },
@@ -96,6 +102,8 @@ export default function StoryQuizGame() {
     const [sessionPerformanceId, setSessionPerformanceId] = useState<string | null>(null);
     const [sessionTracking, setSessionTracking] = useState<SessionTrackingState>(INITIAL_SESSION_TRACKING);
     const [questionStartedAtMs, setQuestionStartedAtMs] = useState<number>(0);
+    const [baselineAbilitySnapshot, setBaselineAbilitySnapshot] = useState<AbilitySnapshot | null>(null);
+    const [previousSessionPerformance, setPreviousSessionPerformance] = useState<SessionPerformance | null>(null);
 
     // Load stories
     useEffect(() => {
@@ -132,6 +140,8 @@ export default function StoryQuizGame() {
         setSessionPerformanceId(null);
         setSessionTracking(INITIAL_SESSION_TRACKING);
         setQuestionStartedAtMs(0);
+        setBaselineAbilitySnapshot(null);
+        setPreviousSessionPerformance(null);
         playSound('pop');
     }, [stories, playSound]);
 
@@ -144,6 +154,62 @@ export default function StoryQuizGame() {
         }
     }, []);
 
+    const buildSessionMetrics = useCallback((tracking: SessionTrackingState): SessionPerformance => {
+        const answered = Math.max(0, tracking.answered);
+
+        if (answered === 0) {
+            return {
+                recentAccuracy: 0,
+                averageResponseMs: 0,
+                targetResponseMs: SESSION_TARGET_RESPONSE_MS,
+                streakCorrect: 0,
+                consecutiveWrong: 0
+            };
+        }
+
+        return {
+            recentAccuracy: tracking.correct / answered,
+            averageResponseMs: Math.round(tracking.responseMsTotal / answered),
+            targetResponseMs: SESSION_TARGET_RESPONSE_MS,
+            streakCorrect: tracking.streakCorrect,
+            consecutiveWrong: tracking.consecutiveWrong
+        };
+    }, []);
+
+    const buildDifficultyDecisionForTracking = useCallback((input: {
+        tracking: SessionTrackingState;
+        snapshot: AbilitySnapshot;
+        userId: string;
+        topic: string;
+    }) => {
+        const previousDifficultyLevel = previousSessionPerformance
+            ? calculateTargetDifficultyDecision(
+                {
+                    userId: input.userId,
+                    topic: input.topic,
+                    locale: 'tr',
+                    abilitySnapshot: input.snapshot,
+                    sessionPerformance: previousSessionPerformance
+                },
+                {
+                    settings: ADAPTIVE_DIFFICULTY_SETTINGS
+                }
+            ).difficultyLevel
+            : null;
+
+        return calculateTargetDifficultyDecision({
+            userId: input.userId,
+            topic: input.topic,
+            locale: 'tr',
+            abilitySnapshot: input.snapshot,
+            sessionPerformance: buildSessionMetrics(input.tracking)
+        }, {
+            previousSessionPerformance,
+            previousDifficultyLevel,
+            settings: ADAPTIVE_DIFFICULTY_SETTINGS
+        });
+    }, [buildSessionMetrics, previousSessionPerformance]);
+
     const startLearningSession = useCallback(async () => {
         if (!story) {
             return;
@@ -153,8 +219,16 @@ export default function StoryQuizGame() {
             const userId = await getSessionUserId();
             if (!userId) {
                 setSessionPerformanceId(null);
+                setBaselineAbilitySnapshot(null);
+                setPreviousSessionPerformance(null);
                 return;
             }
+
+            const latestSessionPerformance = await aiLearningRepository.getLatestSessionPerformance(userId);
+            const currentSnapshot = await aiLearningRepository.getAbilitySnapshot(userId);
+            const baselineSnapshot = currentSnapshot ?? createDefaultAbilitySnapshot(userId);
+            setBaselineAbilitySnapshot(baselineSnapshot);
+            setPreviousSessionPerformance(latestSessionPerformance);
 
             const sessionId = await aiLearningRepository.createSessionPerformance({
                 userId,
@@ -196,8 +270,19 @@ export default function StoryQuizGame() {
             }
 
             const answered = Math.max(0, tracking.answered);
-            const recentAccuracy = answered > 0 ? tracking.correct / answered : 0;
-            const averageResponseMs = answered > 0 ? Math.round(tracking.responseMsTotal / answered) : 0;
+            const topic = resolveTopicFromTheme(story.theme);
+            const sessionMetrics = buildSessionMetrics(tracking);
+            const currentSnapshot = await aiLearningRepository.getAbilitySnapshot(userId);
+            const baselineSnapshot =
+                baselineAbilitySnapshot ??
+                currentSnapshot ??
+                createDefaultAbilitySnapshot(userId);
+            const difficultyDecision = buildDifficultyDecisionForTracking({
+                tracking,
+                snapshot: baselineSnapshot,
+                userId,
+                topic
+            });
 
             await aiLearningRepository.updateSessionPerformance({
                 userId,
@@ -205,33 +290,20 @@ export default function StoryQuizGame() {
                 totalQuestions: story.questions.length,
                 correctAnswers: tracking.correct,
                 endedAtISO: new Date().toISOString(),
-                metrics: {
-                    recentAccuracy,
-                    averageResponseMs,
-                    targetResponseMs: SESSION_TARGET_RESPONSE_MS,
-                    streakCorrect: tracking.streakCorrect,
-                    consecutiveWrong: tracking.consecutiveWrong
-                },
+                metrics: sessionMetrics,
                 metadata: {
                     gameId: GAME_ID,
                     storyId: story.id,
                     storyTheme: story.theme,
-                    answeredQuestions: answered
+                    answeredQuestions: answered,
+                    difficultyDecision
                 }
             });
 
-            const currentSnapshot = await aiLearningRepository.getAbilitySnapshot(userId);
-            const baselineSnapshot = currentSnapshot ?? createDefaultAbilitySnapshot(userId);
             const nextSnapshot = updateAbilitySnapshotFromSession({
                 snapshot: baselineSnapshot,
-                topic: resolveTopicFromTheme(story.theme),
-                sessionPerformance: {
-                    recentAccuracy,
-                    averageResponseMs,
-                    targetResponseMs: SESSION_TARGET_RESPONSE_MS,
-                    streakCorrect: tracking.streakCorrect,
-                    consecutiveWrong: tracking.consecutiveWrong
-                },
+                topic,
+                sessionPerformance: sessionMetrics,
                 totalQuestions: answered,
                 correctAnswers: tracking.correct
             });
@@ -243,13 +315,23 @@ export default function StoryQuizGame() {
                 context: {
                     gameId: GAME_ID,
                     storyId: story.id,
-                    storyTheme: story.theme
+                    storyTheme: story.theme,
+                    difficultyDecision,
+                    previousOverallScore: baselineSnapshot.overallScore,
+                    nextOverallScore: nextSnapshot.overallScore
                 }
             });
         } catch (error) {
             console.error('session_performance güncellenemedi:', error);
         }
-    }, [getSessionUserId, sessionPerformanceId, story]);
+    }, [
+        baselineAbilitySnapshot,
+        buildDifficultyDecisionForTracking,
+        buildSessionMetrics,
+        getSessionUserId,
+        sessionPerformanceId,
+        story
+    ]);
 
     // Finish reading → start the engine (quiz begins, timer starts)
     const finishReading = useCallback(() => {
@@ -270,6 +352,8 @@ export default function StoryQuizGame() {
         setSessionPerformanceId(null);
         setSessionTracking(INITIAL_SESSION_TRACKING);
         setQuestionStartedAtMs(0);
+        setBaselineAbilitySnapshot(null);
+        setPreviousSessionPerformance(null);
         startReading();
     }, [engine, startReading]);
 
@@ -315,21 +399,32 @@ export default function StoryQuizGame() {
                         question.aiGeneratedQuestionId ||
                         question.id ||
                         `story-${story.id}-q-${currentQuestion + 1}`;
+                    const topic = resolveTopicFromTheme(story.theme);
+                    const difficultyDecision = buildDifficultyDecisionForTracking({
+                        tracking: sessionTracking,
+                        snapshot: baselineAbilitySnapshot ?? createDefaultAbilitySnapshot(userId),
+                        userId,
+                        topic
+                    });
 
                     await aiLearningRepository.recordQuestionAttempt({
                         userId,
                         sessionPerformanceId,
                         questionId,
-                        topic: resolveTopicFromTheme(story.theme),
-                        difficultyLevel: 3,
+                        topic,
+                        difficultyLevel: difficultyDecision.difficultyLevel,
                         wasCorrect: isCorrect,
                         responseMs,
                         selectedIndex: answerIndex,
                         correctIndex: question.correctAnswer,
-                        source: question.aiGeneratedQuestionId ? 'ai' : 'fallback',
+                        source: resolveStoryQuestionAttemptSource(question),
                         questionPayload: {
                             storyId: story.id,
-                            storyTheme: story.theme
+                            storyTheme: story.theme,
+                            questionNumber: currentQuestion + 1,
+                            answeredBeforeQuestion: sessionTracking.answered,
+                            answeredAfterQuestion: nextTracking.answered,
+                            difficultyDecision
                         }
                     });
                 } catch (error) {

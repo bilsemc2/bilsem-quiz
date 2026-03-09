@@ -53,43 +53,6 @@ export const StatsManagement: React.FC = () => {
   const [quizStats, setQuizStats] = useState<QuizStats | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
 
-  const fetchStats = async () => {
-    try {
-      setLoading(true);
-
-      // Quiz İstatistikleri
-      const { data: quizData, error: quizError } = await supabase
-        .from('quiz_results')
-        .select('score, questions_answered, correct_answers, completed_at, profiles(full_name, email)');
-
-      if (quizError) throw quizError;
-
-      // İstatistikleri hesapla
-      const stats = calculateQuizStats(quizData || []);
-      setQuizStats(stats);
-
-      // Kullanıcı İstatistikleri
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('points, experience');
-
-      if (userError) throw userError;
-
-      const userStatsData = calculateUserStats(userData || []);
-      setUserStats(userStatsData);
-
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'İstatistikler yüklenirken bir hata oluştu');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
   const calculateQuizStats = (quizData: Array<{ score: number; questions_answered: number; correct_answers: number; completed_at: string; profiles?: { full_name?: string; email?: string } | { full_name?: string; email?: string }[] | null }>): QuizStats => {
     const totalQuizzes = quizData.length;
     const totalQuestionsAnswered = quizData.reduce((sum, quiz) => sum + quiz.questions_answered, 0);
@@ -144,6 +107,35 @@ export const StatsManagement: React.FC = () => {
       recentQuizzes: []
     };
   };
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+
+        const { data: quizData, error: quizError } = await supabase
+          .from('quiz_results')
+          .select('score, questions_answered, correct_answers, completed_at, profiles(full_name, email)');
+
+        if (quizError) throw quizError;
+        setQuizStats(calculateQuizStats(quizData || []));
+
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('points, experience');
+
+        if (userError) throw userError;
+        setUserStats(calculateUserStats(userData || []));
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'İstatistikler yüklenirken bir hata oluştu');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   if (loading) {
     return (

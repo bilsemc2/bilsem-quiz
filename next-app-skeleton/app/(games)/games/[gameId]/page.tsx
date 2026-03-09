@@ -7,6 +7,7 @@ import { ClockProblemGameClient } from '@/features/games/clock-problem/component
 import { ConditionalLogicGameClient } from '@/features/games/conditional-logic/components/ConditionalLogicGameClient';
 import { CosmicMemoryGameClient } from '@/features/games/cosmic-memory/components/CosmicMemoryGameClient';
 import { DigitSymbolGameClient } from '@/features/games/digit-symbol/components/DigitSymbolGameClient';
+import { DirectionStroopGameClient } from '@/features/games/direction-stroop/components/DirectionStroopGameClient';
 import { getRegistryItem } from '@/features/games/game-registry';
 import { LaserMazeGameClient } from '@/features/games/laser-maze/components/LaserMazeGameClient';
 import { LogicPuzzleGameClient } from '@/features/games/logic-puzzle/components/LogicPuzzleGameClient';
@@ -67,6 +68,16 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
     return (
       <WordHuntGameClient
         gameId="kelime-avi"
+        gameTitle={resolvedGame.title}
+        durationSeconds={resolvedGame.durationSeconds}
+      />
+    );
+  }
+
+  if (resolvedGame.id === 'yon-stroop' || resolvedGame.id === 'direction-stroop') {
+    return (
+      <DirectionStroopGameClient
+        gameId="yon-stroop"
         gameTitle={resolvedGame.title}
         durationSeconds={resolvedGame.durationSeconds}
       />

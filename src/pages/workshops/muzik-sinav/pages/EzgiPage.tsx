@@ -7,8 +7,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, ArrowRight, CheckCircle, Sparkles } from 'lucide-react';
 import { useMicrophone } from '../hooks/useMicrophone';
-import { useExam } from '../contexts/ExamContext';
-import { useAIMuzik } from '../contexts/MusicAIContext';
+import { useExam } from '../contexts/exam/useExam';
+import { useAIMuzik } from '../contexts/musicAI/useAIMuzik';
 import { MicrophoneButton } from '../components/MicrophoneButton';
 import { calculateMelodyAccuracy } from '../utils/scoring';
 import type { TestState } from '../types';
@@ -18,7 +18,13 @@ const POINTS_PER_QUESTION = 5;
 
 
 export default function EzgiPage() {
-    const ai = useAIMuzik();
+    const {
+        piano,
+        initPiano,
+        requestContent,
+        requestAnalysis,
+        adjustDifficulty
+    } = useAIMuzik();
     const mic = useMicrophone();
     const { submitModuleScore, isModuleComplete } = useExam();
 
@@ -26,21 +32,21 @@ export default function EzgiPage() {
         phase: 'intro', currentQuestion: 0, totalQuestions: TOTAL_QUESTIONS, score: 0, maxScore: 20,
     });
     const [targetMelody, setTargetMelody] = useState<string[]>([]);
-    const [_aiHint, setAiHint] = useState('');
+    const [, setAiHint] = useState('');
     const [results, setResults] = useState<{ accuracy: number; points: number }[]>([]);
 
-    useEffect(() => { ai.initPiano(); }, []);
+    useEffect(() => { initPiano(); }, [initPiano]);
 
     const startQuestion = useCallback(async () => {
         setState((s) => ({ ...s, phase: 'playing' }));
-        const content = await ai.requestContent('ezgi', state.currentQuestion, TOTAL_QUESTIONS);
+        const content = await requestContent('ezgi', state.currentQuestion, TOTAL_QUESTIONS);
         const melody = content.melody?.notes || ['C4', 'D4', 'E4', 'C4'];
         const durations = content.melody?.durations || melody.map(() => 0.5);
         setTargetMelody(melody);
         setAiHint(content.hint || '');
-        if (ai.piano?.isReady) await ai.piano.playMelody(melody, durations);
+        if (piano?.isReady) await piano.playMelody(melody, durations);
         setTimeout(() => setState((s) => ({ ...s, phase: 'recording' })), 800);
-    }, [ai, state.currentQuestion]);
+    }, [piano, requestContent, state.currentQuestion]);
 
     const handleMicToggle = useCallback(async () => {
         if (mic.isListening) {
@@ -51,11 +57,11 @@ export default function EzgiPage() {
             const points = Math.round((accuracy / 100) * POINTS_PER_QUESTION);
 
             setResults((prev) => [...prev, { accuracy, points }]);
-            ai.adjustDifficulty(points >= 3);
+            adjustDifficulty(points >= 3);
 
             // Get audio recording for AI multimodal analysis
             const audioData = await mic.getRecordingBase64();
-            ai.requestAnalysis(
+            requestAnalysis(
                 'ezgi',
                 { melody: targetMelody },
                 { melody: mic.capturedNotes, accuracy },
@@ -76,7 +82,15 @@ export default function EzgiPage() {
             mic.resetCapture();
             await mic.startListening();
         }
-    }, [mic, targetMelody, state.score, state.currentQuestion, submitModuleScore, ai]);
+    }, [
+        adjustDifficulty,
+        mic,
+        requestAnalysis,
+        state.currentQuestion,
+        state.score,
+        submitModuleScore,
+        targetMelody
+    ]);
 
     const completed = isModuleComplete('ezgi');
 

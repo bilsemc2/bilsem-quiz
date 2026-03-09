@@ -2,6 +2,22 @@ import type { GameRegistryItem } from '@/features/games/types';
 
 export const GAME_REGISTRY: GameRegistryItem[] = [
   {
+    id: 'yon-stroop',
+    title: 'Yon Stroop',
+    category: 'attention',
+    durationSeconds: 180,
+    description: 'Kelimenin anlamina degil, ekranda bulundugu yone gore karar verme oyunu.',
+    migrated: true,
+  },
+  {
+    id: 'direction-stroop',
+    title: 'Yon Stroop',
+    category: 'attention',
+    durationSeconds: 180,
+    description: 'Kelimenin anlamina degil, ekranda bulundugu yone gore karar verme oyunu.',
+    migrated: true,
+  },
+  {
     id: 'farki-bul',
     title: 'Farki Bul',
     category: 'attention',

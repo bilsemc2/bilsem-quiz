@@ -1,5 +1,6 @@
 import type { StoryTheme, Question } from '../../../../shared/story/types.ts';
 import type { AdaptiveQuestionRequest, SessionPerformance, AbilitySnapshot, AdaptiveQuestion } from '../../model/types.ts';
+import { buildQuestionFingerprint } from './generationPersistenceModel.ts';
 
 interface StoryQuestionSetInput {
     userId: string;
@@ -63,10 +64,12 @@ const toStoryQuestion = (stemPrefix: string, index: number, data: {
     options: string[];
     correctIndex: number;
     explanation: string;
+    source: AdaptiveQuestion['source'];
 }): Question => ({
     text: `${stemPrefix} ${index + 1}: ${data.stem}`,
     options: data.options,
     correctAnswer: data.correctIndex,
+    source: data.source,
     feedback: {
         correct: data.explanation || 'Doğru cevap!',
         incorrect: 'Henüz doğru değil, tekrar deneyebilirsin.'
@@ -126,6 +129,7 @@ export const generateStoryQuestionSet = async (
     const snapshot = storedSnapshot ?? createDefaultSnapshot(input.userId);
     let performance = storedPerformance ?? createDefaultPerformance();
     const previousQuestionIds: string[] = [];
+    const previousQuestionFingerprints: string[] = [];
     const questions: Question[] = [];
 
     for (let i = 0; i < input.questionCount; i++) {
@@ -135,18 +139,26 @@ export const generateStoryQuestionSet = async (
             locale: input.locale,
             abilitySnapshot: snapshot,
             sessionPerformance: performance,
-            previousQuestionIds
+            previousQuestionIds,
+            previousQuestionFingerprints
         };
 
         const { question, usedFallback } = await generateQuestion(request);
         previousQuestionIds.push(question.id);
+        previousQuestionFingerprints.push(
+            buildQuestionFingerprint({
+                stem: question.stem,
+                options: question.options
+            })
+        );
         performance = evolvePerformance(performance, usedFallback);
         questions.push(
             toStoryQuestion('Soru', i, {
                 stem: question.stem,
                 options: question.options,
                 correctIndex: question.correctIndex,
-                explanation: question.explanation
+                explanation: question.explanation,
+                source: question.source
             })
         );
     }

@@ -78,13 +78,6 @@ const KraftOrigami: React.FC = () => {
         return foldBonus + punchBonus;
     }, [state.folds.length, finalPunches.length]);
 
-    // Auto-start from Arcade Hub
-    useEffect(() => {
-        if (location.state?.autoStart && gamePhase === 'idle') {
-            startGame();
-        }
-    }, [location.state]);
-
     const startGame = () => {
         window.scrollTo(0, 0);
         setGamePhase('playing');
@@ -99,6 +92,13 @@ const KraftOrigami: React.FC = () => {
         isResolvingRef.current = false;
         gameStartTimeRef.current = Date.now();
     };
+
+    // Auto-start from Arcade Hub
+    useEffect(() => {
+        if (location.state?.autoStart && gamePhase === 'idle') {
+            startGame();
+        }
+    }, [gamePhase, location.state]);
 
     const handleFold = (direction: FoldDirection) => {
         if (state.isUnfolded) return;

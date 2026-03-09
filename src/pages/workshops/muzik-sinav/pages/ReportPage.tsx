@@ -6,7 +6,7 @@
 import { motion } from 'framer-motion';
 import { Trophy, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useExam } from '../contexts/ExamContext';
+import { useExam } from '../contexts/exam/useExam';
 import { generateJuryScores, calculateFinalScore } from '../utils/scoring';
 
 const modules = [

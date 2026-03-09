@@ -1,32 +1,72 @@
-import type { AdaptiveQuestion, AdaptiveQuestionRequest, AIQuestionProvider } from '../../model/types';
-import { calculateTargetDifficulty } from '../../adaptive-difficulty/model/difficultyEngine';
-import { createFallbackQuestion } from './fallbackQuestionFactory';
-import { isQuestionSafe } from '../../quality-safety/model/questionSafety';
-import { geminiQuestionProvider } from '../../../../server/ai/providers/geminiQuestionProvider';
+import type {
+    AdaptiveDifficultyDecision,
+    AdaptiveQuestion,
+    AdaptiveQuestionRequest,
+    AIProviderUsage,
+    AIQuestionGenerationMetadata,
+    AIQuestionProvider
+} from '../../model/types.ts';
+import { calculateTargetDifficultyDecision } from '../../adaptive-difficulty/model/difficultyEngine.ts';
+import type { AdaptiveDifficultySettings } from '../../adaptive-difficulty/model/adaptiveDifficultySettings.ts';
+import { getAdaptiveDifficultySettings } from '../../adaptive-difficulty/model/adaptiveDifficultySettings.ts';
+import { createFallbackQuestion } from './fallbackQuestionFactory.ts';
+import { reviewAdaptiveQuestionCandidate } from '../../quality-safety/model/questionCandidateReview.ts';
+import { defaultQuestionProvider } from '../../../../server/ai/providers/defaultQuestionProvider.ts';
 
 export interface GenerateAdaptiveQuestionResult {
     question: AdaptiveQuestion;
     usedFallback: boolean;
+    difficultyDecision: AdaptiveDifficultyDecision;
+    generationMetadata: AIQuestionGenerationMetadata;
+    providerUsage: AIProviderUsage | null;
 }
 
-const createProviderInput = (request: AdaptiveQuestionRequest) => ({
+export interface GenerateAdaptiveQuestionOptions {
+    settings?: AdaptiveDifficultySettings;
+}
+
+const createProviderInput = (
+    request: AdaptiveQuestionRequest,
+    difficultyDecision: AdaptiveDifficultyDecision
+) => ({
     topic: request.topic,
     locale: request.locale,
-    difficultyLevel: calculateTargetDifficulty(request),
+    difficultyLevel: difficultyDecision.difficultyLevel,
     abilitySnapshot: request.abilitySnapshot,
     sessionPerformance: request.sessionPerformance,
-    previousQuestionIds: request.previousQuestionIds ?? []
+    previousQuestionIds: request.previousQuestionIds ?? [],
+    previousQuestionFingerprints: request.previousQuestionFingerprints ?? []
 });
 
 export const generateAdaptiveQuestion = async (
     request: AdaptiveQuestionRequest,
-    provider: AIQuestionProvider = geminiQuestionProvider
+    provider: AIQuestionProvider = defaultQuestionProvider,
+    options: GenerateAdaptiveQuestionOptions = {}
 ): Promise<GenerateAdaptiveQuestionResult> => {
-    const providerInput = createProviderInput(request);
-    const aiQuestion = await provider.generateQuestion(providerInput);
+    const settings = options.settings ?? getAdaptiveDifficultySettings();
+    const providerDifficultyDecision = calculateTargetDifficultyDecision(request, {
+        settings
+    });
+    const providerInput = createProviderInput(request, providerDifficultyDecision);
+    const providerResult = await provider.generateQuestion(providerInput);
+    const difficultyDecision = calculateTargetDifficultyDecision(request, {
+        aiSuggestedDifficultyLevel: providerResult.suggestedDifficultyLevel ?? null,
+        settings
+    });
+    const candidateReview = reviewAdaptiveQuestionCandidate({
+        question: providerResult.question,
+        previousQuestionFingerprints: request.previousQuestionFingerprints,
+        expectedDifficultyLevel: providerInput.difficultyLevel
+    });
 
-    if (aiQuestion && isQuestionSafe(aiQuestion)) {
-        return { question: aiQuestion, usedFallback: false };
+    if (candidateReview.status === 'active' && candidateReview.question) {
+        return {
+            question: candidateReview.question,
+            usedFallback: false,
+            difficultyDecision,
+            generationMetadata: providerResult.metadata,
+            providerUsage: providerResult.usage ?? null
+        };
     }
 
     const fallbackQuestion = createFallbackQuestion({
@@ -35,8 +75,16 @@ export const generateAdaptiveQuestion = async (
         locale: request.locale
     });
 
-    return {
-        question: fallbackQuestion,
-        usedFallback: true
-    };
+        return {
+            question: fallbackQuestion,
+            usedFallback: true,
+            difficultyDecision,
+            generationMetadata: {
+                providerName: 'fallback',
+                modelName: null,
+                promptVersion: null,
+                promptProfileId: null
+            },
+            providerUsage: providerResult.usage ?? null
+        };
 };

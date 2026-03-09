@@ -7,6 +7,11 @@ interface GameCatalogItem {
 }
 
 export const GAME_CATALOG: Record<string, GameCatalogItem> = {
+  'yon-stroop': {
+    title: 'Yon Stroop',
+    category: 'attention',
+    durationSeconds: 180,
+  },
   'attention-coding': {
     title: 'Attention Coding',
     category: 'attention',

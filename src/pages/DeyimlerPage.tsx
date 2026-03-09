@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Search, ChevronLeft, Languages, Brain, Check, X, Loader2, ChevronRight, Trophy, RotateCcw, Image, ZoomIn } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { useGamePersistence } from '../hooks/useGamePersistence';
 
 interface Deyim {
@@ -162,10 +162,10 @@ const DeyimlerPage = () => {
     }, [debouncedSearchTerm, galleryPage]);
 
     // Tüm deyimleri yükle (oyun için)
-    const fetchAllDeyimler = async () => {
+    const fetchAllDeyimler = useCallback(async () => {
         const { data } = await supabase.from('deyimler').select('*').eq('child_safe', true);
         setAllDeyimler(data || []);
-    };
+    }, []);
 
     // İlk yükleme ve mod değiştiğinde
     useEffect(() => {
@@ -179,13 +179,13 @@ const DeyimlerPage = () => {
         };
         loadData();
         return () => abortController.abort();
-    }, [user, mode, debouncedSearchTerm, currentPage, galleryPage, fetchDeyimler, fetchGalleryDeyimler]);
+    }, [user, mode, debouncedSearchTerm, currentPage, galleryPage, allDeyimler.length, fetchDeyimler, fetchGalleryDeyimler, fetchAllDeyimler]);
 
-    // R2 image URL — NFC normalize + slash temizleme
+    // R2 image URL — NFC normalize + slash temizleme + çift alt çizgi düzeltme
     const getImageUrl = (deyim: Deyim) => {
         let filename = deyim.image_filename || deyim.deyim.toLowerCase().replace(/ /g, '_') + '.png';
-        // R2 dosya adları NFC formunda ve slash içermiyor
-        filename = filename.normalize('NFC').replace(/\//g, '');
+        // R2 dosya adları NFC formunda, slash içermiyor ve çift alt çizgi yok
+        filename = filename.normalize('NFC').replace(/\//g, '').replace(/_+/g, '_');
         return `${R2_BASE}/${filename}`;
     };
 

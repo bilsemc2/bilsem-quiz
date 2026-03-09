@@ -7,14 +7,19 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, CheckCircle, Sparkles, Loader2 } from 'lucide-react';
 import { useMicrophone } from '../hooks/useMicrophone';
-import { useExam } from '../contexts/ExamContext';
-import { useAIMuzik } from '../contexts/MusicAIContext';
+import { useExam } from '../contexts/exam/useExam';
+import { useAIMuzik } from '../contexts/musicAI/useAIMuzik';
 import { MicrophoneButton } from '../components/MicrophoneButton';
 
 type Phase = 'intro' | 'loading' | 'singing' | 'transpose' | 'result';
 
 export default function SarkiPage() {
-    const ai = useAIMuzik();
+    const {
+        piano,
+        initPiano,
+        requestContent,
+        requestAnalysis
+    } = useAIMuzik();
     const mic = useMicrophone();
     const { submitModuleScore, isModuleComplete } = useExam();
 
@@ -22,16 +27,16 @@ export default function SarkiPage() {
     const [songInfo, setSongInfo] = useState<{ name: string; lyrics: string; melody: string[]; durations: number[] } | null>(null);
     const [scores, setScores] = useState({ voiceQuality: 0, accuracy: 0, transposition: 0 });
 
-    useEffect(() => { ai.initPiano(); }, []);
+    useEffect(() => { initPiano(); }, [initPiano]);
 
     const startSinging = useCallback(async () => {
         setPhase('loading');
-        const content = await ai.requestContent('sarki', 0, 1);
+        const content = await requestContent('sarki', 0, 1);
         const song = content.song || { name: 'Küçük Kurbağa', lyrics: '', melody: ['C4', 'D4', 'E4', 'C4'], durations: [0.4, 0.4, 0.4, 0.4] };
         setSongInfo(song);
-        if (ai.piano?.isReady) await ai.piano.playMelody(song.melody, song.durations);
+        if (piano?.isReady) await piano.playMelody(song.melody, song.durations);
         setPhase('singing');
-    }, [ai]);
+    }, [piano, requestContent]);
 
     const handleSingingToggle = useCallback(async () => {
         if (mic.isListening) {
@@ -45,7 +50,7 @@ export default function SarkiPage() {
             // Get audio recording for AI multimodal voice analysis
             const audioData = await mic.getRecordingBase64();
             if (audioData && songInfo) {
-                ai.requestAnalysis(
+                requestAnalysis(
                     'sarki',
                     { song: songInfo.name, melody: songInfo.melody },
                     { capturedNotes: mic.capturedNotes, voiceQuality, accuracy },
@@ -61,7 +66,7 @@ export default function SarkiPage() {
             mic.resetCapture();
             await mic.startListening();
         }
-    }, [mic, songInfo, ai]);
+    }, [mic, requestAnalysis, songInfo]);
 
     const handleTransposeToggle = useCallback(async () => {
         if (mic.isListening) {
@@ -78,15 +83,15 @@ export default function SarkiPage() {
         } else {
             mic.resetCapture();
             // Play transposed melody
-            if (songInfo && ai.piano?.isReady) {
+            if (songInfo && piano?.isReady) {
                 const transposedMelody = songInfo.melody.map((note) => {
                     return note.replace(/\d/, (d) => String(Math.min(6, Number(d) + 1)));
                 });
-                await ai.piano.playMelody(transposedMelody, songInfo.durations);
+                await piano.playMelody(transposedMelody, songInfo.durations);
             }
             setTimeout(async () => await mic.startListening(), 1500);
         }
-    }, [mic, scores, songInfo, ai, submitModuleScore]);
+    }, [mic, piano, scores, songInfo, submitModuleScore]);
 
     const completed = isModuleComplete('sarki');
     const totalScore = scores.voiceQuality + scores.accuracy + scores.transposition;

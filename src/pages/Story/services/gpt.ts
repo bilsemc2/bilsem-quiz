@@ -1,9 +1,24 @@
 import { StoryTheme } from '../components/types';
 import { supabase } from '../../../lib/supabase';
 import { generateStoryQuestionSet } from '@/features/ai/question-generation/model/storyQuestionSetUseCase';
-import type { AdaptiveQuestion, DifficultyLevel } from '@/features/ai/model/types';
+import type {
+  AdaptiveQuestion,
+  AIProviderUsage,
+  AIQuestionGenerationMetadata,
+  DifficultyLevel
+} from '@/features/ai/model/types';
+import {
+  buildQuestionFingerprint,
+  buildQuestionGenerationResponseSummary,
+  buildStoryQuestionGenerationContext,
+  toSafeGenerationErrorMessage
+} from '@/features/ai/question-generation/model/generationPersistenceModel';
+import { normalizeProviderUsage } from '@/features/ai/question-generation/model/providerUsageModel.ts';
+import { aiGenerationRepository } from '@/server/repositories/aiGenerationRepository';
 import { aiQuestionPoolRepository } from '@/server/repositories/aiQuestionPoolRepository';
 import { aiQuestionPoolSettingsRepository } from '@/server/repositories/aiQuestionPoolSettingsRepository';
+import { resolveStoryQuestionAttemptSource } from '@/shared/story/model/questionSource';
+import type { QuestionAttemptSource } from '@/shared/types/aiEventDtos';
 
 // Supabase Edge Function URL
 const getEdgeFunctionUrl = () => {
@@ -14,6 +29,7 @@ const getEdgeFunctionUrl = () => {
 interface GeneratedQuestion {
   id?: string;
   aiGeneratedQuestionId?: string;
+  source?: QuestionAttemptSource;
   text: string;
   options: string[];
   correctAnswer: number;
@@ -22,6 +38,28 @@ interface GeneratedQuestion {
     incorrect: string;
   };
 }
+
+const STORY_AI_GENERATION_METADATA: AIQuestionGenerationMetadata = {
+  providerName: 'gemini',
+  modelName: 'gemini-3-flash-preview',
+  promptVersion: 'story.questions.v1.0.0',
+  promptProfileId: 'story.bilsem.core'
+};
+
+const STORY_FALLBACK_GENERATION_METADATA: AIQuestionGenerationMetadata = {
+  providerName: 'fallback',
+  modelName: null,
+  promptVersion: 'story.fallback.v1.0.0',
+  promptProfileId: 'story.fallback.local'
+};
+
+const resolveStoryGenerationMetadata = (
+  source: 'ai' | 'fallback'
+): AIQuestionGenerationMetadata => {
+  return source === 'ai'
+    ? STORY_AI_GENERATION_METADATA
+    : STORY_FALLBACK_GENERATION_METADATA;
+};
 
 const resolveTopicFromTheme = (theme: StoryTheme): string => {
   switch (theme) {
@@ -50,6 +88,7 @@ const normalizeDifficulty = (value: number): DifficultyLevel => {
 
 const toStoryQuestionFromAdaptive = (question: AdaptiveQuestion): GeneratedQuestion => ({
   aiGeneratedQuestionId: question.id,
+  source: question.source,
   text: question.stem,
   options: question.options,
   correctAnswer: question.correctIndex,
@@ -71,32 +110,20 @@ const toAdaptiveQuestion = (
   correctIndex: question.correctAnswer,
   explanation: question.feedback.correct || 'Doğru cevap!',
   difficultyLevel: normalizeDifficulty(3),
-  source
+  source: resolveStoryQuestionAttemptSource({
+    source: question.source ?? source,
+    aiGeneratedQuestionId: question.aiGeneratedQuestionId
+  }) === 'fallback' ? 'fallback' : 'ai'
 });
 
-const normalizeQuestionFingerprint = (question: GeneratedQuestion): string => {
-  const normalizedText = question.text
-    .toLocaleLowerCase('tr-TR')
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  const normalizedOptions = question.options
-    .map((option) =>
-      option
-        .toLocaleLowerCase('tr-TR')
-        .normalize('NFKD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-    )
-    .filter((option) => option.length > 0)
-    .sort();
-
-  return `${normalizedText}::${normalizedOptions.join('|')}`;
+const annotateQuestionSource = (
+  questions: GeneratedQuestion[],
+  source: QuestionAttemptSource
+): GeneratedQuestion[] => {
+  return questions.map((question) => ({
+    ...question,
+    source: question.source ?? source
+  }));
 };
 
 const mergeUniqueQuestions = (base: GeneratedQuestion[], incoming: GeneratedQuestion[]): GeneratedQuestion[] => {
@@ -104,7 +131,10 @@ const mergeUniqueQuestions = (base: GeneratedQuestion[], incoming: GeneratedQues
   const merged: GeneratedQuestion[] = [];
 
   const append = (question: GeneratedQuestion) => {
-    const fingerprint = normalizeQuestionFingerprint(question);
+    const fingerprint = buildQuestionFingerprint({
+      stem: question.text,
+      options: question.options
+    });
     if (fingerprint.length === 0 || seen.has(fingerprint)) {
       return;
     }
@@ -177,6 +207,7 @@ export async function generateStory(theme: StoryTheme) {
 
     return {
       ...storyData,
+      questions: annotateQuestionSource(storyData.questions as GeneratedQuestion[], 'ai'),
       image_url: themeImageMap[theme] || '/images/story/adventure.png',
       theme
     };
@@ -199,6 +230,7 @@ export async function generateQuestions(story: { title: string; content: string;
       if (!item || typeof item !== 'object') return false;
       const question = item as {
         id?: unknown;
+        source?: unknown;
         text?: unknown;
         options?: unknown;
         correctAnswer?: unknown;
@@ -223,7 +255,20 @@ export async function generateQuestions(story: { title: string; content: string;
       return null;
     }
 
-    return value as GeneratedQuestion[];
+    return (value as GeneratedQuestion[]).map((question) => ({
+      ...question,
+      source: question.source === 'ai' || question.source === 'fallback' || question.source === 'bank'
+        ? question.source
+        : undefined
+    }));
+  };
+
+  const normalizeProviderUsageFromResult = (value: unknown): AIProviderUsage | null => {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    return normalizeProviderUsage((value as { usage?: unknown }).usage);
   };
 
   const getUserId = async () => {
@@ -254,25 +299,45 @@ export async function generateQuestions(story: { title: string; content: string;
   const persistQuestionsToDB = async (
     userId: string | null,
     questions: GeneratedQuestion[],
-    source: 'ai' | 'fallback'
+    source: 'ai' | 'fallback',
+    generationJobId?: string | null
   ): Promise<GeneratedQuestion[]> => {
     if (!userId || questions.length === 0) {
-      return questions;
+      return source === 'fallback' ? annotateQuestionSource(questions, source) : [];
     }
 
     try {
-      const adaptiveQuestions = questions.map((question) => toAdaptiveQuestion(question, topic, source));
+      const generationMetadata = resolveStoryGenerationMetadata(source);
+      const adaptiveQuestions = annotateQuestionSource(questions, source)
+        .map((question) => toAdaptiveQuestion(question, topic, source));
       const saved = await aiQuestionPoolRepository.saveGeneratedQuestions({
         userId,
         topic,
         locale,
+        generationJobId: generationJobId ?? null,
+        generationMetadata,
         questions: adaptiveQuestions
       });
       return saved.map(toStoryQuestionFromAdaptive);
     } catch (error) {
       console.error('AI sorular DB kaydı başarısız:', error);
-      return questions;
+      return source === 'fallback' ? annotateQuestionSource(questions, source) : [];
     }
+  };
+
+  const resolveSafeGeneratedQuestions = async (
+    persistedQuestions: GeneratedQuestion[],
+    userId: string | null,
+    generationJobId: string | null,
+    requestedCount: number
+  ): Promise<GeneratedQuestion[]> => {
+    if (persistedQuestions.length > 0) {
+      return persistedQuestions;
+    }
+
+    const fallback = await generateFallbackQuestions(requestedCount, userId);
+    const persistedFallback = await persistQuestionsToDB(userId, fallback, 'fallback', generationJobId);
+    return persistedFallback.length > 0 ? persistedFallback : fallback;
   };
 
   const generateFallbackQuestions = async (
@@ -293,7 +358,8 @@ export async function generateQuestions(story: { title: string; content: string;
 
   const ensureMinimumQuestionCount = async (
     existing: GeneratedQuestion[],
-    userId: string | null
+    userId: string | null,
+    generationJobId?: string | null
   ): Promise<GeneratedQuestion[]> => {
     let merged = mergeUniqueQuestions([], existing);
     if (merged.length >= targetCount) {
@@ -305,7 +371,7 @@ export async function generateQuestions(story: { title: string; content: string;
       const needed = targetCount - merged.length;
       const generationTarget = Math.min(20, Math.max(needed, needed * 2));
       const fallback = await generateFallbackQuestions(generationTarget, userId);
-      const persistedFallback = await persistQuestionsToDB(userId, fallback, 'fallback');
+      const persistedFallback = await persistQuestionsToDB(userId, fallback, 'fallback', generationJobId);
       const source = persistedFallback.length > 0 ? persistedFallback : fallback;
       const nextMerged = mergeUniqueQuestions(merged, source);
 
@@ -320,11 +386,102 @@ export async function generateQuestions(story: { title: string; content: string;
     return merged.slice(0, targetCount);
   };
 
+  const createGenerationJob = async (
+    userId: string | null,
+    requestedQuestionCount: number
+  ): Promise<string | null> => {
+    if (!userId) {
+      return null;
+    }
+
+    try {
+      return await aiGenerationRepository.createJob({
+        userId,
+        topic,
+        locale,
+        jobType: 'story_questions',
+        requestedQuestionCount,
+        generationMetadata: STORY_AI_GENERATION_METADATA,
+        requestContext: buildStoryQuestionGenerationContext({
+          story,
+          locale,
+          requestedQuestionCount,
+          generationMetadata: STORY_AI_GENERATION_METADATA
+        })
+      });
+    } catch (error) {
+      console.error('AI generation job başlatılamadı:', error);
+      return null;
+    }
+  };
+
+  const completeGenerationJob = async (
+    jobId: string | null,
+    aiQuestions: GeneratedQuestion[],
+    persistedQuestionCount: number,
+    cachedQuestionCount: number,
+    fallbackQuestionCount: number,
+    providerUsage: AIProviderUsage | null
+  ): Promise<void> => {
+    if (!jobId) {
+      return;
+    }
+
+    try {
+      const requestContext = buildStoryQuestionGenerationContext({
+        story,
+        locale,
+        requestedQuestionCount: generationCount,
+        generationMetadata: STORY_AI_GENERATION_METADATA
+      });
+      await aiGenerationRepository.completeJob({
+        jobId,
+        generatedQuestionCount: aiQuestions.length,
+        modelName: STORY_AI_GENERATION_METADATA.modelName,
+        generationMetadata: STORY_AI_GENERATION_METADATA,
+        responseSummary: buildQuestionGenerationResponseSummary({
+          requestedQuestionCount: generationCount,
+          cachedQuestionCount,
+          aiQuestions: aiQuestions.map((question) => toAdaptiveQuestion(question, topic, 'ai')),
+          fallbackQuestionCount,
+          persistedQuestionCount,
+          requestContext,
+          providerUsage,
+          generationMetadata: STORY_AI_GENERATION_METADATA
+        })
+      });
+    } catch (error) {
+      console.error('AI generation job tamamlanamadı:', error);
+    }
+  };
+
+  const failGenerationJob = async (
+    jobId: string | null,
+    error: unknown
+  ): Promise<void> => {
+    if (!jobId) {
+      return;
+    }
+
+    try {
+      await aiGenerationRepository.failJob({
+        jobId,
+        modelName: STORY_AI_GENERATION_METADATA.modelName,
+        generationMetadata: STORY_AI_GENERATION_METADATA,
+        errorMessage: toSafeGenerationErrorMessage(error)
+      });
+    } catch (jobError) {
+      console.error('AI generation job failure kaydı yazılamadı:', jobError);
+    }
+  };
+
   const settings = await aiQuestionPoolSettingsRepository.getEffectiveSettings(topic, locale);
   const maxServedCount = settings.maxServedCount;
   const targetPoolSize = Math.max(targetCount, settings.targetPoolSize);
   const refillBatchSize = settings.refillBatchSize;
   const maxGenerationPerRequest = 20;
+  let generationJobId: string | null = null;
+  let generationCount = 0;
 
   try {
     const userId = await getUserId();
@@ -347,11 +504,13 @@ export async function generateQuestions(story: { title: string; content: string;
     const missingCount = targetCount - cachedQuestions.length;
     const refillNeeded = Math.max(0, targetPoolSize - pendingCount);
     const refillCount = refillNeeded > 0 ? Math.max(refillNeeded, refillBatchSize) : 0;
-    const generationCount = Math.min(maxGenerationPerRequest, Math.max(missingCount, refillCount));
+    generationCount = Math.min(maxGenerationPerRequest, Math.max(missingCount, refillCount));
 
     if (generationCount <= 0) {
       return cachedQuestions.slice(0, targetCount);
     }
+
+    generationJobId = await createGenerationJob(userId, generationCount);
 
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -372,37 +531,74 @@ export async function generateQuestions(story: { title: string; content: string;
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.warn('Gemini question generation failed, falling back to adaptive engine:', errorData?.error);
+      const errorMessage = typeof errorData?.error === 'string'
+        ? errorData.error
+        : 'Gemini question generation failed';
+      console.warn('Gemini question generation failed, falling back to adaptive engine:', errorMessage);
+      await failGenerationJob(generationJobId, errorMessage);
       const fallback = await generateFallbackQuestions(generationCount, userId);
-      const persistedFallback = await persistQuestionsToDB(userId, fallback, 'fallback');
+      const persistedFallback = await persistQuestionsToDB(userId, fallback, 'fallback', generationJobId);
       const source = persistedFallback.length > 0 ? persistedFallback : fallback;
-      return ensureMinimumQuestionCount(mergeUniqueQuestions(cachedQuestions, source), userId);
+      return ensureMinimumQuestionCount(mergeUniqueQuestions(cachedQuestions, source), userId, generationJobId);
     }
 
     const data = await response.json();
     const result = data.result;
+    const providerUsage = normalizeProviderUsageFromResult(result);
     const normalizedDirect = normalizeQuestions(result);
     if (normalizedDirect && normalizedDirect.length > 0) {
-      const newQuestions = normalizedDirect.slice(0, generationCount);
-      const persisted = await persistQuestionsToDB(userId, newQuestions, 'ai');
-      const source = persisted.length > 0 ? persisted : newQuestions;
-      return ensureMinimumQuestionCount(mergeUniqueQuestions(cachedQuestions, source), userId);
+      const newQuestions = annotateQuestionSource(normalizedDirect.slice(0, generationCount), 'ai');
+      const persisted = await persistQuestionsToDB(userId, newQuestions, 'ai', generationJobId);
+      const source = await resolveSafeGeneratedQuestions(
+        persisted,
+        userId,
+        generationJobId,
+        generationCount
+      );
+      const mergedWithoutFallbackTopUp = mergeUniqueQuestions(cachedQuestions, source);
+      const finalQuestions = await ensureMinimumQuestionCount(mergedWithoutFallbackTopUp, userId, generationJobId);
+      await completeGenerationJob(
+        generationJobId,
+        newQuestions,
+        persisted.length,
+        cachedQuestions.length,
+        Math.max(0, finalQuestions.length - mergedWithoutFallbackTopUp.length),
+        providerUsage
+      );
+      return finalQuestions;
     }
 
     const normalizedNested = normalizeQuestions((result as { questions?: unknown } | null)?.questions);
     if (normalizedNested && normalizedNested.length > 0) {
-      const newQuestions = normalizedNested.slice(0, generationCount);
-      const persisted = await persistQuestionsToDB(userId, newQuestions, 'ai');
-      const source = persisted.length > 0 ? persisted : newQuestions;
-      return ensureMinimumQuestionCount(mergeUniqueQuestions(cachedQuestions, source), userId);
+      const newQuestions = annotateQuestionSource(normalizedNested.slice(0, generationCount), 'ai');
+      const persisted = await persistQuestionsToDB(userId, newQuestions, 'ai', generationJobId);
+      const source = await resolveSafeGeneratedQuestions(
+        persisted,
+        userId,
+        generationJobId,
+        generationCount
+      );
+      const mergedWithoutFallbackTopUp = mergeUniqueQuestions(cachedQuestions, source);
+      const finalQuestions = await ensureMinimumQuestionCount(mergedWithoutFallbackTopUp, userId, generationJobId);
+      await completeGenerationJob(
+        generationJobId,
+        newQuestions,
+        persisted.length,
+        cachedQuestions.length,
+        Math.max(0, finalQuestions.length - mergedWithoutFallbackTopUp.length),
+        providerUsage
+      );
+      return finalQuestions;
     }
 
+    await failGenerationJob(generationJobId, 'Gemini returned an invalid question payload');
     const fallback = await generateFallbackQuestions(generationCount, userId);
-    const persistedFallback = await persistQuestionsToDB(userId, fallback, 'fallback');
+    const persistedFallback = await persistQuestionsToDB(userId, fallback, 'fallback', generationJobId);
     const source = persistedFallback.length > 0 ? persistedFallback : fallback;
-    return ensureMinimumQuestionCount(mergeUniqueQuestions(cachedQuestions, source), userId);
+    return ensureMinimumQuestionCount(mergeUniqueQuestions(cachedQuestions, source), userId, generationJobId);
   } catch (error) {
     console.error('Soru oluşturma hatası:', error);
+    await failGenerationJob(generationJobId, error);
     const userId = await getUserId();
     const cachedQuestions = userId
       ? await loadPendingQuestionsFromDB(userId, targetCount, maxServedCount)
@@ -413,9 +609,9 @@ export async function generateQuestions(story: { title: string; content: string;
 
     const missingCount = targetCount - cachedQuestions.length;
     const fallback = await generateFallbackQuestions(missingCount, userId);
-    const persistedFallback = await persistQuestionsToDB(userId, fallback, 'fallback');
+    const persistedFallback = await persistQuestionsToDB(userId, fallback, 'fallback', generationJobId);
     const source = persistedFallback.length > 0 ? persistedFallback : fallback;
-    return ensureMinimumQuestionCount(mergeUniqueQuestions(cachedQuestions, source), userId);
+    return ensureMinimumQuestionCount(mergeUniqueQuestions(cachedQuestions, source), userId, generationJobId);
   }
 }
 
@@ -430,6 +626,7 @@ export interface Story {
   questions: Array<{
     id?: string;
     aiGeneratedQuestionId?: string;
+    source?: QuestionAttemptSource;
     text: string;
     options: string[];
     correctAnswer: number;

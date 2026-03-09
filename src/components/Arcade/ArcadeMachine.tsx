@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useXPEconomy } from '../../hooks/useXPEconomy';
 import { CoinToss } from './CoinToss';
 import { Gamepad2, Coins, Play } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 
 // ═══════════════════════════════════════════════
 // 🕹️ ArcadeMachine — Kid-UI Çocuk Dostu Tasarım

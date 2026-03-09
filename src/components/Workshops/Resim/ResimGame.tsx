@@ -4,7 +4,7 @@ import { Sparkles, BookOpen, Utensils, Camera, RotateCcw, Send, Palette, User, M
 import { ActivityMode, ActivityState } from './types';
 import { generateActivityPrompt, generateStillLifeImage, analyzeDrawing } from './geminiService';
 import { Timer } from './Timer';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { supabase } from '../../../lib/supabase';
 
 interface ResimGameProps {

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './bireysel.css';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import AccessDeniedScreen from '../../components/AccessDeniedScreen';
 
 // yetenek_alani erişim kontrolü

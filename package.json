@@ -12,10 +12,14 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives",
     "lint:strict": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:unit",
-    "test:unit": "node --test --experimental-strip-types \"tests/unit/**/*.test.ts\"",
+    "test": "npm run test:unit && npm run test:smoke",
+    "test:unit": "node --import ./scripts/register-test-alias-loader.mjs --test --experimental-strip-types \"tests/unit/**/*.test.ts\"",
+    "test:smoke": "node --import ./scripts/register-test-alias-loader.mjs --test --experimental-strip-types \"tests/smoke/**/*.test.ts\"",
+    "test:coverage": "node --import ./scripts/register-test-alias-loader.mjs --test --experimental-test-coverage --experimental-strip-types \"tests/unit/**/*.test.ts\" \"tests/smoke/**/*.test.ts\"",
+    "test:coverage:domain": "node --import ./scripts/register-test-alias-loader.mjs --test --experimental-test-coverage --test-coverage-lines=70 --test-coverage-include='src/features/**/*.ts' --test-coverage-include='src/shared/game/**/*.ts' --test-coverage-include='src/shared/types/**/*.ts' --test-coverage-include='src/components/BrainTrainer/**/logic.ts' --test-coverage-include='src/components/BrainTrainer/**/constants.ts' --test-coverage-include='src/components/BrainTrainer/**/data.ts' --test-coverage-include='src/components/BrainTrainer/**/types.ts' --test-coverage-include='src/components/Arcade/**/logic.ts' --test-coverage-include='src/components/Arcade/**/questionLogic.ts' --test-coverage-include='src/components/Arcade/**/roundLogic.ts' --test-coverage-include='src/components/Arcade/**/constants.ts' --test-coverage-include='src/components/guards/routeGuardModel.ts' --experimental-strip-types \"tests/unit/**/*.test.ts\" \"tests/smoke/**/*.test.ts\"",
     "preview": "vite preview",
-    "sitemap": "node scripts/generate-sitemap.js"
+    "sitemap": "node scripts/generate-sitemap.js",
+    "bundle:check": "node scripts/check-bundle-budget.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",

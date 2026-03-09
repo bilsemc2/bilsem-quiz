@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { AdminGamePlaysTable } from '@/features/admin/components/AdminGamePlaysTable';
+import { AdminReportExports } from '@/features/admin/components/AdminReportExports';
 import { Card } from '@/shared/ui/Card';
 import { listAdminGamePlays } from '@/server/services/admin.service';
 
@@ -14,6 +15,10 @@ export default async function AdminGamePlaysPage() {
 
       <Card title="Oturum Gecmisi">
         <AdminGamePlaysTable rows={gamePlays} />
+      </Card>
+
+      <Card title="Rapor Disa Aktar">
+        <AdminReportExports defaultLimit={300} showUsers={false} />
       </Card>
 
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>

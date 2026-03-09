@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, X, Search, Users, Loader2, Check } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { profileRepository } from '@/server/repositories/profileRepository';
 import { adminMessageRepository } from '@/server/repositories/adminMessageRepository';
 import {

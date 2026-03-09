@@ -3,7 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Edit, X, Loader2, Zap, ArrowLeft } from 'lucide-react';
 import { XPRequirement } from '../../types/xpRequirements';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authRepository } from '@/server/repositories/authRepository';

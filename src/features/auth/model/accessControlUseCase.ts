@@ -33,6 +33,13 @@ export const normalizeTalents = (talents: string | string[] | null | undefined):
     return [];
 };
 
+const normalizeTalentKey = (talent: string): string => talent
+    .trim()
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
 export const evaluateAccess = (input: EvaluateAccessInput): AccessDecision => {
     const normalizedTalents = normalizeTalents(input.userTalent);
     const isTeacher = input.role === 'teacher';
@@ -51,8 +58,8 @@ export const evaluateAccess = (input: EvaluateAccessInput): AccessDecision => {
     }
 
     if (input.requiredTalent) {
-        const requiredTalent = input.requiredTalent.toLowerCase();
-        const hasTalent = normalizedTalents.some((item) => item.toLowerCase() === requiredTalent);
+        const requiredTalent = normalizeTalentKey(input.requiredTalent);
+        const hasTalent = normalizedTalents.some((item) => normalizeTalentKey(item) === requiredTalent);
         if (!hasTalent) {
             return { hasAccess: false, reason: 'talent', normalizedTalents };
         }

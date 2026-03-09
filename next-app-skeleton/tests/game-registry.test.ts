@@ -3,6 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { getRegistryItem } from '@/features/games/game-registry';
 
 describe('game-registry', () => {
+  it('marks yon-stroop as migrated', () => {
+    const item = getRegistryItem('yon-stroop');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
+  it('marks direction-stroop as migrated', () => {
+    const item = getRegistryItem('direction-stroop');
+
+    expect(item).not.toBeNull();
+    expect(item?.migrated).toBe(true);
+  });
+
   it('marks farki-bul as migrated', () => {
     const item = getRegistryItem('farki-bul');
 

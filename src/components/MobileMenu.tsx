@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 
 export const MobileMenu: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);

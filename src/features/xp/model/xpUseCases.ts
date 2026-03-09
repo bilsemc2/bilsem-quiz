@@ -1,5 +1,5 @@
-import { authRepository, type AuthRepository } from '@/server/repositories/authRepository';
-import { xpRepository, type XPRepository } from '@/server/repositories/xpRepository';
+import { authRepository, type AuthRepository } from '../../../server/repositories/authRepository.ts';
+import { xpRepository, type XPRepository } from '../../../server/repositories/xpRepository.ts';
 
 export const loadXPRequirementsMap = async (
     pagePaths: string[],

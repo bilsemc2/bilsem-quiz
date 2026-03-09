@@ -37,12 +37,16 @@ const createInput = (overrides: Partial<AIQuestionProviderInput> = {}): AIQuesti
 test('buildAdaptiveQuestionPromptTemplate returns versioned Turkish prompt', () => {
     const result = buildAdaptiveQuestionPromptTemplate(createInput());
 
-    assert.equal(result.version, ADAPTIVE_QUESTION_PROMPT_TEMPLATE_VERSION);
+    assert.match(result.version, /^aq\.logic\.core\.v1\.0\.0$/);
+    assert.equal(ADAPTIVE_QUESTION_PROMPT_TEMPLATE_VERSION, 'v1.0.0');
+    assert.equal(result.profileId, 'logic.core');
     assert.match(result.systemPrompt, /Cevabı Türkçe ver/);
     assert.match(result.userPrompt, /Topic: analitik düşünme/);
     assert.match(result.userPrompt, /Target difficulty level: 3/);
+    assert.match(result.userPrompt, /Prompt profile: logic\.core/);
     assert.match(result.userPrompt, /Do not repeat these question ids: q-1, q-2/);
     assert.match(result.userPrompt, /"source": "ai"/);
+    assert.match(result.userPrompt, /"suggestedDifficultyLevel": 3/);
 });
 
 test('buildAdaptiveQuestionPromptTemplate returns English locale instruction', () => {
@@ -51,5 +55,6 @@ test('buildAdaptiveQuestionPromptTemplate returns English locale instruction', (
     );
 
     assert.match(result.systemPrompt, /Respond in English/);
+    assert.equal(result.profileId, 'logic.core');
     assert.match(result.userPrompt, /Do not repeat these question ids: \(none\)/);
 });

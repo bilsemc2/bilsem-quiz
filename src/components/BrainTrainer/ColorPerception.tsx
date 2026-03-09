@@ -74,7 +74,7 @@ const ColorPerception: React.FC = () => {
       setLocalPhase("guessing");
     }, displayDuration);
     timeoutsRef.current.push(t);
-  }, []);
+  }, [safeTimeout]);
 
   useEffect(() => {
     if (phase === "playing" && localPhase === "idle") {

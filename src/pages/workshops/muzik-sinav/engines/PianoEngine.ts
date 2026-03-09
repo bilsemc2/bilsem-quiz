@@ -133,8 +133,9 @@ export class PianoEngine {
      * @param beats - array of beat timestamps in ms
      * @param tempo - BPM
      */
-    async playRhythm(beats: number[], _tempo: number): Promise<void> {
+    async playRhythm(beats: number[], tempo: number): Promise<void> {
         if (!this.instrument || !this._ready) return;
+        void tempo;
         const now = Tone.now();
         const percNote = 'C3'; // Low percussive tone
 

@@ -1,9 +1,8 @@
 // PDF Önizleme Bileşeni
 import { X, Download } from 'lucide-react';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { StoryPDF } from './StoryPDF';
 import { decode } from 'html-entities';
 import { Story } from './types';
+import { OnDemandPdfDownloadButton } from './OnDemandPdfDownloadButton';
 
 
 interface PDFPreviewProps {
@@ -12,6 +11,8 @@ interface PDFPreviewProps {
 }
 
 export function PDFPreview({ story, onClose }: PDFPreviewProps) {
+  const fileName = `${story.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -90,16 +91,19 @@ export function PDFPreview({ story, onClose }: PDFPreviewProps) {
         </div>
 
         <div className="p-4 border-t flex justify-end">
-          <PDFDownloadLink
-            document={<StoryPDF story={story} />}
-            fileName={`${story.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`}
+          <OnDemandPdfDownloadButton
+            fileName={fileName}
+            loadDocument={async () => {
+              const { StoryPDF } = await import('./StoryPDF');
+              return <StoryPDF story={story} />;
+            }}
             className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
             <div className="flex items-center gap-2">
               <Download size={20} />
               <span>PDF İndir</span>
             </div>
-          </PDFDownloadLink>
+          </OnDemandPdfDownloadButton>
         </div>
       </div>
     </div>

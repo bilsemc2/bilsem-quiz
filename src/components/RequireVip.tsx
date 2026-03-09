@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useLocation, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { Lock, Crown, ArrowLeft } from 'lucide-react';
-import { showXPDeduct } from './XPToast';
+import { showXPDeduct } from './xpToastService';
 import { checkVipAccessForPath, deductVipXPForPageVisit } from '@/features/auth/model/vipAccessUseCases';
 import { authRepository } from '@/server/repositories/authRepository';
 import { xpRepository } from '@/server/repositories/xpRepository';

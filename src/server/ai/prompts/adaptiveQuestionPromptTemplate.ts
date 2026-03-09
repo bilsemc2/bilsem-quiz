@@ -1,9 +1,11 @@
 import type { AIQuestionProviderInput } from '@/features/ai/model/types';
+import { resolveAdaptiveQuestionPromptProfile } from './adaptiveQuestionPromptRegistry.ts';
 
-export const ADAPTIVE_QUESTION_PROMPT_TEMPLATE_VERSION = 'aq.v1.0.0';
+export const ADAPTIVE_QUESTION_PROMPT_TEMPLATE_VERSION = 'v1.0.0';
 
 export interface AdaptiveQuestionPromptTemplate {
     version: string;
+    profileId: string;
     systemPrompt: string;
     userPrompt: string;
 }
@@ -18,9 +20,11 @@ export const buildAdaptiveQuestionPromptTemplate = (
     input: AIQuestionProviderInput
 ): AdaptiveQuestionPromptTemplate => {
     const localeInstruction = buildLocaleInstruction(input.locale);
+    const promptProfile = resolveAdaptiveQuestionPromptProfile(input);
     const ability = input.abilitySnapshot;
     const performance = input.sessionPerformance;
     const excludedIds = input.previousQuestionIds.join(', ') || '(none)';
+    const excludedFingerprints = input.previousQuestionFingerprints?.join(', ') || '(none)';
 
     const systemPrompt = [
         'You are an educational assessment assistant for children (ages 7-12).',
@@ -28,6 +32,7 @@ export const buildAdaptiveQuestionPromptTemplate = (
         'Return only JSON object, no markdown.',
         'The question must be safe, age-appropriate, and non-violent.',
         'Options must be distinct and exactly 4 items.',
+        promptProfile.systemInstruction,
         localeInstruction
     ].join(' ');
 
@@ -49,23 +54,30 @@ Create one adaptive question using the profile below:
   - targetResponseMs: ${performance.targetResponseMs}
   - streakCorrect: ${performance.streakCorrect}
   - consecutiveWrong: ${performance.consecutiveWrong}
+- Prompt profile: ${promptProfile.id}
+- Prompt rule: ${promptProfile.userInstruction}
 - Do not repeat these question ids: ${excludedIds}
+- Do not create questions that match these normalized fingerprints: ${excludedFingerprints}
 
 Required output JSON shape:
 {
-  "id": "string",
-  "topic": "string",
-  "stem": "string",
-  "options": ["string", "string", "string", "string"],
-  "correctIndex": 0,
-  "explanation": "string",
-  "difficultyLevel": ${input.difficultyLevel},
-  "source": "ai"
+  "question": {
+    "id": "string",
+    "topic": "string",
+    "stem": "string",
+    "options": ["string", "string", "string", "string"],
+    "correctIndex": 0,
+    "explanation": "string",
+    "difficultyLevel": ${input.difficultyLevel},
+    "source": "ai"
+  },
+  "suggestedDifficultyLevel": ${input.difficultyLevel}
 }
 `.trim();
 
     return {
-        version: ADAPTIVE_QUESTION_PROMPT_TEMPLATE_VERSION,
+        version: promptProfile.version,
+        profileId: promptProfile.id,
         systemPrompt,
         userPrompt
     };

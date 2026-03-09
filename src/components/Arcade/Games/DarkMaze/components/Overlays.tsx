@@ -38,9 +38,13 @@ export const StartOverlay: React.FC<StartOverlayProps> = ({ onStart }) => (
 
 interface LevelClearedOverlayProps {
     onNextLevel: () => void;
+    scoreGain?: number;
 }
 
-export const LevelClearedOverlay: React.FC<LevelClearedOverlayProps> = ({ onNextLevel }) => (
+export const LevelClearedOverlay: React.FC<LevelClearedOverlayProps> = ({
+    onNextLevel,
+    scoreGain
+}) => (
     <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-30 p-4">
         <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
@@ -53,9 +57,15 @@ export const LevelClearedOverlay: React.FC<LevelClearedOverlayProps> = ({ onNext
                 <Sparkles size={36} className="text-black" strokeWidth={3} />
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-black mb-3 uppercase drop-shadow-[2px_2px_0_#fff] tracking-tighter">BÖLÜM<br />TAMAM!</h2>
-            <p className="text-black bg-sky-200 border-2 border-black/10 shadow-neo-sm rounded-xl p-2 mb-4 uppercase tracking-widest text-xs font-black rotate-2">
-                Yeni Labirent Hazırlanıyor...
-            </p>
+            {typeof scoreGain === 'number' ? (
+                <p className="text-black bg-sky-200 border-2 border-black/10 shadow-neo-sm rounded-xl p-2 mb-4 uppercase tracking-widest text-xs font-black rotate-2">
+                    +{scoreGain} Puan
+                </p>
+            ) : (
+                <p className="text-black bg-sky-200 border-2 border-black/10 shadow-neo-sm rounded-xl p-2 mb-4 uppercase tracking-widest text-xs font-black rotate-2">
+                    Yeni Labirent Hazirlaniyor...
+                </p>
+            )}
             <button
                 onClick={onNextLevel}
                 className="w-full py-3 bg-emerald-400 text-black font-black text-lg sm:text-xl tracking-widest uppercase rounded-xl sm:rounded-2xl hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-2 active:shadow-none transition-all border-2 border-black/10 shadow-neo-sm"

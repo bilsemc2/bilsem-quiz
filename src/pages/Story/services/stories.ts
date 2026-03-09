@@ -1,5 +1,6 @@
 import { Story, StoryTheme, Question } from '../components/types';
 import { supabase } from '../../../lib/supabase';
+import { resolveStoryQuestionAttemptSource } from '@/shared/story/model/questionSource';
 
 // Yerel depolama için anahtar
 const STORIES_KEY = 'local_stories';
@@ -34,6 +35,7 @@ export async function saveStory(story: {
   questions: Array<{
     id?: string;
     aiGeneratedQuestionId?: string;
+    source?: Question['source'];
     text: string;
     options: string[];
     correctAnswer: number;
@@ -77,6 +79,8 @@ export async function saveStory(story: {
       const questionInserts = story.questions.map((question) => {
         return {
           story_id: storyId,
+          ai_generated_question_id: question.aiGeneratedQuestionId || null,
+          source: resolveStoryQuestionAttemptSource(question),
           question_text: question.text,
           options: question.options,
           correct_option: question.options[question.correctAnswer],
@@ -95,7 +99,6 @@ export async function saveStory(story: {
         throw new Error(`Sorular kaydedilemedi: ${questionsError.message}`);
       }
 
-    } else {
     }
 
     // Tam nesneyi oluştur
@@ -174,6 +177,10 @@ export async function getStories(): Promise<Story[]> {
               return shuffleQuestionOptions({
                 id: q.id,
                 aiGeneratedQuestionId: q.ai_generated_question_id || undefined,
+                source: resolveStoryQuestionAttemptSource({
+                  source: q.source,
+                  aiGeneratedQuestionId: q.ai_generated_question_id || undefined
+                }),
                 text: q.question_text,
                 options: options,
                 correctAnswer: correctAnswer >= 0 ? correctAnswer : 0,
@@ -229,6 +236,7 @@ function getStoriesFromLocalStorage(): Story[] {
 export async function saveStoryQuestions(storyId: string, questions: Array<{
   id?: string;
   aiGeneratedQuestionId?: string;
+  source?: Question['source'];
   text: string;
   options: string[];
   correctAnswer: number;
@@ -240,6 +248,8 @@ export async function saveStoryQuestions(storyId: string, questions: Array<{
     const questionInserts = questions.map((question) => {
       return {
         story_id: storyId,
+        ai_generated_question_id: question.aiGeneratedQuestionId || null,
+        source: resolveStoryQuestionAttemptSource(question),
         question_text: question.text,
         options: question.options,
         correct_option: question.options[question.correctAnswer],
@@ -258,4 +268,3 @@ export async function saveStoryQuestions(storyId: string, questions: Array<{
     console.error('Sorular kaydedilirken hata:', error);
   }
 }
-

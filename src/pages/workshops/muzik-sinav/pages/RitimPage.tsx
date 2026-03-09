@@ -6,8 +6,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, ArrowRight, CheckCircle, Sparkles } from 'lucide-react';
-import { useExam } from '../contexts/ExamContext';
-import { useAIMuzik } from '../contexts/MusicAIContext';
+import { useExam } from '../contexts/exam/useExam';
+import { useAIMuzik } from '../contexts/musicAI/useAIMuzik';
 import { calculateRhythmAccuracy } from '../utils/scoring';
 import type { TestState } from '../types';
 
@@ -16,7 +16,12 @@ const POINTS_PER_QUESTION = 6;
 
 
 export default function RitimPage() {
-    const ai = useAIMuzik();
+    const {
+        piano,
+        initPiano,
+        requestContent,
+        adjustDifficulty
+    } = useAIMuzik();
     const { submitModuleScore, isModuleComplete } = useExam();
 
     const [state, setState] = useState<TestState>({
@@ -28,29 +33,29 @@ export default function RitimPage() {
     const [results, setResults] = useState<{ accuracy: number; points: number }[]>([]);
     const tapStartRef = useRef<number>(0);
 
-    useEffect(() => { ai.initPiano(); }, []);
+    useEffect(() => { initPiano(); }, [initPiano]);
 
     const startQuestion = useCallback(async () => {
         setUserBeats([]);
         setState((s) => ({ ...s, phase: 'playing' }));
-        const content = await ai.requestContent('ritim', state.currentQuestion, TOTAL_QUESTIONS);
+        const content = await requestContent('ritim', state.currentQuestion, TOTAL_QUESTIONS);
         const beats = content.rhythm?.beats || [0, 500, 1000, 1500, 2000, 2500];
         setTargetBeats(beats);
-        if (ai.piano?.isReady) await ai.piano.playRhythm(beats, content.rhythm?.tempo || 100);
+        if (piano?.isReady) await piano.playRhythm(beats, content.rhythm?.tempo || 100);
         const totalDuration = Math.max(...beats) + 800;
         setTimeout(() => {
             setState((s) => ({ ...s, phase: 'recording' }));
             setIsTapping(true);
             tapStartRef.current = performance.now();
         }, totalDuration);
-    }, [ai, state.currentQuestion]);
+    }, [piano, requestContent, state.currentQuestion]);
 
     const handleTap = useCallback(async () => {
         if (!isTapping) return;
         const tapTime = performance.now() - tapStartRef.current;
         setUserBeats((prev) => [...prev, Math.round(tapTime)]);
-        if (ai.piano?.isReady) ai.piano.playNote('C5', 0.08);
-    }, [isTapping, ai]);
+        if (piano?.isReady) piano.playNote('C5', 0.08);
+    }, [isTapping, piano]);
 
     const finishTapping = useCallback(() => {
         setIsTapping(false);
@@ -60,7 +65,7 @@ export default function RitimPage() {
         const points = Math.round((accuracy / 100) * POINTS_PER_QUESTION);
 
         setResults((prev) => [...prev, { accuracy, points }]);
-        ai.adjustDifficulty(points >= 4);
+        adjustDifficulty(points >= 4);
         const newScore = state.score + points;
         const newQ = state.currentQuestion + 1;
         setState((s) => ({ ...s, phase: 'result', currentQuestion: newQ, score: newScore }));
@@ -68,7 +73,14 @@ export default function RitimPage() {
         if (newQ >= TOTAL_QUESTIONS) {
             submitModuleScore('ritim', newScore, `${newQ} ritimden ${newScore} puan`);
         }
-    }, [targetBeats, userBeats, state.score, state.currentQuestion, submitModuleScore, ai]);
+    }, [
+        adjustDifficulty,
+        state.currentQuestion,
+        state.score,
+        submitModuleScore,
+        targetBeats,
+        userBeats
+    ]);
 
     const completed = isModuleComplete('ritim');
 

@@ -33,6 +33,18 @@ test('evaluateAccess enforces talent matching before XP check', () => {
     assert.equal(decision.reason, 'talent');
 });
 
+test('evaluateAccess matches talents accent-insensitively', () => {
+    const decision = evaluateAccess({
+        requiredTalent: 'Müzik',
+        userTalent: ['Muzik'],
+        userXP: 100,
+        requiredXP: 0
+    });
+
+    assert.equal(decision.hasAccess, true);
+    assert.equal(decision.reason, null);
+});
+
 test('evaluateAccess denies when XP is lower than required amount', () => {
     const decision = evaluateAccess({
         userXP: 4,

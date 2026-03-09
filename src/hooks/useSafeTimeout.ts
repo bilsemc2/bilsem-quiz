@@ -13,9 +13,11 @@ export function useSafeTimeout() {
     const ids = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
     useEffect(() => {
+        const activeIds = ids.current;
+
         return () => {
-            ids.current.forEach(clearTimeout);
-            ids.current.clear();
+            activeIds.forEach(clearTimeout);
+            activeIds.clear();
         };
     }, []);
 

@@ -8,8 +8,8 @@ import {
     Clock, BookOpen, Trophy, BarChart3, Shield,
     Lightbulb, Puzzle, Eye, MessageSquare, Gauge, Users, LucideIcon
 } from 'lucide-react';
-import { useExam } from '../../contexts/ExamContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { useExam } from '../../contexts/exam/useExam';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { EXAM_MODES, ExamMode } from '../../types/examTypes';
 import { getActiveModules, getModuleCountByCategory } from '../../config/examModules';
 import AccessDeniedScreen from '../../components/AccessDeniedScreen';

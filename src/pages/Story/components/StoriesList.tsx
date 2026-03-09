@@ -1,12 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStories } from '../services/stories';
 import { Story, Question, themeTranslations, StoryTheme } from './types';
 import { ChevronRight, Download, GamepadIcon, Check, X, Trophy, ArrowLeft, BookOpen, Filter, Star, Sparkles } from 'lucide-react';
-import { PDFPreview } from './PDFPreview';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { WordGamesPDF } from './WordGamesPDF';
 import { WordGames } from './WordGames';
+import { OnDemandPdfDownloadButton } from './OnDemandPdfDownloadButton';
+
+const PDFPreview = lazy(() =>
+  import('./PDFPreview').then((module) => ({ default: module.PDFPreview }))
+);
 
 const THEME_COLORS: Record<StoryTheme, { bg: string; text: string; border: string; accent: string }> = {
   animals: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-300', accent: 'from-emerald-400 to-teal-500' },
@@ -440,10 +442,12 @@ export function StoriesList() {
       )}
 
       {showPDFPreview && selectedStory && (
-        <PDFPreview
-          story={selectedStory}
-          onClose={() => setShowPDFPreview(false)}
-        />
+        <Suspense fallback={null}>
+          <PDFPreview
+            story={selectedStory}
+            onClose={() => setShowPDFPreview(false)}
+          />
+        </Suspense>
       )}
 
       {showGames && selectedStory && (
@@ -454,16 +458,19 @@ export function StoriesList() {
                 🎮 Kelime Oyunları — {selectedStory.title}
               </h3>
               <div className="flex items-center gap-3">
-                <PDFDownloadLink
-                  document={<WordGamesPDF story={selectedStory} />}
+                <OnDemandPdfDownloadButton
                   fileName={`${selectedStory.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-kelime-oyunlari.pdf`}
+                  loadDocument={async () => {
+                    const { WordGamesPDF } = await import('./WordGamesPDF');
+                    return <WordGamesPDF story={selectedStory} />;
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-white/20 text-white rounded-xl hover:bg-white/30 transition-colors text-sm font-bold"
                 >
                   <div className="flex items-center gap-2">
                     <Download size={18} />
                     <span>PDF İndir</span>
                   </div>
-                </PDFDownloadLink>
+                </OnDemandPdfDownloadButton>
                 <button
                   onClick={() => setShowGames(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-colors"

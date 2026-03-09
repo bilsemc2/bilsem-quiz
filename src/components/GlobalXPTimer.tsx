@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Sparkles } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useXP } from '../contexts/XPContext';
+import { useAuth } from '@/contexts/auth/useAuth';
+import { useXP } from '@/contexts/xp/useXP';
+import { TIMED_XP_INTERVAL_SECONDS } from '@/features/xp/model/timedXPSessionModel';
 
 const GlobalXPTimer = () => {
     const { user } = useAuth();
     const { secondsActive, lastXPGainAt } = useXP();
     const [showGainAnim, setShowGainAnim] = useState(false);
-    const XP_INTERVAL = 60;
+    const XP_INTERVAL = TIMED_XP_INTERVAL_SECONDS;
 
     const prevLastGain = useRef(lastXPGainAt);
 

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Music, Trophy, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 
 const SKILL_BARS = [
     { key: 'pitch_score', label: 'Perde Duyma', max: 60, color: 'bg-cyber-pink' },

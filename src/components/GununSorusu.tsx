@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { encryptImageUrl, loadImageAsBase64, getImageProtectionStyles } from '../utils/imageProtection';
@@ -25,81 +25,8 @@ const GununSorusu: React.FC = () => {
     return today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
   };
 
-  // Günün sorusunu yükle
-  useEffect(() => {
-    const fetchDailyQuestion = async () => {
-      setLoading(true);
-      try {
-        // Bugünün tarihine göre sabit bir sıra belirle
-        const todaySeed = getTodaysSeed();
-
-        // Aktif sorulardan birini seç
-        const { data, error } = await supabase
-          .from('questions')
-          .select('*')
-          .eq('is_active', true)
-          .order('question_number', { ascending: true });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data && data.length > 0) {
-          // Günün tarihine göre belirli bir soruyu seç
-          const index = todaySeed % data.length;
-          setQuestion(data[index]);
-
-          // Eğer resim varsa, Base64 formatında yükle
-          if (data[index].image_url) {
-            loadQuestionImage(data[index].image_url);
-          }
-        } else {
-        }
-      } catch (error) {
-        console.error('Günün sorusu yüklenirken hata:', error);
-        toast.error('Günün sorusu yüklenirken bir hata oluştu', {
-          description: 'Lütfen daha sonra tekrar deneyin.'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDailyQuestion();
-
-    // Koruma CSS'ini ekle
-    const style = document.createElement('style');
-    style.textContent = getImageProtectionStyles();
-    document.head.appendChild(style);
-
-    // Temizleme fonksiyonu
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
-  // Resmi Base64 formatında yükle
-  const loadQuestionImage = async (imageUrl: string) => {
-    if (!imageUrl) return;
-
-    setImageLoading(true);
-    try {
-      // Resmi güvenli URL ile yükle
-      const secureUrl = encryptImageUrl(imageUrl);
-      const base64Data = await loadImageAsBase64(secureUrl);
-      setImageBase64(base64Data);
-
-      // Filigran ekle
-      setTimeout(addWatermark, 500);
-    } catch (error) {
-      console.error('Resim yüklenirken hata:', error);
-    } finally {
-      setImageLoading(false);
-    }
-  };
-
   // Filigran ekle
-  const addWatermark = () => {
+  const addWatermark = useCallback(() => {
     if (!watermarkRef.current) return;
 
     const container = watermarkRef.current;
@@ -154,7 +81,69 @@ const GununSorusu: React.FC = () => {
 
     watermarkElement.className = 'watermark';
     container.appendChild(watermarkElement);
-  };
+  }, []);
+
+  // Resmi Base64 formatında yükle
+  const loadQuestionImage = useCallback(async (imageUrl: string) => {
+    if (!imageUrl) return;
+
+    setImageLoading(true);
+    try {
+      const secureUrl = encryptImageUrl(imageUrl);
+      const base64Data = await loadImageAsBase64(secureUrl);
+      setImageBase64(base64Data);
+      setTimeout(addWatermark, 500);
+    } catch (error) {
+      console.error('Resim yüklenirken hata:', error);
+    } finally {
+      setImageLoading(false);
+    }
+  }, [addWatermark]);
+
+  // Günün sorusunu yükle
+  useEffect(() => {
+    const fetchDailyQuestion = async () => {
+      setLoading(true);
+      try {
+        const todaySeed = getTodaysSeed();
+        const { data, error } = await supabase
+          .from('questions')
+          .select('*')
+          .eq('is_active', true)
+          .order('question_number', { ascending: true });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data && data.length > 0) {
+          const index = todaySeed % data.length;
+          setQuestion(data[index]);
+
+          if (data[index].image_url) {
+            loadQuestionImage(data[index].image_url);
+          }
+        }
+      } catch (error) {
+        console.error('Günün sorusu yüklenirken hata:', error);
+        toast.error('Günün sorusu yüklenirken bir hata oluştu', {
+          description: 'Lütfen daha sonra tekrar deneyin.'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDailyQuestion();
+
+    const style = document.createElement('style');
+    style.textContent = getImageProtectionStyles();
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [loadQuestionImage]);
 
   if (loading) {
     return (

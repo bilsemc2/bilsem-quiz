@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import { Link, useParams, useNavigate } from 'react-router-dom';
@@ -29,11 +29,9 @@ const BilsemDetailPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
 
-    useEffect(() => { if (slug) fetchKurum(slug); }, [slug]);
-
-    const fetchKurum = async (slug: string) => {
+    const fetchKurum = useCallback(async (nextSlug: string) => {
         try {
-            const { data, error } = await supabase.from('bilsem_kurumlari').select('*').eq('slug', slug).maybeSingle();
+            const { data, error } = await supabase.from('bilsem_kurumlari').select('*').eq('slug', nextSlug).maybeSingle();
             if (error) throw error;
             if (!data) { toast.error('BİLSEM bulunamadı'); navigate('/bilsem-rehberi'); return; }
             setKurum(data);
@@ -42,7 +40,9 @@ const BilsemDetailPage: React.FC = () => {
             toast.error('BİLSEM bilgileri yüklenemedi');
             navigate('/bilsem-rehberi');
         } finally { setLoading(false); }
-    };
+    }, [navigate]);
+
+    useEffect(() => { if (slug) fetchKurum(slug); }, [fetchKurum, slug]);
 
     const copyAddress = async () => {
         if (!kurum) return;

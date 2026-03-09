@@ -64,21 +64,21 @@ const RenkliBalon: React.FC = () => {
         setFeedback(null);
     }, []);
 
-    const startGame = () => {
+    const startGame = useCallback(() => {
         window.scrollTo(0, 0);
         hasSavedRef.current = false;
         isResolvingRef.current = false;
         setGameState({ score: 0, level: 1, lives: 3, status: 'PLAYING' });
         gameStartTimeRef.current = Date.now();
         startNewPattern(1);
-    };
+    }, [startNewPattern]);
 
     // Auto-start from Hub
     useEffect(() => {
         if (location.state?.autoStart && gameState.status === 'START') {
             startGame();
         }
-    }, [location.state, gameState.status]);
+    }, [gameState.status, location.state, startGame]);
 
     // Balloon Spawning
     useEffect(() => {
@@ -159,7 +159,7 @@ const RenkliBalon: React.FC = () => {
         }, 100);
 
         return () => clearInterval(checkBalloons);
-    }, [currentPattern, poppedId]);
+    }, [currentPattern, gameState.status, poppedId]);
 
     // Game Over Handler
     useEffect(() => {

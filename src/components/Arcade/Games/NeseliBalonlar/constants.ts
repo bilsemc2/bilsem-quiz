@@ -1,5 +1,5 @@
-import { ARCADE_PALETTE } from '../../Shared/ArcadeConstants';
-import { BalloonColor } from './types';
+import { ARCADE_PALETTE } from '../../Shared/ArcadeConstants.ts';
+import type { BalloonColor } from './types.ts';
 
 // ARCADE_PALETTE'den BalloonColor formatına dönüştür
 // secondary: %30 karartılmış, highlight: %30 açıklaştırılmış

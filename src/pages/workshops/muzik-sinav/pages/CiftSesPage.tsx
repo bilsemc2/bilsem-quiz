@@ -7,8 +7,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, ArrowRight, CheckCircle, Sparkles } from 'lucide-react';
 import { useMicrophone } from '../hooks/useMicrophone';
-import { useExam } from '../contexts/ExamContext';
-import { useAIMuzik } from '../contexts/MusicAIContext';
+import { useExam } from '../contexts/exam/useExam';
+import { useAIMuzik } from '../contexts/musicAI/useAIMuzik';
 import { MicrophoneButton } from '../components/MicrophoneButton';
 import { frequencyToNoteName, noteNameToFrequency } from '../utils/noteUtils';
 import { calculatePitchAccuracy } from '../utils/scoring';
@@ -18,7 +18,13 @@ const TOTAL_QUESTIONS = 3;
 const POINTS_PER_QUESTION = 2;
 
 export default function CiftSesPage() {
-    const ai = useAIMuzik();
+    const {
+        piano,
+        initPiano,
+        requestContent,
+        requestAnalysis,
+        adjustDifficulty
+    } = useAIMuzik();
     const mic = useMicrophone();
     const { submitModuleScore, isModuleComplete } = useExam();
 
@@ -26,20 +32,20 @@ export default function CiftSesPage() {
         phase: 'intro', currentQuestion: 0, totalQuestions: TOTAL_QUESTIONS, score: 0, maxScore: 6,
     });
     const [targetNotes, setTargetNotes] = useState<string[]>([]);
-    const [_aiHint, setAiHint] = useState('');
+    const [, setAiHint] = useState('');
     const [results, setResults] = useState<{ accuracy: number; points: number }[]>([]);
 
-    useEffect(() => { ai.initPiano(); }, []);
+    useEffect(() => { initPiano(); }, [initPiano]);
 
     const startQuestion = useCallback(async () => {
         setState((s) => ({ ...s, phase: 'playing' }));
-        const content = await ai.requestContent('cift-ses', state.currentQuestion, TOTAL_QUESTIONS);
+        const content = await requestContent('cift-ses', state.currentQuestion, TOTAL_QUESTIONS);
         const notes = content.notes || ['C4', 'E4'];
         setTargetNotes(notes);
         setAiHint(content.hint || '');
-        if (ai.piano?.isReady) ai.piano.playChord(notes, 1.2);
+        if (piano?.isReady) piano.playChord(notes, 1.2);
         setTimeout(() => setState((s) => ({ ...s, phase: 'recording' })), 2500);
-    }, [ai, state.currentQuestion]);
+    }, [piano, requestContent, state.currentQuestion]);
 
     const handleMicToggle = useCallback(async () => {
         if (mic.isListening) {
@@ -56,11 +62,11 @@ export default function CiftSesPage() {
             const points = accuracy >= 70 ? POINTS_PER_QUESTION : accuracy >= 40 ? 1 : 0;
 
             setResults((prev) => [...prev, { accuracy, points }]);
-            ai.adjustDifficulty(points >= 1);
+            adjustDifficulty(points >= 1);
 
             // Get audio recording for AI multimodal analysis
             const audioData = await mic.getRecordingBase64();
-            ai.requestAnalysis(
+            requestAnalysis(
                 'cift-ses',
                 { notes: targetNotes },
                 { notes: captured, accuracy },
@@ -81,7 +87,15 @@ export default function CiftSesPage() {
             mic.resetCapture();
             await mic.startListening();
         }
-    }, [mic, targetNotes, state.score, state.currentQuestion, submitModuleScore, ai]);
+    }, [
+        adjustDifficulty,
+        mic,
+        requestAnalysis,
+        state.currentQuestion,
+        state.score,
+        submitModuleScore,
+        targetNotes
+    ]);
 
     const completed = isModuleComplete('cift-ses');
 

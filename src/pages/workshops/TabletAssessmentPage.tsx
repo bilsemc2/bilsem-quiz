@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Tablet, Brain, Layout, ChevronRight, Star, ChevronLeft, Box } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import AccessDeniedScreen from '../../components/AccessDeniedScreen';
 
 // yetenek_alani erişim kontrolü

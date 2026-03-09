@@ -1,8 +1,7 @@
 import React from 'react';
 import { Play, Pause, SkipBack, SkipForward, Download, Sparkles, ArrowRight } from 'lucide-react';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { StoryPDF } from './StoryPDF';
 import { Story } from '../types';
+import { OnDemandPdfDownloadButton } from './OnDemandPdfDownloadButton';
 
 interface StoryViewerProps {
   story: Story;
@@ -12,6 +11,7 @@ interface StoryViewerProps {
 
 export function StoryViewer({ story, onNext, isLoading }: StoryViewerProps) {
   const [isPlaying, setIsPlaying] = React.useState(false);
+  const fileName = `${story.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
@@ -22,16 +22,19 @@ export function StoryViewer({ story, onNext, isLoading }: StoryViewerProps) {
 
       {/* PDF Download */}
       <div className="flex justify-end">
-        <PDFDownloadLink
-          document={<StoryPDF story={story} />}
-          fileName={`${story.title}.pdf`}
+        <OnDemandPdfDownloadButton
+          fileName={fileName}
+          loadDocument={async () => {
+            const { StoryPDF } = await import('./StoryPDF');
+            return <StoryPDF story={story} />;
+          }}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5 shadow-md"
         >
           <div className="flex items-center gap-2">
             <Download size={18} />
             <span>PDF İndir</span>
           </div>
-        </PDFDownloadLink>
+        </OnDemandPdfDownloadButton>
       </div>
 
       {/* Story Image */}

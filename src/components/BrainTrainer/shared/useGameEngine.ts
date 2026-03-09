@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSound } from "../../../hooks/useSound";
 import { useGamePersistence } from "../../../hooks/useGamePersistence";
-import { useExam } from "../../../contexts/ExamContext";
+import { useExam } from "../../../contexts/exam/useExam";
+import { buildGamePerformanceMetadata, type GamePerformanceState } from "../../../shared/game/performance";
 
 export type GamePhase = "welcome" | "playing" | "feedback" | "game_over" | "victory";
 
@@ -13,6 +14,7 @@ export interface UseGameEngineConfig {
     timeLimit?: number; // In seconds
     /** When true, prevents auto-start from location.state (useful for games with custom pre-game phases like reading) */
     disableAutoStart?: boolean;
+    getPerformanceSnapshot?: () => GamePerformanceState | null;
 }
 
 export const useGameEngine = ({
@@ -21,6 +23,7 @@ export const useGameEngine = ({
     initialLives = 5,
     timeLimit = 180,
     disableAutoStart = false,
+    getPerformanceSnapshot,
 }: UseGameEngineConfig) => {
     const { playSound } = useSound();
     const { saveGamePlay } = useGamePersistence();
@@ -161,7 +164,11 @@ export const useGameEngine = ({
             game_id: gameId,
             score_achieved: score,
             duration_seconds: duration,
-            metadata: { level_reached: level, victory: phase === "victory" },
+            metadata: {
+                level_reached: level,
+                victory: phase === "victory",
+                ...buildGamePerformanceMetadata(getPerformanceSnapshot?.())
+            },
         });
     }, [
         phase,
@@ -173,6 +180,7 @@ export const useGameEngine = ({
         navigate,
         gameId,
         maxLevel,
+        getPerformanceSnapshot,
     ]);
 
     useEffect(() => {

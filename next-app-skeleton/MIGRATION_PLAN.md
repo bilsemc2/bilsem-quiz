@@ -90,13 +90,13 @@ Oncelikli tablolar:
 6. Faz 5 - Admin + Profile + Reporting
 - [x] Dashboard stats tabani (`profiles` + `game_plays`)
 - [x] Admin detay ekranlari (`/admin`, `/admin/users`, `/admin/users/[userId]`, `/admin/game-plays`)
-- [ ] PDF/report servislerinin server action'a tasinmasi
+- [x] PDF/report servislerinin server action'a tasinmasi
 
 7. Faz 6 - Kalite ve Performans
 - [x] `typecheck`, `lint`, `build`, `test` green
 - [x] `src/server/db/client.ts` icin telemetry + retry stratejisi
-- [ ] Lighthouse + Web Vitals olcumu
-- [ ] E2E test coverage
+- [x] Lighthouse + Web Vitals olcumu
+- [x] E2E test coverage
 
 ## Tasima Kurallari
 
@@ -111,5 +111,5 @@ Oncelikli tablolar:
 ## Sonraki Oncelik
 
 1. Diger BrainTrainer oyunlarini migration backlog'undan one al
-2. PDF/report servislerini server action katmanina tasi
-3. Lighthouse + Web Vitals + E2E kalite adimlarini tamamla
+2. E2E coverage'i kritik akislara cikar
+3. Lighthouse assertion'larini warn -> error seviyesine yukselt

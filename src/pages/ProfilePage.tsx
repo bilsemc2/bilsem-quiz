@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import EditProfileModal from '../components/EditProfileModal';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -11,7 +11,7 @@ import confetti from 'canvas-confetti';
 import { UserProfile, QuizStats } from '@/types/profile';
 import { calculateLevelInfo, getLevelBadge, getLevelTitle } from '@/utils/levelCalculator';
 import ReferralSystem from '@/components/profile/ReferralSystem';
-import { showXPEarn } from '@/components/XPToast';
+import { showXPEarn } from '@/components/xpToastService';
 import UserMessages from '@/components/UserMessages';
 import TimeXPGain from '@/components/profile/TimeXPGain';
 import UserGameStats from '@/components/profile/UserGameStats';
@@ -71,7 +71,7 @@ export const ProfilePage: React.FC = () => {
         levelTitle: ""
     });
 
-    const fetchUserData = async () => {
+    const fetchUserData = useCallback(async () => {
         if (!user) return;
         setIsLoading(true);
         try {
@@ -105,7 +105,7 @@ export const ProfilePage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
         if (profile?.experience !== undefined) {
@@ -186,7 +186,7 @@ export const ProfilePage: React.FC = () => {
         }
     };
 
-    useEffect(() => { if (user) fetchUserData(); }, [user]);
+    useEffect(() => { if (user) fetchUserData(); }, [fetchUserData, user]);
 
     /* ── Section header helper ── */
     const SectionHeader = ({ icon: Icon, iconBg, title, subtitle }: { icon: React.ElementType; iconBg: string; title: string; subtitle: string }) => (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import { toast } from 'sonner';
 import { authRepository } from '@/server/repositories/authRepository';
 import { quizizzRepository } from '@/server/repositories/quizizzRepository';

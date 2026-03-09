@@ -71,7 +71,7 @@ const LaserMazeGame: React.FC = () => {
     } else {
       if (engineRef.current) { engineRef.current.dispose(); engineRef.current = null; }
     }
-  }, [phase, level, puzzleKey, initEngine, clearGuessTimeouts]);
+  }, [phase, level, puzzleKey, initEngine, clearGuessTimeouts, safeTimeout]);
 
   useEffect(() => {
     if (phase === "welcome") setPuzzleKey(0);

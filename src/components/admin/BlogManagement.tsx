@@ -5,7 +5,7 @@ import { Plus, Edit, Trash2, X, Loader2, FileText, Eye, EyeOff, Wand2, Bot } fro
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/useAuth';
 import BlogRichTextEditor from './BlogRichTextEditor';
 import ImageUploader from './ImageUploader';
 import DOMPurify from 'dompurify';
