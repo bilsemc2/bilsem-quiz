@@ -49,10 +49,12 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     const pos = getGridPos(clientX, clientY);
 
-    // Allow starting from the start position cell
-    if (pos && pos.row === startPos.row && pos.col === startPos.col) {
+    // BAŞLA butonu 2 hücre geniş: startPos.col ile startPos.col±1 arasına dokunmaya izin ver
+    if (pos && pos.row === startPos.row &&
+      Math.abs(pos.col - startPos.col) <= 1) {
+      // Normalize: path her zaman startPos'tan başlar
       setIsDrawing(true);
-      setCurrentPath([pos]);
+      setCurrentPath([startPos]);
     }
   };
 
@@ -86,8 +88,14 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     if (!isDrawing) return;
     setIsDrawing(false);
     const lastPos = currentPath[currentPath.length - 1];
-    if (lastPos && lastPos.row === goalPos.row && lastPos.col === goalPos.col) {
-      onFinish(currentPath);
+    // BİTİŞ butonu 2 hücre geniş: goalPos ±1 col toleransıyla kabul et
+    const reachedGoal = lastPos &&
+      lastPos.row === goalPos.row &&
+      Math.abs(lastPos.col - goalPos.col) <= 1;
+    if (reachedGoal) {
+      // Path'i goalPos'a normalize et (checkResult doğru cell'i bulsun)
+      const normalizedPath = [...currentPath.slice(0, -1), goalPos];
+      onFinish(normalizedPath);
     } else {
       setCurrentPath([]);
     }
@@ -100,7 +108,10 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
   // Ensure global event listeners for cleanup
   useEffect(() => {
-    const handleGlobalUp = () => setIsDrawing(false);
+    const handleGlobalUp = () => {
+      setIsDrawing(false);
+      setCurrentPath([]); // Global mouseup da path'i temizle
+    };
     window.addEventListener('mouseup', handleGlobalUp);
     window.addEventListener('touchend', handleGlobalUp);
     return () => {

@@ -92,9 +92,10 @@ const YolBulmaca: React.FC = () => {
         }
     }, [gameOver, score, level, isArcadeMode, saveGamePlay]);
 
-    const startLevel = useCallback(() => {
-        const nextSeq = generateSequence(level);
-        const nextQuest = generateQuestion(nextSeq, level);
+    const startLevel = useCallback((explicitLevel?: number) => {
+        const lvl = explicitLevel ?? level;
+        const nextSeq = generateSequence(lvl);
+        const nextQuest = generateQuestion(nextSeq, lvl);
 
         const correctAnswerIndex = nextQuest.options.findIndex(o => o === nextQuest.answer);
         const { start, goal, optionPositions } = generateSmartPositions(
@@ -112,7 +113,7 @@ const YolBulmaca: React.FC = () => {
         setFeedback(null);
         isResolvingRef.current = false;
 
-        const time = MEMORIZE_TIME_BASE + (level * 500);
+        const time = MEMORIZE_TIME_BASE + (lvl * 500);
         setMemorizeTimeLeft(time);
 
         if (timerRef.current) clearInterval(timerRef.current);
@@ -138,7 +139,7 @@ const YolBulmaca: React.FC = () => {
         setFeedback(null);
         hasSavedRef.current = false;
         isResolvingRef.current = false;
-        startLevel();
+        startLevel(1); // Explicit level=1 to avoid setState async race
     };
 
     const handleFinishDrawing = (drawnPath: GridPos[]) => {
@@ -227,9 +228,12 @@ const YolBulmaca: React.FC = () => {
             return;
         }
         if (isSuccess) {
-            setLevel(prev => prev + 1);
+            const nextLvl = level + 1;
+            setLevel(nextLvl);
+            startLevel(nextLvl); // Pass next level explicitly to avoid setState async race
+        } else {
+            startLevel(level); // Retry same level
         }
-        startLevel();
     };
 
     // Derive Shell status
