@@ -9,7 +9,7 @@ export const TUZO_TEXT = "TUZÖ 5.5.1 Kural Çıkarsama";
 export const INITIAL_LIVES = 5;
 export const TIME_LIMIT = 180;
 export const MAX_LEVEL = 20;
-export const FEEDBACK_DURATION_MS = 1500;
+export const FEEDBACK_DURATION_MS = 1200;
 export const OPTION_COUNT = 4;
 
 export const AVAILABLE_SHAPES: readonly ShapeType[] = [

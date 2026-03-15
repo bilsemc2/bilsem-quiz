@@ -34,9 +34,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/auth/useAuth';
 import { useTheme, useMediaQuery } from '@mui/material';
-import { authRepository } from '@/server/repositories/authRepository';
-import { notificationRepository } from '@/server/repositories/notificationRepository';
-import { applyNotificationBadges } from '@/features/admin/model/adminPageUseCases';
+import { applyNotificationBadges, loadUnreadNotifications, loadAdminProfile } from '@/features/admin/model/adminPageUseCases';
 import { toast } from 'sonner';
 
 const AdminDashboard = lazy(() => import('../components/admin/AdminDashboard'));
@@ -189,7 +187,7 @@ const AdminPage: React.FC = () => {
     if (!auth.user?.id) return;
 
     try {
-      const notifications = await notificationRepository.listUnreadByUserId(auth.user.id);
+      const notifications = await loadUnreadNotifications(auth.user.id);
       setMenuItems((prev) => applyNotificationBadges(prev, notifications));
     } catch (err) {
       console.error('Bildirimler kontrol edilirken hata:', err);
@@ -213,7 +211,7 @@ const AdminPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const profile = await authRepository.getProfileByUserId(auth.user.id);
+      const profile = await loadAdminProfile(auth.user.id);
 
       if (!profile?.is_admin) {
         setError('Bu sayfaya erişim yetkiniz yok');

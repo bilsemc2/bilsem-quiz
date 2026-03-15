@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { loadQuestionImageBlob } from '@/features/content/model/questionImageUseCases';
 
 export const useSupabaseImage = (path: string) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -11,13 +11,7 @@ export const useSupabaseImage = (path: string) => {
         const fetchImage = async () => {
             try {
                 setError(null);
-                const { data, error } = await supabase.storage
-                    .from('questions')
-                    .download(path);
-
-                if (error) {
-                    throw error;
-                }
+                const data = await loadQuestionImageBlob(path);
 
                 if (data) {
                     currentObjectUrl = URL.createObjectURL(data);

@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Music, Trophy, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '@/contexts/auth/useAuth';
+import {
+    loadMusicReportCardData,
+    type MusicReportSummary as Report
+} from '@/features/profile/model/musicReportUseCases';
 
 const SKILL_BARS = [
     { key: 'pitch_score', label: 'Perde Duyma', max: 60, color: 'bg-cyber-pink' },
@@ -20,16 +23,6 @@ const LEVEL_COLORS: Record<string, string> = {
     'Üstün': 'bg-cyber-pink/15 text-cyber-pink',
 };
 
-interface Report {
-    overall_score: number;
-    pitch_score: number;
-    rhythm_score: number;
-    melody_score: number;
-    expression_score: number;
-    level: string;
-    created_at: string;
-}
-
 const MusicReportCard: React.FC = () => {
     const { user } = useAuth();
     const [report, setReport] = useState<Report | null>(null);
@@ -38,21 +31,17 @@ const MusicReportCard: React.FC = () => {
     useEffect(() => {
         if (!user) return;
         const load = async () => {
-            const [reportRes, resultsRes] = await Promise.all([
-                supabase.from('music_overall_reports')
-                    .select('overall_score, pitch_score, rhythm_score, melody_score, expression_score, level, created_at')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle(),
-                supabase.from('music_test_results')
-                    .select('test_type')
-                    .eq('user_id', user.id),
-            ]);
-            if (reportRes.data) setReport(reportRes.data);
-            if (resultsRes.data) setCompletedCount(resultsRes.data.length);
+            try {
+                const data = await loadMusicReportCardData(user.id);
+                setReport(data.report);
+                setCompletedCount(data.completedCount);
+            } catch (error) {
+                console.error('Music report card load failed:', error);
+                setReport(null);
+                setCompletedCount(0);
+            }
         };
-        load();
+        void load();
     }, [user]);
 
     // Hiç test yapılmamışsa gösterme

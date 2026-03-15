@@ -13,6 +13,7 @@ import {
 } from "./constants";
 import {
   appendDigitToCell,
+  buildMathGridFeedbackMessage,
   calculateMathGridScore,
   deleteDigitFromCell,
   findFirstMissingCell,
@@ -179,8 +180,15 @@ export const useMathGridController = () => {
     });
 
     if (validation.allCorrect) {
-      playSound("correct");
-      showFeedback(true);
+      showFeedback(
+        true,
+        buildMathGridFeedbackMessage({
+          correct: true,
+          ruleDescription,
+          level,
+          maxLevel: MAX_LEVEL,
+        }),
+      );
 
       scheduleAction(() => {
         dismissFeedback();
@@ -201,8 +209,15 @@ export const useMathGridController = () => {
       return;
     }
 
-    playSound("incorrect");
-    showFeedback(false);
+    showFeedback(
+      false,
+      buildMathGridFeedbackMessage({
+        correct: false,
+        ruleDescription,
+        level,
+        maxLevel: MAX_LEVEL,
+      }),
+    );
     setShowErrors(true);
     loseLife();
 
@@ -222,6 +237,7 @@ export const useMathGridController = () => {
     phase,
     playSound,
     recordAttempt,
+    ruleDescription,
     scheduleAction,
     setGamePhase,
     showFeedback,

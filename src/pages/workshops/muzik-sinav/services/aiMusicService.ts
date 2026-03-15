@@ -7,7 +7,11 @@
  * Fallback: If AI is unavailable, uses local noteUtils.ts for content generation.
  */
 
-import { supabase } from '../../../../lib/supabase';
+import {
+    requestMusicExamAnalysis,
+    requestMusicExamContent,
+    requestMusicExamReport
+} from '@/features/content/model/musicExamAiUseCases';
 import type { TestModule, AIContentResponse, AIAnalysisResponse, AIReportResponse } from '../types';
 import { getRandomNote, getRandomMelody, getRandomRhythm } from '../utils/noteUtils';
 
@@ -23,23 +27,14 @@ interface GenerateContentInput {
 
 export async function generateContent(input: GenerateContentInput): Promise<AIContentResponse> {
     try {
-        const { data, error } = await supabase.functions.invoke('gemini-proxy', {
-            body: {
-                action: 'generateMusicExamContent',
-                module: input.module,
-                questionIndex: input.questionIndex,
-                totalQuestions: input.totalQuestions,
-                difficulty: input.difficulty,
-                previousNotes: input.previousNotes ?? [],
-            },
-        });
+        const response = await requestMusicExamContent<AIContentResponse>(input);
 
-        if (error || data?.error) {
-            console.warn('[AI Music] Content generation failed, using fallback:', error?.message || data?.error);
+        if (response.error || !response.result) {
+            console.warn('[AI Music] Content generation failed, using fallback:', response.error);
             return generateFallbackContent(input);
         }
 
-        return data.result as AIContentResponse;
+        return response.result;
     } catch (err) {
         console.warn('[AI Music] Network error, using fallback:', err);
         return generateFallbackContent(input);
@@ -62,31 +57,18 @@ interface AnalyzeInput {
 
 export async function analyzePerformance(input: AnalyzeInput): Promise<AIAnalysisResponse> {
     try {
-        const { data, error } = await supabase.functions.invoke('gemini-proxy', {
-            body: {
-                action: 'analyzeMusicExamPerformance',
-                module: input.module,
-                target: input.target,
-                detected: input.detected,
-                questionIndex: input.questionIndex,
-                difficulty: input.difficulty,
-                ...(input.audioBase64 && {
-                    audioBase64: input.audioBase64,
-                    audioMimeType: input.audioMimeType || 'audio/webm',
-                }),
-            },
-        });
+        const response = await requestMusicExamAnalysis<AIAnalysisResponse>(input);
 
-        if (data?.retryAfterSec) {
+        if (response.retryAfterSec) {
             return fallbackAnalysis('AI analiz limitine ulaştınız. Biraz bekleyin.');
         }
 
-        if (error || data?.error) {
-            console.warn('[AI Music] Analysis failed, using fallback:', error?.message || data?.error);
+        if (response.error || !response.result) {
+            console.warn('[AI Music] Analysis failed, using fallback:', response.error);
             return fallbackAnalysis('AI şu an kullanılamıyor.');
         }
 
-        return data.result as AIAnalysisResponse;
+        return response.result;
     } catch (err) {
         console.warn('[AI Music] Analysis network error:', err);
         return fallbackAnalysis('Bağlantı hatası oluştu.');
@@ -107,19 +89,14 @@ interface ReportInput {
 
 export async function generateReport(input: ReportInput): Promise<AIReportResponse> {
     try {
-        const { data, error } = await supabase.functions.invoke('gemini-proxy', {
-            body: {
-                action: 'generateMusicExamReport',
-                moduleScores: input.moduleScores,
-            },
-        });
+        const response = await requestMusicExamReport<AIReportResponse>(input);
 
-        if (error || data?.error) {
-            console.warn('[AI Music] Report generation failed:', error?.message || data?.error);
+        if (response.error || !response.result) {
+            console.warn('[AI Music] Report generation failed:', response.error);
             return fallbackReport(input);
         }
 
-        return data.result as AIReportResponse;
+        return response.result;
     } catch (err) {
         console.warn('[AI Music] Report network error:', err);
         return fallbackReport(input);

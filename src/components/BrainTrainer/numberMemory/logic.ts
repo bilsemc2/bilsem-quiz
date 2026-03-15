@@ -161,3 +161,25 @@ export const createQuestion = (
 };
 
 export const calculateNumberMemoryScore = (level: number) => 30 + level * 5;
+
+export const buildNumberMemoryFeedbackMessage = ({
+  correct,
+  answer,
+  level,
+  maxLevel,
+}: {
+  correct: boolean;
+  answer: number;
+  level: number;
+  maxLevel: number;
+}) => {
+  if (correct) {
+    if (level >= maxLevel) {
+      return "Doğru cevap! Son sayı sorusunu da tamamladın, oyun bitiyor.";
+    }
+
+    return `Doğru cevap! Şimdi ${level + 1}. seviyeye geçiyorsun.`;
+  }
+
+  return `Yanlış cevap! Doğru yanıt ${answer} olmalıydı.`;
+};

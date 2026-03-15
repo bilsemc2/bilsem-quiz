@@ -8,7 +8,7 @@ export const GAME_TITLE = "Konum Bulmaca";
 export const GAME_DESCRIPTION =
   "Sekillerin kesisim bolgelerini analiz et ve noktanin dogru konumunu belirle. Uzamsal iliskileri coz!";
 export const TUZO_TEXT = "TUZO 5.5.3 Uzamsal Iliski";
-export const FEEDBACK_DURATION_MS = 1500;
+export const FEEDBACK_DURATION_MS = 1200;
 export const INTERNAL_SIZE = 300;
 export const CANVAS_MAX_SIZE = 480;
 export const CANVAS_HORIZONTAL_PADDING = 32;

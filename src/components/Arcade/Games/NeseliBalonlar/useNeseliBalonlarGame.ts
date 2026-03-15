@@ -19,10 +19,17 @@ import {
     ARCADE_SCORE_BASE,
     ARCADE_SCORE_FORMULA
 } from '../../Shared/ArcadeConstants';
-import { useArcadeGameSession } from '../../Shared/useArcadeGameSession';
+import { useArcadeSoundEffects } from '../../Shared/useArcadeSoundEffects';
+import { useArcadeGameSession, type ArcadeFinishOptions } from '../../Shared/useArcadeGameSession';
 type FeedbackState = { message: string; type: 'success' | 'error' } | null;
 
-export const useNeseliBalonlarGame = (autoStart?: boolean) => {
+interface UseNeseliBalonlarGameOptions {
+    autoStart?: boolean;
+    onGameStart?: () => void;
+}
+
+export const useNeseliBalonlarGame = ({ autoStart, onGameStart }: UseNeseliBalonlarGameOptions = {}) => {
+    const { playArcadeSound } = useArcadeSoundEffects();
     const {
         sessionState,
         startSession,
@@ -30,6 +37,7 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
         advanceLevel,
         loseLife,
         finishGame,
+        saveResult,
         recordAttempt
     } = useArcadeGameSession({ gameId: GAME_ID });
     const [balloons, setBalloons] = useState<BalloonState[]>([]);
@@ -43,12 +51,16 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
     const promptStartedAtRef = useRef(0);
     const isResolvingRef = useRef(false);
     const timeoutIdsRef = useRef<number[]>([]);
+    const pendingGameOverSaveRef = useRef<ArcadeFinishOptions | null>(null);
     const clearScheduledTimeouts = useCallback(() => {
         timeoutIdsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
         timeoutIdsRef.current = [];
     }, []);
     const scheduleTimeout = useCallback((callback: () => void, delay: number) => {
-        const timeoutId = window.setTimeout(callback, delay);
+        const timeoutId = window.setTimeout(() => {
+            timeoutIdsRef.current = timeoutIdsRef.current.filter((currentTimeoutId) => currentTimeoutId !== timeoutId);
+            callback();
+        }, delay);
         timeoutIdsRef.current.push(timeoutId);
         return timeoutId;
     }, []);
@@ -72,14 +84,16 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
     }, []);
 
     const handleStartGame = useCallback(() => {
-        window.scrollTo(0, 0);
         clearScheduledTimeouts();
+        pendingGameOverSaveRef.current = null;
+        playArcadeSound('start');
         startSession();
         setFeedback(null);
         isResolvingRef.current = false;
         promptStartedAtRef.current = 0;
         initLevel(1);
-    }, [clearScheduledTimeouts, initLevel, startSession]);
+        onGameStart?.();
+    }, [clearScheduledTimeouts, initLevel, onGameStart, playArcadeSound, startSession]);
 
     useEffect(() => {
         if (autoStart && sessionState.status === 'START') {
@@ -87,7 +101,14 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
         }
     }, [autoStart, handleStartGame, sessionState.status]);
 
-    useEffect(() => clearScheduledTimeouts, [clearScheduledTimeouts]);
+    useEffect(() => () => {
+        clearScheduledTimeouts();
+
+        if (pendingGameOverSaveRef.current) {
+            void saveResult(pendingGameOverSaveRef.current);
+            pendingGameOverSaveRef.current = null;
+        }
+    }, [clearScheduledTimeouts, saveResult]);
 
     useEffect(() => {
         if (phase !== 'watching' && phase !== 'popping') {
@@ -112,6 +133,7 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
                         balloon.id === id ? { ...balloon, isPopped: true } : balloon
                     )
                 );
+                playArcadeSound('hit');
 
                 if (index === nextPopOrder.length - 1) {
                     scheduleTimeout(() => {
@@ -131,6 +153,7 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
     }, [
         clearScheduledTimeouts,
         phase,
+        playArcadeSound,
         scheduleTimeout,
         sessionState.level,
         setNextBalloons
@@ -172,11 +195,18 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
             : null;
         const nextLevel = sessionState.level + 1;
         const nextLives = isCorrect ? sessionState.lives : Math.max(0, sessionState.lives - 1);
+        const pendingGameOverResult = !isCorrect && nextLives <= 0
+            ? {
+                levelReached: sessionState.level,
+                livesRemaining: 0,
+            } satisfies ArcadeFinishOptions
+            : null;
 
         recordAttempt({ isCorrect, responseMs });
 
         if (isCorrect) {
             const messages = ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES;
+            playArcadeSound('levelUp');
             setFeedback({
                 message: messages[Math.floor(Math.random() * messages.length)],
                 type: 'success'
@@ -184,6 +214,7 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
             addScore(ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, sessionState.level));
         } else {
             const messages = ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES;
+            playArcadeSound('fail');
             setFeedback({
                 message: messages[Math.floor(Math.random() * messages.length)],
                 type: 'error'
@@ -192,24 +223,28 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
         }
 
         setPhase('result');
+        pendingGameOverSaveRef.current = pendingGameOverResult;
 
         scheduleTimeout(() => {
             setFeedback(null);
             isResolvingRef.current = false;
             promptStartedAtRef.current = 0;
 
-            if (!isCorrect && nextLives <= 0) {
+            if (pendingGameOverResult) {
+                pendingGameOverSaveRef.current = null;
                 setPhase('gameover');
-                void finishGame({ status: 'GAME_OVER' });
+                void finishGame({ ...pendingGameOverResult, status: 'GAME_OVER' });
                 return;
             }
 
             if (isCorrect) {
+                pendingGameOverSaveRef.current = null;
                 advanceLevel();
                 initLevel(nextLevel);
                 return;
             }
 
+            pendingGameOverSaveRef.current = null;
             initLevel(sessionState.level);
         }, 2000);
     }, [
@@ -222,6 +257,7 @@ export const useNeseliBalonlarGame = (autoStart?: boolean) => {
         popOrder,
         poppedIndices,
         questionType,
+        playArcadeSound,
         recordAttempt,
         scheduleTimeout,
         sessionState.level,

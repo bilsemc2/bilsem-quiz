@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabase';
 import type {
     AdaptiveQuestion,
     AIQuestionProviderResult,
@@ -6,6 +5,7 @@ import type {
     AIProviderUsage,
     DifficultyLevel
 } from '@/features/ai/model/types';
+import { loadSessionAccessToken } from '@/features/auth/model/authUseCases';
 import { sanitizeQuestion } from '@/features/ai/quality-safety/model/questionSafety';
 import { validateAdaptiveQuestionSchema } from '@/features/ai/quality-safety/model/questionSchemaValidator';
 import { buildAdaptiveQuestionPromptTemplate } from '@/server/ai/prompts/adaptiveQuestionPromptTemplate';
@@ -98,8 +98,7 @@ export const invokeEdgeAdaptiveQuestionProvider = async (
     };
 
     try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
+        const token = await loadSessionAccessToken();
         const response = await fetch(getEdgeFunctionUrl(), {
             method: 'POST',
             headers: {

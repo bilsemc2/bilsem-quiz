@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, type ChangeEvent } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -28,7 +28,12 @@ interface BlogRichTextEditorProps {
     onChange: (content: string) => void;
 }
 
-const MenuBar = ({ editor }: { editor: Editor | null }) => {
+interface MenuBarProps {
+    editor: Editor | null;
+    onAddImage: () => void;
+}
+
+const MenuBar = ({ editor, onAddImage }: MenuBarProps) => {
     if (!editor) return null;
 
     const addLink = () => {
@@ -36,26 +41,6 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         if (url) {
             editor.chain().focus().setLink({ href: url }).run();
         }
-    };
-
-    const addImage = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = async () => {
-            if (input.files?.length) {
-                const file = input.files[0];
-                const toastId = toast.loading('Resim yükleniyor...');
-                try {
-                    const url = await uploadImage(file);
-                    editor.chain().focus().setImage({ src: url }).run();
-                    toast.success('Resim yüklendi', { id: toastId });
-                } catch {
-                    toast.error('Yükleme başarısız', { id: toastId });
-                }
-            }
-        };
-        input.click();
     };
 
     const buttons = [
@@ -70,7 +55,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         { icon: ListOrdered, action: () => editor.chain().focus().toggleOrderedList().run(), active: 'orderedList' },
         { icon: Quote, action: () => editor.chain().focus().toggleBlockquote().run(), active: 'blockquote' },
         { icon: LinkIcon, action: addLink, active: 'link' },
-        { icon: ImageIcon, action: addImage },
+        { icon: ImageIcon, action: onAddImage },
         { icon: RotateCcw, action: () => editor.chain().focus().undo().run(), disabled: !editor.can().undo() },
         { icon: RotateCw, action: () => editor.chain().focus().redo().run(), disabled: !editor.can().redo() },
     ];
@@ -98,6 +83,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 };
 
 const BlogRichTextEditor = ({ content, onChange }: BlogRichTextEditorProps) => {
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
@@ -129,6 +115,29 @@ const BlogRichTextEditor = ({ content, onChange }: BlogRichTextEditorProps) => {
         },
     });
 
+    const handleImagePickerOpen = useCallback(() => {
+        fileInputRef.current?.click();
+    }, []);
+
+    const handleImageFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+
+        if (!file || !editor) {
+            return;
+        }
+
+        const toastId = toast.loading('Resim yükleniyor...');
+
+        try {
+            const url = await uploadImage(file);
+            editor.chain().focus().setImage({ src: url }).run();
+            toast.success('Resim yüklendi', { id: toastId });
+        } catch {
+            toast.error('Yükleme başarısız', { id: toastId });
+        }
+    }, [editor]);
+
     // Content prop değiştiğinde editor'ü güncelle (AI Writer gibi dış müdahaleler için)
     useEffect(() => {
         if (editor && content !== editor.getHTML()) {
@@ -138,7 +147,14 @@ const BlogRichTextEditor = ({ content, onChange }: BlogRichTextEditorProps) => {
 
     return (
         <div className="border border-slate-300 rounded-xl overflow-hidden bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
-            <MenuBar editor={editor} />
+            <MenuBar editor={editor} onAddImage={handleImagePickerOpen} />
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => void handleImageFileChange(event)}
+            />
             <EditorContent editor={editor} />
         </div>
     );

@@ -59,9 +59,23 @@ export interface MessageRecipientRow {
     yetenek_alani: string | string[] | null;
 }
 
+export interface EditableProfileInput {
+    name: string;
+    school: string;
+    avatar_url?: string;
+}
+
+export interface ResimWorkshopProfileRow {
+    yetenek_alani: string | string[] | null;
+    role: string | null;
+    is_admin: boolean | null;
+    resim_analiz_hakki: number | null;
+}
+
 export interface ProfileRepository {
     getProfileWithClasses: (userId: string) => Promise<ProfileWithClassesRow | null>;
     getLatestCompletedExamSession: (userId: string) => Promise<ExamSessionSummary | null>;
+    updateEditableProfile: (userId: string, input: EditableProfileInput) => Promise<void>;
     updateReferralCode: (userId: string, referralCode: string) => Promise<void>;
     getPromoCodeByCode: (code: string) => Promise<PromoCode | null>;
     hasPromoCodeUsage: (promoCodeId: string, studentId: string) => Promise<boolean>;
@@ -71,6 +85,8 @@ export interface ProfileRepository {
     listMessageRecipients: (nameQuery?: string) => Promise<MessageRecipientRow[]>;
     listMessageRecipientsByGrade: (grade: number) => Promise<MessageRecipientRow[]>;
     listVipMessageRecipients: () => Promise<MessageRecipientRow[]>;
+    getResimWorkshopProfile: (userId: string) => Promise<ResimWorkshopProfileRow | null>;
+    updateResimAnalysisQuota: (userId: string, newQuota: number) => Promise<void>;
 }
 
 const getProfileWithClasses = async (userId: string): Promise<ProfileWithClassesRow | null> => {
@@ -94,6 +110,21 @@ const getLatestCompletedExamSession = async (userId: string): Promise<ExamSessio
     return examSessionRepository.getLatestCompletedExamSession(userId);
 };
 
+const updateEditableProfile = async (userId: string, input: EditableProfileInput): Promise<void> => {
+    const { error } = await supabase
+        .from('profiles')
+        .update({
+            name: input.name,
+            school: input.school,
+            avatar_url: input.avatar_url
+        })
+        .eq('id', userId);
+
+    if (error) {
+        throw error;
+    }
+};
+
 const updateReferralCode = async (userId: string, referralCode: string): Promise<void> => {
     const { error } = await supabase
         .from('profiles')
@@ -112,11 +143,10 @@ const getPromoCodeByCode = async (code: string): Promise<PromoCode | null> => {
         .eq('code', code)
         .maybeSingle();
 
-    if (error) {
-        throw error;
-    }
-
-    if (!data) {
+    if (error || !data) {
+        if (error) {
+            console.error('promo code fetch failed:', error);
+        }
         return null;
     }
 
@@ -140,7 +170,8 @@ const hasPromoCodeUsage = async (promoCodeId: string, studentId: string): Promis
         .maybeSingle();
 
     if (error) {
-        throw error;
+        console.error('promo code usage check failed:', error);
+        return false;
     }
 
     return Boolean(data);
@@ -231,9 +262,43 @@ const listVipMessageRecipients = async (): Promise<MessageRecipientRow[]> => {
     return data as MessageRecipientRow[];
 };
 
+const getResimWorkshopProfile = async (
+    userId: string
+): Promise<ResimWorkshopProfileRow | null> => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('yetenek_alani, role, is_admin, resim_analiz_hakki')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error || !data) {
+        if (error) {
+            console.error('resim workshop profile fetch failed:', error);
+        }
+        return null;
+    }
+
+    return data as ResimWorkshopProfileRow;
+};
+
+const updateResimAnalysisQuota = async (
+    userId: string,
+    newQuota: number
+): Promise<void> => {
+    const { error } = await supabase
+        .from('profiles')
+        .update({ resim_analiz_hakki: newQuota })
+        .eq('id', userId);
+
+    if (error) {
+        throw error;
+    }
+};
+
 export const profileRepository: ProfileRepository = {
     getProfileWithClasses,
     getLatestCompletedExamSession,
+    updateEditableProfile,
     updateReferralCode,
     getPromoCodeByCode,
     hasPromoCodeUsage,
@@ -242,5 +307,7 @@ export const profileRepository: ProfileRepository = {
     updatePromoCodeCurrentUses,
     listMessageRecipients,
     listMessageRecipientsByGrade,
-    listVipMessageRecipients
+    listVipMessageRecipients,
+    getResimWorkshopProfile,
+    updateResimAnalysisQuota
 };

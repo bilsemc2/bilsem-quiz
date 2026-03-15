@@ -1,4 +1,4 @@
-import { ArcadeColorId } from '../../Shared/ArcadeConstants';
+import type { ArcadeColorId } from '../../Shared/ArcadeConstants.ts';
 
 // ColorType artık ArcadeColorId'den türetilir (sadece oyunun kullandığı 4 renk)
 export type ColorType = Extract<ArcadeColorId, 'red' | 'blue' | 'yellow' | 'green'>;

@@ -17,6 +17,7 @@ import {
 import {
   areAllCardsMatched,
   areCardsMatch,
+  buildCrossMatchFeedbackMessage,
   createCards,
   flipCard,
   getShuffleIntervalForLevel,
@@ -168,15 +169,23 @@ export const useCrossMatchController = () => {
 
       if (isMatch) {
         actionTimeoutRef.current = window.setTimeout(() => {
-          playSound("correct");
-          showFeedback(true);
           setFlippedCardIds([]);
           addScore(level * 10);
 
           const updatedCards = markCardsMatched(cardsRef.current, nextFlippedCardIds);
+          const allMatched = areAllCardsMatched(updatedCards);
+          showFeedback(
+            true,
+            buildCrossMatchFeedbackMessage({
+              correct: true,
+              allMatched,
+              level,
+              maxLevel: MAX_LEVEL,
+            }),
+          );
           setCards(updatedCards);
 
-          if (areAllCardsMatched(updatedCards)) {
+          if (allMatched) {
             setLocalPhase("feedback");
             actionTimeoutRef.current = window.setTimeout(() => {
               dismissFeedback();
@@ -200,8 +209,15 @@ export const useCrossMatchController = () => {
       }
 
       actionTimeoutRef.current = window.setTimeout(() => {
-        playSound("incorrect");
-        showFeedback(false);
+        showFeedback(
+          false,
+          buildCrossMatchFeedbackMessage({
+            correct: false,
+            allMatched: false,
+            level,
+            maxLevel: MAX_LEVEL,
+          }),
+        );
         setLocalPhase("feedback");
         const willGameOver = lives <= 1;
 

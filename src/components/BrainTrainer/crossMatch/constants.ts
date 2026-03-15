@@ -13,7 +13,7 @@ export const TIME_LIMIT = 180;
 export const PREVIEW_DURATION_MS = 3000;
 export const MATCH_REVEAL_DELAY_MS = 500;
 export const MISMATCH_REVEAL_DELAY_MS = 1000;
-export const FEEDBACK_DURATION_MS = 1000;
+export const FEEDBACK_DURATION_MS = 1200;
 
 export const COLORS = [
   { name: "Yeşil", hex: GAME_COLORS.emerald },

@@ -10,10 +10,10 @@ const getSizeClass = (gridSize: number) => {
   }
 
   if (gridSize === 4) {
-    return "min-w-[50px] sm:min-w-[70px] md:min-w-[90px]";
+    return "min-w-[52px] sm:min-w-[70px] md:min-w-[90px]";
   }
 
-  return "min-w-[40px] sm:min-w-[56px] md:min-w-[72px]";
+  return "min-w-[44px] sm:min-w-[56px] md:min-w-[72px]";
 };
 
 interface VisualMemoryCellProps {

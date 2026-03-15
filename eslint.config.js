@@ -9,6 +9,9 @@ export default tseslint.config(
     ignores: [
       'dist',
       'dev-dist',
+      '.playwright',
+      'playwright-report',
+      'test-results',
       'next-app-skeleton/**',
     ],
   },
@@ -85,6 +88,30 @@ export default tseslint.config(
             {
               group: ['@/app/*', '**/app/**'],
               message: 'Features/server katmani app katmanindan import etmemelidir.'
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      'src/pages/**/*.{ts,tsx}',
+      'src/components/**/*.{ts,tsx}',
+      'src/contexts/**/*.{ts,tsx}',
+      'src/hooks/**/*.{ts,tsx}',
+      'src/routes/**/*.{ts,tsx}',
+      'src/services/**/*.{ts,tsx}',
+      'src/utils/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/lib/supabase', '@/lib/supabase.ts', '**/lib/supabase', '**/lib/supabase.ts'],
+              message: 'UI/orchestration katmani Supabase clientini dogrudan import etmemelidir. Repository veya use case katmanini kullanin.'
             },
           ],
         },

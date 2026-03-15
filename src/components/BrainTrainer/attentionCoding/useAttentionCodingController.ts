@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useGameFeedback } from "../../../hooks/useGameFeedback";
 import { useGamePerformanceTracker } from "../../../hooks/useGamePerformanceTracker";
-import { useSafeTimeout } from "../../../hooks/useSafeTimeout";
 import { useSound } from "../../../hooks/useSound";
 import { useGameEngine } from "../shared/useGameEngine";
 import {
@@ -14,7 +13,9 @@ import {
   TIME_LIMIT,
 } from "./constants";
 import {
+  buildAttentionCodingFeedbackMessage,
   createAttentionCodingRound,
+  getCorrectShape,
   getAttentionCodingScore,
   getAvailableAnswerShapes,
   isCorrectAnswer,
@@ -24,7 +25,7 @@ import type { AttentionCodingRound, ShapeType } from "./types";
 export const useAttentionCodingController = () => {
   const questionStartedAtRef = useRef(0);
   const pendingLevelRef = useRef<number | null>(null);
-  const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const timeoutIdsRef = useRef<number[]>([]);
   const { performanceRef, recordAttempt, resetPerformance } =
     useGamePerformanceTracker();
   const engine = useGameEngine({
@@ -35,9 +36,8 @@ export const useAttentionCodingController = () => {
     getPerformanceSnapshot: () => performanceRef.current,
   });
   const { playSound } = useSound();
-  const safeTimeout = useSafeTimeout();
   const feedback = useGameFeedback({ duration: FEEDBACK_DURATION_MS });
-  const { feedbackState, showFeedback } = feedback;
+  const { dismissFeedback, feedbackState, showFeedback } = feedback;
   const { addScore, addTime, level, lives, loseLife, nextLevel, phase } = engine;
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -50,7 +50,7 @@ export const useAttentionCodingController = () => {
 
   const scheduleAction = useCallback(
     (callback: () => void, delayMs: number) => {
-      const timeoutId = safeTimeout(() => {
+      const timeoutId = window.setTimeout(() => {
         timeoutIdsRef.current = timeoutIdsRef.current.filter(
           (trackedId) => trackedId !== timeoutId,
         );
@@ -60,7 +60,7 @@ export const useAttentionCodingController = () => {
       timeoutIdsRef.current.push(timeoutId);
       return timeoutId;
     },
-    [safeTimeout],
+    [],
   );
 
   const getResponseMs = useCallback(() => {
@@ -98,6 +98,7 @@ export const useAttentionCodingController = () => {
     }
 
     clearPendingActions();
+    dismissFeedback();
 
     if (phase === "welcome") {
       resetRoundState();
@@ -108,6 +109,7 @@ export const useAttentionCodingController = () => {
     resetRoundState();
   }, [
     clearPendingActions,
+    dismissFeedback,
     level,
     phase,
     resetPerformance,
@@ -127,6 +129,10 @@ export const useAttentionCodingController = () => {
         currentItem.targetNumber,
         shape,
       );
+      const correctShape = getCorrectShape(
+        round.keyMappings,
+        currentItem.targetNumber,
+      );
       const canRetry = lives > 1;
 
       clearPendingActions();
@@ -137,8 +143,16 @@ export const useAttentionCodingController = () => {
         addScore(getAttentionCodingScore(level));
 
         if (currentIndex === round.items.length - 1) {
-          playSound("correct");
-          showFeedback(true);
+          showFeedback(
+            true,
+            buildAttentionCodingFeedbackMessage({
+              correct: true,
+              targetNumber: currentItem.targetNumber,
+              correctShape,
+              level,
+              maxLevel: MAX_LEVEL,
+            }),
+          );
           scheduleAction(() => {
             addTime(LEVEL_BONUS_SECONDS);
             nextLevel();
@@ -151,9 +165,17 @@ export const useAttentionCodingController = () => {
         return;
       }
 
-      playSound("incorrect");
       loseLife();
-      showFeedback(false);
+      showFeedback(
+        false,
+        buildAttentionCodingFeedbackMessage({
+          correct: false,
+          targetNumber: currentItem.targetNumber,
+          correctShape,
+          level,
+          maxLevel: MAX_LEVEL,
+        }),
+      );
 
       if (!canRetry) {
         return;

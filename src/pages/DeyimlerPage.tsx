@@ -1,20 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Search, ChevronLeft, Languages, Brain, Check, X, Loader2, ChevronRight, Trophy, RotateCcw, Image, ZoomIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth/useAuth';
 import { useGamePersistence } from '../hooks/useGamePersistence';
-
-interface Deyim {
-    id: number;
-    deyim: string;
-    aciklama: string;
-    ornek: string | null;
-    child_safe?: boolean;
-    image_filename?: string | null;
-}
+import { useViewportAnchor } from '../hooks/useViewportAnchor';
+import {
+    loadAllPublicDeyimler,
+    loadPublicDeyimGallery,
+    loadPublicDeyimList,
+    type PublicDeyim as Deyim
+} from '@/features/content/model/deyimUseCases';
 
 type Mode = 'liste' | 'oyun' | 'galeri';
 
@@ -82,6 +79,7 @@ const DeyimlerPage = () => {
     const { saveGamePlay } = useGamePersistence();
     const navigate = useNavigate();
     const gameStartTimeRef = useRef<number>(0);
+    const { anchorRef: pageTopRef, scrollToAnchor: scrollToPageTop } = useViewportAnchor();
 
     // State
     const [deyimler, setDeyimler] = useState<Deyim[]>([]);
@@ -128,17 +126,16 @@ const DeyimlerPage = () => {
     // Deyimleri yükle (liste)
     const fetchDeyimler = useCallback(async (abortController?: AbortController) => {
         try {
-            let query = supabase.from('deyimler').select('*', { count: 'exact' }).eq('child_safe', true);
-            if (debouncedSearchTerm) { query = query.ilike('deyim', `%${debouncedSearchTerm}%`); }
-            let finalQuery = query.order('id').range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
-            if (abortController?.signal) { finalQuery = finalQuery.abortSignal(abortController.signal); }
-            const { data, count, error } = await finalQuery;
-            if (error) throw error;
-            setDeyimler(data || []);
-            setTotalCount(count || 0);
+            const { deyimler: nextDeyimler, totalCount: nextTotalCount } = await loadPublicDeyimList({
+                searchTerm: debouncedSearchTerm,
+                page: currentPage,
+                pageSize: ITEMS_PER_PAGE,
+                signal: abortController?.signal
+            });
+            setDeyimler(nextDeyimler);
+            setTotalCount(nextTotalCount);
         } catch (error: unknown) {
             if (error instanceof Error && (error.name === 'AbortError' || error.message?.includes('aborted'))) return;
-            console.error('Deyimler yüklenirken hata:', error);
             toast.error('Deyimler yüklenemedi');
         }
     }, [debouncedSearchTerm, currentPage]);
@@ -147,14 +144,14 @@ const DeyimlerPage = () => {
     const fetchGalleryDeyimler = useCallback(async () => {
         setGalleryLoading(true);
         try {
-            let query = supabase.from('deyimler').select('*', { count: 'exact' }).eq('child_safe', true);
-            if (debouncedSearchTerm) { query = query.ilike('deyim', `%${debouncedSearchTerm}%`); }
-            const { data, count, error } = await query.order('deyim').range((galleryPage - 1) * GALLERY_PER_PAGE, galleryPage * GALLERY_PER_PAGE - 1);
-            if (error) throw error;
-            setGalleryDeyimler(data || []);
-            setGalleryTotal(count || 0);
-        } catch (err) {
-            console.error('Galeri yüklenirken hata:', err);
+            const { deyimler: nextDeyimler, totalCount: nextTotalCount } = await loadPublicDeyimGallery({
+                searchTerm: debouncedSearchTerm,
+                page: galleryPage,
+                pageSize: GALLERY_PER_PAGE
+            });
+            setGalleryDeyimler(nextDeyimler);
+            setGalleryTotal(nextTotalCount);
+        } catch {
             toast.error('Karikatürler yüklenemedi');
         } finally {
             setGalleryLoading(false);
@@ -163,8 +160,12 @@ const DeyimlerPage = () => {
 
     // Tüm deyimleri yükle (oyun için)
     const fetchAllDeyimler = useCallback(async () => {
-        const { data } = await supabase.from('deyimler').select('*').eq('child_safe', true);
-        setAllDeyimler(data || []);
+        try {
+            const data = await loadAllPublicDeyimler();
+            setAllDeyimler(data);
+        } catch {
+            setAllDeyimler([]);
+        }
     }, []);
 
     // İlk yükleme ve mod değiştiğinde
@@ -209,10 +210,10 @@ const DeyimlerPage = () => {
     }, [allDeyimler]);
 
     const startGame = () => {
-        window.scrollTo(0, 0);
         setScore(0); setQuestionNumber(1); setGameOver(false); setMode('oyun');
         gameStartTimeRef.current = Date.now();
         generateQuestion();
+        scrollToPageTop();
     };
 
     useEffect(() => {
@@ -257,7 +258,7 @@ const DeyimlerPage = () => {
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pt-24 pb-12 px-4 sm:px-6 relative overflow-hidden transition-colors duration-300">
             <div className="fixed inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
-            <div className="container mx-auto max-w-6xl relative z-10">
+            <div ref={pageTopRef} className="container mx-auto max-w-6xl relative z-10">
                 {/* Header */}
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-6 mb-12">
                     <Link to="/" className="inline-flex items-center gap-2 text-black dark:text-white font-nunito font-extrabold uppercase text-xs tracking-widest bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl px-4 py-2 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-md transition-all">
@@ -281,13 +282,13 @@ const DeyimlerPage = () => {
 
                 {/* Mode Tabs */}
                 <div className="flex flex-wrap gap-3 mb-8 justify-center">
-                    <button onClick={() => { setMode('galeri'); window.scrollTo(0, 0); }}
+                    <button onClick={() => { setMode('galeri'); scrollToPageTop(); }}
                         className={`flex items-center gap-2 px-5 py-3 font-nunito font-extrabold text-sm uppercase tracking-wider rounded-xl border-2 transition-all ${mode === 'galeri'
                             ? 'bg-cyber-pink text-white border-black/10 shadow-neo-md -translate-y-0.5'
                             : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-md'}`}>
                         <Image size={18} strokeWidth={2.5} /> Karikatürler
                     </button>
-                    <button onClick={() => { setMode('liste'); window.scrollTo(0, 0); }}
+                    <button onClick={() => { setMode('liste'); scrollToPageTop(); }}
                         className={`flex items-center gap-2 px-5 py-3 font-nunito font-extrabold text-sm uppercase tracking-wider rounded-xl border-2 transition-all ${mode === 'liste'
                             ? 'bg-cyber-blue text-white border-black/10 shadow-neo-md -translate-y-0.5'
                             : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-md'}`}>
@@ -336,7 +337,6 @@ const DeyimlerPage = () => {
                                                     onClick={() => setLightboxDeyim(deyim)}
                                                     onError={() => {
                                                         setFailedImages(prev => new Set(prev).add(deyim.id));
-                                                        console.warn(`❌ Resim bulunamadı: ${deyim.deyim} → ${getImageUrl(deyim)}`);
                                                     }}
                                                 />
                                                 <div className="p-3">
@@ -351,7 +351,7 @@ const DeyimlerPage = () => {
                                     {/* Pagination */}
                                     {galleryTotalPages > 1 && (
                                         <div className="flex items-center justify-center gap-3">
-                                            <button onClick={() => { setGalleryPage(p => Math.max(1, p - 1)); window.scrollTo(0, 0); }}
+                                            <button onClick={() => { setGalleryPage(p => Math.max(1, p - 1)); scrollToPageTop(); }}
                                                 disabled={galleryPage === 1}
                                                 className="p-3 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl shadow-neo-sm disabled:opacity-40 hover:-translate-y-0.5 hover:shadow-neo-md transition-all">
                                                 <ChevronLeft size={20} className="text-black dark:text-white" strokeWidth={3} />
@@ -359,7 +359,7 @@ const DeyimlerPage = () => {
                                             <span className="px-5 py-2.5 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl shadow-neo-sm font-nunito font-extrabold text-sm text-black dark:text-white">
                                                 {galleryPage} / {galleryTotalPages}
                                             </span>
-                                            <button onClick={() => { setGalleryPage(p => Math.min(galleryTotalPages, p + 1)); window.scrollTo(0, 0); }}
+                                            <button onClick={() => { setGalleryPage(p => Math.min(galleryTotalPages, p + 1)); scrollToPageTop(); }}
                                                 disabled={galleryPage === galleryTotalPages}
                                                 className="p-3 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl shadow-neo-sm disabled:opacity-40 hover:-translate-y-0.5 hover:shadow-neo-md transition-all">
                                                 <ChevronRight size={20} className="text-black dark:text-white" strokeWidth={3} />
@@ -394,7 +394,7 @@ const DeyimlerPage = () => {
 
                             {totalPages > 1 && (
                                 <div className="flex items-center justify-center gap-3">
-                                    <button onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo(0, 0); }}
+                                    <button onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); scrollToPageTop(); }}
                                         disabled={currentPage === 1}
                                         className="p-3 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl shadow-neo-sm disabled:opacity-40 hover:-translate-y-0.5 hover:shadow-neo-md transition-all">
                                         <ChevronLeft size={20} className="text-black dark:text-white" strokeWidth={3} />
@@ -402,7 +402,7 @@ const DeyimlerPage = () => {
                                     <span className="px-5 py-2.5 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl shadow-neo-sm font-nunito font-extrabold text-sm text-black dark:text-white">
                                         {currentPage} / {totalPages}
                                     </span>
-                                    <button onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0, 0); }}
+                                    <button onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); scrollToPageTop(); }}
                                         disabled={currentPage === totalPages}
                                         className="p-3 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-xl shadow-neo-sm disabled:opacity-40 hover:-translate-y-0.5 hover:shadow-neo-md transition-all">
                                         <ChevronRight size={20} className="text-black dark:text-white" strokeWidth={3} />

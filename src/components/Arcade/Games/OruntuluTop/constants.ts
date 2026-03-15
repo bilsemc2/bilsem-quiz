@@ -1,4 +1,4 @@
-import type { BubbleColor } from './types.ts';
+import type { BubbleColor, BubblePowerUp } from './types.ts';
 
 export const GAME_CONFIG = {
     FRICTION: 0.998,
@@ -23,3 +23,23 @@ export const COLOR_CONFIG: Record<BubbleColor, { hex: string; points: number; la
 };
 
 export const COLOR_KEYS: BubbleColor[] = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
+
+export const POWER_UP_CONFIG: Record<
+    BubblePowerUp,
+    { label: string; shortLabel: string; bonusPoints: number; badgeColor: string; textColor: string }
+> = {
+    star: {
+        label: 'Yıldız Balon',
+        shortLabel: 'Yıldız',
+        bonusPoints: 250,
+        badgeColor: '#facc15',
+        textColor: '#111827',
+    },
+    heart: {
+        label: 'Kalp Balon',
+        shortLabel: 'Kalp',
+        bonusPoints: 150,
+        badgeColor: '#fb7185',
+        textColor: '#ffffff',
+    },
+};

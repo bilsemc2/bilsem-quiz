@@ -66,3 +66,21 @@ export const createQuestion = (
 };
 
 export const calculateDeyimlerScore = (level: number) => 10 * level;
+
+export const buildDeyimlerFeedbackMessage = ({
+  isCorrect,
+  level,
+  maxLevel,
+  missingWord,
+}: {
+  isCorrect: boolean;
+  level: number;
+  maxLevel: number;
+  missingWord: string;
+}): string => {
+  if (isCorrect) {
+    if (level >= maxLevel) return "Harika! Son deyimi de bildin, tebrikler!";
+    return `Doğru! ${level + 1}. seviyeye geçiyorsun.`;
+  }
+  return `Yanlış! Doğru kelime: ${missingWord}`;
+};

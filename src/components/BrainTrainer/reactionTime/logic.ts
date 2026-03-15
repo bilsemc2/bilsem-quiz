@@ -127,3 +127,41 @@ export const getBackNavigation = (examMode: boolean, isArcadeMode: boolean) => {
     backLabel: "Geri Dön",
   };
 };
+
+export const buildReactionFeedbackMessage = ({
+  gameMode,
+  isCorrect,
+  roundState,
+  reactionTime,
+  currentColor,
+  targetColor = TARGET_COLOR,
+}: {
+  gameMode: GameMode;
+  isCorrect: boolean;
+  roundState: RoundState;
+  reactionTime: number | null;
+  currentColor: string;
+  targetColor?: string;
+}) => {
+  if (!isCorrect) {
+    if (roundState === "waiting" || roundState === "ready") {
+      return "Henüz değil! Hedef sinyal gelmeden dokundun.";
+    }
+
+    if (gameMode === "selective" && currentColor !== targetColor) {
+      return "Bu renk hedef değildi. Doğru sinyali beklemeliydin.";
+    }
+
+    return "Biraz erken ya da yanlış tepki verdin. Tekrar dene.";
+  }
+
+  if (gameMode === "selective" && reactionTime === null) {
+    return "Harika! Doğru anda bekledin ve tuzağa kapılmadın.";
+  }
+
+  if (reactionTime !== null) {
+    return `Harika hız! ${reactionTime} ms içinde doğru tepki verdin.`;
+  }
+
+  return "Doğru tepki! Aynı dikkatle devam et.";
+};

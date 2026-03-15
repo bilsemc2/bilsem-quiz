@@ -68,7 +68,7 @@ const GameQuestionCard: React.FC<GameQuestionCardProps> = ({
                     key={animationKey}
                     initial={{ y: 16, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="text-2xl sm:text-4xl font-black font-nunito text-center uppercase tracking-widest text-black dark:text-white mt-4"
+                    className="text-2xl sm:text-4xl font-black font-nunito text-center uppercase tracking-widest text-black dark:text-white mt-4 break-words"
                 >
                     {question}
                 </motion.h2>

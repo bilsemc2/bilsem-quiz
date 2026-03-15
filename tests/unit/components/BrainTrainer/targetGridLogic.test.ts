@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildTargetGridFeedbackMessage,
   calculateTargetGridScore,
   createRound,
   getCombinationSize,
@@ -108,4 +109,34 @@ test("card reveal and hide helpers preserve the intended selection visibility", 
 
 test("score formula preserves the legacy level multiplier", () => {
   assert.equal(calculateTargetGridScore(6), 120);
+});
+
+test("target grid feedback helper explains hit and overflow results", () => {
+  assert.equal(
+    buildTargetGridFeedbackMessage({
+      correct: true,
+      targetSum: 14,
+      level: 5,
+      maxLevel: 20,
+    }),
+    "Doğru toplam: 14. Şimdi 6. seviyeye geçiyorsun.",
+  );
+  assert.equal(
+    buildTargetGridFeedbackMessage({
+      correct: true,
+      targetSum: 21,
+      level: 20,
+      maxLevel: 20,
+    }),
+    "Harika toplam! 21 hedefini de çözdün, oyun tamamlanıyor.",
+  );
+  assert.equal(
+    buildTargetGridFeedbackMessage({
+      correct: false,
+      targetSum: 11,
+      level: 8,
+      maxLevel: 20,
+    }),
+    "Yanlış toplam! Hedef 11 olmalıydı.",
+  );
 });

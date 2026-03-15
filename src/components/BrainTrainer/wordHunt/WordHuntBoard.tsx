@@ -104,7 +104,7 @@ const WordHuntBoard: React.FC<WordHuntBoardProps> = ({
           size={18}
           className="text-black fill-white shrink-0"
         />
-        <p className="text-xs sm:text-sm font-nunito font-black text-black uppercase tracking-widest">
+        <p className="text-xs sm:text-sm font-nunito font-black text-black uppercase tracking-widest break-words">
           {hintText}
         </p>
       </div>

@@ -78,14 +78,14 @@ test("low-level round generation builds the expected tower and answer set", () =
   assert.ok(round.options.includes(7));
 });
 
-test("high-level round generation can include negative multiplier blocks", () => {
+test("high-level round generation can include negative blocks without multipliers", () => {
   const round = createRound(9, createRepeatingRandom(0, 0.05, 0.8, 0, 0.1));
 
   assert.equal(round.tower.length, 10);
-  assert.ok(round.tower.every((segment) => segment.isNegative));
-  assert.ok(round.tower.every((segment) => segment.multiplier === 3));
-  assert.equal(round.correctAnswer, -30);
-  assert.ok(round.options.includes(-30));
+  const hasNegative = round.tower.some((segment) => segment.isNegative);
+  assert.ok(hasNegative, "level 9 should produce at least one negative block");
+  assert.ok(round.tower.every((segment) => segment.multiplier === undefined), "multipliers should be disabled");
+  assert.ok(round.options.includes(round.correctAnswer), "correct answer must be among options");
 });
 
 test("score formula keeps the legacy level and streak bonus", () => {

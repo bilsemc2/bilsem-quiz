@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Shield, Clock, Check, FileText, ExternalLink } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { loadActivePackages } from '@/features/content/model/packageUseCases';
 import type { Package } from '../types/package';
 import PackageCard from '../components/PackageCard';
 
@@ -21,21 +21,7 @@ export default function PricingPage() {
 
   const fetchPackages = async () => {
     try {
-      const { data, error } = await supabase
-        .from('packages')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      if (error) throw error;
-
-      const parsed = (data || []).map(pkg => ({
-        ...pkg,
-        features: typeof pkg.features === 'string' ? JSON.parse(pkg.features) : pkg.features || [],
-        includes: pkg.includes || [],
-      }));
-
-      setPackages(parsed);
+      setPackages(await loadActivePackages());
     } catch (error) {
       console.error('Paketler yüklenirken hata:', error);
       setPackages([]);

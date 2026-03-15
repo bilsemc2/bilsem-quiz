@@ -10,7 +10,7 @@ export const PUZZLE_SIZE = 512;
 export const SELECTION_SIZE = 80;
 export const TARGET_PADDING = 20;
 export const TARGET_HIT_MARGIN = 25;
-export const FEEDBACK_DURATION_MS = 1500;
+export const FEEDBACK_DURATION_MS = 1200;
 
 export const DEFAULT_SELECTION = {
   x: 206,

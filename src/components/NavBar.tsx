@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/auth/useAuth';
 import { Sun, Moon, Menu, X, User, LogOut, Zap, ChevronDown, Crown, Sparkles, Gamepad2, Languages, BookOpen } from 'lucide-react';
 import { User as AuthUser } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
-import { authRepository } from '@/server/repositories/authRepository';
 
 // ═══════════════════════════════════════════════
 // 🎮 Profile Dropdown — Kid-UI Style
@@ -21,6 +20,7 @@ interface ProfileDropdownProps {
 const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownId = 'profile-dropdown-panel';
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,9 +37,14 @@ const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropd
   return (
     <div className="relative" ref={dropdownRef}>
       <motion.button
+        type="button"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
+        aria-label="Profil menüsü"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-controls={dropdownId}
         className={`flex items-center gap-2 p-1.5 pr-3 rounded-2xl border-2 border-black/10 transition-all duration-200 ${isOpen || isActive("/profile")
           ? "bg-cyber-gold shadow-neo-sm"
           : "bg-white dark:bg-slate-800 hover:bg-cyber-yellow/10 shadow-neo-sm"
@@ -61,6 +66,9 @@ const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropd
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            id={dropdownId}
+            role="menu"
+            aria-label="Profil menü paneli"
             initial={{ opacity: 0, y: -8, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
@@ -144,6 +152,7 @@ const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropd
               <div className="my-1 border-t-2 border-dashed border-black/10 dark:border-white/10" />
 
               <button
+                type="button"
                 onClick={() => { setIsOpen(false); handleLogout(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-nunito font-bold text-sm tracking-wide text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group"
               >
@@ -168,7 +177,7 @@ const ProfileDropdown = ({ isActive, handleLogout, user, profile }: ProfileDropd
 const NavBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
@@ -178,7 +187,7 @@ const NavBar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = async () => {
-    await authRepository.signOut();
+    await signOut();
     navigate('/');
   };
 
@@ -199,24 +208,8 @@ const NavBar = () => {
   };
 
   useEffect(() => {
-    const checkUser = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-      try {
-        const profile = await authRepository.getProfileByUserId(user.id);
-        setIsAdmin(profile?.is_admin || false);
-      } catch (error) {
-        console.error("Kullanıcı bilgileri kontrol edilirken hata:", error);
-        setIsAdmin(false);
-      }
-    };
-
-    checkUser();
-
-    return () => { };
-  }, [user]);
+    setIsAdmin(Boolean(profile?.is_admin));
+  }, [profile?.is_admin]);
 
 
   const menuItems = [

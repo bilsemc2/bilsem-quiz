@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { useSound } from "../../../hooks/useSound";
 import { useGameFeedback } from "../../../hooks/useGameFeedback";
 import { useGamePerformanceTracker } from "../../../hooks/useGamePerformanceTracker";
 import { useSafeTimeout } from "../../../hooks/useSafeTimeout";
@@ -14,6 +13,7 @@ import {
 } from "./constants";
 import {
   addReactionTime,
+  buildReactionFeedbackMessage,
   calculateReactionScore,
   createEmptyReactionMetrics,
   getBackNavigation,
@@ -24,7 +24,6 @@ import {
 import type { GameMode, ReactionMetrics, RoundState } from "./types";
 
 export const useReactionTimeController = () => {
-  const { playSound } = useSound();
   const safeTimeout = useSafeTimeout();
   const location = useLocation();
   const {
@@ -138,7 +137,6 @@ export const useReactionTimeController = () => {
 
   const startCustomGame = useCallback(
     (mode: GameMode) => {
-      window.scrollTo(0, 0);
       resetSessionState(mode);
       handleStart();
     },
@@ -181,8 +179,16 @@ export const useReactionTimeController = () => {
 
     if (roundState === "waiting" || roundState === "ready") {
       setRoundState("early");
-      playSound("wrong");
-      showFeedback(false);
+      showFeedback(
+        false,
+        buildReactionFeedbackMessage({
+          gameMode,
+          isCorrect: false,
+          roundState,
+          reactionTime: null,
+          currentColor,
+        }),
+      );
       recordAttempt({ isCorrect: false, responseMs: null });
       loseLife();
       clearAllTimeouts();
@@ -203,8 +209,16 @@ export const useReactionTimeController = () => {
 
     if (shouldWaitForTarget(gameMode, currentColor, TARGET_COLOR)) {
       setRoundState("result");
-      playSound("wrong");
-      showFeedback(false);
+      showFeedback(
+        false,
+        buildReactionFeedbackMessage({
+          gameMode,
+          isCorrect: false,
+          roundState: "go",
+          reactionTime,
+          currentColor,
+        }),
+      );
       recordAttempt({ isCorrect: false, responseMs: reactionTime });
       loseLife();
       scheduleTransition(() => {
@@ -216,8 +230,16 @@ export const useReactionTimeController = () => {
     }
 
     setRoundState("result");
-    playSound("correct");
-    showFeedback(true);
+    showFeedback(
+      true,
+      buildReactionFeedbackMessage({
+        gameMode,
+        isCorrect: true,
+        roundState: "result",
+        reactionTime,
+        currentColor,
+      }),
+    );
     const nextPerformance = recordAttempt({
       isCorrect: true,
       responseMs: reactionTime,
@@ -245,7 +267,6 @@ export const useReactionTimeController = () => {
     loseLife,
     nextLevel,
     phase,
-    playSound,
     recordAttempt,
     roundState,
     scheduleTransition,
@@ -267,8 +288,16 @@ export const useReactionTimeController = () => {
 
     setRoundState("result");
     setCurrentReactionTime(null);
-    playSound("correct");
-    showFeedback(true);
+    showFeedback(
+      true,
+      buildReactionFeedbackMessage({
+        gameMode,
+        isCorrect: true,
+        roundState: "result",
+        reactionTime: null,
+        currentColor,
+      }),
+    );
     const nextPerformance = recordAttempt({ isCorrect: true, responseMs: null });
     addScore(75 + nextPerformance.streakCorrect * 5);
     scheduleTransition(() => {
@@ -287,7 +316,6 @@ export const useReactionTimeController = () => {
     level,
     nextLevel,
     phase,
-    playSound,
     recordAttempt,
     roundState,
     scheduleTransition,

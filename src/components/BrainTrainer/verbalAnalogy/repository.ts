@@ -1,19 +1,9 @@
-import { supabase } from "../../../lib/supabase";
+import { loadVerbalAnalogyRows } from '@/features/games/model/brainTrainerContentUseCases';
 
 import { FETCH_LIMIT } from "./constants";
 import type { VerbalAnalogyRow } from "./types";
 
 export const fetchVerbalAnalogyRows = async () => {
-  const { data, error } = await supabase
-    .from("analoji_sorulari")
-    .select(
-      "id, soru_metni, secenek_a, secenek_b, secenek_c, secenek_d, dogru_cevap, aciklama",
-    )
-    .limit(FETCH_LIMIT);
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []) as VerbalAnalogyRow[];
+  const rows = await loadVerbalAnalogyRows();
+  return rows.slice(0, FETCH_LIMIT) as VerbalAnalogyRow[];
 };

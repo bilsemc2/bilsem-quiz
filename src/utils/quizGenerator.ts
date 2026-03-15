@@ -32,118 +32,109 @@ function isCorrectAnswer(filename: string): boolean {
 }
 
 export async function generateQuiz(questionCount: number = 10): Promise<Quiz> {
-    try {
-        // Import all images from the public directory
-        const questionImports = import.meta.glob('/public/images/questions/Matris/*.webp', { eager: true });
-        const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
+    // Import all images from the public directory
+    const questionImports = import.meta.glob('/public/images/questions/Matris/*.webp', { eager: true });
+    const optionImports = import.meta.glob('/public/images/options/Matris/**/*.webp', { eager: true });
 
-        if (Object.keys(questionImports).length === 0) {
-            throw new Error('Soru resimleri bulunamadı');
-        }
+    if (Object.keys(questionImports).length === 0) {
+        throw new Error('Soru resimleri bulunamadı');
+    }
 
-        if (Object.keys(optionImports).length === 0) {
-            throw new Error('Seçenek resimleri bulunamadı');
-        }
+    if (Object.keys(optionImports).length === 0) {
+        throw new Error('Seçenek resimleri bulunamadı');
+    }
 
-        // Tüm soru numaralarını topla
-        const questionNumbers = Object.keys(questionImports)
-            .map(path => getQuestionNumber(extractFilename(path)))
-            .filter(num => num > 0 && num <= MAX_QUESTION_NUMBER);
+    // Tüm soru numaralarını topla
+    const questionNumbers = Object.keys(questionImports)
+        .map(path => getQuestionNumber(extractFilename(path)))
+        .filter(num => num > 0 && num <= MAX_QUESTION_NUMBER);
 
-        if (questionNumbers.length === 0) {
-            throw new Error('Geçerli soru bulunamadı');
-        }
+    if (questionNumbers.length === 0) {
+        throw new Error('Geçerli soru bulunamadı');
+    }
 
-        // Rastgele soru seç
-        const selectedNumbers = shuffleArray([...questionNumbers]).slice(0, questionCount);
-        const validQuestions: Question[] = [];
+    // Rastgele soru seç
+    const selectedNumbers = shuffleArray([...questionNumbers]).slice(0, questionCount);
+    const validQuestions: Question[] = [];
 
-        // Her soru için seçenekleri ve doğru cevabı bul
-        for (const questionNumber of selectedNumbers) {
-            const questionId = `q${questionNumber}`;
+    // Her soru için seçenekleri ve doğru cevabı bul
+    for (const questionNumber of selectedNumbers) {
+        const questionId = `q${questionNumber}`;
 
-            try {
-                // Tüm seçenekleri ve doğru cevapları bul
-                const optionPaths = Object.keys(optionImports)
-                    .filter(path => path.includes(`/Matris/${questionNumber}/`))
-                    .map(path => ({
-                        path,
-                        letter: getOptionLetter(extractFilename(path)),
-                        isCorrect: isCorrectAnswer(extractFilename(path))
-                    }))
-                    .filter(option => option.letter); // Geçersiz harfleri filtrele
+        try {
+            // Tüm seçenekleri ve doğru cevapları bul
+            const optionPaths = Object.keys(optionImports)
+                .filter(path => path.includes(`/Matris/${questionNumber}/`))
+                .map(path => ({
+                    path,
+                    letter: getOptionLetter(extractFilename(path)),
+                    isCorrect: isCorrectAnswer(extractFilename(path))
+                }))
+                .filter(option => option.letter); // Geçersiz harfleri filtrele
 
-                if (optionPaths.length === 0) {
-                    console.warn(`Soru ${questionNumber} için seçenek bulunamadı`);
-                    continue;
-                }
-
-                // Doğru cevabı bul
-                const correctOption = optionPaths.find(option => option.isCorrect);
-                if (!correctOption) {
-                    console.warn(`Soru ${questionNumber} için doğru cevap bulunamadı`);
-                    continue;
-                }
-
-                // Normal seçenekleri bul (doğru cevap olmayan)
-                const normalOptions = optionPaths
-                    .filter(option => !option.isCorrect)
-                    .map(option => ({
-                        id: `${questionId}${option.letter}`,
-                        text: '',
-                        imageUrl: `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${option.letter}.webp`,
-                        isCorrect: false
-                    }));
-
-                if (normalOptions.length === 0) {
-                    console.warn(`Soru ${questionNumber} için normal seçenek bulunamadı`);
-                    continue;
-                }
-
-                // Doğru cevap seçeneğini ekle
-                const options = [
-                    ...normalOptions,
-                    {
-                        id: `${questionId}${correctOption.letter}`,
-                        text: '',
-                        imageUrl: `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${correctOption.letter}.webp`,
-                        isCorrect: true
-                    }
-                ];
-
-                validQuestions.push({
-                    id: questionId,
-                    questionImageUrl: `/images/questions/Matris/Soru-${questionNumber}.webp`,
-                    question: '',
-                    options: shuffleArray(options),
-                    correctOptionId: `${questionId}${correctOption.letter}`,
-                    points: 10,
-                    type: 'multiple_choice',
-                    difficulty: 2
-                });
-            } catch (err) {
-                console.error(`Soru ${questionNumber} işlenirken hata:`, err);
+            if (optionPaths.length === 0) {
                 continue;
             }
-        }
 
-        if (validQuestions.length === 0) {
-            throw new Error('Hiç geçerli soru oluşturulamadı');
-        }
+            // Doğru cevabı bul
+            const correctOption = optionPaths.find(option => option.isCorrect);
+            if (!correctOption) {
+                continue;
+            }
 
-        return {
-            id: crypto.randomUUID(),
-            title: 'Yeni Quiz',
-            description: 'Otomatik oluşturulmuş quiz',
-            questions: validQuestions,
-            grade: 9,
-            subject: 'Matematik',
-            status: 'pending',
-            created_by: '',
-            is_active: true
-        };
-    } catch (error) {
-        console.error('Quiz oluşturulurken hata:', error);
-        throw error;
+            // Normal seçenekleri bul (doğru cevap olmayan)
+            const normalOptions = optionPaths
+                .filter(option => !option.isCorrect)
+                .map(option => ({
+                    id: `${questionId}${option.letter}`,
+                    text: '',
+                    imageUrl: `/images/options/Matris/${questionNumber}/Soru-${questionNumber}${option.letter}.webp`,
+                    isCorrect: false
+                }));
+
+            if (normalOptions.length === 0) {
+                continue;
+            }
+
+            // Doğru cevap seçeneğini ekle
+            const options = [
+                ...normalOptions,
+                {
+                    id: `${questionId}${correctOption.letter}`,
+                    text: '',
+                    imageUrl: `/images/options/Matris/${questionNumber}/Soru-cevap-${questionNumber}${correctOption.letter}.webp`,
+                    isCorrect: true
+                }
+            ];
+
+            validQuestions.push({
+                id: questionId,
+                questionImageUrl: `/images/questions/Matris/Soru-${questionNumber}.webp`,
+                question: '',
+                options: shuffleArray(options),
+                correctOptionId: `${questionId}${correctOption.letter}`,
+                points: 10,
+                type: 'multiple_choice',
+                difficulty: 2
+            });
+        } catch {
+            continue;
+        }
     }
+
+    if (validQuestions.length === 0) {
+        throw new Error('Hiç geçerli soru oluşturulamadı');
+    }
+
+    return {
+        id: crypto.randomUUID(),
+        title: 'Yeni Quiz',
+        description: 'Otomatik oluşturulmuş quiz',
+        questions: validQuestions,
+        grade: 9,
+        subject: 'Matematik',
+        status: 'pending',
+        created_by: '',
+        is_active: true
+    };
 }

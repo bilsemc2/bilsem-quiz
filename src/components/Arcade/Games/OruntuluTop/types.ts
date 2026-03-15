@@ -12,6 +12,7 @@ export interface Point {
 }
 
 export type BubbleColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange';
+export type BubblePowerUp = 'star' | 'heart';
 
 export interface Bubble {
   id: string;
@@ -21,6 +22,7 @@ export interface Bubble {
   y: number;
   color: BubbleColor;
   active: boolean;
+  powerUp?: BubblePowerUp;
 }
 
 export interface Particle {

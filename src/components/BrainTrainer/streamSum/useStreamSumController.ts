@@ -14,6 +14,7 @@ import {
   TIME_LIMIT,
 } from "./constants";
 import {
+  buildStreamSumFeedbackMessage,
   calculateStreamSumScore,
   evaluateInput,
   generateNumber,
@@ -119,8 +120,19 @@ export const useStreamSumController = () => {
 
   const handleWrongAnswer = useCallback(() => {
     const canRetry = lives > 1;
+    const expected = previous !== null && current !== null
+      ? getExpectedTotal(previous, current)
+      : null;
     recordAttempt({ isCorrect: false, responseMs: getResponseMs() });
-    showFeedback(false);
+    showFeedback(
+      false,
+      buildStreamSumFeedbackMessage({
+        isCorrect: false,
+        level,
+        maxLevel: MAX_LEVEL,
+        expected,
+      }),
+    );
     playSound("wrong");
     setStreak(0);
     setWaitingForInput(false);
@@ -221,7 +233,15 @@ export const useStreamSumController = () => {
         clearFeedbackTimeout();
         setWaitingForInput(false);
         setStreamPhase("memorize");
-        showFeedback(true);
+        showFeedback(
+          true,
+          buildStreamSumFeedbackMessage({
+            isCorrect: true,
+            level,
+            maxLevel: MAX_LEVEL,
+            expected,
+          }),
+        );
         playSound("correct");
         addScore(calculateStreamSumScore(level, streak));
         setStreak(nextStreak);

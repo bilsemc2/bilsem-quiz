@@ -9,7 +9,7 @@ export const TUZO_TEXT = "TUZÖ 5.3.2 Görsel Analiz";
 export const TIME_LIMIT = 180;
 export const INITIAL_LIVES = 5;
 export const MAX_LEVEL = 20;
-export const FEEDBACK_DURATION_MS = 1500;
+export const FEEDBACK_DURATION_MS = 1200;
 export const PREVIEW_SECONDS = 3;
 export const OPTION_COUNT = 4;
 

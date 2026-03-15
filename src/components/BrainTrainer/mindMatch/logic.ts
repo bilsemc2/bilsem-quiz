@@ -50,9 +50,10 @@ export const generatePuzzle = (
   const distractorCount = TOTAL_ITEMS - correctCount;
   const selectedTargets = shuffle(category.items, random).slice(0, correctCount);
   const otherItems: EmojiDef[] = [];
+  const excludedKeys = category.excludedDistractorKeys || [];
 
   for (const key of categoryKeys) {
-    if (key !== categoryKey) {
+    if (key !== categoryKey && !excludedKeys.includes(key)) {
       otherItems.push(...CATEGORIES[key].items);
     }
   }

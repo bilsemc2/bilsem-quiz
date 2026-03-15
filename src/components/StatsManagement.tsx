@@ -15,117 +15,25 @@ import {
   TableRow,
   Divider
 } from '@mui/material';
-import { supabase } from '../lib/supabase';
-
-interface QuizStats {
-  totalQuizzes: number;
-  averageScore: number;
-  totalQuestionsAnswered: number;
-  totalCorrectAnswers: number;
-  accuracyRate: number;
-  quizzesByDay: { [key: string]: number };
-  topScorers: {
-    name: string;
-    email: string;
-    score: number;
-    date: string;
-  }[];
-}
-
-interface UserStats {
-  totalQuizzes: number;
-  averageScore: number;
-  totalQuestionsAnswered: number;
-  totalCorrectAnswers: number;
-  accuracyRate: number;
-  quizzesByDay: { [key: string]: number };
-  recentQuizzes: Array<{
-    score: number;
-    questions_answered: number;
-    correct_answers: number;
-    completed_at: string;
-  }>;
-}
+import {
+  loadSystemStatsSummary,
+  type SystemQuizStats,
+  type SystemUserStats
+} from '@/features/admin/model/systemStatsUseCases';
 
 export const StatsManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [quizStats, setQuizStats] = useState<QuizStats | null>(null);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-
-  const calculateQuizStats = (quizData: Array<{ score: number; questions_answered: number; correct_answers: number; completed_at: string; profiles?: { full_name?: string; email?: string } | { full_name?: string; email?: string }[] | null }>): QuizStats => {
-    const totalQuizzes = quizData.length;
-    const totalQuestionsAnswered = quizData.reduce((sum, quiz) => sum + quiz.questions_answered, 0);
-    const totalCorrectAnswers = quizData.reduce((sum, quiz) => sum + quiz.correct_answers, 0);
-    const totalScore = quizData.reduce((sum, quiz) => sum + quiz.score, 0);
-
-    // Günlük quiz sayıları
-    const quizzesByDay = quizData.reduce((acc: { [key: string]: number }, quiz) => {
-      const date = new Date(quiz.completed_at).toLocaleDateString('tr-TR');
-      acc[date] = (acc[date] || 0) + 1;
-      return acc;
-    }, {});
-
-    // En yüksek skorlar
-    const topScorers = quizData
-      .map(quiz => {
-        // Handle profiles as either array or single object
-        const profile = Array.isArray(quiz.profiles) ? quiz.profiles[0] : quiz.profiles;
-        return {
-          name: profile?.full_name || 'İsimsiz',
-          email: profile?.email || '',
-          score: quiz.score,
-          date: new Date(quiz.completed_at).toLocaleDateString('tr-TR')
-        };
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-
-    return {
-      totalQuizzes,
-      averageScore: totalQuizzes ? totalScore / totalQuizzes : 0,
-      totalQuestionsAnswered,
-      totalCorrectAnswers,
-      accuracyRate: totalQuestionsAnswered ? (totalCorrectAnswers / totalQuestionsAnswered) * 100 : 0,
-      quizzesByDay,
-      topScorers
-    };
-  };
-
-  const calculateUserStats = (userData: Array<{ points?: number; experience?: number }>): UserStats => {
-    const totalPoints = userData.reduce((sum, user) => sum + (user.points || 0), 0);
-    const totalExperience = userData.reduce((sum, user) => sum + (user.experience || 0), 0);
-    const averagePoints = userData.length ? totalPoints / userData.length : 0;
-
-    return {
-      totalQuizzes: userData.length,
-      averageScore: averagePoints,
-      totalQuestionsAnswered: totalExperience,
-      totalCorrectAnswers: totalPoints,
-      accuracyRate: totalExperience ? (totalPoints / totalExperience) * 100 : 0,
-      quizzesByDay: {},
-      recentQuizzes: []
-    };
-  };
+  const [quizStats, setQuizStats] = useState<SystemQuizStats | null>(null);
+  const [userStats, setUserStats] = useState<SystemUserStats | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-
-        const { data: quizData, error: quizError } = await supabase
-          .from('quiz_results')
-          .select('score, questions_answered, correct_answers, completed_at, profiles(full_name, email)');
-
-        if (quizError) throw quizError;
-        setQuizStats(calculateQuizStats(quizData || []));
-
-        const { data: userData, error: userError } = await supabase
-          .from('profiles')
-          .select('points, experience');
-
-        if (userError) throw userError;
-        setUserStats(calculateUserStats(userData || []));
+        const stats = await loadSystemStatsSummary();
+        setQuizStats(stats.quizStats);
+        setUserStats(stats.userStats);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'İstatistikler yüklenirken bir hata oluştu');
@@ -215,13 +123,13 @@ export const StatsManagement: React.FC = () => {
               </Typography>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Toplam Kullanıcı: {userStats?.totalQuizzes}
+                  Toplam Kullanıcı: {userStats?.totalUsers}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Ortalama Puan: {userStats?.averageScore.toFixed(2)}
+                  Ortalama Puan: {userStats?.averagePoints.toFixed(2)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Toplam Deneyim Puanı: {userStats?.totalQuestionsAnswered}
+                  Toplam Deneyim Puanı: {userStats?.totalExperience}
                 </Typography>
               </Box>
 

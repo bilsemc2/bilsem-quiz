@@ -1,4 +1,4 @@
-import { ALL_SHAPES } from "./constants.ts";
+import { ALL_SHAPES, SHAPE_LABELS } from "./constants.ts";
 import type { AttentionCodingRound, KeyMapping, ShapeType, TestItem } from "./types.ts";
 
 export const shuffleItems = <T,>(
@@ -109,3 +109,28 @@ export const isCorrectAnswer = (
 ) => getCorrectShape(keyMappings, targetNumber) === selectedShape;
 
 export const getAttentionCodingScore = (level: number) => 20 + level * 5;
+
+export const buildAttentionCodingFeedbackMessage = ({
+  correct,
+  targetNumber,
+  correctShape,
+  level,
+  maxLevel,
+}: {
+  correct: boolean;
+  targetNumber: number;
+  correctShape: ShapeType | null;
+  level: number;
+  maxLevel: number;
+}) => {
+  if (correct) {
+    if (level >= maxLevel) {
+      return "Doğru eşleştirme! Son kodu da çözdün, oyun tamamlanıyor.";
+    }
+
+    return `Doğru eşleştirme! Şimdi ${level + 1}. seviyeye geçiyorsun.`;
+  }
+
+  const shapeLabel = correctShape ? SHAPE_LABELS[correctShape] : "?";
+  return `Yanlış eşleştirme! ${targetNumber} sayısının şekli ${shapeLabel} olmalıydı.`;
+};

@@ -13,7 +13,7 @@ export const CARD_DISPLAY_TIME = 2000;
 export const CARD_SEQUENCE_DELAY = 800;
 export const INITIAL_FOCUS_DELAY = 800;
 export const QUESTION_REVEAL_DELAY = 800;
-export const FEEDBACK_DURATION_MS = 1000;
+export const FEEDBACK_DURATION_MS = 1200;
 export const ROUND_TRANSITION_MS = 1200;
 export const MAX_NUMBER_INPUT_LENGTH = 3;
 

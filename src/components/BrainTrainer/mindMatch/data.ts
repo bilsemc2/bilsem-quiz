@@ -37,6 +37,7 @@ export const CATEGORIES: Record<string, CategoryData> = {
   },
   Hayvanlar: {
     description: "Doğada veya evde yaşayan canlılar",
+    excludedDistractorKeys: ["Deniz Canlıları"],
     items: [
       { emoji: "🐶", name: "Köpek" },
       { emoji: "🐱", name: "Kedi" },
@@ -114,6 +115,7 @@ export const CATEGORIES: Record<string, CategoryData> = {
   },
   "Deniz Canlıları": {
     description: "Suda yaşayan hayvanlar",
+    excludedDistractorKeys: ["Hayvanlar"],
     items: [
       { emoji: "🐙", name: "Ahtapot" },
       { emoji: "🦑", name: "Kalamar" },

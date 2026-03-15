@@ -1,16 +1,14 @@
-import { sounds, SoundName } from '../config/sounds';
+import { playLegacySound } from '@/features/sound/model/soundEngine';
+import type { SoundName } from '../config/sounds';
 
 class SoundManager {
     private static instance: SoundManager;
-    private audioElements: Map<SoundName, HTMLAudioElement>;
     private volume: number;
     private isMuted: boolean;
 
     private constructor() {
-        this.audioElements = new Map();
-        this.volume = 0.5;
+        this.volume = 50;
         this.isMuted = false;
-        this.initializeAudio();
     }
 
     public static getInstance(): SoundManager {
@@ -20,30 +18,8 @@ class SoundManager {
         return SoundManager.instance;
     }
 
-    private initializeAudio() {
-        Object.entries(sounds).forEach(([key, path]) => {
-            const audio = new Audio(path);
-            audio.preload = 'auto';
-            audio.volume = this.volume;
-            this.audioElements.set(key as SoundName, audio);
-
-            // Log successful load
-            audio.addEventListener('canplaythrough', () => {
-
-            });
-
-            // Log load errors
-            audio.addEventListener('error', (e) => {
-                console.error(`Error loading sound ${key}:`, e);
-            });
-        });
-    }
-
     public setVolume(volume: number) {
-        this.volume = volume / 100;
-        this.audioElements.forEach(audio => {
-            audio.volume = this.volume;
-        });
+        this.volume = volume;
     }
 
     public setMuted(muted: boolean) {
@@ -55,28 +31,7 @@ class SoundManager {
             return;
         }
 
-        if (!sounds[soundName]) {
-            console.error('Ses dosyası bulunamadı:', soundName);
-            return;
-        }
-
-        try {
-            // Create a new audio instance for this play
-            const playAudio = new Audio(sounds[soundName]);
-            playAudio.volume = this.volume;
-            await playAudio.play();
-        } catch (error) {
-            console.error('Ses çalınırken hata oluştu:', error);
-            try {
-                // Try an alternative approach with a delay
-                const alternativeAudio = new Audio(sounds[soundName]);
-                alternativeAudio.volume = this.volume;
-                await new Promise(resolve => setTimeout(resolve, 100));
-                await alternativeAudio.play();
-            } catch (retryError) {
-                console.error('Ses tekrar denenirken hata oluştu:', retryError);
-            }
-        }
+        await playLegacySound(soundName, this.volume);
     }
 
     public playTestSound() {

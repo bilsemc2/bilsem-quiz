@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { QuizQuestion, TIMING } from '../types';
 
 interface QuizModeProps {
@@ -106,19 +106,34 @@ const QuizMode: React.FC<QuizModeProps> = ({ history, level, onQuizComplete }) =
   const [question, setQuestion] = useState<QuizQuestion | null>(null);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const completeTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (completeTimeoutRef.current !== null) {
+      window.clearTimeout(completeTimeoutRef.current);
+      completeTimeoutRef.current = null;
+    }
+
     const difficulty = Math.min(Math.ceil(level / 2), 5);
     const q = generateQuizQuestion(history, difficulty);
     setQuestion(q);
+    setSelectedOption(null);
+    setShowResult(false);
   }, [history, level]);
+
+  useEffect(() => () => {
+    if (completeTimeoutRef.current !== null) {
+      window.clearTimeout(completeTimeoutRef.current);
+    }
+  }, []);
 
   const handleOptionClick = (option: string) => {
     if (showResult) return;
     setSelectedOption(option);
     setShowResult(true);
 
-    setTimeout(() => {
+    completeTimeoutRef.current = window.setTimeout(() => {
+      completeTimeoutRef.current = null;
       onQuizComplete(option === question?.correctAnswer);
     }, TIMING.QUIZ_RESULT_DELAY_MS);
   };

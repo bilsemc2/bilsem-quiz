@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
-import ArcadeGameShell from '../../Shared/ArcadeGameShell';
-import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
 import { ARCADE_SCORE_FORMULA, ARCADE_SCORE_BASE, ARCADE_FEEDBACK_TEXTS } from '../../Shared/ArcadeConstants';
+import { useArcadeSoundEffects } from '../../Shared/useArcadeSoundEffects';
 import { Target, Level } from './types';
 import GameCanvas from './components/GameCanvas';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Brain, Play, RotateCcw, Sparkles, Star, Target as TargetIcon, Trophy } from 'lucide-react';
+import { useGameViewportFocus } from '../../../../hooks/useGameViewportFocus';
+import { KidCard, KidGameFeedbackBanner, KidGameShell, KidGameStatusOverlay } from '../../../kid-ui';
 
 const INITIAL_LEVELS: Level[] = [
     {
@@ -35,12 +36,89 @@ const INITIAL_LEVELS: Level[] = [
 
 type GamePhase = 'idle' | 'playing' | 'finished';
 
+const AynaUstasiPreview: React.FC = () => {
+    const steps = [
+        {
+            title: 'Solda Çiz',
+            description: 'Çizgiyi kendi alanında rahatça hareket ettir ve bir şekil oluştur.',
+            accentColor: 'yellow',
+        },
+        {
+            title: 'Aynayı İzle',
+            description: 'Sağ tarafta oluşan yansımayı takip ederek hedeflerin üzerinden geç.',
+            accentColor: 'blue',
+        },
+        {
+            title: 'Bölümü Tamamla',
+            description: 'Tüm hedefleri vurunca sıradaki bölüme geçip daha kalabalık desenlerle oynarsın.',
+            accentColor: 'emerald',
+        },
+    ] as const;
+
+    return (
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+            <div className="rounded-[2rem] border-2 border-black/10 bg-white/85 p-5 shadow-neo-md dark:border-white/10 dark:bg-slate-900/80">
+                <div className="rounded-[1.5rem] border-2 border-black/10 bg-[linear-gradient(180deg,#e0f2fe_0%,#ffffff_45%,#ffe4e6_100%)] p-6 shadow-inner dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(30,41,59,0.96)_0%,rgba(15,23,42,0.96)_100%)]">
+                    <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-center">
+                        <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-blue/15 p-4 shadow-neo-sm">
+                            <div className="text-center text-[11px] font-black uppercase tracking-[0.22em] text-black dark:text-white">
+                                Senin Alanın
+                            </div>
+                            <div className="mt-4 h-40 rounded-[1.5rem] border-2 border-dashed border-black/15 bg-white/85 dark:border-white/10 dark:bg-slate-800/80" />
+                        </div>
+                        <div className="mx-auto h-12 w-12 rounded-full border-2 border-black/10 bg-cyber-yellow shadow-neo-sm md:h-40 md:w-3" />
+                        <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-pink/15 p-4 shadow-neo-sm">
+                            <div className="text-center text-[11px] font-black uppercase tracking-[0.22em] text-black dark:text-white">
+                                Ayna Dünyası
+                            </div>
+                            <div className="mt-4 grid h-40 place-items-center rounded-[1.5rem] border-2 border-black/10 bg-white/85 dark:border-white/10 dark:bg-slate-800/80">
+                                <div className="flex gap-3">
+                                    {Array.from({ length: 3 }).map((_, index) => (
+                                        <div
+                                            key={index}
+                                            className="h-10 w-10 rounded-full border-2 border-black/10 bg-cyber-pink shadow-neo-sm"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 rounded-[1.5rem] border-2 border-black/10 bg-cyber-yellow/80 px-4 py-3 text-center text-sm font-black uppercase tracking-[0.22em] text-black shadow-neo-sm">
+                        Çizgi sağda aynalanır, hedefi yansıma vurur
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid gap-4">
+                {steps.map((step) => (
+                    <KidCard key={step.title} accentColor={step.accentColor} animate={false} className="h-full">
+                        <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                            Ayna Görevi
+                        </div>
+                        <div className="mt-2 text-2xl font-black tracking-tight text-black dark:text-white">
+                            {step.title}
+                        </div>
+                        <p className="mt-2 text-sm font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                            {step.description}
+                        </p>
+                    </KidCard>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 const AynaUstasi: React.FC = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const { saveGamePlay } = useGamePersistence();
+    const { playAreaRef, focusPlayArea } = useGameViewportFocus();
+    const { playArcadeSound } = useArcadeSoundEffects();
     const gameStartTimeRef = useRef<number>(0);
     const isResolvingRef = useRef(false);
     const hasSavedRef = useRef(false);
+    const levelCompleteTimeoutRef = useRef<number | null>(null);
 
     const [gamePhase, setGamePhase] = useState<GamePhase>('idle');
     const [currentLevelIdx, setCurrentLevelIdx] = useState(0);
@@ -54,8 +132,15 @@ const AynaUstasi: React.FC = () => {
     const totalHits = currentLevel?.targets.filter(t => t.hit).length || 0;
     const totalTargets = currentLevel?.targets.length || 0;
 
+    const clearLevelCompleteTimeout = useCallback(() => {
+        if (levelCompleteTimeoutRef.current !== null) {
+            window.clearTimeout(levelCompleteTimeoutRef.current);
+            levelCompleteTimeoutRef.current = null;
+        }
+    }, []);
+
     const startGame = useCallback(() => {
-        window.scrollTo(0, 0);
+        clearLevelCompleteTimeout();
         setGamePhase('playing');
         setCurrentLevelIdx(0);
         setLevels(INITIAL_LEVELS.map(l => ({
@@ -69,7 +154,9 @@ const AynaUstasi: React.FC = () => {
         hasSavedRef.current = false;
         isResolvingRef.current = false;
         gameStartTimeRef.current = Date.now();
-    }, []);
+        playArcadeSound('start');
+        focusPlayArea();
+    }, [clearLevelCompleteTimeout, focusPlayArea, playArcadeSound]);
 
     // Auto-start from Arcade Hub
     useEffect(() => {
@@ -77,6 +164,8 @@ const AynaUstasi: React.FC = () => {
             startGame();
         }
     }, [gamePhase, location.state, startGame]);
+
+    useEffect(() => clearLevelCompleteTimeout, [clearLevelCompleteTimeout]);
 
     const generateProceduralLevel = (num: number): Level => {
         const targetCount = Math.min(3 + Math.floor(num / 1.5), 12);
@@ -127,6 +216,7 @@ const AynaUstasi: React.FC = () => {
                 target.hit = true;
                 const hitScore = ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, currentLevelIdx + 1);
                 setTotalScore(s => s + hitScore);
+                playArcadeSound('hit');
             }
             return newLevels;
         });
@@ -139,10 +229,13 @@ const AynaUstasi: React.FC = () => {
 
         if (hits === total) {
             isResolvingRef.current = true;
+            playArcadeSound('success');
             const msgs = ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES;
             setFeedback({ message: msgs[Math.floor(Math.random() * msgs.length)], type: 'success' });
 
-            setTimeout(() => {
+            clearLevelCompleteTimeout();
+            levelCompleteTimeoutRef.current = window.setTimeout(() => {
+                levelCompleteTimeoutRef.current = null;
                 setFeedback(null);
                 setShowLevelUp(true);
                 isResolvingRef.current = false;
@@ -151,16 +244,20 @@ const AynaUstasi: React.FC = () => {
     };
 
     const nextLevel = () => {
+        clearLevelCompleteTimeout();
         setShowLevelUp(false);
+        playArcadeSound('levelUp');
         if (currentLevelIdx >= levels.length - 1) {
             const newLevel = generateProceduralLevel(levels.length + 1);
             setLevels(prev => [...prev, newLevel]);
         }
         setCurrentLevelIdx(prev => prev + 1);
         setResetTrigger(prev => prev + 1);
+        focusPlayArea();
     };
 
     const resetLevel = () => {
+        clearLevelCompleteTimeout();
         setLevels(prev => {
             const newLevels = [...prev];
             newLevels[currentLevelIdx].targets = newLevels[currentLevelIdx].targets.map(t => ({ ...t, hit: false }));
@@ -168,9 +265,11 @@ const AynaUstasi: React.FC = () => {
         });
         setResetTrigger(prev => prev + 1);
         setShowLevelUp(false);
+        focusPlayArea();
     };
 
     const endGame = () => {
+        clearLevelCompleteTimeout();
         setGamePhase('finished');
         if (!hasSavedRef.current) {
             hasSavedRef.current = true;
@@ -187,125 +286,194 @@ const AynaUstasi: React.FC = () => {
         }
     };
 
-    // ─── Shell status mapping ────────────────────────────────────────────
-    const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' =
-        gamePhase === 'idle' ? 'START' :
-            gamePhase === 'finished' ? 'GAME_OVER' : 'PLAYING';
+    const overlay = gamePhase === 'idle' ? (
+        <KidGameStatusOverlay
+            tone="blue"
+            icon={TargetIcon}
+            title="Ayna Ustası"
+            description="Solda çiz, sağda oluşan ayna görüntüsüyle hedefleri vur ve her bölümde desenleri büyüt."
+            actions={[
+                { label: 'Oyuna Başla', variant: 'primary', size: 'lg', icon: Play, onClick: startGame },
+                { label: 'Hızlı Başlangıç', variant: 'ghost', size: 'lg', icon: Sparkles, onClick: startGame },
+            ]}
+        >
+            <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border-2 border-black/10 bg-cyber-yellow/80 px-4 py-4 shadow-neo-sm">
+                    <div className="text-[11px] font-black uppercase tracking-[0.2em] text-black/70">1</div>
+                    <div className="mt-2 text-sm font-black uppercase">Çizgiyi Kur</div>
+                </div>
+                <div className="rounded-2xl border-2 border-black/10 bg-cyber-blue px-4 py-4 text-white shadow-neo-sm">
+                    <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/70">2</div>
+                    <div className="mt-2 text-sm font-black uppercase">Aynayı İzle</div>
+                </div>
+                <div className="rounded-2xl border-2 border-black/10 bg-cyber-emerald px-4 py-4 text-black shadow-neo-sm">
+                    <div className="text-[11px] font-black uppercase tracking-[0.2em] text-black/70">3</div>
+                    <div className="mt-2 text-sm font-black uppercase">Hedefleri Bitir</div>
+                </div>
+            </div>
+        </KidGameStatusOverlay>
+    ) : gamePhase === 'finished' ? (
+        <KidGameStatusOverlay
+            tone="pink"
+            icon={Trophy}
+            title="Tur Tamamlandı"
+            description="Ayna simetrisini güzel kullandın. Yeni turda daha çok hedefe ve daha yüksek puana oynayabilirsin."
+            stats={[
+                { label: 'Puan', value: totalScore, tone: 'yellow' },
+                { label: 'Seviye', value: currentLevelIdx + 1, tone: 'blue' },
+                { label: 'Hedef', value: `${totalHits}/${totalTargets}`, tone: 'emerald' },
+            ]}
+            actions={[
+                { label: 'Tekrar Oyna', variant: 'primary', size: 'lg', icon: RotateCcw, onClick: startGame },
+                { label: "Arcade'e Dön", variant: 'ghost', size: 'lg', onClick: () => navigate('/bilsem-zeka') },
+            ]}
+            backdropClassName="bg-slate-950/60"
+        />
+    ) : showLevelUp ? (
+        <KidGameStatusOverlay
+            tone="emerald"
+            icon={Star}
+            title="Mükemmel"
+            description="Tüm simetrileri buldun. İstersen bölümü tekrar açabilir ya da sıradaki desene geçebilirsin."
+            stats={[
+                { label: 'Seviye', value: currentLevelIdx + 1, tone: 'blue' },
+                { label: 'Puan', value: totalScore, tone: 'yellow' },
+                { label: 'Hedef', value: `${totalHits}/${totalTargets}`, tone: 'emerald' },
+            ]}
+            actions={[
+                { label: 'Bölümü Tekrarla', variant: 'ghost', size: 'lg', icon: RotateCcw, onClick: resetLevel },
+                { label: 'Sıradaki Bölüm', variant: 'primary', size: 'lg', icon: Play, onClick: nextLevel },
+            ]}
+            backdropClassName="bg-slate-950/55"
+        />
+    ) : null;
 
     return (
-        <ArcadeGameShell
-            gameState={{ score: totalScore, level: currentLevelIdx + 1, lives: 1, status: shellStatus }}
-            gameMetadata={{
-                id: 'arcade-ayna-ustasi',
-                title: 'AYNA USTASI',
-                description: (
-                    <>
-                        <p>🪞 Sol tarafta çiz, sağ tarafta ayna görüntüsüyle hedefleri vur!</p>
-                        <p className="mt-2">🧠 Ayna simetrisi ve görsel-uzamsal algı testi!</p>
-                    </>
-                ),
-                tuzoCode: '3.2.1 Ayna Simetrisi',
-                icon: <span className="text-5xl">🪞</span>,
-                iconBgColor: 'bg-sky-400',
-                containerBgColor: 'bg-rose-200 dark:bg-slate-900'
-            }}
-            onStart={startGame}
-            onRestart={startGame}
-            showLevel={true}
-            showLives={false}
-            allowMobileScroll
+        <KidGameShell
+            title="Ayna Ustası"
+            subtitle="Solda çizdiğin çizgi sağda aynalanır. Yansıma ile hedefleri vur ve bölümleri büyüt."
+            instruction="Çizgiyi kendi alanında sürükle. Asıl vuruş sağdaki ayna tarafında oluşur."
+            backHref="/bilsem-zeka"
+            backLabel="Arcade'e Dön"
+            badges={[
+                { label: 'Ayna Simetrisi', variant: 'difficulty' },
+                { label: 'TUZÖ 3.2.1', variant: 'tuzo' },
+            ]}
+            stats={[
+                { label: 'Seviye', value: currentLevelIdx + 1, tone: 'blue', icon: Brain, helper: currentLevel.title },
+                { label: 'Puan', value: totalScore, tone: 'yellow', icon: Star, helper: 'Her hedef ekstra puan getirir' },
+                { label: 'Hedef', value: `${totalHits}/${totalTargets}`, tone: 'emerald', icon: TargetIcon, helper: currentLevel.description },
+                { label: 'Durum', value: showLevelUp ? 'Geçiş' : gamePhase === 'playing' ? 'Oyun' : 'Hazır', tone: 'orange', icon: Trophy, helper: showLevelUp ? 'Sıradaki bölüme geçebilirsin' : 'Çizgiyi aynaya dönüştür' },
+            ]}
+            supportTitle="Ayna Rehberi"
+            supportDescription="Simetriyi daha hızlı kurmak ve hedefleri kaçırmamak için kısa ipuçları burada."
+            playAreaRef={playAreaRef}
+            playAreaClassName="min-h-[760px]"
+            supportArea={(
+                <div className="grid gap-3 lg:grid-cols-3">
+                    <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-yellow/30 px-4 py-4 shadow-neo-sm">
+                        <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                            Nasıl Çalışır?
+                        </div>
+                        <p className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                            Sol tarafta çizdiğin yol sağ tarafta terslenerek görünür. Hedefleri çizen el değil, aynadaki yol vurur.
+                        </p>
+                    </div>
+                    <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-blue/15 px-4 py-4 shadow-neo-sm">
+                        <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                            Seviye İpucu
+                        </div>
+                        <p className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                            Her bölümde hedef sayısı artar. Önce en üstteki ve en alttaki hedefleri hizalamak işini kolaylaştırır.
+                        </p>
+                    </div>
+                    <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-pink/15 px-4 py-4 shadow-neo-sm">
+                        <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                            Hızlı Kontrol
+                        </div>
+                        <p className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                            Çizgiyi bir turda bitiremezsen bölümü sıfırlayıp yeniden deneyebilirsin. Geçişten sonra yeni bölüm otomatik odaklanır.
+                        </p>
+                    </div>
+                </div>
+            )}
+            overlay={overlay}
         >
-            <div className="w-full min-h-[60dvh] flex flex-col items-center py-4 px-2 md:py-8 md:px-4 bg-sky-200 dark:bg-slate-900 font-sans transition-colors duration-300">
+            <div className="w-full space-y-5">
+                <KidGameFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
 
-                {/* Feedback Banner */}
-                <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
+                {gamePhase === 'playing' ? (
+                    <div className="space-y-5">
+                        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                            <KidCard accentColor="yellow" animate={false}>
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                                            Aktif Bölüm
+                                        </div>
+                                        <div className="mt-2 text-2xl font-black tracking-tight text-black dark:text-white">
+                                            {currentLevel.title}
+                                        </div>
+                                        <p className="mt-2 text-sm font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                                            {currentLevel.description}
+                                        </p>
+                                    </div>
 
-                <main className="w-full max-w-5xl flex flex-col bg-white dark:bg-slate-800 rounded-[3rem] border-2 border-black/10 dark:border-slate-700 shadow-neo-sm dark:shadow-[16px_16px_0_#0f172a] p-4 md:p-8 relative transition-colors duration-300">
-                    {/* Level info + controls */}
-                    <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b-8 border-black/10 pb-6">
-                        <div className="flex items-center gap-4 w-full md:w-auto">
-                            <div className="bg-sky-400 text-black w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl border-2 border-black/10 shadow-neo-sm rotate-3">
-                                {currentLevelIdx + 1}
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-black text-black dark:text-white uppercase drop-shadow-[2px_2px_0_rgba(0,0,0,0.1)] transition-colors duration-300">{currentLevel.title}</h2>
-                                <div className="flex gap-2 mt-2">
-                                    {Array.from({ length: totalTargets }).map((_, i) => (
+                                    <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-blue px-5 py-4 text-center text-white shadow-neo-sm">
+                                        <div className="text-[11px] font-black uppercase tracking-[0.22em] text-white/75">
+                                            Bölüm
+                                        </div>
+                                        <div className="mt-2 text-4xl font-black leading-none">
+                                            {currentLevelIdx + 1}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 flex flex-wrap gap-2">
+                                    {Array.from({ length: totalTargets }).map((_, index) => (
                                         <div
-                                            key={i}
-                                            className={`h-4 w-6 rounded-full border-2 border-black/10 transition-all duration-300 ${i < totalHits ? 'bg-emerald-400 shadow-neo-sm w-12' : 'bg-slate-200'}`}
+                                            key={index}
+                                            className={[
+                                                'h-4 rounded-full border-2 border-black/10 transition-all duration-300',
+                                                index < totalHits ? 'w-12 bg-cyber-emerald shadow-neo-sm' : 'w-6 bg-slate-200 dark:bg-slate-700',
+                                            ].join(' ')}
                                         />
                                     ))}
                                 </div>
+                            </KidCard>
+
+                            <div className="flex flex-wrap gap-3 lg:flex-col">
+                                <button
+                                    type="button"
+                                    onClick={resetLevel}
+                                    className="rounded-2xl border-2 border-black/10 bg-cyber-yellow px-5 py-3 text-sm font-black uppercase tracking-[0.22em] text-black shadow-neo-sm transition-all hover:-translate-y-1 hover:shadow-neo-md"
+                                >
+                                    Bölümü Sıfırla
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={endGame}
+                                    className="rounded-2xl border-2 border-black/10 bg-cyber-pink px-5 py-3 text-sm font-black uppercase tracking-[0.22em] text-white shadow-neo-sm transition-all hover:-translate-y-1 hover:shadow-neo-md"
+                                >
+                                    Turu Bitir
+                                </button>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-3">
-                            <button
-                                onClick={resetLevel}
-                                className="px-6 py-3 bg-yellow-300 text-black rounded-xl font-black uppercase tracking-widest transition-all hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 border-2 border-black/10 shadow-neo-sm"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
-                                Sıfırla
-                            </button>
-                            <button
-                                onClick={endGame}
-                                className="px-6 py-3 bg-red-400 text-black rounded-xl font-black uppercase tracking-widest transition-all hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 border-2 border-black/10 shadow-neo-sm"
-                            >
-                                Bitir
-                            </button>
+                        <div className="rounded-[2rem] border-2 border-black/10 bg-[linear-gradient(180deg,#dbeafe_0%,#f8fafc_42%,#ffe4e6_100%)] p-2 shadow-neo-md dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(30,41,59,0.96)_0%,rgba(15,23,42,0.96)_100%)]">
+                            <GameCanvas
+                                targets={currentLevel.targets}
+                                onTargetHit={handleTargetHit}
+                                onDrawComplete={handleDrawComplete}
+                                resetTrigger={resetTrigger}
+                            />
                         </div>
                     </div>
-
-                    <GameCanvas
-                        targets={currentLevel.targets}
-                        onTargetHit={handleTargetHit}
-                        onDrawComplete={handleDrawComplete}
-                        resetTrigger={resetTrigger}
-                    />
-
-                    {/* Level complete overlay (mid-game transition) */}
-                    <AnimatePresence>
-                        {showLevelUp && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                            >
-                                <motion.div
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 0.8, opacity: 0 }}
-                                    className="bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-slate-700 p-6 sm:p-10 rounded-[3rem] shadow-neo-sm text-center max-w-sm w-full transform rotate-2 transition-colors duration-300"
-                                >
-                                    <div className="text-6xl mb-4">🎉</div>
-                                    <h2 className="text-3xl md:text-4xl font-black mb-3 text-emerald-500 uppercase tracking-tighter">MÜKEMMEL!</h2>
-                                    <p className="text-sm font-black text-rose-500 mb-6 bg-slate-100 dark:bg-slate-700 border-2 border-black/10 inline-block px-4 py-2 rounded-xl shadow-neo-sm -rotate-1 transition-colors duration-300">
-                                        Tüm simetrileri buldun!
-                                    </p>
-
-                                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                                        <button
-                                            onClick={resetLevel}
-                                            className="flex-1 py-3 bg-amber-300 active:translate-y-2 active:shadow-none hover:-translate-y-1 hover:shadow-neo-sm border-2 border-black/10 shadow-neo-sm rounded-2xl font-black text-lg uppercase transition-all text-black"
-                                        >
-                                            TEKRAR
-                                        </button>
-                                        <button
-                                            onClick={nextLevel}
-                                            className="flex-1 py-3 bg-sky-400 active:translate-y-2 active:shadow-none hover:-translate-y-1 hover:shadow-neo-sm border-2 border-black/10 shadow-neo-sm text-black rounded-2xl font-black text-lg transition-all uppercase"
-                                        >
-                                            SIRADAKİ ➔
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </main>
+                ) : (
+                    <AynaUstasiPreview />
+                )}
             </div>
-        </ArcadeGameShell>
+        </KidGameShell>
     );
 };
 

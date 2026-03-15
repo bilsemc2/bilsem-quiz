@@ -12,6 +12,7 @@ import {
   TIME_LIMIT,
 } from "./constants";
 import {
+  buildCosmicMemoryFeedbackMessage,
   calculateCosmicMemoryScore,
   createRound,
   getDisplayTime,
@@ -177,8 +178,15 @@ export const useCosmicMemoryController = () => {
       if (expectedCell !== index) {
         const canRetry = lives > 1;
         recordAttempt({ isCorrect: false, responseMs: getResponseMs() });
-        playSound("incorrect");
-        showFeedback(false);
+        showFeedback(
+          false,
+          buildCosmicMemoryFeedbackMessage({
+            correct: false,
+            level,
+            maxLevel: MAX_LEVEL,
+            mode: round.mode,
+          }),
+        );
         clearActionTimeout();
 
         actionTimeoutRef.current = window.setTimeout(() => {
@@ -200,8 +208,15 @@ export const useCosmicMemoryController = () => {
       }
 
       recordAttempt({ isCorrect: true, responseMs: getResponseMs() });
-      playSound("correct");
-      showFeedback(true);
+      showFeedback(
+        true,
+        buildCosmicMemoryFeedbackMessage({
+          correct: true,
+          level,
+          maxLevel: MAX_LEVEL,
+          mode: round.mode,
+        }),
+      );
       clearActionTimeout();
 
       actionTimeoutRef.current = window.setTimeout(() => {

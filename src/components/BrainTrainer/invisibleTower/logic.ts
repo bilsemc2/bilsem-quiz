@@ -68,8 +68,7 @@ export const createRound = (
 
     for (let col = 0; col < columnsInRow; col += 1) {
       const isNegative = level > 5 && randomFn() < 0.15;
-      const multiplier =
-        level > 8 && randomFn() < 0.1 ? (randomFn() < 0.7 ? 2 : 3) : undefined;
+      const multiplier = undefined;
       const rawValue = Math.floor(randomFn() * 9) + 1;
 
       const segment: TowerSegment = {
@@ -102,4 +101,22 @@ export const calculateInvisibleTowerScore = (
 
 export const isMaxLevel = (level: number) => {
   return level >= MAX_LEVEL;
+};
+
+export const buildInvisibleTowerFeedbackMessage = ({
+  isCorrect,
+  level,
+  maxLevel,
+  correctAnswer,
+}: {
+  isCorrect: boolean;
+  level: number;
+  maxLevel: number;
+  correctAnswer: number;
+}): string => {
+  if (isCorrect) {
+    if (level >= maxLevel) return "Harika! Son kuleyi de topladın!";
+    return `Doğru! ${level + 1}. seviyeye geçiyorsun.`;
+  }
+  return `Yanlış! Kulenin toplamı: ${correctAnswer}`;
 };

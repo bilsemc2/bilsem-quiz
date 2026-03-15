@@ -30,6 +30,7 @@ interface UseOruntuluTopCanvasConfig {
     isResolvingRef: MutableRefObject<boolean>;
     bubblesRef: MutableRefObject<Bubble[]>;
     particlesRef: MutableRefObject<Particle[]>;
+    onLaunch?: () => void;
     onBubbleHit: (bubble: Bubble) => void;
 }
 
@@ -39,6 +40,7 @@ export const useOruntuluTopCanvas = ({
     isResolvingRef,
     bubblesRef,
     particlesRef,
+    onLaunch,
     onBubbleHit
 }: UseOruntuluTopCanvasConfig) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -112,7 +114,8 @@ export const useOruntuluTopCanvas = ({
 
         isFlyingRef.current = true;
         ballVelocityRef.current = velocity;
-    }, [isPlaying]);
+        onLaunch?.();
+    }, [isPlaying, onLaunch]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -159,7 +162,7 @@ export const useOruntuluTopCanvas = ({
 
             bubblesRef.current.forEach((bubble) => {
                 if (bubble.active) {
-                    drawBubble(context, bubble.x, bubble.y, bubbleRadius - 1, bubble.color);
+                    drawBubble(context, bubble.x, bubble.y, bubbleRadius - 1, bubble.color, bubble.powerUp);
                 }
             });
 

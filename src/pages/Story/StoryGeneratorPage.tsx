@@ -54,8 +54,7 @@ export default function StoryGeneratorPage() {
         navigate(`/stories/${savedStory.id}`);
       }, 1500);
 
-    } catch (error) {
-      console.error('Hikaye oluşturma hatası:', error);
+    } catch {
       toast.error('Hikaye oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.', {
         duration: 5000,
         icon: '⚠️',

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   addReactionTime,
+  buildReactionFeedbackMessage,
   calculateReactionScore,
   createEmptyReactionMetrics,
   getBackNavigation,
@@ -79,4 +80,50 @@ test("shouldWaitForTarget and getBackNavigation normalize gameplay helpers", () 
     backLink: "/bilsem-zeka",
     backLabel: "Arcade",
   });
+});
+
+test("buildReactionFeedbackMessage explains the active reaction outcome", () => {
+  assert.equal(
+    buildReactionFeedbackMessage({
+      gameMode: "simple",
+      isCorrect: false,
+      roundState: "ready",
+      reactionTime: null,
+      currentColor: "green",
+    }),
+    "Henüz değil! Hedef sinyal gelmeden dokundun.",
+  );
+
+  assert.equal(
+    buildReactionFeedbackMessage({
+      gameMode: "selective",
+      isCorrect: false,
+      roundState: "go",
+      reactionTime: 420,
+      currentColor: "red",
+    }),
+    "Bu renk hedef değildi. Doğru sinyali beklemeliydin.",
+  );
+
+  assert.equal(
+    buildReactionFeedbackMessage({
+      gameMode: "selective",
+      isCorrect: true,
+      roundState: "result",
+      reactionTime: null,
+      currentColor: "red",
+    }),
+    "Harika! Doğru anda bekledin ve tuzağa kapılmadın.",
+  );
+
+  assert.equal(
+    buildReactionFeedbackMessage({
+      gameMode: "simple",
+      isCorrect: true,
+      roundState: "result",
+      reactionTime: 245,
+      currentColor: "green",
+    }),
+    "Harika hız! 245 ms içinde doğru tepki verdin.",
+  );
 });

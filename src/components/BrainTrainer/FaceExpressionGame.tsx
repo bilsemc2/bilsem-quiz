@@ -1,144 +1,22 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { Smile, Eye } from "lucide-react";
 import GameOptionButton from "./shared/GameOptionButton";
 import type { FeedbackResult } from "./shared/GameOptionButton";
-import { useSound } from "../../hooks/useSound";
-import { useSafeTimeout } from '../../hooks/useSafeTimeout';
-import { useGameFeedback } from "../../hooks/useGameFeedback";
-import { useGamePerformanceTracker } from "../../hooks/useGamePerformanceTracker";
-import { useGameEngine } from "./shared/useGameEngine";
 import BrainTrainerShell from "./shared/BrainTrainerShell";
-import { GAME_COLORS } from './shared/gameColors';
-
-const GAME_ID = "yuz-ifadesi";
-const MAX_LEVEL = 20;
-const GAME_TITLE = "Yüz İfadesi Tanıma";
-const GAME_DESCRIPTION = "Duyguları gözlerinden tanı! Emojilerin hangi duyguyu temsil ettiğini bul ve empati yeteneğini geliştir.";
-const TUZO_TEXT = "TUZÖ 7.1.1 Sosyal Algı";
-
-const EMOTIONS = [
-  { id: "mutlu", name: "Mutlu", emoji: "😊", description: "Neşeli, sevinçli", color: GAME_COLORS.yellow },
-  { id: "uzgun", name: "Üzgün", emoji: "😢", description: "Kederli, hüzünlü", color: GAME_COLORS.blue },
-  { id: "kizgin", name: "Kızgın", emoji: "😠", description: "Öfkeli, sinirli", color: GAME_COLORS.incorrect },
-  { id: "saskin", name: "Şaşkın", emoji: "😲", description: "Hayret içinde", color: GAME_COLORS.orange },
-  { id: "korkmus", name: "Korkmuş", emoji: "😨", description: "Ürkmüş, endişeli", color: GAME_COLORS.purple },
-  { id: "igrenme", name: "İğrenme", emoji: "🤢", description: "Tiksinmiş", color: GAME_COLORS.emerald },
-  { id: "notr", name: "Sakin", emoji: "😐", description: "Tarafsız, sakin", color: "#64748b" },
-  { id: "bikkin", name: "Bıkkın", emoji: "😒", description: "Sıkılmış, bıkmış", color: GAME_COLORS.orange },
-  { id: "dusunceli", name: "Düşünceli", emoji: "🤔", description: "Derin düşüncede", color: GAME_COLORS.blue },
-];
-
-const EXPRESSION_VARIANTS: Record<string, string[]> = {
-  mutlu: ["😊", "😄", "😁", "😃"],
-  uzgun: ["😢", "😞", "😔", "🙁"],
-  kizgin: ["😠", "😡", "😤", "🤬"],
-  saskin: ["😲", "😮", "😯", "😳"],
-  korkmus: ["😨", "😰", "😱", "😧"],
-  igrenme: ["🤢", "🤮", "😷", "😝"],
-  notr: ["😐", "😑", "😶"],
-  bikkin: ["😒", "🙄", "😮‍💨"],
-  dusunceli: ["🤔", "🧐", "🤨", "🫤"],
-};
-
-interface Question {
-  emoji: string;
-  correctEmotion: (typeof EMOTIONS)[0];
-  options: (typeof EMOTIONS)[0][];
-}
+import { MAX_LEVEL } from "./faceExpression/logic";
+import { useFaceExpressionController } from "./faceExpression/useFaceExpressionController";
 
 const FaceExpressionGame: React.FC = () => {
-  const questionStartedAtRef = React.useRef(0);
-  const { performanceRef, recordAttempt, resetPerformance } = useGamePerformanceTracker();
-  const engine = useGameEngine({
-    gameId: GAME_ID,
-    maxLevel: MAX_LEVEL,
-    initialLives: 5,
-    timeLimit: 180,
-    getPerformanceSnapshot: () => performanceRef.current,
-  });
-
-  const { playSound } = useSound();
-  const safeTimeout = useSafeTimeout();
-  const feedback = useGameFeedback({ duration: 1000 });
-  const { feedbackState, showFeedback, dismissFeedback } = feedback;
-
-  const { phase, level, lives, addScore, loseLife, nextLevel } = engine;
-
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [streak, setStreak] = useState(0);
-
-  const generateQuestion = useCallback((): Question => {
-    const correctEmotion = EMOTIONS[Math.floor(Math.random() * EMOTIONS.length)];
-    const variants = EXPRESSION_VARIANTS[correctEmotion.id];
-    const emoji = variants[Math.floor(Math.random() * variants.length)];
-    const wrongOptions = EMOTIONS.filter((e) => e.id !== correctEmotion.id)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3);
-    const options = [correctEmotion, ...wrongOptions].sort(() => Math.random() - 0.5);
-    return { emoji, correctEmotion, options };
-  }, []);
-
-  const startLevel = useCallback(() => {
-    setCurrentQuestion(generateQuestion());
-    setSelectedAnswer(null);
-    questionStartedAtRef.current = Date.now();
-  }, [generateQuestion]);
-
-  useEffect(() => {
-    if (phase === "playing" && !currentQuestion) {
-      startLevel();
-    } else if (phase === "welcome" || phase === "game_over" || phase === "victory") {
-      setCurrentQuestion(null);
-      setSelectedAnswer(null);
-      setStreak(0);
-      resetPerformance();
-    }
-  }, [phase, currentQuestion, startLevel, resetPerformance]);
-
-  const handleAnswer = useCallback((emotionId: string) => {
-    if (phase !== "playing" || !!feedbackState || !currentQuestion || selectedAnswer !== null) return;
-
-    setSelectedAnswer(emotionId);
-    const isCorrect = emotionId === currentQuestion.correctEmotion.id;
-    recordAttempt({
-      isCorrect,
-      responseMs: questionStartedAtRef.current > 0 ? Date.now() - questionStartedAtRef.current : null
-    });
-    showFeedback(isCorrect);
-    playSound(isCorrect ? "correct" : "incorrect");
-
-    if (isCorrect) {
-      const newStreak = streak + 1;
-      setStreak(newStreak);
-      addScore(10 * level + newStreak * 5);
-
-      safeTimeout(() => {
-        dismissFeedback();
-        if (level >= MAX_LEVEL) {
-          engine.setGamePhase("victory");
-        } else {
-          nextLevel();
-          startLevel();
-        }
-      }, 1000);
-    } else {
-      setStreak(0);
-      loseLife();
-      safeTimeout(() => {
-        dismissFeedback();
-        if (lives > 1) {
-          startLevel();
-        }
-      }, 1000);
-    }
-  }, [phase, feedbackState, currentQuestion, selectedAnswer, showFeedback, dismissFeedback, playSound, streak, addScore, level, nextLevel, loseLife, lives, startLevel, safeTimeout, engine, recordAttempt]);
+  const { engine, feedback, currentQuestion, selectedAnswer, handleAnswer } =
+    useFaceExpressionController();
+  const { phase, level } = engine;
+  const { feedbackState } = feedback;
 
   const gameConfig = {
-    title: GAME_TITLE,
-    description: GAME_DESCRIPTION,
-    tuzoCode: TUZO_TEXT,
+    title: "Yüz İfadesi Tanıma",
+    description: "Duyguları gözlerinden tanı! Emojilerin hangi duyguyu temsil ettiğini bul ve empati yeteneğini geliştir.",
+    tuzoCode: "TUZÖ 7.1.1 Sosyal Algı",
     icon: Eye,
     accentColor: "cyber-blue",
     maxLevel: MAX_LEVEL,

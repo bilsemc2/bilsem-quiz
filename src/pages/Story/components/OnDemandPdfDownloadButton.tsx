@@ -1,4 +1,11 @@
-import { useState, type MouseEvent, type ReactElement, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode
+} from 'react';
 import { toast } from 'sonner';
 
 interface OnDemandPdfDownloadButtonProps {
@@ -10,17 +17,6 @@ interface OnDemandPdfDownloadButtonProps {
   disabled?: boolean;
 }
 
-const triggerBlobDownload = (blob: Blob, fileName: string) => {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
-};
-
 export function OnDemandPdfDownloadButton({
   className,
   fileName,
@@ -30,6 +26,16 @@ export function OnDemandPdfDownloadButton({
   disabled = false
 }: OnDemandPdfDownloadButtonProps) {
   const [isPreparing, setIsPreparing] = useState(false);
+  const linkRef = useRef<HTMLAnchorElement | null>(null);
+  const activeDownloadUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (activeDownloadUrlRef.current) {
+        URL.revokeObjectURL(activeDownloadUrlRef.current);
+      }
+    };
+  }, []);
 
   const handleClick = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -47,9 +53,26 @@ export function OnDemandPdfDownloadButton({
       ]);
 
       const blob = await pdf(document).toBlob();
-      triggerBlobDownload(blob, fileName);
-    } catch (error) {
-      console.error('PDF indirme hatası:', error);
+      if (activeDownloadUrlRef.current) {
+        URL.revokeObjectURL(activeDownloadUrlRef.current);
+      }
+
+      const nextUrl = URL.createObjectURL(blob);
+      activeDownloadUrlRef.current = nextUrl;
+
+      if (linkRef.current) {
+        linkRef.current.href = nextUrl;
+        linkRef.current.download = fileName;
+        linkRef.current.click();
+      }
+
+      window.setTimeout(() => {
+        if (activeDownloadUrlRef.current === nextUrl) {
+          URL.revokeObjectURL(nextUrl);
+          activeDownloadUrlRef.current = null;
+        }
+      }, 0);
+    } catch {
       toast.error('PDF hazırlanırken bir hata oluştu.');
     } finally {
       setIsPreparing(false);
@@ -57,15 +80,20 @@ export function OnDemandPdfDownloadButton({
   };
 
   return (
-    <button
-      type="button"
-      onClick={(event) => {
-        void handleClick(event);
-      }}
-      disabled={disabled || isPreparing}
-      className={`${className} disabled:cursor-wait disabled:opacity-70`}
-    >
-      {isPreparing ? loadingLabel : children}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={(event) => {
+          void handleClick(event);
+        }}
+        disabled={disabled || isPreparing}
+        className={`${className} disabled:cursor-wait disabled:opacity-70`}
+      >
+        {isPreparing ? loadingLabel : children}
+      </button>
+      <a ref={linkRef} className="hidden" aria-hidden="true" tabIndex={-1}>
+        download
+      </a>
+    </>
   );
 }

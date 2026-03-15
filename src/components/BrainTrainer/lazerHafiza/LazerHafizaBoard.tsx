@@ -182,7 +182,7 @@ const LazerHafizaBoard: React.FC<LazerHafizaBoardProps> = ({
                     <div
                       key={`${row}-${col}`}
                       onClick={() => onCellClick(row, col)}
-                      className="flex items-center justify-center cursor-pointer group min-w-[40px] min-h-[40px]"
+                      className="flex items-center justify-center cursor-pointer group min-w-[44px] min-h-[44px]"
                     >
                       <motion.div
                         className={`${dotSize} rounded-full transition-all duration-300`}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { fixProfessionImages } from '@/lib/puzzleService';
+import { fixProfessionImages } from '@/features/content/model/puzzleUseCases';
 import { toast } from 'sonner';
 
 export const AdminTools: React.FC = () => {

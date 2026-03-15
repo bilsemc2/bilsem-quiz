@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import {
+  loadPublishedBlogPostBySlug,
+  loadPublishedBlogPosts,
+  subscribeNewsletterEmail,
+  type BlogPost
+} from '@/features/content/model/blogUseCases';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -7,23 +12,11 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, FileText, Share2, Sparkles, Bookmark, Loader2, ChevronLeft } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import { Helmet } from 'react-helmet-async';
 
 // ═══════════════════════════════════════════════
 // 📰 BlogPage — Kid-UI Çocuk Dostu Tasarım
 // ═══════════════════════════════════════════════
-
-interface BlogPost {
-  id: string;
-  title: string;
-  content: string;
-  published: boolean;
-  created_at: string;
-  updated_at: string;
-  author_id: string;
-  slug: string;
-  image_url?: string;
-  category?: string;
-}
 
 const BlogPage: React.FC = () => {
   const navigate = useNavigate();
@@ -51,64 +44,12 @@ const BlogPage: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [selectedPost]);
 
-  // AI SEO: Inject JSON-LD Structured Data
-  useEffect(() => {
-    if (selectedPost) {
-      const schemaData = {
-        "@context": "https://schema.org",
-        "@type": "Article",
-        "headline": selectedPost.title,
-        "description": getPreviewContent(selectedPost.content),
-        "image": selectedPost.image_url || getFirstImage(selectedPost.content),
-        "datePublished": selectedPost.created_at,
-        "dateModified": selectedPost.updated_at,
-        "author": {
-          "@type": "Organization",
-          "name": "BilsemC2"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "BilsemC2",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://bilsemc2.com/images/beyninikullan.png"
-          }
-        },
-        "mainEntityOfPage": {
-          "@type": "WebPage",
-          "@id": `https://bilsemc2.com/blog/${selectedPost.slug}`
-        }
-      };
-
-      const script = document.createElement('script');
-      script.type = 'application/ld+json';
-      script.id = 'json-ld-article';
-      script.text = JSON.stringify(schemaData);
-      document.head.appendChild(script);
-
-      return () => {
-        const existingScript = document.getElementById('json-ld-article');
-        if (existingScript) {
-          document.head.removeChild(existingScript);
-        }
-      };
-    }
-  }, [selectedPost]);
-
   const fetchBlogPosts = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('published', true)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setBlogPosts(data || []);
-      setFilteredPosts(data || []);
-    } catch (error) {
-      console.error('Error fetching blog posts:', error);
-    } finally {
+      const posts = await loadPublishedBlogPosts();
+      setBlogPosts(posts);
+      setFilteredPosts(posts);
+    } catch { /* load failed */ } finally {
       setLoading(false);
     }
   }, []);
@@ -123,29 +64,15 @@ const BlogPage: React.FC = () => {
 
   const fetchSinglePost = useCallback(async (postSlug: string) => {
     try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('slug', postSlug)
-        .eq('published', true)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Blog yazısı yüklenirken hata:', error);
-        toast.error('Blog yazısı yüklenemedi');
-        navigate('/blog');
-        return;
-      }
-
-      if (!data) {
+      const post = await loadPublishedBlogPostBySlug(postSlug);
+      if (!post) {
         toast.error('Blog yazısı bulunamadı');
         navigate('/blog');
         return;
       }
 
-      setSelectedPost(data);
-    } catch (error) {
-      console.error('Blog yazısı yüklenirken beklenmeyen hata:', error);
+      setSelectedPost(post);
+    } catch {
       toast.error('Blog yazısı yüklenemedi');
       navigate('/blog');
     }
@@ -187,29 +114,50 @@ const BlogPage: React.FC = () => {
 
   const getCategory = (post: BlogPost) => post.category || 'BİLSEM';
 
+  const structuredData = selectedPost
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": selectedPost.title,
+        "description": getPreviewContent(selectedPost.content),
+        "image": selectedPost.image_url || getFirstImage(selectedPost.content),
+        "datePublished": selectedPost.created_at,
+        "dateModified": selectedPost.updated_at,
+        "author": {
+          "@type": "Organization",
+          "name": "BilsemC2"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "BilsemC2",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://bilsemc2.com/images/beyninikullan.png"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": `https://bilsemc2.com/blog/${selectedPost.slug}`
+        }
+      }
+    : null;
+
   const handleNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
-      const { error } = await supabase
-        .from('newsletter_subscribers')
-        .insert([{ email: email.trim() }]);
+      const result = await subscribeNewsletterEmail(email);
 
-      if (error) {
-        if (error.code === '23505') {
-          toast.info('Zaten kayıtlısınız!');
-          setSubscribed(true);
-        } else {
-          throw error;
-        }
-      } else {
+      if (result === 'duplicate') {
+        toast.info('Zaten kayıtlısınız!');
+        setSubscribed(true);
+      } else if (result === 'success') {
         toast.success('Bültene başarıyla katıldınız!');
         setSubscribed(true);
       }
-    } catch (error: unknown) {
-      console.error('Newsletter error:', error);
+    } catch {
       toast.error('Bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setIsSubmitting(false);
@@ -245,6 +193,13 @@ const BlogPage: React.FC = () => {
   if (selectedPost) {
     return (
       <div className="min-h-screen pt-24 pb-12 px-4 md:px-6 transition-colors">
+        {structuredData && (
+          <Helmet>
+            <script type="application/ld+json">
+              {JSON.stringify(structuredData)}
+            </script>
+          </Helmet>
+        )}
         {/* Dot Pattern */}
         <div className="fixed inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 

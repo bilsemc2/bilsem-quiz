@@ -13,6 +13,7 @@ import {
   TIME_LIMIT,
 } from "./constants";
 import {
+  buildReflectionSumFeedbackMessage,
   calculateReflectionSumScore,
   createRound,
   getDigitsSum,
@@ -173,7 +174,16 @@ export const useReflectionSumController = () => {
       const canRetry = lives > 1;
       recordAttempt({ isCorrect: false, responseMs: getResponseMs() });
       playSound("wrong");
-      showFeedback(false);
+      showFeedback(
+        false,
+        buildReflectionSumFeedbackMessage({
+          isCorrect: false,
+          level,
+          maxLevel: MAX_LEVEL,
+          correctSum: null,
+          phase: "sequence",
+        }),
+      );
       clearActionTimeout();
 
       actionTimeoutRef.current = window.setTimeout(() => {
@@ -224,7 +234,16 @@ export const useReflectionSumController = () => {
     const canRetry = lives > 1;
 
     recordAttempt({ isCorrect: correct, responseMs: getResponseMs() });
-    showFeedback(correct);
+    showFeedback(
+      correct,
+      buildReflectionSumFeedbackMessage({
+        isCorrect: correct,
+        level,
+        maxLevel: MAX_LEVEL,
+        correctSum: getDigitsSum(digits),
+        phase: "sum",
+      }),
+    );
     playSound(correct ? "correct" : "wrong");
     clearActionTimeout();
 

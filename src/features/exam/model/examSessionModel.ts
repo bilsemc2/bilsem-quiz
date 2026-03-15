@@ -9,6 +9,17 @@ import {
 
 export const EXAM_SESSION_STORAGE_KEY = 'exam_session';
 
+const MAX_SESSION_AGE_MS = 3 * 60 * 60 * 1000; // 3 saat
+
+export const isExamSessionExpired = (session: ExamSession): boolean => {
+    if (session.status !== 'active') {
+        return false;
+    }
+
+    const age = Date.now() - new Date(session.startedAt).getTime();
+    return age > MAX_SESSION_AGE_MS;
+};
+
 const DIFFICULTY_MULTIPLIERS: Record<number, number> = {
     1: 0.7,
     2: 0.85,

@@ -1,17 +1,28 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Timer, Navigation } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Brain, Navigation, Play, RotateCcw, Star, Target, Timer } from 'lucide-react';
 import { GameState, PerformanceStats } from './types';
 import { GAME_DURATION } from './constants';
 import Menu from './components/Menu';
 import GameCanvas from './components/GameCanvas';
-import GameOver from './components/GameOver';
 import { useGamePersistence } from '../../../../hooks/useGamePersistence';
-import ArcadeGameShell from '../../Shared/ArcadeGameShell';
+import { useGameViewportFocus } from '../../../../hooks/useGameViewportFocus';
+import { useArcadeSoundEffects } from '../../Shared/useArcadeSoundEffects';
+import { KidCard, KidGameShell, KidGameStatusOverlay } from '../../../kid-ui';
+
+const getRank = (score: number) => {
+    if (score > 600) return 'Zihin Ustası';
+    if (score > 400) return 'Odaklanma Uzmanı';
+    if (score > 200) return 'Hızlı Düşünür';
+    return 'Çaylak';
+};
 
 const TersNavigator: React.FC = () => {
     const { saveGamePlay } = useGamePersistence();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { playAreaRef, focusPlayArea } = useGameViewportFocus();
+    const { playArcadeSound } = useArcadeSoundEffects();
 
     const [gameState, setGameState] = useState<GameState>(GameState.MENU);
     const [stats, setStats] = useState<PerformanceStats>({ score: 0, accuracy: 0, averageTime: 0, rounds: 0 });
@@ -29,8 +40,7 @@ const TersNavigator: React.FC = () => {
         if (saved) setHighScore(parseInt(saved, 10));
     }, []);
 
-    const startGame = () => {
-        window.scrollTo(0, 0);
+    const startGame = useCallback(() => {
         hasSavedRef.current = false;
         setGameState(GameState.PLAYING);
         setTimeLeft(GAME_DURATION);
@@ -39,14 +49,16 @@ const TersNavigator: React.FC = () => {
         totalRoundsRef.current = 0;
         totalTimeRef.current = 0;
         gameStartTimeRef.current = Date.now();
-    };
+        playArcadeSound('start');
+        focusPlayArea();
+    }, [focusPlayArea, playArcadeSound]);
 
     // Auto-start from Hub
     useEffect(() => {
         if (location.state?.autoStart && gameState === GameState.MENU) {
             startGame();
         }
-    }, [location.state, gameState]);
+    }, [location.state, gameState, startGame]);
 
     const endGame = useCallback(() => {
         const finalStats: PerformanceStats = {
@@ -95,74 +107,159 @@ const TersNavigator: React.FC = () => {
         totalRoundsRef.current += 1;
         totalTimeRef.current += reactionTime;
 
+        let earnedScore = 0;
         if (isCorrect) {
             totalCorrectRef.current += 1;
             const baseScore = 10;
             const speedBonus = Math.max(0, Math.round((2 - reactionTime) * 5));
-            setStats(prev => ({ ...prev, score: prev.score + baseScore + speedBonus }));
+            earnedScore = baseScore + speedBonus;
+            playArcadeSound('success');
+        } else {
+            playArcadeSound('fail');
         }
-    }, []);
 
-    // Map local GameState enum → ArcadeGameShell status string
-    const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' =
-        gameState === GameState.MENU ? 'START'
-            : gameState === GameState.PLAYING ? 'PLAYING'
-                : 'GAME_OVER';
+        setStats(prev => ({
+            score: prev.score + earnedScore,
+            accuracy: totalRoundsRef.current > 0 ? totalCorrectRef.current / totalRoundsRef.current : 0,
+            averageTime: totalRoundsRef.current > 0 ? totalTimeRef.current / totalRoundsRef.current : 0,
+            rounds: totalRoundsRef.current
+        }));
+    }, [playArcadeSound]);
 
-    // Süre sayacı — ArcadeGameShell HUD'una eklenir
-    const timerHud = (
-        <div className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl shadow-neo-sm flex items-center gap-1.5 sm:gap-2 border-2 border-black/10 rotate-1 transition-colors duration-300 ${timeLeft <= 10 ? 'bg-red-300 animate-pulse' : 'bg-blue-300 dark:bg-slate-700'}`}>
-            <Timer className={`w-4 h-4 sm:w-5 sm:h-5 stroke-[3px] ${timeLeft <= 10 ? 'text-red-700' : 'text-black dark:text-white'}`} />
-            <span className={`text-base sm:text-lg font-black leading-none bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg border-2 border-black/10 dark:border-slate-700 tabular-nums transition-colors duration-300 ${timeLeft <= 10 ? 'text-red-700' : 'text-black dark:text-white'}`}>{timeLeft}s</span>
-        </div>
-    );
+    const accuracyLabel = stats.rounds > 0 ? `%${Math.round(stats.accuracy * 100)}` : 'Hazır';
+    const averageTimeLabel = stats.rounds > 0 ? `${stats.averageTime.toFixed(2)} sn` : 'Isınma';
+    const rank = getRank(Math.max(stats.score, highScore));
+
+    const overlay = gameState === GameState.MENU ? (
+        <KidGameStatusOverlay
+            tone="blue"
+            icon={Navigation}
+            title="Ters Navigator"
+            description="Kelimeyi oku, ama aynı yönü seçme. Yazının anlattığı yönün tam tersine basarak hedefe ilerle."
+            actions={[
+                { label: 'Oyuna Başla', variant: 'primary', size: 'lg', icon: Play, onClick: startGame },
+                { label: "Arcade'e Dön", variant: 'ghost', size: 'lg', onClick: () => navigate('/bilsem-zeka') },
+            ]}
+        >
+            <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[1.5rem] border-2 border-black/10 bg-white/85 px-4 py-4 text-left shadow-neo-sm dark:border-white/10 dark:bg-slate-900/75">
+                    <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                        Kritik Kural
+                    </div>
+                    <div className="mt-2 text-xl font-black text-black dark:text-white">
+                        YUKARI görürsen AŞAĞI seç.
+                    </div>
+                </div>
+                <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-yellow/35 px-4 py-4 text-left shadow-neo-sm">
+                    <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-600">
+                        Hedef
+                    </div>
+                    <div className="mt-2 text-sm font-bold leading-relaxed text-slate-700">
+                        60 saniye boyunca hızlı cevap ver, puanını büyüt ve rekorunu geç.
+                    </div>
+                </div>
+            </div>
+        </KidGameStatusOverlay>
+    ) : gameState === GameState.GAME_OVER ? (
+        <KidGameStatusOverlay
+            tone="purple"
+            icon={Brain}
+            title="Süre Doldu"
+            description="Ters yön refleksini güzel kullandın. Bir tur daha açıp hızını ve doğruluğunu yükseltebilirsin."
+            stats={[
+                { label: 'Puan', value: stats.score, tone: 'yellow' },
+                { label: 'Doğruluk', value: `%${Math.round(stats.accuracy * 100)}`, tone: 'emerald' },
+                { label: 'Tur', value: stats.rounds, tone: 'blue' },
+            ]}
+            actions={[
+                { label: 'Tekrar Oyna', variant: 'primary', size: 'lg', icon: RotateCcw, onClick: startGame },
+                { label: "Arcade'e Dön", variant: 'ghost', size: 'lg', onClick: () => navigate('/bilsem-zeka') },
+            ]}
+            backdropClassName="bg-slate-950/60"
+        >
+            <KidCard accentColor="orange" animate={false}>
+                <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                    Bugünkü Ünvanın
+                </div>
+                <div className="mt-2 text-3xl font-black tracking-tight text-black dark:text-white">
+                    {getRank(stats.score)}
+                </div>
+                <div className="mt-2 text-sm font-bold text-slate-600 dark:text-slate-300">
+                    En iyi skorun: {Math.max(highScore, stats.score)} puan
+                </div>
+            </KidCard>
+        </KidGameStatusOverlay>
+    ) : null;
 
     return (
-        <ArcadeGameShell
-            gameState={{ score: stats.score, level: 1, lives: 1, status: shellStatus }}
-            gameMetadata={{
-                id: 'ters-navigator',
-                title: 'TERS NAVİGATÖR',
-                description: (
-                    <>
-                        <p>🧭 Ekrandaki <strong>kelimeyi</strong> oku — ama yönü değil harfin gösterdiği <strong>oku</strong> izle!</p>
-                        <p className="mt-2">⚡ Hızlı karar ver, süreni iyi kullan. {GAME_DURATION} saniyede kaç puan toplarsan o kadar iyisin!</p>
-                    </>
-                ),
-                tuzoCode: '5.8.1 Bilişsel Esneklik',
-                icon: <Navigation className="w-14 h-14 text-black" strokeWidth={3} />,
-                iconBgColor: 'bg-blue-400',
-                containerBgColor: 'bg-sky-200 dark:bg-slate-900'
-            }}
-            onStart={startGame}
-            onRestart={startGame}
-            showLevel={false}
-            showLives={false}
-            hudExtras={timerHud}
-        >
-            {/* Menu Screen */}
-            {gameState === GameState.MENU && (
-                <Menu onStart={startGame} highScore={highScore} />
+        <KidGameShell
+            title="Ters Navigator"
+            subtitle="Kelimeyi oku, tam ters yöndeki oku seç ve hedefe hızlıca ilerle."
+            instruction="Ortadaki yazı hangi yönü söylüyorsa tam ters oka dokun. Hız bonusu da puan getirir."
+            backHref="/bilsem-zeka"
+            backLabel="Arcade'e Dön"
+            badges={[
+                { label: 'Ketleyici Kontrol', variant: 'difficulty' },
+                { label: 'TUZÖ 6.1.1', variant: 'tuzo' },
+            ]}
+            stats={[
+                {
+                    label: 'Süre',
+                    value: `${timeLeft}s`,
+                    tone: timeLeft <= 10 ? 'pink' : 'blue',
+                    icon: Timer,
+                    emphasis: timeLeft <= 10 ? 'danger' : 'default',
+                    helper: timeLeft <= 10 ? 'Son saniyeler' : 'Hızını koru',
+                },
+                { label: 'Puan', value: stats.score, tone: 'yellow', icon: Star, helper: 'Doğru yanıtta bonus var' },
+                { label: 'Tur', value: stats.rounds, tone: 'emerald', icon: Target, helper: `${accuracyLabel} doğruluk` },
+                { label: 'Rekor', value: highScore, tone: 'orange', icon: Brain, helper: rank },
+            ]}
+            supportTitle="Ters Ok Rehberi"
+            supportDescription="Kuralları kısa tut, elini hızlı kullan ve son saniyelerde paniğe kapılma."
+            playAreaRef={playAreaRef}
+            playAreaClassName="min-h-[720px]"
+            supportArea={(
+                <div className="grid gap-3 lg:grid-cols-3">
+                    <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-pink/15 px-4 py-4 shadow-neo-sm">
+                        <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                            Kritik Kural
+                        </div>
+                        <p className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                            Yazı hangi yönü söylüyorsa tam ters oka bas. Okuma refleksini ters çevirmen gerekiyor.
+                        </p>
+                    </div>
+                    <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-yellow/30 px-4 py-4 shadow-neo-sm">
+                        <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                            Puan İpucu
+                        </div>
+                        <p className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                            Her doğru cevap 10 puan kazandırır. 2 saniyeden hızlıysan ekstra hız puanı da alırsın.
+                        </p>
+                    </div>
+                    <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-blue/15 px-4 py-4 shadow-neo-sm">
+                        <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                            Tempo
+                        </div>
+                        <p className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                            Ortalama tepki süren şu an <span className="font-black text-black dark:text-white">{averageTimeLabel}</span>. Kısa ve net karar ver.
+                        </p>
+                    </div>
+                </div>
             )}
-
-            {/* Play Area */}
+            overlay={overlay}
+        >
             {gameState === GameState.PLAYING && (
-                <div className="w-full max-w-5xl pt-32 sm:pt-28">
+                <div className="flex min-h-[640px] items-center justify-center">
                     <GameCanvas onRoundComplete={handleRoundComplete} />
                 </div>
             )}
-
-            {/* Game Over Screen — istatistik gösterir */}
-            {gameState === GameState.GAME_OVER && (
-                <div className="pt-20">
-                    <GameOver
-                        stats={stats}
-                        onRestart={startGame}
-                        onMenu={() => setGameState(GameState.MENU)}
-                    />
+            {gameState !== GameState.PLAYING && (
+                <div className="flex min-h-[640px] items-center justify-center">
+                    <Menu highScore={highScore} showStartButton={false} />
                 </div>
             )}
-        </ArcadeGameShell>
+        </KidGameShell>
     );
 };
 

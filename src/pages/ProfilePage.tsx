@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/useAuth';
 import EditProfileModal from '../components/EditProfileModal';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import {
-    Gift, Zap, Sparkles, Ticket, Mail, BarChart3, Brain, ChevronRight, ShieldCheck, CheckCircle2, Lock as LockIcon, Languages
+    Gift, Zap, Sparkles, Ticket, Mail, BarChart3, ShieldCheck, CheckCircle2,
+    LayoutDashboard, Star
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { UserProfile, QuizStats } from '@/types/profile';
@@ -18,7 +18,6 @@ import UserGameStats from '@/components/profile/UserGameStats';
 import { loadProfilePageData, redeemPromoCode, refreshReferralCode } from '@/features/profile/model/profileUseCases';
 
 // Extracted Sub-Components
-import QuickAccessSection from '@/components/profile/QuickAccessSection';
 import TalentWorkshopsSection from '@/components/profile/TalentWorkshopsSection';
 import ExamResultSection from '@/components/profile/ExamResultSection';
 import AchievementsSection from '@/components/profile/AchievementsSection';
@@ -36,6 +35,7 @@ export const ProfilePage: React.FC = () => {
     const [showReferral, setShowReferral] = useState(false);
     const [promoCode, setPromoCode] = useState('');
     const [isRedeeming, setIsRedeeming] = useState(false);
+    const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'rewards'>('overview');
 
     const [lastExamSession, setLastExamSession] = useState<{
         bzp_score: number | null;
@@ -319,119 +319,37 @@ export const ProfilePage: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* BeyniniKullan.com Banner */}
-                <motion.a
-                    href="https://beyninikullan.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="block mb-6 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl overflow-hidden group cursor-pointer shadow-neo-md hover:-translate-y-0.5 transition-all"
-                >
-                    <div className="h-2 bg-cyber-emerald" />
-                    <div className="p-5 flex items-center gap-4">
-                        <img
-                            src="/images/beyninikullan.webp"
-                            alt="BeyniniKullan.com"
-                            className="w-12 h-12 rounded-xl object-contain bg-white border-2 border-black/10 p-1 flex-shrink-0 group-hover:rotate-3 transition-transform"
-                        />
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className="text-[9px] font-nunito font-extrabold uppercase tracking-widest bg-black text-white px-1.5 py-0.5 rounded-md">🧠 Yapay Zeka</span>
-                            </div>
-                            <h3 className="font-nunito text-sm font-extrabold text-black dark:text-white">Çocuğunuza Özel Zeka Kitabı Oluşturun</h3>
-                            <p className="font-nunito text-slate-500 dark:text-slate-400 font-bold text-xs truncate">AI ile benzersiz mantık bulmacaları üretin, baskıya hazır PDF kitap oluşturun</p>
-                        </div>
-                        <div className="flex-shrink-0 hidden sm:flex items-center gap-1.5 bg-black text-white font-nunito font-extrabold px-4 py-2 rounded-xl border-2 border-black/10 text-xs shadow-neo-sm group-hover:shadow-neo-md transition-all">
-                            Keşfet
-                            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                        </div>
-                    </div>
-                </motion.a>
+                {/* Tab Navigation */}
+                <div className="flex gap-2 mb-6 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl p-1.5 shadow-neo-sm">
+                    {([
+                        { id: 'overview' as const, label: 'Genel Bakis', icon: LayoutDashboard },
+                        { id: 'stats' as const, label: 'Istatistikler', icon: BarChart3 },
+                        { id: 'rewards' as const, label: 'XP & Oduller', icon: Star },
+                    ]).map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-nunito font-extrabold text-sm uppercase tracking-wider transition-all ${activeTab === tab.id
+                                ? 'bg-black text-white shadow-neo-sm dark:bg-white dark:text-black'
+                                : 'text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                            <tab.icon size={16} strokeWidth={3} />
+                            <span className="hidden sm:inline">{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
 
-                {/* ── Hero Grid: En çok kullanılan 2 bölüm yan yana ── */}
+                {/* ── TAB: Genel Bakis ── */}
+                {activeTab === 'overview' && <>
+
+                {/* Atölye Kartları — yetenek alanına göre dinamik */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.08 }}
-                    className="mb-6 space-y-4"
+                    className="mb-6"
                 >
-                    {/* Üst satır: 2 featured kart */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Bireysel Değerlendirme */}
-                        {(() => {
-                            // Kullanıcının aktif aboneliği veya genel_yetenek yetkisi var mı kontrol et
-                            const talentsInput = userData.yetenek_alani;
-                            let talents: string[] = [];
-                            if (Array.isArray(talentsInput)) talents = talentsInput;
-                            else if (typeof talentsInput === 'string') talents = talentsInput.split(/[,,;]/).map(t => t.trim()).filter(Boolean);
-                            const hasAccess = talents.some(t => t.toLowerCase().includes('genel yetenek') || t.toLowerCase().includes('genel_yetenek'));
-
-                            if (hasAccess) {
-                                return (
-                                    <Link
-                                        to="/atolyeler/bireysel-degerlendirme"
-                                        className="group flex items-center gap-4 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl p-5 transition-all shadow-neo-md hover:-translate-y-0.5 hover:shadow-neo-lg active:translate-y-0.5 active:shadow-neo-sm focus:outline-none"
-                                    >
-                                        <div className="w-14 h-14 bg-cyber-blue border-2 border-black/10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-neo-sm flex-shrink-0">
-                                            <Brain className="w-7 h-7 text-white" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-nunito font-extrabold text-black dark:text-white text-lg tracking-tight">Bireysel Değerlendirme</h3>
-                                            <p className="font-nunito font-bold text-slate-400 text-xs">2. Aşama simülasyonları</p>
-                                        </div>
-                                        <span className="bg-cyber-emerald text-white text-[9px] font-nunito font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border-2 border-black/10 shadow-sm flex-shrink-0">Yetkili</span>
-                                        <div className="bg-gray-50 dark:bg-slate-700 border-2 border-black/10 dark:border-white/10 rounded-xl p-2.5 group-hover:translate-x-1 transition-all flex-shrink-0">
-                                            <ChevronRight className="w-5 h-5 text-black dark:text-white" />
-                                        </div>
-                                    </Link>
-                                );
-                            }
-
-                            return (
-                                <Link
-                                    to="/atolyeler/bireysel-degerlendirme"
-                                    className="group flex items-center gap-4 bg-gray-100 dark:bg-slate-800/50 border-2 border-black/5 dark:border-white/5 rounded-2xl p-5 opacity-60 transition-all shadow-none hover:opacity-80 hover:shadow-neo-sm focus:outline-none"
-                                >
-                                    <div className="w-14 h-14 bg-slate-300 dark:bg-slate-600 border-2 border-black/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                                        <Brain className="w-7 h-7 text-white" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-nunito font-extrabold text-slate-400 dark:text-slate-500 text-lg tracking-tight">Bireysel Değerlendirme</h3>
-                                        <p className="font-nunito font-bold text-slate-300 dark:text-slate-600 text-xs">Detayları incele</p>
-                                    </div>
-                                    <span className="bg-slate-300 dark:bg-slate-600 text-white text-[9px] font-nunito font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border-2 border-black/5 flex-shrink-0 flex items-center gap-1">
-                                        <LockIcon size={10} strokeWidth={3} /> Kilitli
-                                    </span>
-                                </Link>
-                            );
-                        })()}
-
-                        {/* BİLSEM Zeka Oyunları */}
-                        <QuickAccessSection />
-
-                        {/* Deyimler Atölyesi */}
-                        <Link
-                            to="/deyimler"
-                            className="group flex items-center gap-4 bg-white dark:bg-slate-800 border-2 border-black/10 rounded-2xl p-5 transition-all shadow-neo-md hover:-translate-y-0.5 hover:shadow-neo-lg active:translate-y-0.5 active:shadow-neo-sm focus:outline-none"
-                        >
-                            <div className="w-14 h-14 bg-cyber-pink border-2 border-black/20 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-neo-sm flex-shrink-0">
-                                <Languages className="w-7 h-7 text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-nunito font-extrabold text-black dark:text-white text-lg tracking-tight">Deyimler Atölyesi</h3>
-                                <p className="font-nunito font-bold text-slate-400 text-xs">Karikatürlerle deyim öğren!</p>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-slate-700 border-2 border-black/10 dark:border-white/10 rounded-xl p-2.5 group-hover:translate-x-1 transition-all flex-shrink-0">
-                                <ChevronRight className="w-5 h-5 text-black dark:text-white" />
-                            </div>
-                        </Link>
-                    </div>
-
-                    {/* Alt satır: Müzik + Resim (varsa) */}
                     <TalentWorkshopsSection userData={userData} />
                 </motion.div>
 
@@ -451,11 +369,27 @@ export const ProfilePage: React.FC = () => {
                     <UserMessages userId={user?.id} />
                 </motion.div>
 
-                {/* XP Kazanma Bölümü */}
+                </>}
+
+                {/* ── TAB: İstatistikler ── */}
+                {activeTab === 'stats' && <>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                    className="mb-6"
+                >
+                    <SectionHeader icon={BarChart3} iconBg="bg-cyber-gold" title="Oyun İstatistiklerim" subtitle="Zeka türü analizleri ve performans" />
+                    <UserGameStats />
+                </motion.div>
+
+                <ExamResultSection lastExamSession={lastExamSession} />
+                </>}
+
+                {/* ── TAB: XP & Ödüller ── */}
+                {activeTab === 'rewards' && <>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     className="mb-6"
                 >
                     <SectionHeader icon={Sparkles} iconBg="bg-cyber-pink" title="XP Kazan" subtitle="Aktivitelere katıl, XP topla!" />
@@ -535,19 +469,10 @@ export const ProfilePage: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* Oyun İstatistiklerim */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 }}
-                    className="mb-6"
-                >
-                    <SectionHeader icon={BarChart3} iconBg="bg-cyber-gold" title="Oyun İstatistiklerim" subtitle="Zeka türü analizleri ve performans" />
-                    <UserGameStats />
-                </motion.div>
-
                 {/* Başarımlar */}
                 <AchievementsSection currentLevel={quizStats.currentLevel} />
+                </>}
+
             </div>
         </div>
     );

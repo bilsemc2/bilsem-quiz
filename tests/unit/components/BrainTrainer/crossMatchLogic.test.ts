@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   areAllCardsMatched,
   areCardsMatch,
+  buildCrossMatchFeedbackMessage,
   createCards,
   flipCard,
   getPairCountForLevel,
@@ -87,5 +88,35 @@ test("match helpers flip, hide and resolve pairs correctly", () => {
   assert.equal(
     areAllCardsMatched(markCardsMatched(cards, cards.map((card) => card.id))),
     true,
+  );
+});
+
+test("cross match feedback helper explains pair progress and mistakes", () => {
+  assert.equal(
+    buildCrossMatchFeedbackMessage({
+      correct: true,
+      allMatched: false,
+      level: 5,
+      maxLevel: 20,
+    }),
+    "Doğru eşleşme! Bir çift daha buldun.",
+  );
+  assert.equal(
+    buildCrossMatchFeedbackMessage({
+      correct: true,
+      allMatched: true,
+      level: 20,
+      maxLevel: 20,
+    }),
+    "Harika! Son çifti de buldun, oyun tamamlanıyor.",
+  );
+  assert.equal(
+    buildCrossMatchFeedbackMessage({
+      correct: false,
+      allMatched: false,
+      level: 9,
+      maxLevel: 20,
+    }),
+    "Yanlış eşleşme! Renk ve şekil aynı olmalıydı.",
   );
 });

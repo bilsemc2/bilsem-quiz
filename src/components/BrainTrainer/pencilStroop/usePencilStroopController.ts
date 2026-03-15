@@ -12,6 +12,7 @@ import {
   TIME_LIMIT,
 } from "./constants";
 import {
+  buildPencilStroopFeedbackMessage,
   calculatePencilStroopScore,
   createRound,
   isAnswerCorrect,
@@ -119,11 +120,15 @@ export const usePencilStroopController = () => {
 
       const correct = isAnswerCorrect(answer, currentRound);
       const canRetry = lives > 1;
+      const feedbackMessage = buildPencilStroopFeedbackMessage(
+        correct,
+        currentRound.correctAnswer,
+        level,
+      );
 
       setSelectedAnswer(answer);
       recordAttempt({ isCorrect: correct, responseMs: getResponseMs() });
-      showFeedback(correct);
-      playSound(correct ? "correct" : "incorrect");
+      showFeedback(correct, feedbackMessage);
       clearActionTimeout();
 
       actionTimeoutRef.current = window.setTimeout(() => {
@@ -154,7 +159,6 @@ export const usePencilStroopController = () => {
       loseLife,
       nextLevel,
       phase,
-      playSound,
       recordAttempt,
       selectedAnswer,
       showFeedback,

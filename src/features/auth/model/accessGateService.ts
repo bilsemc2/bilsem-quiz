@@ -1,4 +1,5 @@
 import { evaluateAccess, type AccessDeniedReason } from './accessControlUseCase.ts';
+import { isE2EMockAuthEnabled, readE2EMockAuthSession } from './e2eMockAuth.ts';
 
 export interface AccessCheckInput {
     userId: string;
@@ -57,6 +58,32 @@ export const checkUserAccess = async (
     input: AccessCheckInput,
     deps: AccessCheckDeps
 ): Promise<AccessCheckResult> => {
+    if (isE2EMockAuthEnabled) {
+        const mockSession = readE2EMockAuthSession();
+
+        if (mockSession?.user.id === input.userId) {
+            const decision = evaluateAccess({
+                requireAdmin: input.requireAdmin,
+                requireTeacher: input.requireTeacher,
+                requiredTalent: input.requiredTalent,
+                skipXPCheck: input.skipXPCheck,
+                isAdmin: mockSession.profile.is_admin,
+                role: mockSession.profile.role,
+                userTalent: mockSession.profile.yetenek_alani,
+                userXP: mockSession.profile.experience,
+                requiredXP: 0
+            });
+
+            return {
+                hasAccess: decision.hasAccess,
+                reason: decision.reason,
+                userXP: mockSession.profile.experience,
+                requiredXP: 0,
+                userTalent: mockSession.profile.yetenek_alani ?? null
+            };
+        }
+    }
+
     const profile = await deps.auth.getAccessProfileByUserId(input.userId);
     if (!profile) {
         return {
@@ -94,6 +121,10 @@ export const deductPageVisitXP = async (
     input: { pagePath: string; requiredXP: number },
     deps: XPDeductionDeps
 ) => {
+    if (isE2EMockAuthEnabled) {
+        return { success: true as const, newXP: 0, change: 0 };
+    }
+
     if (input.requiredXP <= 0) {
         return { success: true as const, newXP: 0, change: 0 };
     }

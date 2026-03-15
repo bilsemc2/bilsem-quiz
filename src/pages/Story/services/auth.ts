@@ -1,26 +1,17 @@
-import { supabase } from '../../../lib/supabase';
+import {
+  signInUser,
+  signOutUser,
+  signUpEmailPassword,
+} from '@/features/auth/model/authUseCases';
 
 export async function signUp(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-  
-  if (error) throw error;
-  return data;
+  await signUpEmailPassword({ email, password });
 }
 
 export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  
-  if (error) throw error;
-  return data;
+  await signInUser({ email, password });
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  await signOutUser();
 }

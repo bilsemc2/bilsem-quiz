@@ -12,6 +12,7 @@ import { useExam } from '../../contexts/exam/useExam';
 import { useAuth } from '@/contexts/auth/useAuth';
 import { EXAM_MODES, ExamMode } from '../../types/examTypes';
 import { getActiveModules, getModuleCountByCategory } from '../../config/examModules';
+import { isExamSessionExpired } from '@/features/exam/model/examSessionModel';
 import AccessDeniedScreen from '../../components/AccessDeniedScreen';
 
 const CATEGORY_CONFIG: Record<string, { icon: React.ElementType; bgColor: string; textColor: string }> = {
@@ -34,18 +35,28 @@ const MODE_ICONS: Record<string, LucideIcon> = { Zap, Scale, Target, Trophy };
 const ExamSimulatorPage: React.FC = () => {
     const navigate = useNavigate();
     const { profile } = useAuth();
-    const { session, isExamActive, startExam } = useExam();
+    const { session, isExamActive, startExam, abandonExam } = useExam();
     const [selectedMode, setSelectedMode] = useState<ExamMode>('standard');
     const [showConfirm, setShowConfirm] = useState(false);
+    const [showResumePrompt, setShowResumePrompt] = useState(false);
 
     const activeModules = getActiveModules();
     const categoryCounts = getModuleCountByCategory();
     const modeConfig = EXAM_MODES.find(m => m.id === selectedMode)!;
 
     useEffect(() => {
-        if (isExamActive && session) navigate('/atolyeler/sinav-simulasyonu/devam');
-    }, [isExamActive, session, navigate]);
+        if (!isExamActive || !session) return;
 
+        if (isExamSessionExpired(session)) {
+            abandonExam();
+            return;
+        }
+
+        setShowResumePrompt(true);
+    }, [isExamActive, session, abandonExam]);
+
+    const handleResumeExam = () => { setShowResumePrompt(false); navigate('/atolyeler/sinav-simulasyonu/devam'); };
+    const handleNewExam = () => { abandonExam(); setShowResumePrompt(false); };
     const handleStartExam = () => { startExam(selectedMode); navigate('/atolyeler/sinav-simulasyonu/devam'); };
 
     const hasExamAccess = (y: string[] | string | null | undefined): boolean => {
@@ -57,6 +68,32 @@ const ExamSimulatorPage: React.FC = () => {
     if (!profile) return <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center"><div className="w-12 h-12 border-4 border-cyber-emerald border-t-transparent rounded-full animate-spin" /></div>;
 
     if (!hasExamAccess(profile?.yetenek_alani)) return <AccessDeniedScreen requiredTalent="Genel Yetenek" backLink="/atolyeler/bireysel-degerlendirme" backLabel="Bireysel Değerlendirme" additionalMessage="Yakında diğer yetenek alanları için de simülasyonlar eklenecek! 🚀" requiredIncludes={['genel_yetenek']} />;
+
+    if (showResumePrompt && session) {
+        const completedCount = session.currentIndex;
+        const totalCount = session.modules.length;
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4 transition-colors duration-300">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-800 border-2 border-black/10 rounded-3xl shadow-neo-lg p-8 max-w-md w-full text-center">
+                    <div className="w-16 h-16 mx-auto mb-5 bg-cyber-yellow border-2 border-black/10 rounded-2xl flex items-center justify-center shadow-neo-sm">
+                        <AlertCircle size={32} className="text-black" strokeWidth={2.5} />
+                    </div>
+                    <h2 className="text-2xl font-nunito font-black text-black dark:text-white uppercase tracking-tight mb-2">Yarım Kalan Sınav</h2>
+                    <p className="text-slate-500 dark:text-slate-400 font-nunito font-bold text-sm mb-6">
+                        {completedCount}/{totalCount} modül tamamlanmış bir sınav oturumun var. Devam etmek ister misin?
+                    </p>
+                    <div className="flex flex-col gap-3">
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleResumeExam} className="w-full py-4 bg-cyber-emerald text-white font-nunito font-black text-lg uppercase tracking-widest border-2 border-black/10 shadow-neo-sm rounded-2xl hover:-translate-y-1 hover:shadow-neo-md transition-all flex items-center justify-center gap-2">
+                            <Play size={20} strokeWidth={3} /> Devam Et
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleNewExam} className="w-full py-3 bg-white dark:bg-slate-700 text-black dark:text-white font-nunito font-bold text-sm uppercase tracking-widest border-2 border-black/10 rounded-2xl hover:-translate-y-1 transition-all">
+                            Yeni Sınav Başlat
+                        </motion.button>
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-800 pt-20 pb-12 px-4 sm:px-6 relative overflow-hidden transition-colors duration-300">

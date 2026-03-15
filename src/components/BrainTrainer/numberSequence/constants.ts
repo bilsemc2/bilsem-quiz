@@ -6,7 +6,7 @@ export const GAME_TITLE = "Sayı Dizileri";
 export const GAME_DESCRIPTION =
   "Sayılar arasındaki gizli kuralı keşfet, mantık zincirini tamamla!";
 export const TUZO_TEXT = "TUZÖ 5.3.1 Sayısal Mantık & Örüntü Tanıma";
-export const FEEDBACK_DURATION_MS = 1500;
+export const FEEDBACK_DURATION_MS = 1200;
 export const OPTION_COLORS = [
   "bg-cyber-yellow",
   "bg-cyber-blue",

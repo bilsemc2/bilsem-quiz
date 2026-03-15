@@ -24,6 +24,29 @@ export interface AccessProfileRecord {
     yetenek_alani: string | string[] | null;
 }
 
+export interface SignInWithPasswordInput {
+    email: string;
+    password: string;
+}
+
+export interface SignUpWithPasswordInput {
+    email: string;
+    password: string;
+    metadata?: Record<string, unknown>;
+}
+
+export interface CompleteRegistrationProfileInput {
+    userId: string;
+    email: string;
+    name: string;
+    school: string;
+    grade: number;
+    referredBy: string | null;
+    avatarUrl: string;
+    points: number;
+    experience: number;
+}
+
 export interface AuthRepository {
     getProfilesCount: () => Promise<number | null>;
     getSessionUser: () => Promise<User | null>;
@@ -36,6 +59,13 @@ export interface AuthRepository {
     updateLastSeen: (userId: string, lastSeenISO: string) => Promise<void>;
     signOut: () => Promise<void>;
     getAccessToken: () => Promise<string | null>;
+    signInWithPassword: (input: SignInWithPasswordInput) => Promise<User>;
+    signUpWithPassword: (input: SignUpWithPasswordInput) => Promise<User | null>;
+    requestPasswordReset: (email: string, redirectTo: string) => Promise<void>;
+    updatePassword: (password: string) => Promise<void>;
+    getReferrerIdByCode: (referralCode: string) => Promise<string | null>;
+    completeRegistrationProfile: (input: CompleteRegistrationProfileInput) => Promise<void>;
+    incrementXP: (userId: string, amount: number) => Promise<void>;
 }
 
 const getProfilesCount = async (): Promise<number | null> => {
@@ -135,7 +165,7 @@ const updateLastSeen = async (userId: string, lastSeenISO: string): Promise<void
         .eq('id', userId);
 
     if (error) {
-        console.error('last seen update failed:', error);
+        throw error;
     }
 };
 
@@ -151,6 +181,107 @@ const getAccessToken = async (): Promise<string | null> => {
     return data.session?.access_token ?? null;
 };
 
+const signInWithPassword = async (input: SignInWithPasswordInput): Promise<User> => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email: input.email,
+        password: input.password
+    });
+
+    if (error || !data.user) {
+        throw error || new Error('Kullanici oturumu olusturulamadi');
+    }
+
+    return data.user;
+};
+
+const signUpWithPassword = async (input: SignUpWithPasswordInput): Promise<User | null> => {
+    const { data, error } = await supabase.auth.signUp({
+        email: input.email,
+        password: input.password,
+        options: input.metadata
+            ? {
+                data: input.metadata
+            }
+            : undefined
+    });
+
+    if (error) {
+        throw error;
+    }
+
+    return data.user ?? null;
+};
+
+const requestPasswordReset = async (email: string, redirectTo: string): Promise<void> => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo
+    });
+
+    if (error) {
+        throw error;
+    }
+};
+
+const updatePassword = async (password: string): Promise<void> => {
+    const { error } = await supabase.auth.updateUser({
+        password
+    });
+
+    if (error) {
+        throw error;
+    }
+};
+
+const getReferrerIdByCode = async (referralCode: string): Promise<string | null> => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('referral_code', referralCode)
+        .maybeSingle();
+
+    if (error || !data) {
+        if (error) {
+            console.error('referrer fetch failed:', error);
+        }
+        return null;
+    }
+
+    return typeof data.id === 'string' ? data.id : null;
+};
+
+const completeRegistrationProfile = async (
+    input: CompleteRegistrationProfileInput
+): Promise<void> => {
+    const { error } = await supabase
+        .from('profiles')
+        .update({
+            name: input.name,
+            email: input.email,
+            school: input.school,
+            grade: input.grade,
+            referred_by: input.referredBy,
+            avatar_url: input.avatarUrl,
+            points: input.points,
+            experience: input.experience
+        })
+        .eq('id', input.userId);
+
+    if (error) {
+        throw error;
+    }
+};
+
+const incrementXP = async (userId: string, amount: number): Promise<void> => {
+    const { error } = await supabase.rpc('increment_xp', {
+        user_id: userId,
+        amount
+    });
+
+    if (error) {
+        throw error;
+    }
+};
+
 export const authRepository: AuthRepository = {
     getProfilesCount,
     getSessionUser,
@@ -160,5 +291,12 @@ export const authRepository: AuthRepository = {
     getExperienceByUserId,
     updateLastSeen,
     signOut,
-    getAccessToken
+    getAccessToken,
+    signInWithPassword,
+    signUpWithPassword,
+    requestPasswordReset,
+    updatePassword,
+    getReferrerIdByCode,
+    completeRegistrationProfile,
+    incrementXP
 };

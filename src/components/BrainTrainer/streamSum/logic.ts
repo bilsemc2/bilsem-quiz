@@ -35,3 +35,22 @@ export const shouldAdvanceLevel = (nextStreak: number, level: number) => {
 export const shouldTriggerVictory = (level: number, streak: number) => {
   return level >= MAX_LEVEL && streak >= VICTORY_STREAK_TARGET;
 };
+
+export const buildStreamSumFeedbackMessage = ({
+  isCorrect,
+  level,
+  maxLevel,
+  expected,
+}: {
+  isCorrect: boolean;
+  level: number;
+  maxLevel: number;
+  expected: number | null;
+}): string => {
+  if (isCorrect) {
+    if (level >= maxLevel) return "Harika! Son seviyeyi de geçtin!";
+    return `Doğru! Akış devam ediyor.`;
+  }
+  if (expected !== null) return `Yanlış! Doğru toplam: ${expected}`;
+  return "Süre doldu! Daha hızlı topla.";
+};

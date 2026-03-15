@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../lib/supabase';
+import { loadPublicLessonSlots } from '@/features/profile/model/liveLessonUseCases';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Video, Clock, ChevronLeft, ChevronRight, CheckCircle, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
@@ -63,16 +63,11 @@ const LiveLessonBooking: React.FC = () => {
     const [bookingHour, setBookingHour] = useState<number | null>(null);
 
     const fetchSlots = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('lesson_slots')
-            .select('id, day, hour, minute, duration, is_booked')
-            .order('hour', { ascending: true })
-            .order('minute', { ascending: true });
-
-        if (error) {
+        try {
+            const data = await loadPublicLessonSlots();
+            setSlots(data as LessonSlot[]);
+        } catch (error) {
             console.error(error);
-        } else {
-            setSlots(data || []);
         }
     }, []);
 

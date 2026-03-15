@@ -1,16 +1,16 @@
-import { supabase } from "../../../lib/supabase";
 import { ActivityMode } from "./types";
+import { loadSessionAccessToken } from "@/features/auth/model/authUseCases";
 
 const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-proxy`;
 
 async function callGeminiProxy(action: string, data: Record<string, unknown> = {}) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = await loadSessionAccessToken();
 
     const response = await fetch(FUNCTION_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token || ''}`,
+            'Authorization': `Bearer ${accessToken || ''}`,
         },
         body: JSON.stringify({ action, ...data }),
     });

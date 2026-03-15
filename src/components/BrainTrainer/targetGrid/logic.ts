@@ -72,3 +72,25 @@ export const hideAllCards = (cards: Card[]) =>
   cards.map((card) => ({ ...card, isRevealed: false }));
 
 export const calculateTargetGridScore = (level: number) => 20 * level;
+
+export const buildTargetGridFeedbackMessage = ({
+  correct,
+  targetSum,
+  level,
+  maxLevel,
+}: {
+  correct: boolean;
+  targetSum: number;
+  level: number;
+  maxLevel: number;
+}) => {
+  if (correct) {
+    if (level >= maxLevel) {
+      return `Harika toplam! ${targetSum} hedefini de çözdün, oyun tamamlanıyor.`;
+    }
+
+    return `Doğru toplam: ${targetSum}. Şimdi ${level + 1}. seviyeye geçiyorsun.`;
+  }
+
+  return `Yanlış toplam! Hedef ${targetSum} olmalıydı.`;
+};

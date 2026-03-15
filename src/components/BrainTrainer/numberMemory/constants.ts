@@ -6,7 +6,7 @@ export const TUZO_TEXT = "TUZÖ 5.4.1 İşitsel Sayı Dizisi";
 export const INITIAL_LIVES = 5;
 export const TIME_LIMIT = 180;
 export const MAX_LEVEL = 20;
-export const FEEDBACK_DURATION_MS = 1500;
+export const FEEDBACK_DURATION_MS = 1200;
 
 export const PRE_NUMBER_DELAY_MS = 600;
 export const BETWEEN_NUMBER_DELAY_MS = 400;

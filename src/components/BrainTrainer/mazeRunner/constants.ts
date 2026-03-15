@@ -14,5 +14,5 @@ export const CANVAS_HORIZONTAL_PADDING = 32;
 export const CANVAS_VERTICAL_OFFSET = 240;
 export const MIN_PATH_POINT_DISTANCE = 3;
 export const WRONG_PATH_WARNING_MS = 1000;
-export const FEEDBACK_DURATION_MS = 1500;
+export const FEEDBACK_DURATION_MS = 1200;
 export const SHAKE_DURATION_MS = 500;

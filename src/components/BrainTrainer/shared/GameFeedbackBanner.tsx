@@ -37,7 +37,7 @@ const GameFeedbackBanner: React.FC<GameFeedbackBannerProps> = ({
           initial={{ opacity: 0, y: 50, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="absolute bottom-6 left-0 right-0 z-50 flex justify-center px-6 pointer-events-none"
+          className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-6 pointer-events-none"
         >
           <motion.div
             className={`px-6 py-4 rounded-[2rem] flex items-center justify-center gap-4 border-2 border-black/10 shadow-neo-md pointer-events-auto w-full max-w-sm ${feedback.correct

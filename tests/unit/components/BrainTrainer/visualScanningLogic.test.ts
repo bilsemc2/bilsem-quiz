@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   applyCellSelection,
+  buildVisualScanningFeedbackMessage,
   calculateVisualScanningScore,
   createRound,
   getDistractorCountForLevel,
@@ -76,4 +77,43 @@ test("remaining counter and score helper preserve legacy rules", () => {
   assert.equal(calculateVisualScanningScore(0), 25);
   assert.equal(calculateVisualScanningScore(4), 33);
   assert.equal(calculateVisualScanningScore(20), 45);
+});
+
+test("visual scanning feedback helper explains completion and mistakes", () => {
+  assert.equal(
+    buildVisualScanningFeedbackMessage({
+      correct: true,
+      remainingTargets: 0,
+      level: 5,
+      maxLevel: 20,
+    }),
+    "Harika tarama! Tüm hedefleri buldun, şimdi 6. seviyeye geçiyorsun.",
+  );
+  assert.equal(
+    buildVisualScanningFeedbackMessage({
+      correct: true,
+      remainingTargets: 0,
+      level: 20,
+      maxLevel: 20,
+    }),
+    "Harika tarama! Son hedefi de buldun, oyun tamamlanıyor.",
+  );
+  assert.equal(
+    buildVisualScanningFeedbackMessage({
+      correct: true,
+      remainingTargets: 3,
+      level: 8,
+      maxLevel: 20,
+    }),
+    "Doğru seçim! 3 hedef daha kaldı.",
+  );
+  assert.equal(
+    buildVisualScanningFeedbackMessage({
+      correct: false,
+      remainingTargets: 7,
+      level: 8,
+      maxLevel: 20,
+    }),
+    "Yanlış seçim! Yalnızca hedef sembollere dokunmalısın.",
+  );
 });

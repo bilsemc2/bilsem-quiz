@@ -1,15 +1,20 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Block, COLORS, PowerUp, PowerUpType, TIMING, A11Y } from '../types';
+import { useViewportAnchor } from '../../../../../hooks/useViewportAnchor';
 
 interface BreakoutGameProps {
   onGameOver: (history: string[], score: number) => void;
   onBlockHit: (colorName: string) => void;
+  onLaunch?: () => void;
   level: number;
 }
 
-const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, level }) => {
+const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, onLaunch, level }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { anchorRef: boardRef, scrollToAnchor: scrollToBoard } = useViewportAnchor<HTMLDivElement>({
+    defaultBlock: 'center',
+  });
   const [isStarted, setIsStarted] = useState(false);
   const isStartedRef = useRef(false);
   const requestRef = useRef<number | undefined>(undefined);
@@ -390,7 +395,7 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
   }, [update]);
 
   const handleStart = () => {
-    window.scrollTo(0, 0);
+    scrollToBoard();
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -413,22 +418,15 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
 
     setIsStarted(true);
     isStartedRef.current = true;
+    onLaunch?.();
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center font-black">
-      <div className="mb-6 flex gap-4 sm:gap-8 text-black">
-        <div className="bg-amber-300 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm -rotate-1 text-sm sm:text-xl uppercase tracking-widest">
-          SKOR: <span className="text-white drop-shadow-neo-sm ml-2 text-xl sm:text-2xl">{gameStateRef.current.score}</span>
-        </div>
-        <div className="bg-sky-300 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm rotate-1 text-sm sm:text-xl uppercase tracking-widest">
-          SEVİYE: <span className="text-white drop-shadow-neo-sm ml-2 text-xl sm:text-2xl">{level}</span>
-        </div>
-      </div>
-
+    <div className="relative flex h-full w-full flex-col items-center justify-center font-black">
       <div
-        className="relative bg-white p-2 sm:p-4 rounded-3xl border-2 border-black/10 shadow-neo-sm cursor-pointer"
-        onClick={handleStart}
+        ref={boardRef}
+        className={`relative w-full max-w-[860px] rounded-[2.5rem] border-4 border-black/10 bg-white p-2 shadow-neo-lg sm:p-4 ${isStarted ? 'cursor-none' : 'cursor-pointer'}`}
+        onClick={isStarted ? undefined : handleStart}
       >
         <canvas
           ref={canvasRef}
@@ -436,33 +434,24 @@ const BreakoutGame: React.FC<BreakoutGameProps> = ({ onGameOver, onBlockHit, lev
           height={600}
           aria-label={A11Y.CANVAS_LABEL}
           role="img"
-          className={`max-w-full h-auto block rounded-lg ${isStarted ? 'cursor-none' : 'cursor-pointer'}`}
+          className={`block h-auto max-w-full rounded-[1.5rem] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] ${isStarted ? 'cursor-none' : 'cursor-pointer'}`}
         />
 
         {!isStarted && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-[1.2rem] transition-opacity duration-300 backdrop-blur-sm z-10 m-2 sm:m-4">
-            <div className="text-center p-6 sm:p-8 border-2 border-black/10 rounded-3xl bg-yellow-300 shadow-neo-sm -rotate-2 max-w-[90%]">
-              <p className="text-black text-3xl sm:text-4xl font-black mb-6 uppercase tracking-tighter drop-shadow-[2px_2px_0_#fff] rotate-1">HAZIR MISIN?</p>
-              <button className="w-full px-6 py-4 sm:py-5 bg-rose-400 hover:bg-rose-500 text-black font-black text-lg sm:text-xl rounded-2xl border-2 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-2 active:shadow-none transition-all uppercase tracking-widest">
-                TOPU FIRLAT!
-              </button>
-              <p className="text-black text-sm sm:text-base font-black mt-6 bg-white px-4 py-2 rounded-xl border-2 border-black/10 rotate-1 inline-block shadow-neo-sm">
-                🧠 Logolu blokları kır ve güç topla!
+          <div className="absolute inset-0 z-10 m-2 flex items-center justify-center rounded-[1.75rem] bg-white/82 backdrop-blur-sm transition-opacity duration-300 sm:m-4">
+            <div className="max-w-[90%] rounded-[2rem] border-2 border-black/10 bg-cyber-yellow px-6 py-7 text-center shadow-neo-md sm:px-8 sm:py-8">
+              <p className="mb-4 text-3xl font-black uppercase tracking-tight text-black sm:text-4xl">
+                Hazır mısın?
+              </p>
+              <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-pink px-6 py-4 text-lg font-black uppercase tracking-[0.22em] text-white shadow-neo-sm sm:text-xl">
+                Topu Fırlat
+              </div>
+              <p className="mt-5 inline-block rounded-xl border-2 border-black/10 bg-white px-4 py-2 text-sm font-black text-black shadow-neo-sm sm:text-base">
+                Logolu blokları kır ve güç topla!
               </p>
             </div>
           </div>
         )}
-      </div>
-
-      <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-6 text-black text-xs sm:text-sm font-black uppercase tracking-widest text-center w-full max-w-lg">
-        <div className="bg-emerald-100 flex-1 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm -rotate-1">
-          <span className="text-emerald-500 drop-shadow-neo-sm">🟢 UZAT</span>
-          <div className="mt-1">Paddle büyür</div>
-        </div>
-        <div className="bg-sky-100 flex-1 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm rotate-1">
-          <span className="text-sky-500 drop-shadow-neo-sm">🔵 YAVAŞ</span>
-          <div className="mt-1">Top yavaşlar</div>
-        </div>
       </div>
     </div>
   );

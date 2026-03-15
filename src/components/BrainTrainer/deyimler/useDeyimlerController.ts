@@ -11,7 +11,7 @@ import {
   MAX_LEVEL,
   TIME_LIMIT,
 } from "./constants";
-import { calculateDeyimlerScore, createQuestion } from "./logic.ts";
+import { buildDeyimlerFeedbackMessage, calculateDeyimlerScore, createQuestion } from "./logic.ts";
 import { fetchDeyimlerRows } from "./repository.ts";
 import type { DeyimlerQuestion, DeyimRow } from "./types.ts";
 
@@ -145,7 +145,15 @@ export const useDeyimlerController = () => {
       const isCorrect = answer === currentQuestion.missingWord;
       const willGameOver = !isCorrect && engine.lives <= 1;
       recordAttempt({ isCorrect, responseMs: getResponseMs() });
-      showFeedback(isCorrect);
+      showFeedback(
+        isCorrect,
+        buildDeyimlerFeedbackMessage({
+          isCorrect,
+          level: engine.level,
+          maxLevel: MAX_LEVEL,
+          missingWord: currentQuestion.missingWord,
+        }),
+      );
       playSound(isCorrect ? "correct" : "incorrect");
 
       if (isCorrect) {

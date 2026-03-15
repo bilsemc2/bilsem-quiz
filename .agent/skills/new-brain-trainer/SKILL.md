@@ -1,394 +1,407 @@
 ---
-name: BrainTrainer Simülatörü Ekleme
-description: Bireysel Değerlendirme için yeni bir beyin eğitimi simülatörü ekler
+name: BrainTrainer Simulatoru Ekleme
+description: Bireysel Degerlendirme icin yeni bir beyin egitimi simulatoru ekler (Pattern B)
 ---
 
-# 🧠 BrainTrainer Simülatörü Ekleme Skill'i
+# BrainTrainer Simulatoru Ekleme Skill'i
 
-Bu skill, `src/components/BrainTrainer/` altına yeni bir kognitif simülatör eklemek için gerekli adımları içerir.
+Bu skill, `src/components/BrainTrainer/` altina yeni bir kognitif simulasyon eklemek icin gerekli adimlari icerir.
 
-**Mimari:** Tüm BrainTrainer oyunları **3 paylaşımlı yapı** üzerine kuruludur:
-1. `useGameEngine` — State yönetimi, timer, can, skor, examMode, kayıt
-2. `BrainTrainerShell` — HUD, welcome/game_over/victory ekranları, feedback banner
-3. `GAME_COLORS` — Paylaşımlı renk paleti
+**Mimari (Pattern B):** Her BrainTrainer oyunu asagidaki yapiya sahiptir:
+
+1. **`{gameName}/logic.ts`** — Pure fonksiyonlar (soru uret, cevap kontrol, skor hesapla, feedback mesaji)
+2. **`{gameName}/use{GameName}Controller.ts`** — React hook, `useGameEngine` kullanir
+3. **`{gameName}/{GameName}Board.tsx`** — Presentational bilesen (opsiyonel)
+4. **`{gameName}/constants.ts`** — GAME_ID, MAX_LEVEL, TIME_LIMIT, INITIAL_LIVES, FEEDBACK_DURATION_MS
+5. **`{gameName}/types.ts`** — TypeScript tipleri
+6. **`{GameName}Game.tsx`** (ust seviye) — Thin wrapper, controller + BrainTrainerShell cagirir
+
+Paylasimli altyapi:
+- `useGameEngine` — `src/components/BrainTrainer/shared/useGameEngine.ts`
+- `BrainTrainerShell` — `src/components/BrainTrainer/shared/BrainTrainerShell.tsx`
+- `useGameFeedback` — `src/hooks/useGameFeedback.ts` (1200ms standart)
+- `GAME_COLORS` — `src/components/BrainTrainer/shared/gameColors.ts`
+- Paylasimli bilesenler: `GameOptionButton`, `GameNumpad`, `GameQuestionCard` — `src/components/BrainTrainer/shared/`
 
 ## Gerekli Bilgiler
 
-Simülatör eklemeden önce şu bilgileri kullanıcıdan alın:
-1. **Simülatör Adı (Türkçe)**: Örn. "Renk Hafızası"
-2. **Dosya Adı**: Örn. "ColorMemoryGame.tsx"
-3. **Zeka Türü**: Görsel-Uzamsal, Sözel, Mantıksal, İşitsel, vb.
-4. **Kognitif Hedef**: Hangi TUZÖ becerisini geliştiriyor?
+Simulatoru eklemeden once su bilgileri kullanicidan alin:
+1. **Simulatoru Adi (Turkce)**: Orn. "Renk Hafizasi"
+2. **Dosya Adi**: Orn. "ColorMemoryGame.tsx"
+3. **Zeka Turu**: Gorsel-Uzamsal, Sozel, Mantiksal, Isitsel, vb.
+4. **Kognitif Hedef**: Hangi TUZO becerisini gelistiriyor?
 
 ---
 
-## Platform Standartları
+## Platform Standartlari
 
-| Parametre | Değer | Yöneten |
+| Parametre | Deger | Yoneten |
 |-----------|-------|---------|
-| **Başlangıç Canı** | 5 | `useGameEngine` |
-| **Global Timer** | 180 saniye | `useGameEngine` |
-| **Maksimum Level** | 20 | `useGameEngine` |
+| **Baslangic Cani** | 5 | `useGameEngine` (INITIAL_LIVES) |
+| **Global Timer** | 180 saniye | `useGameEngine` (TIME_LIMIT) |
+| **Maksimum Level** | 20 | `useGameEngine` (MAX_LEVEL) |
+| **Feedback Suresi** | 1200ms | `FEEDBACK_DURATION_MS` sabiti |
 | **examMode** | `location.state` otomatik | `useGameEngine` |
-| **Skor Kaydı** | `saveGamePlay` otomatik | `useGameEngine` |
+| **Skor Kaydi** | `saveGamePlay` otomatik | `useGameEngine` |
 | **Welcome/GameOver/Victory** | Otomatik render | `BrainTrainerShell` |
 | **HUD (skor, can, timer)** | Otomatik render | `BrainTrainerShell` |
 | **Feedback Banner** | Otomatik render | `BrainTrainerShell` |
-| **Touch Target** | Minimum 80px | Oyun JSX'inde |
-| **Renkler** | `GAME_COLORS` sabitleri | `shared/gameColors.ts` |
+| **Shuffle** | Fisher-Yates | `.sort(() => random() - 0.5)` KULLANMAYIN |
 | **Font** | `font-nunito font-black` | Tailwind class |
 
-> **⚠️ Inline Style Yasağı:**
-> `style={{ backgroundColor: '...' }}` gibi inline style'lar **kullanmayın**.
+> **Inline Style Yasagi:**
+> `style={{ backgroundColor: '...' }}` gibi inline style'lar **kullanmayin**.
 > - **KULLANMA:** Gradient, Soft Shadow, Glassmorphism.
 > - **KULLAN:** `border-2 border-black/10`, `shadow-neo-sm`, Solid Renkler.
-> - **İstisna:** Yalnızca JavaScript ile dinamik hesaplanan değerler inline olabilir.
+> - **Istisna:** Yalnizca JavaScript ile dinamik hesaplanan degerler inline olabilir.
 
 ---
 
-## Adım 1: Component Dosyasını Oluştur
+## Adim 1: Klasor Yapisi ve Dosyalar
 
-`src/components/BrainTrainer/[SimulatorName]Game.tsx` dosyasını oluştur.
-
-### Tam Şablon
-
-```tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Brain } from 'lucide-react'; // Oyuna uygun ikon seç
-import { useSound } from '../../hooks/useSound';
-import { useSafeTimeout } from '../../hooks/useSafeTimeout';
-import { useGameFeedback } from '../../hooks/useGameFeedback';
-import { useGameEngine } from './shared/useGameEngine';
-import BrainTrainerShell from './shared/BrainTrainerShell';
-import { GAME_COLORS } from './shared/gameColors';
-
-const GAME_ID = '[simulator-slug]';
-const GAME_TITLE = '[Simülatör Adı]';
-const GAME_DESCRIPTION = '[Kısa açıklama]';
-const TUZO_TEXT = 'TUZÖ 5.X.X [Beceri Adı]';
-
-const [SimulatorName]Game: React.FC = () => {
-  // ====== 1. HOOKS ======
-  const engine = useGameEngine({
-    gameId: GAME_ID,
-    maxLevel: 20,
-    initialLives: 5,
-    timeLimit: 180,
-  });
-
-  const { playSound } = useSound();
-  const safeTimeout = useSafeTimeout();
-  const feedback = useGameFeedback({ duration: 1000 });
-  const { feedbackState, showFeedback, dismissFeedback } = feedback;
-
-  const { phase, level, addScore, loseLife, nextLevel } = engine;
-
-  // ====== 2. OYUN STATE'İ ======
-  const [currentQuestion, setCurrentQuestion] = useState<any>(null);
-
-  // ====== 3. SORU ÜRETİMİ ======
-  const generateQuestion = useCallback(() => {
-    // Oyuna özgü soru üretimi
-    return { /* question data */ };
-  }, [level]); // Seviye bazlı zorluk artışı
-
-  const startLevel = useCallback(() => {
-    setCurrentQuestion(generateQuestion());
-  }, [generateQuestion]);
-
-  // ====== 4. PHASE EFEKTİ ======
-  useEffect(() => {
-    if (phase === 'playing' && !currentQuestion) {
-      startLevel();
-    } else if (phase === 'welcome' || phase === 'game_over' || phase === 'victory') {
-      setCurrentQuestion(null);
-    }
-  }, [phase, currentQuestion, startLevel]);
-
-  // ====== 5. CEVAP KONTROL ======
-  const handleAnswer = (answer: any) => {
-    if (phase !== 'playing' || !!feedbackState || !currentQuestion) return;
-
-    const isCorrect = /* doğruluk kontrolü */;
-    showFeedback(isCorrect);
-    playSound(isCorrect ? 'correct' : 'incorrect');
-
-    if (isCorrect) {
-      addScore(10 * level);
-      safeTimeout(() => {
-        dismissFeedback();
-        nextLevel();
-        startLevel();
-      }, 1000);
-    } else {
-      loseLife();
-      safeTimeout(() => {
-        dismissFeedback();
-        if (engine.lives > 1) {
-          startLevel();
-        }
-      }, 1000);
-    }
-  };
-
-  // ====== 6. CONFIG ======
-  const gameConfig = {
-    title: GAME_TITLE,
-    description: GAME_DESCRIPTION,
-    tuzoCode: TUZO_TEXT,
-    icon: Brain,
-    accentColor: 'cyber-blue', // cyber-blue, cyber-pink, cyber-green, cyber-yellow
-    maxLevel: 20,
-    howToPlay: [
-      'Adım 1 açıklaması.',
-      'Adım 2 açıklaması.',
-      'Adım 3 açıklaması.'
-    ],
-  };
-
-  // ====== 7. RENDER ======
-  return (
-    <BrainTrainerShell config={gameConfig} engine={engine} feedback={feedback}>
-      {() => (
-        <div className="relative z-10 flex flex-col items-center justify-center flex-1 p-2 w-full">
-          {phase === 'playing' && currentQuestion && (
-            <motion.div
-              key="game"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-md text-center space-y-4"
-            >
-              {/* SORU ALANI */}
-              <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-black/10 shadow-neo-sm">
-                <p className="text-slate-500 dark:text-slate-400 font-nunito font-black text-xs tracking-widest uppercase mb-3">
-                  SORU BAŞLIĞI
-                </p>
-                {/* Soru içeriği */}
-              </div>
-
-              {/* CEVAP BUTONLARI */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Her buton için: */}
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleAnswer(option)}
-                  className="p-4 border-2 border-black/10 rounded-xl font-nunito font-black text-lg shadow-neo-sm bg-white dark:bg-slate-700 text-black dark:text-white active:translate-y-1 active:shadow-none"
-                >
-                  {option.label}
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </div>
-      )}
-    </BrainTrainerShell>
-  );
-};
-
-export default [SimulatorName]Game;
+```bash
+mkdir -p src/components/BrainTrainer/[gameName]
 ```
 
-### useGameEngine Sağladıkları (Import Etmeyin, Zaten İçinde)
+```
+src/components/BrainTrainer/
+├── [gameName]/
+│   ├── logic.ts                    <- Pure fonksiyonlar
+│   ├── use[GameName]Controller.ts  <- React hook (useGameEngine)
+│   ├── [GameName]Board.tsx         <- Presentational bilesen (opsiyonel)
+│   ├── constants.ts                <- Sabitler (opsiyonel, controller icinde de olabilir)
+│   └── types.ts                    <- TypeScript tipleri (opsiyonel)
+└── [GameName]Game.tsx              <- Thin wrapper (UST SEVIYE)
+```
 
-| Özellik | Açıklama |
-|---------|----------|
-| `phase` | `'welcome' \| 'playing' \| 'feedback' \| 'game_over' \| 'victory'` |
-| `level`, `score`, `lives`, `timeLeft` | Otomatik yönetilen state |
-| `handleStart()` | Oyun başlatma (BrainTrainerShell çağırır) |
-| `addScore(points)` | Skor ekleme |
-| `loseLife()` | Can azaltma (0'da otomatik game_over) |
-| `nextLevel()` | Seviye artırma (maxLevel'da otomatik victory) |
-| `onCorrect(bonus?)` | addScore + nextLevel birleşik |
-| `onIncorrect()` | loseLife kısayolu |
-| `setGamePhase(phase)` | Manuel phase değişikliği |
-| `examMode` | `location.state` otomatik okuma |
-| `addTime(seconds)` | Timer'a süre ekleme |
+---
 
-### BrainTrainerShell Otomatik Yönetir
-
-| Bileşen | Açıklama |
-|---------|----------|
-| **Welcome Screen** | Başlık, açıklama, nasıl oynanır, TUZÖ badge, Başla butonu |
-| **HUD** | Skor, canlar, timer, seviye göstergesi |
-| **Game Over Screen** | Skor özeti, tekrar oyna butonu |
-| **Victory Screen** | Tebrik, skor, tekrar oyna |
-| **Feedback Banner** | Doğru/yanlış overlay (`GameFeedbackBanner`) |
-| **Geri Dön** | `/atolyeler/bireysel-degerlendirme` link |
-| **Scroll Lock** | Otomatik body scroll lock |
-
-### GameShellConfig Seçenekleri
+## Adim 2: logic.ts — Pure Fonksiyonlar
 
 ```typescript
-{
-  title: string;           // Zorunlu
-  icon: LucideIcon;        // Zorunlu
-  description: string;     // Zorunlu
-  howToPlay: ReactNode[];  // Zorunlu
-  tuzoCode?: string;       // TUZÖ badge (önerilir)
-  maxLevel?: number;       // Varsayılan: 20
-  accentColor?: string;    // 'cyber-blue' | 'cyber-pink' | 'cyber-green' | 'cyber-yellow'
-  wideLayout?: boolean;    // true ise max-w-3xl (geniş oyunlar için)
-  extraHudItems?: ReactNode;         // HUD'a ek öğeler
-  extraGameOverActions?: ReactNode;  // Game over'da ek içerik
-  customWelcome?: ReactNode;         // Welcome ekranını override et
-  backLink?: string;                 // Geri dön linki override
-  backLabel?: string;                // Geri dön etiketi override
-  onRestart?: () => void;            // Tekrar oyna'da özel reset
-}
+// src/components/BrainTrainer/[gameName]/logic.ts
+
+/** Seviyeye gore soru zorlugunu belirle */
+export const getDifficultyForLevel = (level: number) =>
+    level <= 5 ? 'easy' : level <= 10 ? 'medium' : level <= 15 ? 'hard' : 'expert';
+
+/** Yeni round/soru uret — pure fonksiyon, side-effect yok */
+export const generateRound = (level: number) => {
+    const difficulty = getDifficultyForLevel(level);
+    // ... soru uretim mantigi ...
+    return {
+        question: /* ... */,
+        correctAnswer: /* ... */,
+        options: /* ... */,
+    };
+};
+
+/** Cevap dogru mu kontrol et */
+export const checkAnswer = (
+    userAnswer: string,
+    correctAnswer: string,
+): boolean => {
+    return userAnswer === correctAnswer;
+};
+
+/** Skor hesapla */
+export const calculateScore = (level: number, basePoints: number = 10) =>
+    basePoints * level;
+
+/** Feedback mesaji olustur — her oyun bunu MUTLAKA export etmeli */
+export const build[GameName]FeedbackMessage = ({
+    correct,
+    level,
+    maxLevel,
+    correctAnswer,
+}: {
+    correct: boolean;
+    level: number;
+    maxLevel: number;
+    correctAnswer: string;
+}) => {
+    if (correct) {
+        if (level >= maxLevel) {
+            return 'Tebrikler! Tum seviyeleri tamamladin!';
+        }
+        return `Dogru! Seviye ${level + 1}'e geciyorsun.`;
+    }
+    return `Yanlis! Dogru cevap: ${correctAnswer}.`;
+};
+```
+
+> **ONEMLI:** `build[GameName]FeedbackMessage` fonksiyonu her oyunda **zorunludur**. Isimlendirme kalıbi: `buildXxxFeedbackMessage`.
+
+> **Shuffle icin Fisher-Yates kullanin:**
+> ```ts
+> function fisherYatesShuffle<T>(arr: T[]): T[] {
+>     const result = [...arr];
+>     for (let i = result.length - 1; i > 0; i--) {
+>         const j = Math.floor(Math.random() * (i + 1));
+>         [result[i], result[j]] = [result[j], result[i]];
+>     }
+>     return result;
+> }
+> ```
+> `.sort(() => Math.random() - 0.5)` asla kullanmayin — uniform dagitim saglamaz.
+
+---
+
+## Adim 3: use[GameName]Controller.ts — Controller Hook
+
+```typescript
+// src/components/BrainTrainer/[gameName]/use[GameName]Controller.ts
+
+import { useCallback, useEffect, useState } from 'react';
+import { useGameFeedback } from '../../../hooks/useGameFeedback';
+import { useSound } from '../../../hooks/useSound';
+import { useGameEngine } from '../shared/useGameEngine';
+import {
+    generateRound,
+    checkAnswer,
+    calculateScore,
+    build[GameName]FeedbackMessage,
+} from './logic';
+
+const GAME_ID = '[game-slug]';
+const MAX_LEVEL = 20;
+const FEEDBACK_DURATION_MS = 1200;
+
+export const use[GameName]Controller = () => {
+    const engine = useGameEngine({
+        gameId: GAME_ID,
+        maxLevel: MAX_LEVEL,
+        initialLives: 5,
+        timeLimit: 180,
+    });
+
+    const { playSound } = useSound();
+    const feedback = useGameFeedback({ duration: FEEDBACK_DURATION_MS });
+    const { feedbackState, showFeedback, dismissFeedback } = feedback;
+
+    const { phase, level, addScore, loseLife, nextLevel } = engine;
+
+    const [currentRound, setCurrentRound] = useState<ReturnType<typeof generateRound> | null>(null);
+
+    const startRound = useCallback(() => {
+        setCurrentRound(generateRound(level));
+    }, [level]);
+
+    // Phase degistiginde round baslat
+    useEffect(() => {
+        if (phase === 'playing' && !currentRound) {
+            startRound();
+        } else if (phase !== 'playing') {
+            setCurrentRound(null);
+        }
+    }, [phase, currentRound, startRound]);
+
+    const handleAnswer = useCallback((answer: string) => {
+        if (phase !== 'playing' || !!feedbackState || !currentRound) return;
+
+        const correct = checkAnswer(answer, currentRound.correctAnswer);
+        const message = build[GameName]FeedbackMessage({
+            correct,
+            level,
+            maxLevel: MAX_LEVEL,
+            correctAnswer: currentRound.correctAnswer,
+        });
+
+        showFeedback(correct, message);
+        playSound(correct ? 'correct' : 'incorrect');
+
+        if (correct) {
+            addScore(calculateScore(level));
+        } else {
+            loseLife();
+        }
+
+        setTimeout(() => {
+            dismissFeedback();
+            if (correct) {
+                nextLevel();
+            }
+            startRound();
+        }, FEEDBACK_DURATION_MS);
+    }, [phase, feedbackState, currentRound, level, showFeedback, playSound, addScore, loseLife, nextLevel, dismissFeedback, startRound]);
+
+    return {
+        engine,
+        feedback,
+        currentRound,
+        handleAnswer,
+    };
+};
 ```
 
 ---
 
-## Adım 2: Route Ekle
-
-`src/routes/gameRoutes.tsx` dosyasına ekle:
+## Adim 4: [GameName]Game.tsx — Thin Wrapper (Ust Seviye)
 
 ```tsx
-// Lazy import (dosyanın üstüne)
-const [SimulatorName]Game = React.lazy(() => import('@/components/BrainTrainer/[SimulatorName]Game'));
+// src/components/BrainTrainer/[GameName]Game.tsx
 
-// gameRoutes dizisine ekle
-<Route key="[slug]" path="/games/[slug]" element={<RequireAuth><[SimulatorName]Game /></RequireAuth>} />,
+import React from 'react';
+import { Brain } from 'lucide-react';
+import BrainTrainerShell from './shared/BrainTrainerShell';
+import { use[GameName]Controller } from './[gameName]/use[GameName]Controller';
+
+const [GameName]Game: React.FC = () => {
+    const { engine, feedback, currentRound, handleAnswer } = use[GameName]Controller();
+
+    const gameConfig = {
+        title: '[Simulatoru Adi]',
+        description: '[Kisa aciklama]',
+        tuzoCode: 'TUZO 5.X.X [Beceri Adi]',
+        icon: Brain,
+        accentColor: 'cyber-blue',
+        maxLevel: 20,
+        howToPlay: [
+            'Adim 1 aciklamasi.',
+            'Adim 2 aciklamasi.',
+            'Adim 3 aciklamasi.',
+        ],
+    };
+
+    return (
+        <BrainTrainerShell config={gameConfig} engine={engine} feedback={feedback}>
+            {() => (
+                <div className="relative z-10 flex flex-col items-center justify-center flex-1 p-2 w-full">
+                    {engine.phase === 'playing' && currentRound && (
+                        <div className="w-full max-w-md text-center space-y-4">
+                            {/* SORU ALANI */}
+                            <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-black/10 shadow-neo-sm">
+                                <p className="text-slate-500 dark:text-slate-400 font-nunito font-black text-xs tracking-widest uppercase mb-3">
+                                    SORU BASLIGI
+                                </p>
+                                {/* Soru icerigi */}
+                            </div>
+
+                            {/* CEVAP BUTONLARI */}
+                            <div className="grid grid-cols-2 gap-3">
+                                {currentRound.options.map((option) => (
+                                    <button
+                                        key={option}
+                                        onClick={() => handleAnswer(option)}
+                                        className="p-4 border-2 border-black/10 rounded-xl font-nunito font-black text-lg shadow-neo-sm bg-white dark:bg-slate-700 text-black dark:text-white active:translate-y-1 active:shadow-none"
+                                    >
+                                        {option}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </BrainTrainerShell>
+    );
+};
+
+export default [GameName]Game;
 ```
 
 ---
 
-## Adım 3: IndividualAssessmentPage'e Ekle ⚠️ EN ÜSTE EKLE
+## Adim 5: Route Ekle
 
-`src/pages/workshops/IndividualAssessmentPage.tsx` dosyasında **modules dizisinin EN BAŞINA** ekle:
+`src/routes/gameRoutes.tsx` dosyasina ekle:
+
+```tsx
+const [GameName]Game = React.lazy(() => import('@/components/BrainTrainer/[GameName]Game'));
+
+<Route key="[slug]" path="/games/[slug]" element={<RequireAuth><[GameName]Game /></RequireAuth>} />,
+```
+
+---
+
+## Adim 6: IndividualAssessmentPage'e Ekle (EN USTE EKLE)
+
+`src/pages/workshops/IndividualAssessmentPage.tsx` dosyasinda **modules dizisinin EN BASINA** ekle:
 
 ```tsx
 const modules = [
     {
         id: '[simulator-slug]',
-        title: '[Simülatör Adı]',
-        desc: 'Kısa açıklama',
+        title: '[Simulatoru Adi]',
+        desc: 'Kisa aciklama',
         icon: <Brain />,
-        color: 'cyber-green', // cyber-blue, cyber-pink, cyber-green, cyber-yellow
-        difficulty: 'Zor', // Kolay/Orta/Zor/Uzman
+        color: 'cyber-green',
+        difficulty: 'Zor',
         link: '/games/[simulator-slug]',
-        isNew: true,  // 🆕 YENİ badge gösterir
-        tuzo: '5.X.X TUZÖ Beceri Adı',
+        isNew: true,
+        tuzo: '5.X.X TUZO Beceri Adi',
     },
     // ... mevcut oyunlar
 ];
 ```
 
-> **⚠️ Kurallar:**
-> 1. **En üste ekle**: Yeni oyun her zaman listenin en başında olmalı
-> 2. **isNew: true ekle**: Bu, oyunun yanında "YENİ" badge'i gösterir
-> 3. **Önceki oyunun isNew'ini kaldır**: Bir önceki yeni oyunun `isNew: true` satırını sil
-
-**Mevcut TUZÖ Kodları:**
-| Kod | Beceri |
-|-----|--------|
-| 5.1.x | Sözel Beceriler (Kelime, Analoji, Anlama) |
-| 5.2.x | Sayısal Beceriler (Dizi, Problem, Mantık) |
-| 5.3.x | Uzamsal Beceriler (Desen, Şekil, Labirent) |
-| 5.4.x | Kısa Süreli Bellek (Sayısal, Görsel) |
-| 5.5.x | Akıl Yürütme (Analogik, Kural Çıkarsama) |
-| 5.6.x | İşlem Hızı |
-| 5.7.x | Dikkat (Seçici, Bölünmüş) |
-| 5.8.x | Kontrol/Esneklik (Stroop, İnhibishyon) |
-| 5.9.x | Çalışma Belleği (Güncelleme, İzleme, Bağlama) |
-| 5.10.x | Sosyal Zeka |
+> **Kurallar:**
+> 1. **En uste ekle**: Yeni oyun her zaman listenin en basinda olmali
+> 2. **isNew: true ekle**: Bu, oyunun yaninda "YENI" badge'i gosterir
+> 3. **Onceki oyunun isNew'ini kaldir**: Bir onceki yeni oyunun `isNew: true` satirini sil
 
 ---
 
-## Adım 4: Zeka Türü Eşleştirmesi Ekle ⚠️ KRİTİK
+## Adim 7: Zeka Turu Eslestirmesi Ekle (KRITIK)
 
-`src/constants/intelligenceTypes.ts` dosyasında oyunu **her iki tabloya** ekle:
+`src/constants/intelligenceTypes.ts` dosyasinda oyunu **her iki tabloya** ekle:
 
 ```typescript
 // 1. OYUN_ZEKA_ESLESTIRMESI
-export const OYUN_ZEKA_ESLESTIRMESI: Record<string, ZekaTuru> = {
-    '[simulator-slug]': ZEKA_TURLERI.[UYGUN_TIP],
-};
+'[simulator-slug]': ZEKA_TURLERI.[UYGUN_TIP],
 
 // 2. OYUN_WORKSHOP_ESLESTIRMESI
-export const OYUN_WORKSHOP_ESLESTIRMESI: Record<string, WorkshopType> = {
-    '[simulator-slug]': 'bireysel',
-};
+'[simulator-slug]': 'bireysel',
 ```
 
-> **⚠️ Bu adım zorunludur!** Eklenmezse admin panelindeki raporlarda oyun görünmez.
+> Bu adim zorunludur! Eklenmezse admin panelindeki raporlarda oyun gorunmez.
 
 ---
 
-## Adım 5: XP Requirement Ekle
+## Adim 8: XP Requirement Ekle
 
 ```sql
-INSERT INTO xp_requirements (path, xp_cost, description) 
-VALUES ('/atolyeler/bireysel-degerlendirme/[simulator-slug]', 15, '[Simülatör Adı]');
+INSERT INTO xp_requirements (path, xp_cost, description)
+VALUES ('/atolyeler/bireysel-degerlendirme/[simulator-slug]', 15, '[Simulatoru Adi]');
 ```
 
 ---
 
-## Adım 6: Sınav Simülasyonu Modülü Ekle ⚠️ ZORUNLU
+## Adim 9: Sinav Simulasyonu Modulu Ekle (ZORUNLU)
 
-`src/config/examModules.ts` dosyasına ekle:
+`src/config/examModules.ts` dosyasina ekle:
 
 ```typescript
 {
     id: '[simulator-slug]',
-    title: '[Simülatör Adı]',
+    title: '[Simulatoru Adi]',
     link: '/games/[simulator-slug]',
-    tuzo: '5.X.X Beceri Adı',
+    tuzo: '5.X.X Beceri Adi',
     category: 'memory' | 'logic' | 'attention' | 'verbal' | 'speed' | 'perception' | 'social',
-    timeLimit: 120, // saniye
+    timeLimit: 120,
     active: true
 },
 ```
 
-> **⚠️ KRİTİK:** examMode tamamen `useGameEngine` tarafından yönetilir. Oyun kodunda `location.state`, `submitResult`, `navigate` gibi examMode mantığı **EKLEMEYIN** — engine otomatik halleder.
+> examMode tamamen `useGameEngine` tarafindan yonetilir. Oyun kodunda `location.state`, `submitResult`, `navigate` gibi examMode mantigi **EKLEMEYIN**.
 
 ---
 
-## Adım 7: YouTube İçerik Paketi
+## useGameEngine Sagladiklari
 
-Her yeni simülatör için YouTube tanıtım içeriği oluştur.
-
-### Başlık Formülü
-
-```
-BİLSEM [Simülatör Adı] 🧠[emoji] [Kısa Kanca] | [TUZÖ Beceri Adı]
-```
-
-**Kurallar:**
-- Maks 70 karakter (mobil uyum)
-- İlk 40 karakterde ana kanca
-- En az 1 emoji
-- BİLSEM kelimesi başta
-- TUZÖ beceri adı sonda
-
-**3 alternatif başlık üret**, farklı açılardan:
-1. Oyun mekaniği odaklı
-2. Zorluk/tuzak odaklı
-3. Hız/beyin odaklı
-
-### Açıklama Şablonu
-
-```
-🧠 BİLSEM [Simülatör Adı] — [Bir cümlelik oyun açıklaması]
-
-Bu simülatör, BİLSEM 2. Aşama Bireysel Değerlendirme sınavına hazırlık için tasarlandı.
-
-⚡ Özellikler:
-• 20 seviye
-• [Oyuna özgü özellik 1]
-• [Oyuna özgü özellik 2]
-• 5 can, 180 saniye süre
-• TUZÖ [X.X.X Beceri Adı] müfredatına uygun
-
-🎯 TUZÖ Beceri: [X.X.X Beceri Adı]
-📊 Kategori: Bireysel Değerlendirme (2. Aşama)
-
-🔗 Hemen Oyna: https://www.bilsemc2.com/games/[slug]
-🌐 Platform: https://www.bilsemc2.com
-
-#BİLSEM #BİLSEM2Aşama #ZekaOyunları #BireyselDeğerlendirme #TUZÖ #BİLSEMHazırlık #BilsemC2
-```
+| Ozellik | Aciklama |
+|---------|----------|
+| `phase` | `'welcome' \| 'playing' \| 'feedback' \| 'game_over' \| 'victory'` |
+| `level`, `score`, `lives`, `timeLeft` | Otomatik yonetilen state |
+| `handleStart()` | Oyun baslatma (BrainTrainerShell cagirir) |
+| `addScore(points)` | Skor ekleme |
+| `loseLife()` | Can azaltma (0'da otomatik game_over) |
+| `nextLevel()` | Seviye artirma (maxLevel'da otomatik victory) |
+| `onCorrect(bonus?)` | addScore + nextLevel birlesik |
+| `onIncorrect()` | loseLife kisayolu |
+| `setGamePhase(phase)` | Manuel phase degisikligi |
+| `examMode` | `location.state` otomatik okuma |
+| `addTime(seconds)` | Timer'a sure ekleme |
 
 ---
 
@@ -397,7 +410,6 @@ Bu simülatör, BİLSEM 2. Aşama Bireysel Değerlendirme sınavına hazırlık 
 ```typescript
 import { GAME_COLORS } from './shared/gameColors';
 
-// Ana Palet
 GAME_COLORS.yellow    // '#dcf126' — cyber-yellow
 GAME_COLORS.blue      // '#1e40af' — cyber-blue
 GAME_COLORS.pink      // '#f43f5e' — cyber-pink
@@ -405,48 +417,43 @@ GAME_COLORS.emerald   // '#14F195' — cyber-emerald
 GAME_COLORS.purple    // '#B026FF' — cyber-purple
 GAME_COLORS.orange    // '#FF9500' — cyber-orange
 
-// Semantik
-GAME_COLORS.correct   // '#14F195' — doğru cevap
-GAME_COLORS.incorrect // '#f43f5e' — yanlış cevap
-GAME_COLORS.highlight // '#dcf126' — seçili/highlight
+GAME_COLORS.correct   // '#14F195' — dogru cevap
+GAME_COLORS.incorrect // '#f43f5e' — yanlis cevap
+GAME_COLORS.highlight // '#dcf126' — secili/highlight
 
-// Yüzeyler
-GAME_COLORS.paper     // '#FAF9F6' — açık arka plan
+GAME_COLORS.paper     // '#FAF9F6' — acik arka plan
 GAME_COLORS.obsidian  // '#0B0C10' — koyu arka plan
-
-// Canvas/SVG şekilleri
 GAME_COLORS.shapes    // 8 renklik dizi
 ```
 
 ---
 
-## Doğrulama Kontrol Listesi
+## Dogrulama Kontrol Listesi
 
-- [ ] `useGameEngine` + `BrainTrainerShell` + `GAME_COLORS` kullanıldı
-- [ ] Oyun yalnızca `phase === 'playing'` içeriğini render ediyor
-- [ ] `useGameFeedback` + `useSafeTimeout` + `useSound` kullanıldı
-- [ ] Çift tıklama koruması: `if (!!feedbackState) return;`
-- [ ] Yanlış cevapta yeni soru üretiliyor
-- [ ] `max-w-md` veya `max-w-lg` genişlik sınırı
-- [ ] `grid-cols-2` buton düzeni (4 seçenekte)
+- [ ] `logic.ts` pure fonksiyonlar icerir (generateRound, checkAnswer, buildXxxFeedbackMessage)
+- [ ] `use[GameName]Controller.ts` `useGameEngine` kullanir
+- [ ] `[GameName]Game.tsx` thin wrapper, controller + BrainTrainerShell
+- [ ] FEEDBACK_DURATION_MS = 1200
+- [ ] Fisher-Yates shuffle kullanildi (.sort random DEGIL)
+- [ ] `build[GameName]FeedbackMessage` export edildi
+- [ ] Cift tiklama korumasi: `if (!!feedbackState) return;`
 - [ ] Dark mode uyumlu (`dark:bg-slate-800`, `dark:text-white`)
 - [ ] `src/routes/gameRoutes.tsx`'e route eklendi
-- [ ] `IndividualAssessmentPage`'e **EN ÜSTE** eklendi + `isNew: true`
-- [ ] Önceki oyunun `isNew` kaldırıldı
+- [ ] `IndividualAssessmentPage`'e **EN USTE** eklendi + `isNew: true`
+- [ ] Onceki oyunun `isNew` kaldirildi
 - [ ] `intelligenceTypes.ts`'e eklendi (zeka + workshop)
-- [ ] XP requirement veritabanına eklendi
+- [ ] XP requirement veritabanina eklendi
 - [ ] `examModules.ts`'e eklendi
-- [ ] YouTube paketi oluşturuldu
 
 ---
 
-## Referans Simülatörler
+## Referans Simulatorler
 
-| Oyun | Dosya | Özellik |
-|------|-------|---------|
-| Yüz İfadesi | `FaceExpressionGame.tsx` | Basit soru-cevap şablonu |
-| Renkli Kalemler | `PencilStroopGame.tsx` | Stroop + dinamik stil |
-| Kozmik Hafıza | `CosmicMemoryGame.tsx` | Bellek + grid layout |
-| Labirent | `MazeRunnerGame.tsx` | Canvas + touch |
-| Sayı Dizisi | `NumberSequenceGame.tsx` | Mantık + level zorluk |
-| Sözel Analoji | `VerbalAnalogyGame.tsx` | Sözel beceri |
+| Oyun | Klasor | Ozellik |
+|------|--------|---------|
+| Renk Algilama | `colorPerception/` | logic.ts + controller kalip ornegi |
+| Kozmik Hafiza | `cosmicMemory/` | Bellek + grid layout |
+| Dikkat Kodlama | `attentionCoding/` | Grid + hiz |
+| Gurultu Filtresi | `noiseFilter/` | Isitsel + audioModel.ts |
+| Kalem Stroop | `pencilStroop/` | Stroop + dinamik stil |
+| Capraz Eslesme | `crossMatch/` | Coklu kural |

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildPencilStroopFeedbackMessage,
   calculatePencilStroopScore,
   createRound,
   isAnswerCorrect,
@@ -48,4 +49,19 @@ test("score and answer helpers keep the legacy rules", () => {
   assert.equal(isAnswerCorrect(round.correctAnswer, round), true);
   assert.equal(isAnswerCorrect("Yanlis", round), false);
   assert.equal(isAnswerCorrect(round.correctAnswer, null), false);
+});
+
+test("feedback message helper explains the active pencil stroop result", () => {
+  assert.equal(
+    buildPencilStroopFeedbackMessage(true, "Mavi", 3),
+    "Doğru renk: Mavi. Şimdi 4. seviyeye geçiyorsun.",
+  );
+  assert.equal(
+    buildPencilStroopFeedbackMessage(true, "Kırmızı", 20),
+    "Doğru renk: Kırmızı. Son turu da geçtin, oyun tamamlanıyor.",
+  );
+  assert.equal(
+    buildPencilStroopFeedbackMessage(false, "Yeşil", 6),
+    "Yanlış seçim! Kalemin gerçek rengi Yeşil olmalıydı.",
+  );
 });

@@ -71,6 +71,7 @@ src/
 - UI bileşenleri doğrudan Supabase çağrısı yapmaz
 - Veri erişimi sadece `features/*/api` veya `repositories` katmanından geçer
 - AI provider çağrıları doğrudan UI'dan yapılmaz; yalnızca `server/ai` katmanından yapılır
+- UI/orchestration katmanında `@/lib/supabase` importu ESLint ile bloklanır; yalnızca `src/server/repositories/**` client import edebilir
 
 ### AI Tasarım İlkeleri
 
@@ -131,6 +132,7 @@ Hedef: Supabase çağrılarını UI’dan ayırmak.
 
 1. `features/*/api` veya `repositories` katmanları eklenir
 2. `pages/components` içindeki doğrudan `supabase.from(...)` çağrıları aşamalı taşınır
+   - tamamlayıcı koruma: `pages/components/hooks/services/utils` altında `lib/supabase` importu lint hatası olur
 3. Ortak hata/başarı sonucu tipi (`Result<T, E>`) belirlenir
 4. Kritik domainlerden başlanır:
    - `auth`
@@ -202,6 +204,12 @@ Hedef: Refactor sonrası güvenli yayın süreci.
    - bir oyun oynama/kayıt
    - xp düşümü
    - sınav akışı
+   - ara hedef: kaynak-seviyesi `npm run test:critical` smoke kapısı aktif tutulur
+   - browser seviyesi smoke iki katmanda korunur:
+     - `npm run test:e2e:anon`: public ve guard redirect davranışları
+     - `npm run test:e2e:auth:mock`: deterministic mock-auth tabanı ile auth wiring
+     - `npm run test:e2e:auth`: yerelde akıllı auth smoke; credential varsa gerçek, yoksa mock
+     - `npm run test:e2e:auth:real`: secret varsa mock fallback kapalı, strict gerçek backend auth doğrulaması
 4. Minimum coverage hedefi:
    - domain logic: `%70+`
 5. Adaptif seviyeleme için simülasyon test altyapısı hazırlanır (offline replay)
@@ -337,14 +345,14 @@ Done kriteri:
 
 1. ESLint ignore kapsamını düzelt
 2. `typecheck` ve `test` scriptlerini root’a ekle
-3. CI workflow oluştur (`lint + typecheck + build`)
+3. CI workflow oluştur (`lint + typecheck + critical smoke + build`)
 4. Mimari sözleşme dokümanı yaz
 5. Import boundary lint kuralı ekle
 6. `auth` domain için repository katmanı çıkar
 7. `xp` domain için repository/use-case katmanı çıkar
 8. `RequireAuth` bileşenini parçalara ayır
 9. En büyük 3 oyun dosyasını (`600+` satır) modülerleştir
-10. İlk test setini ekle (auth + xp + bir oyun akışı)
+10. İlk test setini ekle (auth + xp + bir oyun akışı + kritik wiring smoke)
 
 ### AI Hazırlık Backlog'u (Faz 7+)
 

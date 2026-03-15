@@ -30,6 +30,28 @@ test('createLevelBalloons produces level-sized visible balloons with positions',
     assert.ok(balloons.every((balloon) => balloon.isVisible && !balloon.isPopped));
 });
 
+test('createLevelBalloons keeps ids unique even when random draws would collide', () => {
+    const scriptedRandomValues = [
+        ...Array.from({ length: 16 }, () => 0),
+        0.005,
+        0.004,
+        0.003,
+        0.002,
+        0.001,
+        0,
+        0,
+        0,
+    ];
+    let cursor = 0;
+    const random = () => scriptedRandomValues[cursor++] ?? 0;
+
+    const balloons = createLevelBalloons(6, random, 1000, BALLOON_COLORS.slice(0, 8));
+    const uniqueIds = new Set(balloons.map((balloon) => balloon.id));
+
+    assert.equal(balloons.length, 8);
+    assert.equal(uniqueIds.size, balloons.length);
+});
+
 test('createAnswerOptions adds distractors for color questions', () => {
     const balloons: BalloonState[] = [
         {

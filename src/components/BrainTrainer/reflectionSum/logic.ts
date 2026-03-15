@@ -46,3 +46,24 @@ export const calculateReflectionSumScore = (level: number, timeLeft: number) =>
   level * 10 + Math.floor(timeLeft / 10);
 
 export const isMaxLevel = (level: number) => level >= MAX_LEVEL;
+
+export const buildReflectionSumFeedbackMessage = ({
+  isCorrect,
+  level,
+  maxLevel,
+  correctSum,
+  phase,
+}: {
+  isCorrect: boolean;
+  level: number;
+  maxLevel: number;
+  correctSum: number | null;
+  phase: "sequence" | "sum";
+}): string => {
+  if (isCorrect) {
+    if (level >= maxLevel) return "Harika! Son seviyeyi de tamamladın!";
+    return `Doğru! ${level + 1}. seviyeye geçiyorsun.`;
+  }
+  if (phase === "sequence") return "Yanlış sıra! Rakamları tersten hatırla.";
+  return `Yanlış! Doğru toplam: ${correctSum}`;
+};

@@ -1,108 +1,29 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { Hash } from "lucide-react";
-import { useSound } from "../../hooks/useSound";
-import { useSafeTimeout } from '../../hooks/useSafeTimeout';
-import { useGameFeedback } from "../../hooks/useGameFeedback";
-import { useGameEngine } from "./shared/useGameEngine";
 import BrainTrainerShell from "./shared/BrainTrainerShell";
-
-const GAME_ID = "simge-kodlama";
-const GAME_TITLE = "Simge Kodlama";
-const GAME_DESCRIPTION = "Sayılarla şekiller arasındaki bağı hızla kur, dikkatinle sembolleri eşleştirerek rekor kır!";
-const TUZO_TEXT = "TUZÖ 5.6.1 Rakam-Sembol Eşleştirme & Hız";
-const MAX_LEVEL = 20;
-
-const SYMBOLS = ["◯", "△", "□", "◇", "★", "♡", "⬡", "⬢", "✕"];
-
-const createSymbolMap = () => {
-  const shuffled = [...SYMBOLS].sort(() => Math.random() - 0.5);
-  const map: Record<number, string> = {};
-  for (let i = 1; i <= 9; i++) map[i] = shuffled[i - 1];
-  return map;
-};
+import { getDigitSymbolTargetScore } from "./digitSymbol/logic";
+import {
+  MAX_LEVEL,
+  SYMBOLS,
+  useDigitSymbolController,
+} from "./digitSymbol/useDigitSymbolController";
 
 const DigitSymbolGame: React.FC = () => {
-  const engine = useGameEngine({
-    gameId: GAME_ID,
-    maxLevel: MAX_LEVEL,
-    initialLives: 5,
-    timeLimit: 180,
-  });
-
-  const { playSound } = useSound();
-  const safeTimeout = useSafeTimeout();
-  const feedback = useGameFeedback({ duration: 1500 });
-  const { feedbackState, showFeedback, dismissFeedback } = feedback;
-
-  const { phase, addScore, loseLife, nextLevel } = engine;
-
-  const [symbolMap, setSymbolMap] = useState<Record<number, string>>({});
-  const [currentNumber, setCurrentNumber] = useState<number>(1);
-  const [scoreInLevel, setScoreInLevel] = useState(0);
-
-  const startLevel = useCallback(() => {
-    setSymbolMap(createSymbolMap());
-    setCurrentNumber(Math.floor(Math.random() * 9) + 1);
-    setScoreInLevel(0);
-    playSound("slide");
-  }, [playSound]);
-
-  useEffect(() => {
-    if (phase === "playing" && Object.keys(symbolMap).length === 0) {
-      startLevel();
-    } else if (phase === "welcome") {
-      setSymbolMap({});
-    }
-  }, [phase, symbolMap, startLevel, engine.level]);
-
-  const handleAnswer = useCallback(
-    (sym: string) => {
-      if (phase !== "playing" || !!feedbackState) return;
-
-      const correct = symbolMap[currentNumber] === sym;
-
-      if (correct) {
-        playSound("pop");
-        addScore(15 + engine.level * 2);
-
-        const ns = scoreInLevel + 1;
-        const targetScore = 5 + Math.floor(engine.level / 4);
-
-        if (ns >= targetScore) {
-          playSound("correct");
-          showFeedback(true);
-          safeTimeout(() => {
-            dismissFeedback();
-            if (engine.level >= MAX_LEVEL) {
-              engine.setGamePhase("victory");
-              playSound("success");
-            } else {
-              nextLevel();
-              startLevel();
-            }
-          }, 1000);
-        } else {
-          setScoreInLevel(ns);
-          setCurrentNumber(Math.floor(Math.random() * 9) + 1);
-        }
-      } else {
-        playSound("incorrect");
-        showFeedback(false);
-        loseLife();
-        safeTimeout(() => {
-          dismissFeedback();
-          setCurrentNumber(Math.floor(Math.random() * 9) + 1);
-        }, 1000);
-      }
-    },
-    [phase, feedbackState, symbolMap, currentNumber, scoreInLevel, playSound, addScore, showFeedback, dismissFeedback, loseLife, nextLevel, engine, safeTimeout, startLevel],
-  );
+  const {
+    engine,
+    feedback,
+    symbolMap,
+    currentNumber,
+    scoreInLevel,
+    handleAnswer,
+  } = useDigitSymbolController();
+  const { phase, level } = engine;
 
   const gameConfig = {
-    title: GAME_TITLE,
-    description: GAME_DESCRIPTION,
-    tuzoCode: TUZO_TEXT,
+    title: "Simge Kodlama",
+    description: "Sayılarla şekiller arasındaki bağı hızla kur, dikkatinle sembolleri eşleştirerek rekor kır!",
+    tuzoCode: "TUZÖ 5.6.1 Rakam-Sembol Eşleştirme & Hız",
     icon: Hash,
     accentColor: "cyber-pink",
     maxLevel: MAX_LEVEL,
@@ -140,7 +61,7 @@ const DigitSymbolGame: React.FC = () => {
                 </motion.div>
 
                 <div className="flex gap-1.5 mt-2 bg-white dark:bg-slate-800 border-2 border-black/10 px-3 py-1.5 rounded-lg shadow-neo-sm">
-                  {Array.from({ length: 5 + Math.floor(engine.level / 4) }).map((_, i) => (
+                  {Array.from({ length: getDigitSymbolTargetScore(level) }).map((_, i) => (
                     <div
                       key={i}
                       className={`w-2.5 h-2.5 rounded-full border-2 border-black/10 ${i < scoreInLevel ? "bg-cyber-yellow" : "bg-slate-200 dark:bg-slate-600"}`}

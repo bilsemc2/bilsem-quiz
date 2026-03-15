@@ -13,6 +13,7 @@ import {
   TIME_LIMIT,
 } from "./constants";
 import {
+  buildKnowledgeCardFeedbackMessage,
   buildQuestions,
   calculateKnowledgeCardScore,
   getBackLink,
@@ -159,7 +160,15 @@ export const useKnowledgeCardController = () => {
       const canContinueAfterMiss = lives > 1;
 
       recordAttempt({ isCorrect, responseMs: getResponseMs() });
-      showFeedback(isCorrect);
+      showFeedback(
+        isCorrect,
+        buildKnowledgeCardFeedbackMessage({
+          isCorrect,
+          level,
+          maxLevel: MAX_LEVEL,
+          correctAnswer: currentQuestion.correctAnswer,
+        }),
+      );
       playSound(isCorrect ? "correct" : "incorrect");
 
       if (isCorrect) {

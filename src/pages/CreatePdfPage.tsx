@@ -1,8 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { QUESTIONS_CONFIG } from '../config/questions';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '@/contexts/auth/useAuth';
+import { loadUserProfile } from '@/features/auth/model/authUseCases';
 import { Link } from 'react-router-dom';
+
+type AnswerImageStatus = 'loaded' | 'error';
+
+const waitForPaint = async () => {
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  });
+};
 
 const CreatePdfPage: React.FC = () => {
   const [numQuestions, setNumQuestions] = useState<number>(10);
@@ -13,7 +23,9 @@ const CreatePdfPage: React.FC = () => {
   const [isVip, setIsVip] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [showWatermark, setShowWatermark] = useState(false);
+  const [answerImageStatuses, setAnswerImageStatuses] = useState<Record<string, AnswerImageStatus>>({});
+  const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -24,20 +36,9 @@ const CreatePdfPage: React.FC = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('is_vip')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error checking VIP status:', error);
-          setIsVip(false);
-        } else {
-          setIsVip(data?.is_vip || false);
-        }
-      } catch (error) {
-        console.error('Error:', error);
+        const profile = await loadUserProfile(user.id);
+        setIsVip(Boolean(profile?.is_vip));
+      } catch {
         setIsVip(false);
       } finally {
         setLoading(false);
@@ -46,6 +47,105 @@ const CreatePdfPage: React.FC = () => {
 
     checkVipStatus();
   }, [user]);
+
+  const generateQuestions = () => {
+    const totalQuestions = QUESTIONS_CONFIG.totalQuestions;
+    const questions: number[] = [];
+
+    if (selectionType === 'sequential') {
+      for (let i = 0; i < numQuestions; i++) {
+        const questionNum = startQuestion + i;
+        if (questionNum <= totalQuestions) {
+          questions.push(questionNum);
+        }
+      }
+    } else {
+      while (questions.length < numQuestions) {
+        const num = Math.floor(Math.random() * totalQuestions) + 1;
+        if (!questions.includes(num)) {
+          questions.push(num);
+        }
+      }
+      questions.sort((a, b) => a - b);
+    }
+
+    setSelectedQuestions(questions);
+    setAnswerImageStatuses({});
+    setShowPreview(true);
+  };
+
+  const totalQuestionPages = Math.ceil(selectedQuestions.length / 6);
+  const pageCount = totalQuestionPages + 1;
+
+  const setPageRef = useCallback((index: number, element: HTMLDivElement | null) => {
+    pageRefs.current[index] = element;
+  }, []);
+
+  const getRegisteredPages = useCallback(() => {
+    return pageRefs.current
+      .slice(0, pageCount)
+      .filter((page): page is HTMLDivElement => Boolean(page));
+  }, [pageCount]);
+
+  const markAnswerImageStatus = useCallback((key: string, status: AnswerImageStatus) => {
+    setAnswerImageStatuses((previous) => {
+      if (previous[key] === status) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        [key]: status
+      };
+    });
+  }, []);
+
+  const generatePDF = async () => {
+    if (getRegisteredPages().length === 0) return;
+
+    setIsGeneratingPdf(true);
+    setShowWatermark(true);
+    await waitForPaint();
+
+    const pages = getRegisteredPages();
+
+    try {
+      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas')
+      ]);
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
+
+        const canvas = await html2canvas(page, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
+      }
+
+      pdf.save('sorular.pdf');
+    } catch { /* pdf generation failed */ } finally {
+      setShowWatermark(false);
+      setIsGeneratingPdf(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -115,113 +215,6 @@ const CreatePdfPage: React.FC = () => {
       </div>
     );
   }
-
-  const generateQuestions = () => {
-    const totalQuestions = QUESTIONS_CONFIG.totalQuestions;
-    const questions: number[] = [];
-
-    if (selectionType === 'sequential') {
-      for (let i = 0; i < numQuestions; i++) {
-        const questionNum = startQuestion + i;
-        if (questionNum <= totalQuestions) {
-          questions.push(questionNum);
-        }
-      }
-    } else {
-      while (questions.length < numQuestions) {
-        const num = Math.floor(Math.random() * totalQuestions) + 1;
-        if (!questions.includes(num)) {
-          questions.push(num);
-        }
-      }
-      questions.sort((a, b) => a - b);
-    }
-
-    setSelectedQuestions(questions);
-    setShowPreview(true);
-  };
-
-  const addWatermark = () => {
-    const pages = document.querySelectorAll('.pdf-page');
-    pages.forEach(page => {
-      const watermark = document.createElement('div');
-      const pageElement = page as HTMLElement;
-      const watermarkElement = watermark as HTMLElement;
-
-      watermarkElement.style.position = 'absolute';
-      watermarkElement.style.top = '50%';
-      watermarkElement.style.left = '50%';
-      watermarkElement.style.transform = 'translate(-50%, -50%) rotate(-45deg)';
-      watermarkElement.style.fontSize = '60px';
-      watermarkElement.style.color = 'gray';
-      watermarkElement.style.opacity = '0.05';
-      watermarkElement.style.pointerEvents = 'none';
-      watermarkElement.style.userSelect = 'none';
-      watermarkElement.style.width = '100%';
-      watermarkElement.style.textAlign = 'center';
-      watermarkElement.style.fontWeight = 'bold';
-      watermarkElement.className = 'watermark';
-      watermarkElement.textContent = 'BilsemC2';
-      pageElement.style.position = 'relative';
-      pageElement.appendChild(watermarkElement);
-    });
-  };
-
-  const generatePDF = async () => {
-    if (!contentRef.current) return;
-
-    setIsGeneratingPdf(true);
-
-    // Watermark ekle
-    addWatermark();
-
-    const element = contentRef.current;
-    const pages = element.querySelectorAll('.pdf-page');
-
-    try {
-      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
-        import('jspdf'),
-        import('html2canvas')
-      ]);
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      for (let i = 0; i < pages.length; i++) {
-        const page = pages[i] as HTMLElement;
-
-        const canvas = await html2canvas(page, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-        });
-
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-        if (i > 0) {
-          pdf.addPage();
-        }
-
-        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
-      }
-
-      pdf.save('sorular.pdf');
-    } catch (error) {
-      console.error('PDF oluşturma hatası:', error);
-    } finally {
-      // PDF oluştuktan sonra watermark'ları temizle
-      const existingWatermarks = element.getElementsByClassName('watermark');
-      while (existingWatermarks.length > 0) {
-        existingWatermarks[0].remove();
-      }
-
-      setIsGeneratingPdf(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">
@@ -315,13 +308,14 @@ const CreatePdfPage: React.FC = () => {
           </div>
 
           <div className="pdf-preview" style={{ maxWidth: '210mm', margin: '0 auto' }}>
-            <div ref={contentRef} style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {/* Soru sayfaları */}
-              {Array.from({ length: Math.ceil(selectedQuestions.length / 6) }, (_, pageIndex) => {
+              {Array.from({ length: totalQuestionPages }, (_, pageIndex) => {
                 const pageQuestions = selectedQuestions.slice(pageIndex * 6, (pageIndex + 1) * 6);
                 return pageQuestions.length > 0 ? (
                   <div
                     key={pageIndex}
+                    ref={(element) => setPageRef(pageIndex, element)}
                     className="pdf-page bg-white"
                     style={{
                       width: '210mm',
@@ -331,9 +325,20 @@ const CreatePdfPage: React.FC = () => {
                       pageBreakAfter: 'always',
                       display: 'flex',
                       flexDirection: 'column',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      position: 'relative'
                     }}
                   >
+                    {showWatermark && (
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 flex items-center justify-center select-none"
+                      >
+                        <div className="w-full -rotate-45 text-center text-[60px] font-bold text-gray-500 opacity-5">
+                          BilsemC2
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-4" style={{ width: '190mm' }}>
                       {pageQuestions.map((questionNum, index) => (
                         <div key={questionNum} className="question-box border rounded p-3 flex flex-col items-center question-container">
@@ -381,6 +386,7 @@ const CreatePdfPage: React.FC = () => {
 
               {/* Cevap sayfası */}
               <div
+                ref={(element) => setPageRef(totalQuestionPages, element)}
                 className="pdf-page bg-white"
                 style={{
                   width: '210mm',
@@ -389,36 +395,51 @@ const CreatePdfPage: React.FC = () => {
                   boxSizing: 'border-box',
                   display: 'flex',
                   flexDirection: 'column',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  position: 'relative'
                 }}
               >
+                {showWatermark && (
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 flex items-center justify-center select-none"
+                  >
+                    <div className="w-full -rotate-45 text-center text-[60px] font-bold text-gray-500 opacity-5">
+                      BilsemC2
+                    </div>
+                  </div>
+                )}
                 <h1 className="text-xl font-bold mb-6">Soru Cevapları:</h1>
                 <div className="grid grid-cols-2 gap-6" style={{ width: '180mm' }}>
                   {selectedQuestions.map((questionNum, index) => (
                     <div key={questionNum} className="answer-box flex items-center gap-4">
                       <span className="text-sm font-bold">Soru {index + 1}:</span>
                       <div className="flex gap-2">
-                        {['A', 'B', 'C', 'D', 'E'].map((option) => (
-                          <img
-                            key={option}
-                            src={`/images/options/Matris/${questionNum}/Soru-cevap-${questionNum}${option}.webp`}
-                            alt={`Soru ${questionNum} cevap`}
-                            className="h-[40px] object-contain"
-                            onLoad={(e) => {
-                              // Görsel yüklendiğinde yanına cevap harfini ekle
-                              const parent = e.currentTarget.parentElement;
-                              if (parent) {
-                                const text = document.createElement('span');
-                                text.className = 'text-sm font-bold ml-1';
-                                text.textContent = option;
-                                parent.appendChild(text);
-                              }
-                            }}
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        ))}
+                        {['A', 'B', 'C', 'D', 'E'].map((option) => {
+                          const answerImageKey = `${questionNum}-${option}`;
+                          const answerImageStatus = answerImageStatuses[answerImageKey];
+
+                          return (
+                            <div key={option} className="flex items-center gap-1">
+                              {answerImageStatus !== 'error' && (
+                                <img
+                                  src={`/images/options/Matris/${questionNum}/Soru-cevap-${questionNum}${option}.webp`}
+                                  alt={`Soru ${questionNum} cevap`}
+                                  className="h-[40px] object-contain"
+                                  onLoad={() => {
+                                    markAnswerImageStatus(answerImageKey, 'loaded');
+                                  }}
+                                  onError={() => {
+                                    markAnswerImageStatus(answerImageKey, 'error');
+                                  }}
+                                />
+                              )}
+                              {answerImageStatus === 'loaded' && (
+                                <span className="text-sm font-bold">{option}</span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}

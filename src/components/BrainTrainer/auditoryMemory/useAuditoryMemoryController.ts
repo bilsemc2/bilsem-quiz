@@ -14,6 +14,7 @@ import {
   USER_NOTE_DURATION_MS,
 } from "./constants";
 import {
+  buildAuditoryMemoryFeedbackMessage,
   calculateAuditoryMemoryScore,
   generateSequence,
   isExpectedNote,
@@ -140,14 +141,22 @@ export const useAuditoryMemoryController = () => {
     setLocalPhase("idle");
     clearScheduledActions();
     recordAttempt({ isCorrect: true, responseMs: getResponseMs() });
-    playSound("correct");
-    showFeedback(true);
+    showFeedback(
+      true,
+      buildAuditoryMemoryFeedbackMessage({
+        correct: true,
+        level,
+        maxLevel: MAX_LEVEL,
+        sequenceLength: sequence.length,
+      }),
+    );
     addScore(calculateAuditoryMemoryScore(level));
 
     scheduleAction(() => {
       dismissFeedback();
 
       if (level >= MAX_LEVEL) {
+        playSound("success");
         setGamePhase("victory");
         return;
       }
@@ -165,6 +174,7 @@ export const useAuditoryMemoryController = () => {
     playSound,
     recordAttempt,
     scheduleAction,
+    sequence.length,
     setGamePhase,
     setupRound,
     showFeedback,
@@ -175,9 +185,16 @@ export const useAuditoryMemoryController = () => {
     setLocalPhase("idle");
     clearScheduledActions();
     recordAttempt({ isCorrect: false, responseMs: getResponseMs() });
-    playSound("incorrect");
     loseLife();
-    showFeedback(false);
+    showFeedback(
+      false,
+      buildAuditoryMemoryFeedbackMessage({
+        correct: false,
+        level,
+        maxLevel: MAX_LEVEL,
+        sequenceLength: sequence.length,
+      }),
+    );
 
     scheduleAction(() => {
       dismissFeedback();
@@ -194,9 +211,9 @@ export const useAuditoryMemoryController = () => {
     lives,
     loseLife,
     phase,
-    playSound,
     recordAttempt,
     scheduleAction,
+    sequence.length,
     setupRound,
     showFeedback,
   ]);

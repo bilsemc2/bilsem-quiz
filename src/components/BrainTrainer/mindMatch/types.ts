@@ -6,6 +6,7 @@ export interface EmojiDef {
 export interface CategoryData {
   description: string;
   items: EmojiDef[];
+  excludedDistractorKeys?: string[];
 }
 
 export interface PuzzleItem extends EmojiDef {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SOUND_URLS, type AppSoundName } from '@/features/sound/model/soundCatalog';
+import type { AppSoundName } from '@/features/sound/model/soundCatalog';
+import { playAppSound } from '@/features/sound/model/soundEngine';
 import {
     createSoundPreferences,
     DEFAULT_SOUND_MUTED,
@@ -28,7 +29,6 @@ export const useSoundController = (): SoundContextValue => {
     const initialPreferencesRef = useRef(readInitialPreferences());
     const [volume, setVolume] = useState(initialPreferencesRef.current.volume);
     const [isMuted, setIsMuted] = useState(initialPreferencesRef.current.isMuted);
-    const preloadedAudioRef = useRef<Partial<Record<AppSoundName, HTMLAudioElement>>>({});
     const volumeRef = useRef(volume);
     const mutedRef = useRef(isMuted);
 
@@ -39,41 +39,6 @@ export const useSoundController = (): SoundContextValue => {
     useEffect(() => {
         mutedRef.current = isMuted;
     }, [isMuted]);
-
-    useEffect(() => {
-        const preloadedAudio: Partial<Record<AppSoundName, HTMLAudioElement>> = {};
-
-        (Object.entries(SOUND_URLS) as [AppSoundName, string][]).forEach(([soundName, soundUrl]) => {
-            const audio = new Audio(soundUrl);
-            audio.preload = 'auto';
-            audio.volume = volumeRef.current / 100;
-            preloadedAudio[soundName] = audio;
-        });
-
-        preloadedAudioRef.current = preloadedAudio;
-
-        return () => {
-            Object.values(preloadedAudio).forEach((audio) => {
-                if (!audio) {
-                    return;
-                }
-
-                audio.pause();
-                audio.currentTime = 0;
-            });
-            preloadedAudioRef.current = {};
-        };
-    }, []);
-
-    useEffect(() => {
-        Object.values(preloadedAudioRef.current).forEach((audio) => {
-            if (!audio) {
-                return;
-            }
-
-            audio.volume = volume / 100;
-        });
-    }, [volume]);
 
     useEffect(() => {
         if (!canUseLocalStorage()) {
@@ -91,13 +56,7 @@ export const useSoundController = (): SoundContextValue => {
             return;
         }
 
-        const sourceAudio = preloadedAudioRef.current[soundName];
-        const playbackAudio = new Audio(sourceAudio?.src ?? SOUND_URLS[soundName]);
-        playbackAudio.volume = volumeRef.current / 100;
-
-        void playbackAudio.play().catch((error) => {
-            console.warn(`Error playing sound ${soundName}:`, error);
-        });
+        void playAppSound(soundName, volumeRef.current);
     }, []);
 
     return {

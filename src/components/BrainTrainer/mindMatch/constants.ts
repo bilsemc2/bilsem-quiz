@@ -7,6 +7,6 @@ export const INITIAL_LIVES = 5;
 export const TIME_LIMIT = 180;
 export const MAX_LEVEL = 20;
 export const TOTAL_ITEMS = 9;
-export const FEEDBACK_DURATION_MS = 1000;
+export const FEEDBACK_DURATION_MS = 1200;
 export const CORRECT_DELAY_MS = 1200;
 export const INCORRECT_DELAY_MS = 1500;

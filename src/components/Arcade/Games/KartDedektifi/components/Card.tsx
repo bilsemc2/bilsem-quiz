@@ -20,6 +20,8 @@ interface CardProps {
 
 const Card: React.FC<CardProps> = ({ card, onClick, isSelected, isReference, disabled }) => {
   const IconComponent = SHAPE_COMPONENTS[card.shape];
+  const isInteractive = Boolean(onClick) && !disabled;
+  const shouldDisableButton = disabled || !onClick;
 
   const renderShapes = () => {
     const icons = [];
@@ -44,15 +46,20 @@ const Card: React.FC<CardProps> = ({ card, onClick, isSelected, isReference, dis
 
   return (
     <button
+      type="button"
       onClick={onClick}
-      disabled={disabled}
+      disabled={shouldDisableButton}
       className={`
         relative w-24 h-36 md:w-32 md:h-48 rounded-3xl flex items-center justify-center transition-all duration-200
         border-[4px] border-black/10 sm:shadow-neo-sm shadow-neo-sm overflow-hidden
         ${COLORS[card.color]}
-        ${isSelected ? 'ring-8 ring-yellow-400 scale-105 z-10 shadow-none -translate-y-1' : 'hover:-translate-y-2 hover:shadow-neo-sm sm:hover:shadow-neo-sm active:translate-y-2 active:shadow-none'}
-        ${isReference ? 'cursor-default hover:-translate-y-0 hover:shadow-neo-sm sm:hover:shadow-neo-sm' : 'cursor-pointer'}
-        ${disabled ? 'opacity-90 grayscale-[0.5] hover:-translate-y-0 active:translate-y-0 hover:shadow-neo-sm sm:hover:shadow-neo-sm' : ''}
+        ${isSelected
+          ? 'ring-8 ring-yellow-400 scale-105 z-10 shadow-none -translate-y-1'
+          : isInteractive
+            ? 'hover:-translate-y-2 hover:shadow-neo-sm sm:hover:shadow-neo-sm active:translate-y-2 active:shadow-none'
+            : 'hover:-translate-y-0 active:translate-y-0'}
+        ${isReference || !onClick ? 'cursor-default' : 'cursor-pointer'}
+        ${disabled && onClick ? 'opacity-90 grayscale-[0.5] hover:-translate-y-0 active:translate-y-0 hover:shadow-neo-sm sm:hover:shadow-neo-sm' : ''}
       `}
     >
       {/* Gloss reflection overlay, cartoonish */}

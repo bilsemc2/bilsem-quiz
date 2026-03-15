@@ -83,7 +83,8 @@ export const createLevelBalloons = (
     const shuffledColors = shuffleArray(colors, random);
 
     return shuffledColors.slice(0, totalBalloons).map((color, index) => ({
-        id: seed + index + Math.floor(random() * 1000),
+        // Round-local ids must stay stable and unique so pop animations target one balloon at a time.
+        id: seed + index,
         displayValue: randomNumbers[index],
         color,
         isPopped: false,

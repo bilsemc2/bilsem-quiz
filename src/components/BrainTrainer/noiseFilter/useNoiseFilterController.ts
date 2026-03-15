@@ -13,17 +13,22 @@ import {
   TIME_LIMIT,
 } from "./constants.ts";
 import {
+  buildNoiseFilterFeedbackMessage,
   calculateNoiseFilterScore,
   createRound,
-  isAnswerCorrect,
+  isNoiseFilterInteractionLocked,
+  resolveNoiseFilterSelection,
 } from "./logic.ts";
 import type { NoiseFilterRound } from "./types.ts";
 import { useNoiseFilterAudio } from "./useNoiseFilterAudio";
 
 export const useNoiseFilterController = () => {
-  const actionTimeoutRef = useRef<number | null>(null);
   const roundLevelRef = useRef<number | null>(null);
   const roundStartedAtRef = useRef(0);
+  const pendingResolutionRef = useRef<{
+    resolution: ReturnType<typeof resolveNoiseFilterSelection>;
+    roundLevel: number;
+  } | null>(null);
   const { performanceRef, recordAttempt, resetPerformance } =
     useGamePerformanceTracker();
   const { playSound } = useSound();
@@ -43,7 +48,34 @@ export const useNoiseFilterController = () => {
     timeLimit: TIME_LIMIT,
     getPerformanceSnapshot: () => performanceRef.current,
   });
-  const feedback = useGameFeedback({ duration: FEEDBACK_DURATION_MS });
+  const feedback = useGameFeedback({
+    duration: FEEDBACK_DURATION_MS,
+    onFeedbackEnd: () => {
+      const pendingResolution = pendingResolutionRef.current;
+      if (!pendingResolution) {
+        return;
+      }
+
+      pendingResolutionRef.current = null;
+
+      if (pendingResolution.resolution.shouldAdvanceLevel) {
+        addScore(
+          pendingResolution.resolution.scoreDelta ||
+            calculateNoiseFilterScore(pendingResolution.roundLevel),
+        );
+        nextLevel();
+        return;
+      }
+
+      if (pendingResolution.resolution.shouldLoseLife) {
+        loseLife();
+      }
+
+      if (pendingResolution.resolution.shouldRetryLevel) {
+        startRound(pendingResolution.roundLevel);
+      }
+    },
+  });
   const { dismissFeedback, feedbackState, showFeedback } = feedback;
   const { addScore, level, lives, loseLife, nextLevel, phase } = engine;
 
@@ -51,13 +83,6 @@ export const useNoiseFilterController = () => {
   const [selectedOptionName, setSelectedOptionName] = useState<string | null>(
     null,
   );
-
-  const clearActionTimeout = useCallback(() => {
-    if (actionTimeoutRef.current !== null) {
-      window.clearTimeout(actionTimeoutRef.current);
-      actionTimeoutRef.current = null;
-    }
-  }, []);
 
   const getResponseMs = useCallback(() => {
     return roundStartedAtRef.current > 0
@@ -67,9 +92,12 @@ export const useNoiseFilterController = () => {
 
   const startRound = useCallback(
     (roundLevel: number, options?: { delayTarget?: boolean }) => {
-      const round = createRound();
+      const round = createRound(roundLevel);
 
       if (!round) {
+        console.warn(
+          `[NoiseFilter] createRound(${roundLevel}) returned null — no sounds available`,
+        );
         return false;
       }
 
@@ -83,22 +111,40 @@ export const useNoiseFilterController = () => {
     [playTargetSound],
   );
 
+  const dismissFeedbackRef = useRef(dismissFeedback);
+  const stopAllAudioRef = useRef(stopAllAudio);
+
+  useEffect(() => {
+    dismissFeedbackRef.current = dismissFeedback;
+  }, [dismissFeedback]);
+
+  useEffect(() => {
+    stopAllAudioRef.current = stopAllAudio;
+  }, [stopAllAudio]);
+
   useEffect(() => {
     return () => {
-      clearActionTimeout();
-      dismissFeedback();
-      stopAllAudio();
+      pendingResolutionRef.current = null;
+      dismissFeedbackRef.current();
+      stopAllAudioRef.current();
     };
-  }, [clearActionTimeout, dismissFeedback, stopAllAudio]);
+  }, []);
+
+  const currentRoundRef = useRef<NoiseFilterRound | null>(null);
+
+  useEffect(() => {
+    currentRoundRef.current = currentRound;
+  }, [currentRound]);
 
   useEffect(() => {
     if (phase === "playing") {
       resumeBackgroundAudio();
 
-      const needsRound = roundLevelRef.current !== level || !currentRound;
+      const needsRound =
+        roundLevelRef.current !== level || !currentRoundRef.current;
 
       if (needsRound) {
-        if (!currentRound) {
+        if (!currentRoundRef.current) {
           resetBackgroundAudio();
           playSound("click");
         }
@@ -109,7 +155,7 @@ export const useNoiseFilterController = () => {
       return;
     }
 
-    clearActionTimeout();
+    pendingResolutionRef.current = null;
     dismissFeedback();
     stopAllAudio();
 
@@ -121,8 +167,6 @@ export const useNoiseFilterController = () => {
       resetPerformance();
     }
   }, [
-    clearActionTimeout,
-    currentRound,
     dismissFeedback,
     level,
     phase,
@@ -169,49 +213,39 @@ export const useNoiseFilterController = () => {
         return;
       }
 
-      const isCorrect = isAnswerCorrect(sound.name, currentRound);
-      const canRetry = lives > 1;
-
+      const resolution = resolveNoiseFilterSelection({
+        selectedName: sound.name,
+        round: currentRound,
+        level,
+        lives,
+      });
+      const isCorrect = resolution.isCorrect;
+      const feedbackMessage = buildNoiseFilterFeedbackMessage(
+        resolution,
+        level,
+        MAX_LEVEL,
+        lives,
+      );
+      
       setSelectedOptionName(sound.name);
       recordAttempt({ isCorrect, responseMs: getResponseMs() });
-      showFeedback(isCorrect);
-      playSound(isCorrect ? "correct" : "wrong");
-      clearActionTimeout();
+      pendingResolutionRef.current = {
+        resolution,
+        roundLevel: level,
+      };
+      showFeedback(isCorrect, feedbackMessage);
       stopTargetAudio();
-
-      actionTimeoutRef.current = window.setTimeout(() => {
-        dismissFeedback();
-
-        if (isCorrect) {
-          addScore(calculateNoiseFilterScore(level));
-          nextLevel();
-          return;
-        }
-
-        loseLife();
-
-        if (canRetry) {
-          startRound(level);
-        }
-      }, FEEDBACK_DURATION_MS);
     },
     [
-      addScore,
-      clearActionTimeout,
       currentRound,
-      dismissFeedback,
       feedbackState,
       getResponseMs,
       level,
       lives,
-      loseLife,
-      nextLevel,
       phase,
-      playSound,
       recordAttempt,
       selectedOptionName,
       showFeedback,
-      startRound,
       stopTargetAudio,
     ],
   );
@@ -224,8 +258,10 @@ export const useNoiseFilterController = () => {
     selectedOptionName,
     handleOption,
     handleReplayTarget,
-    isInteractionLocked:
-      selectedOptionName !== null || Boolean(feedbackState),
+    isInteractionLocked: isNoiseFilterInteractionLocked(
+      selectedOptionName,
+      Boolean(feedbackState),
+    ),
     setBackgroundVolume,
   };
 };

@@ -23,6 +23,15 @@ Bu dokuman, `CLEAN_CODE_ARCHITECTURE_PLAN.md` icindeki Faz 1 hedeflerini kod duz
 
 - UI katmaninda (`pages/components`) dogrudan `supabase.from(...)` cagrisi yazilmaz.
 - Veri erisimi `src/server/repositories` veya feature-level api/use-case katmanindan gecmelidir.
+- `@/lib/supabase` importu yalnizca `src/server/repositories/**` ve `src/lib/**` icinde kalmalidir.
+- `src/pages`, `src/components`, `src/contexts`, `src/hooks`, `src/routes`, `src/services`, `src/utils` altinda Supabase clienti dogrudan import edilmez.
+- Edge function veya auth token kullanan UI akislarinda da istemci kodu use-case/repository uzerinden ilerlemelidir.
+
+## Lint Ile Zorlanan Sinirlar
+
+- ESLint `no-restricted-imports` kurali UI/orchestration katmaninda `@/lib/supabase` ve relatif `lib/supabase` importlarini bloklar.
+- Bu kuralin amaci sadece stil degil, veri erisimi ile ekran mantigi arasinda kalici sinir olusturmaktir.
+- Yeni istisna acilacaksa once repository/use-case alternatifi degerlendirilmelidir; istisna son care olmalidir.
 
 ## AI Akis Kurallari
 
@@ -41,4 +50,5 @@ Bu dokuman, `CLEAN_CODE_ARCHITECTURE_PLAN.md` icindeki Faz 1 hedeflerini kod duz
 - Katman siniri ihlali var mi?
 - Yeni kod testle desteklendi mi?
 - Dogrudan UI icinde veri erisimi eklendi mi?
+- UI/orchestration katmaninda `lib/supabase` importu geri geldi mi?
 - Yeni tipler yanlis katmanda tutuluyor mu?

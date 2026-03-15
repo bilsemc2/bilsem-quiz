@@ -77,8 +77,7 @@ export default function StoryDetailPage() {
       setStory({ ...story, questions: shuffled });
       setShowQuiz(true);
       toast.success('Sorular hazır!', { icon: '✅' });
-    } catch (err) {
-      console.error('Soru oluşturma hatası:', err);
+    } catch {
       toast.error('Sorular oluşturulurken bir hata oluştu.');
     } finally {
       setGeneratingQuestions(false);

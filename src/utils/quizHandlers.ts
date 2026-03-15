@@ -1,6 +1,9 @@
 import { Question, Quiz, Answer } from '../types/quiz';
-import { supabase } from '../lib/supabase';
 import { playSound } from './soundPlayer';
+import {
+    completeAssignmentQuiz,
+    persistCompletedQuiz
+} from '@/features/content/model/quizSubmissionUseCases';
 
 interface QuizActions {
     setIsAnswered: (value: boolean) => void;
@@ -114,8 +117,7 @@ export async function handleOptionSelection(
                 selectedOption.isCorrect ? 'success' : 'error'
             );
         }
-    } catch (error) {
-        console.error('Seçenek seçilirken hata:', error);
+    } catch {
         feedbackActions.showFeedback('Bir hata oluştu.', 'error');
     }
 };
@@ -249,8 +251,7 @@ export const handleQuizEnd = async (
                 timeSpent
             });
         }
-    } catch (error) {
-        console.error('Quiz sonlandırma hatası:', error);
+    } catch {
         feedbackActions.showFeedback('Bir hata oluştu, lütfen tekrar deneyin.', 'error');
     }
 };
@@ -266,8 +267,7 @@ export const handleQuestionNavigation = (
         quizActions.setSelectedOption(null);
         quizActions.setIsAnswered(false);
         quizActions.setIsTimeout(false);
-    } catch (error) {
-        console.error('Soru değiştirilirken hata:', error);
+    } catch {
         feedbackActions.showFeedback('Bir hata oluştu', 'error');
     }
 };
@@ -284,53 +284,14 @@ export const handleQuizComplete = async (
         // Son sorunun cevabını bekle
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        const score = answers.filter(answer => answer.isCorrect).length;
-        const totalQuestions = quiz.questions.length;
+        const { score, totalQuestions } = await persistCompletedQuiz({
+            quiz,
+            answers,
+            userId
+        });
 
-        // Ödev quizi ise sonuçları assignment_results tablosuna kaydet
         if (quiz.isAssignment) {
-            const startTime = answers[0]?.timestamp;
-            const endTime = answers[answers.length - 1]?.timestamp;
-            const durationMinutes = startTime && endTime 
-                ? Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60))
-                : null;
-
-            const { error } = await supabase.from('assignment_results').insert({
-                assignment_id: quiz.id,
-                student_id: userId,
-                answers: answers,
-                score: score,
-                total_questions: totalQuestions,
-                completed_at: new Date().toISOString(),
-                status: 'completed',
-                duration_minutes: durationMinutes
-            });
-
-            if (error) {
-                console.error('Quiz sonuçları kaydedilirken hata:', error);
-                feedbackActions.showFeedback('Quiz sonuçları kaydedilirken hata oluştu', 'error');
-                return;
-            }
-
             feedbackActions.showFeedback('Quiz başarıyla tamamlandı!', 'success', true);
-        } else {
-            // Normal quiz sonuçlarını quiz_results tablosuna kaydet
-            const { error } = await supabase.from('quiz_results').insert({
-                quiz_id: quiz.id,
-                user_id: userId,
-                user_answers: answers,
-                score: score,
-                questions_answered: totalQuestions,
-                correct_answers: score,
-                completed_at: new Date().toISOString(),
-                title: quiz.title
-            });
-
-            if (error) {
-                console.error('Quiz sonuçları kaydedilirken hata:', error);
-                feedbackActions.showFeedback('Quiz sonuçları kaydedilirken hata oluştu', 'error');
-                return;
-            }
         }
 
         if (onComplete) {
@@ -339,8 +300,7 @@ export const handleQuizComplete = async (
 
         quizActions.resetQuizState();
         feedbackActions.showFeedback('Quiz tamamlandı!', 'success', true);
-    } catch (error) {
-        console.error('Quiz tamamlanırken hata:', error);
+    } catch {
         feedbackActions.showFeedback('Quiz tamamlanırken bir hata oluştu', 'error', true);
     }
 };
@@ -355,44 +315,22 @@ export const handleAssignmentQuizComplete = async (
     onComplete?: (score: number, totalQuestions: number) => void,
     onNavigate?: (path: string) => void
 ): Promise<void> => {
-    try {
-        const endTime = new Date();
-        const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+    await completeAssignmentQuiz({
+        assignmentId,
+        answers,
+        userId,
+        score,
+        totalQuestions,
+        startTime
+    });
 
-        // Sonuçları kaydet
-        const { error: resultError } = await supabase
-            .from('assignment_results')
-            .insert({
-                assignment_id: assignmentId,
-                student_id: userId,
-                score,
-                total_questions: totalQuestions,
-                completed_at: endTime.toISOString(),
-                duration,
-                answers
-            });
+    // Callback fonksiyonlarını çağır
+    if (onComplete) {
+        onComplete(score, totalQuestions);
+    }
 
-        if (resultError) throw resultError;
-
-        // Ödevi tamamlandı olarak işaretle
-        const { error: updateError } = await supabase
-            .from('assignments')
-            .update({ status: 'completed' })
-            .eq('id', assignmentId);
-
-        if (updateError) throw updateError;
-
-        // Callback fonksiyonlarını çağır
-        if (onComplete) {
-            onComplete(score, totalQuestions);
-        }
-
-        // Sonuç sayfasına yönlendir
-        if (onNavigate) {
-            onNavigate(`/assignment-results/${assignmentId}`);
-        }
-    } catch (error) {
-        console.error('Ödev tamamlanırken hata:', error);
-        throw error;
+    // Sonuç sayfasına yönlendir
+    if (onNavigate) {
+        onNavigate(`/assignment-results/${assignmentId}`);
     }
 };

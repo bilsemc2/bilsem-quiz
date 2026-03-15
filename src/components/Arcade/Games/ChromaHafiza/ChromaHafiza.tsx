@@ -1,18 +1,84 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { GamePhase, PuzzlePiece } from './types';
-import { LEVEL_CONFIGS, GAME_NAME, TUZO_CODE } from './constants';
-import { generatePuzzlePieces } from './utils/patternGenerator';
-import GameScene from './components/GameScene';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Info, Brain, ChevronRight } from 'lucide-react';
-import ArcadeGameShell from '../../Shared/ArcadeGameShell';
-import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
-import { ARCADE_SCORE_FORMULA, ARCADE_SCORE_BASE, ARCADE_FEEDBACK_TEXTS } from '../../Shared/ArcadeConstants';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Brain, ChevronRight, Eye, Heart, Layers3, Palette, Play, RotateCcw, Sparkles, Star, Target, Trophy } from 'lucide-react';
+import { GamePhase, type PuzzlePiece } from './types';
+import { GAME_NAME, TUZO_CODE } from './constants';
+import GameScene from './components/GameScene';
+import { ARCADE_FEEDBACK_TEXTS, ARCADE_SCORE_BASE, ARCADE_SCORE_FORMULA } from '../../Shared/ArcadeConstants';
 import { useArcadeGameSession } from '../../Shared/useArcadeGameSession';
+import { useArcadeSoundEffects } from '../../Shared/useArcadeSoundEffects';
+import { KidCard, KidGameFeedbackBanner, KidGameShell, KidGameStatusOverlay } from '../../../kid-ui';
+import { useGameViewportFocus } from '../../../../hooks/useGameViewportFocus';
+import { canSelectPiece, createRoundState } from './logic';
+
+const ChromaHafizaPreview: React.FC = () => {
+    const steps = [
+        {
+            title: 'Renkleri Gözle',
+            description: 'Parçalar ilk anda renklerini gösterecek. Hedef renge dikkat kesil.',
+            accentColor: 'yellow',
+        },
+        {
+            title: 'Parçaları Seç',
+            description: 'Renkler gizlenince hedef renkte olan tüm parçaları hafızandan bul.',
+            accentColor: 'blue',
+        },
+        {
+            title: 'Bonus Topla',
+            description: 'Doğru seçimle seviye bonusu al, hata yaparsan bir can eksilir.',
+            accentColor: 'emerald',
+        },
+    ] as const;
+
+    return (
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+            <div className="rounded-[2rem] border-2 border-black/10 bg-white/85 p-5 shadow-neo-md dark:border-white/10 dark:bg-slate-900/80">
+                <div className="rounded-[1.5rem] border-2 border-black/10 bg-[linear-gradient(180deg,#e0f2fe_0%,#ffffff_55%,#fef3c7_100%)] p-5 shadow-inner dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(30,41,59,0.96)_0%,rgba(15,23,42,0.96)_100%)]">
+                    <div className="grid grid-cols-4 gap-3 sm:grid-cols-4">
+                        {['#B85A73', '#3DA882', '#4A8BC2', '#C48B3A', '#7C5DAB', '#B87A5C', '#4A9999', '#ffffff'].map((color, index) => (
+                            <div
+                                key={`${color}-${index}`}
+                                className="aspect-square rounded-[1.25rem] border-2 border-black/10 shadow-neo-sm"
+                                style={{ backgroundColor: color }}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="mt-6 rounded-[1.5rem] border-2 border-black/10 bg-cyber-blue px-4 py-4 text-center text-white shadow-neo-sm">
+                        <div className="text-[11px] font-black uppercase tracking-[0.22em] text-white/70">Hedef Renk</div>
+                        <div className="mt-3 flex items-center justify-center gap-3">
+                            <div className="h-10 w-10 rounded-2xl border-2 border-black/10 bg-[#4A8BC2]" />
+                            <span className="text-lg font-black uppercase tracking-wide">Mavi Tonda Parçaları Hatırla</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid gap-4">
+                {steps.map((step) => (
+                    <KidCard key={step.title} accentColor={step.accentColor} animate={false} className="h-full">
+                        <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                            Hafıza Görevi
+                        </div>
+                        <div className="mt-2 text-2xl font-black tracking-tight text-black dark:text-white">
+                            {step.title}
+                        </div>
+                        <p className="mt-2 text-sm font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                            {step.description}
+                        </p>
+                    </KidCard>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 const ChromaHafiza: React.FC = () => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { playAreaRef, focusPlayArea } = useGameViewportFocus();
+    const { playArcadeSound } = useArcadeSoundEffects();
     const {
         sessionState,
         startSession,
@@ -20,47 +86,65 @@ const ChromaHafiza: React.FC = () => {
         advanceLevel,
         finishGame,
         loseLife,
-        recordAttempt
+        recordAttempt,
     } = useArcadeGameSession({ gameId: 'arcade-chroma-hafiza', initialLevel: 0 });
 
     const isResolvingRef = useRef(false);
     const roundStartedAtRef = useRef(0);
+    const timeoutIdsRef = useRef<number[]>([]);
 
     const [gamePhase, setGamePhase] = useState<GamePhase>('idle');
     const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
-    const [targetColor, setTargetColor] = useState<string>('');
+    const [targetColor, setTargetColor] = useState('');
     const [isRevealing, setIsRevealing] = useState(false);
     const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [showLevelUp, setShowLevelUp] = useState(false);
 
-    const initLevel = useCallback((levelIdx: number) => {
-        const config = LEVEL_CONFIGS[levelIdx % LEVEL_CONFIGS.length];
-        const newPieces = generatePuzzlePieces(config.pieceCount, config.colorCount);
-        const distinctColors = Array.from(new Set(newPieces.map((piece) => piece.targetColor)));
-        const selectedColor = distinctColors[Math.floor(Math.random() * distinctColors.length)];
+    const clearScheduledTimeouts = useCallback(() => {
+        timeoutIdsRef.current.forEach((timeoutId) => {
+            window.clearTimeout(timeoutId);
+        });
+        timeoutIdsRef.current = [];
+    }, []);
 
+    const scheduleTimeout = useCallback((callback: () => void, delay: number) => {
+        const timeoutId = window.setTimeout(() => {
+            timeoutIdsRef.current = timeoutIdsRef.current.filter((id) => id !== timeoutId);
+            callback();
+        }, delay);
+
+        timeoutIdsRef.current.push(timeoutId);
+    }, []);
+
+    const initLevel = useCallback((levelIdx: number) => {
+        const { config, pieces: newPieces, targetColor: selectedColor } = createRoundState(levelIdx);
+
+        clearScheduledTimeouts();
         setPieces(newPieces);
         setTargetColor(selectedColor);
         setGamePhase('preview');
         setIsRevealing(true);
         setShowLevelUp(false);
 
-        setTimeout(() => {
+        scheduleTimeout(() => {
             setIsRevealing(false);
             setGamePhase('playing');
             roundStartedAtRef.current = Date.now();
+            isResolvingRef.current = false;
         }, config.previewDuration);
-    }, []);
+    }, [clearScheduledTimeouts, scheduleTimeout]);
 
     const startGame = useCallback(() => {
-        window.scrollTo(0, 0);
+        clearScheduledTimeouts();
         startSession();
+        playArcadeSound('start');
         setGamePhase('preview');
         setFeedback(null);
         setShowLevelUp(false);
         isResolvingRef.current = false;
         initLevel(0);
-    }, [initLevel, startSession]);
+        focusPlayArea();
+    }, [clearScheduledTimeouts, focusPlayArea, initLevel, playArcadeSound, startSession]);
 
     useEffect(() => {
         if (location.state?.autoStart && sessionState.status === 'START') {
@@ -68,25 +152,33 @@ const ChromaHafiza: React.FC = () => {
         }
     }, [location.state, sessionState.status, startGame]);
 
+    useEffect(() => clearScheduledTimeouts, [clearScheduledTimeouts]);
+
     const handlePieceClick = useCallback((id: string) => {
-        if (gamePhase !== 'playing' || isResolvingRef.current) {
+        const selectedPiece = pieces.find((piece) => piece.id === id);
+
+        if (!canSelectPiece({
+            gamePhase,
+            isResolving: isResolvingRef.current,
+            piece: selectedPiece,
+        })) {
             return;
         }
 
-        const selectedPiece = pieces.find((piece) => piece.id === id);
         recordAttempt({
             isCorrect: selectedPiece?.targetColor === targetColor,
-            responseMs: roundStartedAtRef.current > 0 ? Date.now() - roundStartedAtRef.current : null
+            responseMs: roundStartedAtRef.current > 0 ? Date.now() - roundStartedAtRef.current : null,
         });
+        playArcadeSound('hit');
 
-        setPieces((previous) => previous.map((piece) => {
+        setPieces((previousPieces) => previousPieces.map((piece) => {
             if (piece.id === id) {
                 const isCorrect = piece.targetColor === targetColor;
                 return { ...piece, isSelected: true, isCorrect };
             }
             return piece;
         }));
-    }, [gamePhase, pieces, recordAttempt, targetColor]);
+    }, [gamePhase, pieces, playArcadeSound, recordAttempt, targetColor]);
 
     useEffect(() => {
         if (gamePhase !== 'playing' || isResolvingRef.current) {
@@ -105,12 +197,13 @@ const ChromaHafiza: React.FC = () => {
                 message: ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES[
                     Math.floor(Math.random() * ARCADE_FEEDBACK_TEXTS.ERROR_MESSAGES.length)
                 ],
-                type: 'error'
+                type: 'error',
             });
+            playArcadeSound('fail');
 
             const nextSession = loseLife();
 
-            setTimeout(() => {
+            scheduleTimeout(() => {
                 setIsRevealing(false);
                 setFeedback(null);
 
@@ -121,8 +214,8 @@ const ChromaHafiza: React.FC = () => {
                         metadata: {
                             game_name: GAME_NAME,
                             levels_completed: sessionState.level,
-                            final_level: sessionState.level + 1
-                        }
+                            final_level: sessionState.level + 1,
+                        },
                     });
                 } else {
                     initLevel(sessionState.level);
@@ -145,10 +238,11 @@ const ChromaHafiza: React.FC = () => {
                 message: ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES[
                     Math.floor(Math.random() * ARCADE_FEEDBACK_TEXTS.SUCCESS_MESSAGES.length)
                 ],
-                type: 'success'
+                type: 'success',
             });
+            playArcadeSound('success');
 
-            setTimeout(() => {
+            scheduleTimeout(() => {
                 setIsRevealing(false);
                 setFeedback(null);
                 setShowLevelUp(true);
@@ -156,108 +250,238 @@ const ChromaHafiza: React.FC = () => {
                 isResolvingRef.current = false;
             }, 2000);
         }
-    }, [addScore, finishGame, gamePhase, initLevel, loseLife, pieces, sessionState.level, targetColor]);
+    }, [addScore, finishGame, gamePhase, initLevel, loseLife, pieces, playArcadeSound, scheduleTimeout, sessionState.level, targetColor]);
 
     const nextLevel = useCallback(() => {
+        if (gamePhase !== 'success' || isResolvingRef.current) {
+            return;
+        }
+
+        isResolvingRef.current = true;
+        clearScheduledTimeouts();
         const nextSession = advanceLevel();
+        playArcadeSound('levelUp');
         setShowLevelUp(false);
         initLevel(nextSession.level);
-    }, [advanceLevel, initLevel]);
+        focusPlayArea();
+    }, [advanceLevel, clearScheduledTimeouts, focusPlayArea, gamePhase, initLevel, playArcadeSound]);
+
+    const targetPieceCount = pieces.filter((piece) => piece.targetColor === targetColor).length;
+
+    const overlay = gamePhase === 'idle' ? (
+        <KidGameStatusOverlay
+            tone="yellow"
+            icon={Brain}
+            title={GAME_NAME}
+            description="Renkleri önce izle, sonra hafızandan hedef renkteki tüm parçaları bul."
+            actions={[
+                { label: 'Oyuna Başla', variant: 'primary', size: 'lg', icon: Play, onClick: startGame },
+                { label: 'Hemen Deneyelim', variant: 'ghost', size: 'lg', icon: Sparkles, onClick: startGame },
+            ]}
+        />
+    ) : gamePhase === 'game_over' ? (
+        <KidGameStatusOverlay
+            tone="pink"
+            icon={Trophy}
+            title="Hafıza Turu Bitti"
+            description="İyi bir tur çıkardın. Bir kez daha deneyip daha uzun renk zinciri kurabilirsin."
+            stats={[
+                { label: 'Puan', value: sessionState.score, tone: 'blue' },
+                { label: 'Seviye', value: sessionState.level + 1, tone: 'yellow' },
+                { label: 'Can', value: sessionState.lives, tone: 'emerald' },
+            ]}
+            actions={[
+                { label: 'Tekrar Oyna', variant: 'primary', size: 'lg', icon: RotateCcw, onClick: startGame },
+                { label: "Arcade'e Dön", variant: 'ghost', size: 'lg', onClick: () => navigate('/bilsem-zeka') },
+            ]}
+            backdropClassName="bg-slate-950/60"
+        />
+    ) : null;
 
     return (
-        <ArcadeGameShell
-            gameState={{ ...sessionState, level: sessionState.level + 1 }}
-            gameMetadata={{
-                id: 'arcade-chroma-hafiza',
-                title: GAME_NAME,
-                description: (
-                    <>
-                        <p>🎨 Renkleri hafızanda tut ve hedef renkteki tüm parçaları bul!</p>
-                        <p className="mt-2">💡 Önce renkleri gör, sonra parçalar gizlenir — hafızana güven!</p>
-                    </>
-                ),
-                tuzoCode: TUZO_CODE,
-                icon: <Brain className="w-14 h-14 text-black" strokeWidth={3} />,
-                iconBgColor: 'bg-sky-400',
-                containerBgColor: 'bg-sky-200 dark:bg-slate-900'
-            }}
-            onStart={startGame}
-            onRestart={startGame}
-            showLevel={true}
-            showLives={true}
-        >
-            <div className="relative w-full flex flex-col h-[calc(100dvh-4rem)]">
-                <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
+        <KidGameShell
+            title={GAME_NAME}
+            subtitle="Renk ipuçlarını aklında tut, gizlenen parçaları doğru seç ve seviyeyi büyüt."
+            instruction="Renkler görünürken hedefi ezberle. Gizlenince aynı renkteki tüm parçaları seç."
+            backHref="/bilsem-zeka"
+            backLabel="Arcade'e Dön"
+            badges={[
+                { label: 'Görsel Hafıza', variant: 'difficulty' },
+                { label: TUZO_CODE, variant: 'tuzo' },
+            ]}
+            stats={[
+                { label: 'Seviye', value: sessionState.level + 1, tone: 'blue', icon: Layers3 },
+                { label: 'Puan', value: sessionState.score, tone: 'yellow', icon: Star },
+                {
+                    label: 'Can',
+                    value: `${sessionState.lives}/3`,
+                    tone: sessionState.lives <= 1 ? 'pink' : 'emerald',
+                    emphasis: sessionState.lives <= 1 ? 'danger' : 'default',
+                    icon: Heart,
+                },
+                { label: 'Hedef Parça', value: targetPieceCount || '-', tone: 'orange', icon: Palette },
+            ]}
+            supportTitle="Hafıza Paneli"
+            supportDescription="Hedef rengi ve o anki görev adımını buradan takip et."
+            playAreaRef={playAreaRef}
+            supportArea={(
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+                    <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-blue/15 px-4 py-4 shadow-neo-sm">
+                        <div className="flex items-center gap-3">
+                            <Target size={20} className="stroke-[2.5] text-black dark:text-white" />
+                            <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                                Hedef Renk
+                            </div>
+                        </div>
+                        <div className="mt-3 flex items-center gap-4">
+                            <div
+                                className="h-14 w-14 rounded-[1.25rem] border-2 border-black/10 shadow-neo-sm"
+                                style={{ backgroundColor: targetColor || '#ffffff' }}
+                            />
+                            <div className="text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                                {gamePhase === 'preview' && 'Parçaları izle. Birazdan bu renkte olanları hafızandan seçeceksin.'}
+                                {gamePhase === 'playing' && 'Bu renkteki tüm parçaları seç. Yanlış seçim bir can götürür.'}
+                                {gamePhase === 'reveal' && 'Seçimlerin kontrol ediliyor. Bir sonraki adım birazdan açıklanacak.'}
+                                {gamePhase === 'success' && 'Harika. Bonus puanın hazır, sonraki seviyeye geçebilirsin.'}
+                                {(gamePhase === 'idle' || gamePhase === 'game_over') && 'Oyuna başladığında hedef renk burada belirecek.'}
+                            </div>
+                        </div>
+                    </div>
 
-                <main className="flex-1 relative min-h-[50dvh] sm:min-h-[60dvh]">
-                    <GameScene
-                        pieces={pieces}
-                        isRevealing={isRevealing}
-                        onPieceClick={handlePieceClick}
-                        isGameWon={gamePhase === 'success'}
-                    />
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                        <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-yellow/35 px-4 py-4 shadow-neo-sm">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                                Aşama
+                            </div>
+                            <div className="mt-2 text-sm font-black uppercase text-black dark:text-white">
+                                {gamePhase === 'preview' && 'Renkleri İncele'}
+                                {gamePhase === 'playing' && 'Seçmeye Başla'}
+                                {gamePhase === 'reveal' && 'Kontrol Ediliyor'}
+                                {gamePhase === 'success' && 'Seviye Tamam'}
+                                {(gamePhase === 'idle' || gamePhase === 'game_over') && 'Hazırlık'}
+                            </div>
+                        </div>
 
-                    <AnimatePresence>
-                        {(gamePhase === 'playing' || gamePhase === 'reveal') && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 sm:gap-4 z-20"
-                            >
-                                <div className="px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-slate-700 rounded-[2rem] flex items-center justify-center gap-3 sm:gap-5 shadow-neo-sm rotate-2 transition-colors duration-300">
-                                    <Target className="text-black dark:text-white w-6 h-6 sm:w-8 sm:h-8" strokeWidth={3} />
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] sm:text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Hedef Renk</span>
-                                        <span className="text-sm sm:text-base font-black text-black dark:text-white uppercase tracking-widest transition-colors duration-300">Bu Rengi Bul</span>
-                                    </div>
-                                    <div
-                                        className="w-20 h-16 sm:w-24 sm:h-20 rounded-2xl border-2 border-black/10 shadow-neo-sm"
-                                        style={{ backgroundColor: targetColor }}
-                                    />
-                                </div>
-
-                                {gamePhase === 'reveal' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="bg-yellow-300 px-4 py-2 mt-2 rounded-xl border-2 border-black/10 flex items-center gap-2 shadow-neo-sm -rotate-2"
-                                    >
-                                        <Info size={16} className="text-black" strokeWidth={3} />
-                                        <span className="text-xs sm:text-sm text-black font-black uppercase tracking-widest">Kontrol Ediliyor...</span>
-                                    </motion.div>
-                                )}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
+                        <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-emerald/20 px-4 py-4 shadow-neo-sm">
+                            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                                <Eye size={16} className="stroke-[2.5]" />
+                                Hatırlatma
+                            </div>
+                            <div className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">
+                                Önce renkleri grup olarak gör, sonra seçmeden önce hedef parçayı zihninde konumlandır.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            overlay={(
+                <>
+                    {overlay}
                     <AnimatePresence>
                         {showLevelUp && gamePhase === 'success' && (
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
                             >
-                                <div className="bg-white dark:bg-slate-800 p-8 sm:p-12 rounded-[3rem] border-2 border-black/10 dark:border-slate-700 shadow-neo-sm text-center space-y-6 max-w-sm transform rotate-2 transition-colors duration-300">
-                                    <div className="text-6xl sm:text-7xl">🎉</div>
-                                    <h2 className="text-3xl sm:text-4xl font-black text-emerald-500 uppercase tracking-tighter">BAŞARILI!</h2>
-                                    <p className="text-black dark:text-white font-black bg-emerald-100 dark:bg-emerald-900/30 px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm -rotate-2 transition-colors duration-300">
-                                        +{ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, sessionState.level + 1)} Puan
-                                    </p>
-                                    <button
-                                        onClick={nextLevel}
-                                        className="w-full py-4 sm:py-5 bg-sky-400 text-black font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-2 active:shadow-none transition-all shadow-neo-sm border-2 border-black/10 text-xl sm:text-2xl"
+                                <motion.div
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0.9, opacity: 0 }}
+                                >
+                                    <KidGameStatusOverlay
+                                        tone="emerald"
+                                        icon={Brain}
+                                        title="Başarılı!"
+                                        description="Hedef renkteki tüm parçaları buldun. Sıra bir sonraki desende."
+                                        maxWidthClassName="max-w-sm"
+                                        backdropClassName="bg-black/50"
+                                        actions={[
+                                            {
+                                                label: 'Sonraki Seviye',
+                                                variant: 'secondary',
+                                                size: 'lg',
+                                                icon: ChevronRight,
+                                                onClick: nextLevel,
+                                            },
+                                        ]}
                                     >
-                                        SONRAKİ SEVİYE <ChevronRight size={24} strokeWidth={3} />
-                                    </button>
-                                </div>
+                                        <p className="inline-flex rounded-xl border-2 border-black/10 bg-cyber-yellow px-4 py-2 text-base font-black uppercase tracking-wide text-black shadow-neo-sm">
+                                            +{ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, sessionState.level + 1)} puan
+                                        </p>
+                                    </KidGameStatusOverlay>
+                                </motion.div>
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </main>
+                </>
+            )}
+        >
+            <div className="relative w-full">
+                <KidGameFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
+
+                <AnimatePresence mode="wait">
+                    {(gamePhase === 'idle' || gamePhase === 'game_over') && (
+                        <motion.div
+                            key="preview"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="w-full"
+                        >
+                            <ChromaHafizaPreview />
+                        </motion.div>
+                    )}
+
+                    {gamePhase !== 'idle' && gamePhase !== 'game_over' && (
+                        <motion.div
+                            key="game"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="w-full"
+                        >
+                            <div className="relative min-h-[50dvh] rounded-[2rem] border-2 border-black/10 bg-white/85 shadow-neo-lg dark:border-white/10 dark:bg-slate-900/80">
+                                <div className="absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-[1.5rem] border-2 border-black/10 bg-white/90 px-4 py-3 shadow-neo-sm dark:border-white/10 dark:bg-slate-800/90">
+                                    <div className="flex items-center gap-3">
+                                        <Target className="h-6 w-6 text-black dark:text-white" strokeWidth={3} />
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                                Hedef Renk
+                                            </span>
+                                            <span className="text-sm font-black uppercase tracking-widest text-black dark:text-white">
+                                                Bu Rengi Bul
+                                            </span>
+                                        </div>
+                                        <div
+                                            className="h-12 w-14 rounded-2xl border-2 border-black/10 shadow-neo-sm"
+                                            style={{ backgroundColor: targetColor }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {gamePhase === 'reveal' && (
+                                    <div className="absolute left-1/2 top-24 z-20 -translate-x-1/2 rounded-xl border-2 border-black/10 bg-cyber-yellow px-4 py-2 shadow-neo-sm">
+                                        <span className="text-xs font-black uppercase tracking-widest text-black">
+                                            Kontrol Ediliyor...
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="h-[58dvh] min-h-[420px] overflow-hidden rounded-[2rem]">
+                                    <GameScene
+                                        pieces={pieces}
+                                        isRevealing={isRevealing}
+                                        onPieceClick={handlePieceClick}
+                                        isGameWon={gamePhase === 'success'}
+                                    />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
-        </ArcadeGameShell>
+        </KidGameShell>
     );
 };
 

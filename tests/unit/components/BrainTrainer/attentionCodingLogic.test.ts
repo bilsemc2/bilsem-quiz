@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildAttentionCodingFeedbackMessage,
   createAttentionCodingRound,
   createKeyMappings,
   createTestItems,
@@ -93,4 +94,37 @@ test("answer validation and score preserve the legacy rules", () => {
     true,
   );
   assert.equal(getAttentionCodingScore(9), 65);
+});
+
+test("attention coding feedback helper explains success and mismatches", () => {
+  assert.equal(
+    buildAttentionCodingFeedbackMessage({
+      correct: true,
+      targetNumber: 3,
+      correctShape: "star",
+      level: 4,
+      maxLevel: 20,
+    }),
+    "Doğru eşleştirme! Şimdi 5. seviyeye geçiyorsun.",
+  );
+  assert.equal(
+    buildAttentionCodingFeedbackMessage({
+      correct: true,
+      targetNumber: 6,
+      correctShape: "hexagon",
+      level: 20,
+      maxLevel: 20,
+    }),
+    "Doğru eşleştirme! Son kodu da çözdün, oyun tamamlanıyor.",
+  );
+  assert.equal(
+    buildAttentionCodingFeedbackMessage({
+      correct: false,
+      targetNumber: 2,
+      correctShape: "plus",
+      level: 7,
+      maxLevel: 20,
+    }),
+    "Yanlış eşleştirme! 2 sayısının şekli Artı olmalıydı.",
+  );
 });

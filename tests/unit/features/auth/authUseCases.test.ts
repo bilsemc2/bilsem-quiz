@@ -1,173 +1,164 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
+import type { AuthRepository } from '../../../../src/server/repositories/authRepository.ts';
 import {
-    gainXPForCurrentSession,
-    loadSessionUser,
-    loadUserProfile,
-    signOutUser,
-    subscribeAuthState,
-    touchUserLastSeen
+    loadSessionAccessToken,
+    loadSessionUserId,
+    registerUser,
+    resetUserPassword,
+    signInUser,
+    signUpEmailPassword
 } from '../../../../src/features/auth/model/authUseCases.ts';
 
-const createUser = (overrides: Partial<User> = {}): User => ({
-    id: 'user-1',
-    app_metadata: {},
-    user_metadata: {},
-    aud: 'authenticated',
-    created_at: '2026-03-07T10:00:00.000Z',
-    email: 'user@example.com',
-    ...overrides
+test('signInUser maps invalid credential errors to a friendly message', async () => {
+    await assert.rejects(
+        () =>
+            signInUser(
+                { email: 'ada@example.com', password: 'wrong-password' },
+                {
+                    signInWithPassword: async () => {
+                        throw new Error('Invalid login credentials');
+                    }
+                }
+            ),
+        /Email veya şifre hatalı/
+    );
 });
 
-test('loadSessionUser and loadUserProfile delegate to auth repository', async () => {
-    const sessionUser = await loadSessionUser({
-        getSessionUser: async () => createUser()
-    });
+test('registerUser completes profile, signs in, and keeps signup successful when referral XP fails', async () => {
+    const calls: {
+        referrerCode?: string;
+        profile?: Parameters<
+            Pick<AuthRepository, 'completeRegistrationProfile'>['completeRegistrationProfile']
+        >[0];
+        signedIn?: boolean;
+    } = {};
+    const originalConsoleError = console.error;
+    console.error = () => {};
 
-    const profile = await loadUserProfile('user-1', {
-        getProfileByUserId: async (userId) => ({
-            id: userId,
-            email: 'user@example.com',
-            name: 'Ada',
-            experience: 120
-        })
-    });
+    try {
+        const result = await registerUser(
+            {
+                email: 'ada@example.com',
+                name: 'Ada Lovelace',
+                school: 'Bilsem',
+                grade: '4',
+                password: 'secret1',
+                confirmPassword: 'secret1',
+                referralCode: 'ARKADAS'
+            },
+            {
+                getReferrerIdByCode: async (referralCode) => {
+                    calls.referrerCode = referralCode;
+                    return 'ref-user-1';
+                },
+                signUpWithPassword: async () => ({ id: 'user-1' } as never),
+                completeRegistrationProfile: async (profile) => {
+                    calls.profile = profile;
+                },
+                incrementXP: async () => {
+                    throw new Error('rpc unavailable');
+                },
+                signInWithPassword: async () => {
+                    calls.signedIn = true;
+                    return { id: 'user-1' } as never;
+                }
+            }
+        );
 
-    assert.equal(sessionUser?.id, 'user-1');
-    assert.deepEqual(profile, {
-        id: 'user-1',
-        email: 'user@example.com',
-        name: 'Ada',
-        experience: 120
-    });
+        assert.deepEqual(result, {
+            startingXP: 50,
+            referralBonusGranted: true
+        });
+        assert.equal(calls.referrerCode, 'ARKADAS');
+        assert.equal(calls.profile?.userId, 'user-1');
+        assert.equal(calls.profile?.grade, 4);
+        assert.equal(calls.profile?.referredBy, 'ARKADAS');
+        assert.equal(calls.profile?.experience, 50);
+        assert.match(calls.profile?.avatarUrl ?? '', /seed=Ada%20Lovelace/);
+        assert.equal(calls.signedIn, true);
+    } finally {
+        console.error = originalConsoleError;
+    }
 });
 
-test('subscribeAuthState forwards callback values and exposes unsubscribe', () => {
-    const receivedEvents: Array<{ userId: string | null; event: AuthChangeEvent; hasSession: boolean }> = [];
-    let unsubscribed = false;
+test('resetUserPassword ignores AuthSessionMissingError after updating the password', async () => {
+    let updatePasswordArg: string | null = null;
 
-    const session = {
-        access_token: 'token-1',
-        token_type: 'bearer',
-        expires_in: 3600,
-        expires_at: 1_700_000_000,
-        refresh_token: 'refresh-1',
-        user: createUser()
-    } as Session;
-
-    const subscription = subscribeAuthState(
-        (user, event, activeSession) => {
-            receivedEvents.push({
-                userId: user?.id ?? null,
-                event,
-                hasSession: Boolean(activeSession)
-            });
+    await resetUserPassword(
+        {
+            newPassword: 'new-password',
+            confirmPassword: 'new-password'
         },
         {
-            onAuthStateChange: (callback) => {
-                callback(session.user, 'SIGNED_IN', session);
-                return {
-                    unsubscribe: () => {
-                        unsubscribed = true;
+            updatePassword: async (password) => {
+                updatePasswordArg = password;
+            },
+            signOut: async () => {
+                const error = new Error('session missing');
+                error.name = 'AuthSessionMissingError';
+                throw error;
+            }
+        }
+    );
+
+    assert.equal(updatePasswordArg, 'new-password');
+});
+
+test('signUpEmailPassword forwards metadata to the repository', async () => {
+    let receivedMetadata: Record<string, unknown> | undefined;
+
+    await signUpEmailPassword(
+        {
+            email: 'ada@example.com',
+            password: 'secret1',
+            metadata: {
+                source: 'story'
+            }
+        },
+        {
+            signUpWithPassword: async (input) => {
+                receivedMetadata = input.metadata;
+                return null;
+            }
+        }
+    );
+
+    assert.deepEqual(receivedMetadata, {
+        source: 'story'
+    });
+});
+
+test('signUpEmailPassword maps already-registered errors to a friendly message', async () => {
+    await assert.rejects(
+        () =>
+            signUpEmailPassword(
+                {
+                    email: 'ada@example.com',
+                    password: 'secret1'
+                },
+                {
+                    signUpWithPassword: async () => {
+                        throw new Error('User already registered');
                     }
-                };
-            }
-        }
-    );
-
-    subscription.unsubscribe();
-
-    assert.deepEqual(receivedEvents, [
-        {
-            userId: 'user-1',
-            event: 'SIGNED_IN',
-            hasSession: true
-        }
-    ]);
-    assert.equal(unsubscribed, true);
-});
-
-test('touchUserLastSeen persists an ISO timestamp for the active user', async () => {
-    let capturedUserId = '';
-    let capturedTimestamp = '';
-
-    await touchUserLastSeen('user-42', {
-        updateLastSeen: async (userId, lastSeenISO) => {
-            capturedUserId = userId;
-            capturedTimestamp = lastSeenISO;
-        }
-    });
-
-    assert.equal(capturedUserId, 'user-42');
-    assert.notEqual(Number.isNaN(Date.parse(capturedTimestamp)), true);
-});
-
-test('signOutUser delegates sign-out to auth repository', async () => {
-    let called = false;
-
-    await signOutUser({
-        signOut: async () => {
-            called = true;
-        }
-    });
-
-    assert.equal(called, true);
-});
-
-test('gainXPForCurrentSession returns unauthorized when access token is missing', async () => {
-    const result = await gainXPForCurrentSession(
-        15,
-        'Zaman bazlı XP',
-        {
-            auth: {
-                getAccessToken: async () => null
-            },
-            xp: {
-                executeXPTransaction: async () => {
-                    throw new Error('should not be called');
                 }
-            }
-        }
+            ),
+        /Bu email ile zaten bir hesap var/
     );
-
-    assert.deepEqual(result, {
-        success: false,
-        error: 'Oturum bulunamadı',
-        status: 401
-    });
 });
 
-test('gainXPForCurrentSession executes a gain transaction with the active access token', async () => {
-    const result = await gainXPForCurrentSession(
-        20,
-        'Ders tamamlama',
-        {
-            auth: {
-                getAccessToken: async () => 'token-123'
-            },
-            xp: {
-                executeXPTransaction: async (payload, accessToken) => {
-                    assert.deepEqual(payload, {
-                        action: 'gain',
-                        amount: 20,
-                        reason: 'Ders tamamlama'
-                    });
-                    assert.equal(accessToken, 'token-123');
-
-                    return {
-                        success: true as const,
-                        newXP: 140,
-                        change: 20
-                    };
-                }
-            }
-        }
-    );
-
-    assert.deepEqual(result, {
-        success: true,
-        newXP: 140,
-        change: 20
+test('loadSessionAccessToken returns the access token from the repository', async () => {
+    const accessToken = await loadSessionAccessToken({
+        getAccessToken: async () => 'token-123'
     });
+
+    assert.equal(accessToken, 'token-123');
+});
+
+test('loadSessionUserId resolves the active session user id', async () => {
+    const userId = await loadSessionUserId({
+        getSessionUser: async () => ({ id: 'user-99' }) as never
+    });
+
+    assert.equal(userId, 'user-99');
 });

@@ -12,7 +12,12 @@ import {
   START_ROUND_DELAY_MS,
   TIME_LIMIT,
 } from "./constants";
-import { calculateNumberMemoryScore, createQuestion, generateSequence } from "./logic";
+import {
+  buildNumberMemoryFeedbackMessage,
+  calculateNumberMemoryScore,
+  createQuestion,
+  generateSequence,
+} from "./logic";
 import type { LocalPhase, Question } from "./types";
 import { useNumberSequencePlayback } from "./useNumberSequencePlayback";
 
@@ -113,6 +118,7 @@ export const useNumberMemoryController = () => {
     }
 
     clearScheduledActions();
+    dismissFeedback();
 
     if (phase === "welcome") {
       resetRoundState();
@@ -123,6 +129,7 @@ export const useNumberMemoryController = () => {
     resetRoundState();
   }, [
     clearScheduledActions,
+    dismissFeedback,
     level,
     phase,
     resetPerformance,
@@ -148,8 +155,15 @@ export const useNumberMemoryController = () => {
       recordAttempt({ isCorrect: correct, responseMs: getResponseMs() });
 
       if (correct) {
-        playSound("correct");
-        showFeedback(true);
+        showFeedback(
+          true,
+          buildNumberMemoryFeedbackMessage({
+            correct: true,
+            answer: currentQuestion.answer,
+            level,
+            maxLevel: MAX_LEVEL,
+          }),
+        );
 
         scheduleAction(() => {
           dismissFeedback();
@@ -168,8 +182,15 @@ export const useNumberMemoryController = () => {
         return;
       }
 
-      playSound("incorrect");
-      showFeedback(false);
+      showFeedback(
+        false,
+        buildNumberMemoryFeedbackMessage({
+          correct: false,
+          answer: currentQuestion.answer,
+          level,
+          maxLevel: MAX_LEVEL,
+        }),
+      );
 
       scheduleAction(() => {
         dismissFeedback();

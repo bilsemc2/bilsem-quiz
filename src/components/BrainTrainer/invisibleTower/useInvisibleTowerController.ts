@@ -15,6 +15,7 @@ import {
   TIME_LIMIT,
 } from "./constants";
 import {
+  buildInvisibleTowerFeedbackMessage,
   calculateInvisibleTowerScore,
   createRound,
   getFlashDelay,
@@ -174,7 +175,15 @@ export const useInvisibleTowerController = () => {
 
       clearPendingActions();
       recordAttempt({ isCorrect, responseMs: getResponseMs() });
-      showFeedback(isCorrect);
+      showFeedback(
+        isCorrect,
+        buildInvisibleTowerFeedbackMessage({
+          isCorrect,
+          level,
+          maxLevel: MAX_LEVEL,
+          correctAnswer: round.correctAnswer,
+        }),
+      );
       playSound(isCorrect ? "correct" : "incorrect");
 
       if (isCorrect) {

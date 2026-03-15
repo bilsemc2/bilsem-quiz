@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, RefreshCw, User } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { updateEditableProfile } from '@/features/profile/model/profileUseCases';
 
 // ═══════════════════════════════════════════════
 // ✏️ EditProfileModal — Kid-UI Çocuk Dostu Tasarım
@@ -56,34 +56,16 @@ const EditProfileModal = ({
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const updated = await updateEditableProfile({
+        name: formData.name,
+        school: formData.school,
+        avatar_url: formData.avatar_url
+      });
+
+      if (!updated) {
         toast.error('Kullanıcı oturumu bulunamadı');
         return;
       }
-
-      if (formData.avatar_url !== userData.avatar_url) {
-        const { error: avatarError } = await supabase
-          .from('profiles')
-          .update({ avatar_url: formData.avatar_url })
-          .eq('id', user.id);
-
-        if (avatarError) {
-          console.error('Avatar güncelleme hatası:', avatarError);
-          toast.error('Avatar güncellenirken bir hata oluştu');
-          return;
-        }
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: formData.name,
-          school: formData.school,
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
 
       toast.success('Profil başarıyla güncellendi');
       onUpdate?.();

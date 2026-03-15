@@ -8,7 +8,7 @@ export const TUZO_TEXT = "TUZÖ 5.2.1 Görsel Hafıza";
 export const MAX_LEVEL = 20;
 export const INITIAL_LIVES = 5;
 export const TIME_LIMIT = 180;
-export const FEEDBACK_DURATION_MS = 1000;
+export const FEEDBACK_DURATION_MS = 1200;
 export const ANSWER_RESULT_DELAY_MS = 1200;
 export const MEMORIZE_TICK_MS = 1000;
 

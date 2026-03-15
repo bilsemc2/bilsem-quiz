@@ -1,15 +1,24 @@
 import {
     profileRepository,
+    type EditableProfileInput,
     type ExamSessionSummary,
     type ProfileRepository,
     type ProfileWithClassesRow
 } from '@/server/repositories/profileRepository';
+import { authRepository, type AuthRepository } from '@/server/repositories/authRepository';
 import type { ClassInfo, UserProfile } from '@/types/profile';
-import { generateReferralCode } from './referralCode';
+import { isE2EMockAuthEnabled, readE2EMockAuthSession } from '@/features/auth/model/e2eMockAuth';
+import { generateReferralCode } from './referralCode.ts';
 
 export interface ProfilePageData {
     userData: UserProfile | null;
     lastExamSession: ExamSessionSummary | null;
+}
+
+export interface UpdateEditableProfileInput {
+    name: string;
+    school: string;
+    avatar_url: string;
 }
 
 export type RedeemPromoCodeResult =
@@ -64,6 +73,29 @@ export const loadProfilePageData = async (
     input: { userId: string; userEmail: string },
     deps: Pick<ProfileRepository, 'getProfileWithClasses' | 'getLatestCompletedExamSession'> = profileRepository
 ): Promise<ProfilePageData> => {
+    if (isE2EMockAuthEnabled) {
+        const mockSession = readE2EMockAuthSession();
+
+        if (mockSession?.user.id === input.userId) {
+            return {
+                userData: {
+                    name: mockSession.profile.name,
+                    email: mockSession.profile.email,
+                    school: typeof mockSession.profile.school === 'string' ? mockSession.profile.school : '',
+                    grade: mockSession.profile.grade != null ? String(mockSession.profile.grade) : '',
+                    avatar_url: buildAvatarUrl(mockSession.profile.avatar_url, mockSession.profile.email),
+                    points: 0,
+                    experience: mockSession.profile.experience,
+                    referral_code: 'E2E-FRIEND',
+                    referral_count: 0,
+                    classes: [],
+                    yetenek_alani: mockSession.profile.yetenek_alani ?? ''
+                },
+                lastExamSession: null
+            };
+        }
+    }
+
     const [profileData, lastExamSession] = await Promise.all([
         deps.getProfileWithClasses(input.userId),
         deps.getLatestCompletedExamSession(input.userId)
@@ -94,6 +126,28 @@ export const refreshReferralCode = async (
         console.error('referral code update failed:', error);
         return null;
     }
+};
+
+export const updateEditableProfile = async (
+    input: UpdateEditableProfileInput,
+    deps: {
+        auth: Pick<AuthRepository, 'getSessionUser'>;
+        profile: Pick<ProfileRepository, 'updateEditableProfile'>;
+    } = { auth: authRepository, profile: profileRepository }
+): Promise<boolean> => {
+    const user = await deps.auth.getSessionUser();
+    if (!user) {
+        return false;
+    }
+
+    const payload: EditableProfileInput = {
+        name: input.name,
+        school: input.school,
+        avatar_url: input.avatar_url
+    };
+
+    await deps.profile.updateEditableProfile(user.id, payload);
+    return true;
 };
 
 const normalizePromoCode = (promoCode: string): string => {

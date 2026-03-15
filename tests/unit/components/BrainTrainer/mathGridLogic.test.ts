@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   appendDigitToCell,
+  buildMathGridFeedbackMessage,
   calculateMathGridScore,
   deleteDigitFromCell,
   doesRowMatchOperator,
@@ -122,4 +123,34 @@ test("validatePuzzle distinguishes empty, wrong and correct submissions", () => 
 
 test("score scales with level", () => {
   assert.equal(calculateMathGridScore(6), 60);
+});
+
+test("math grid feedback helper describes the active result", () => {
+  assert.equal(
+    buildMathGridFeedbackMessage({
+      correct: true,
+      ruleDescription: "A + B = C",
+      level: 4,
+      maxLevel: 20,
+    }),
+    "Doğru çözüm! A + B = C kuralını çözdün, şimdi 5. seviyeye geçiyorsun.",
+  );
+  assert.equal(
+    buildMathGridFeedbackMessage({
+      correct: true,
+      ruleDescription: "A / B = C",
+      level: 20,
+      maxLevel: 20,
+    }),
+    "Doğru çözüm! Son matematik kuralını da tamamladın, oyun bitiyor.",
+  );
+  assert.equal(
+    buildMathGridFeedbackMessage({
+      correct: false,
+      ruleDescription: "A x B = C",
+      level: 9,
+      maxLevel: 20,
+    }),
+    "Yanlış çözüm! Satırlardaki A x B = C kuralını yeniden kontrol et.",
+  );
 });

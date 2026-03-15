@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildCosmicMemoryFeedbackMessage,
   calculateCosmicMemoryScore,
   createRound,
   getDisplayTime,
@@ -57,4 +58,34 @@ test("expected cell resolution supports normal and reverse order", () => {
 test("score formula preserves the original level multiplier", () => {
   assert.equal(calculateCosmicMemoryScore(1), 10);
   assert.equal(calculateCosmicMemoryScore(9), 90);
+});
+
+test("cosmic memory feedback helper explains forward and reverse rounds", () => {
+  assert.equal(
+    buildCosmicMemoryFeedbackMessage({
+      correct: true,
+      level: 6,
+      maxLevel: 20,
+      mode: "NORMAL",
+    }),
+    "Doğru sıra! Şimdi 7. seviyeye geçiyorsun.",
+  );
+  assert.equal(
+    buildCosmicMemoryFeedbackMessage({
+      correct: false,
+      level: 9,
+      maxLevel: 20,
+      mode: "REVERSE",
+    }),
+    "Yanlış hücre! Bu turda diziyi tersten hatırlamalıydın.",
+  );
+  assert.equal(
+    buildCosmicMemoryFeedbackMessage({
+      correct: true,
+      level: 20,
+      maxLevel: 20,
+      mode: "NORMAL",
+    }),
+    "Harika hafıza! Son diziyi de doğru tamamladın, oyun bitiyor.",
+  );
 });

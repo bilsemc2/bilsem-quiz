@@ -1,7 +1,10 @@
 import React, { useState } from "react";
-import { supabase } from "../lib/supabase";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  registerUser,
+  SIGNUP_STARTING_XP,
+} from "@/features/auth/model/authUseCases";
 import {
   UserPlus,
   Mail,
@@ -21,8 +24,6 @@ import { toast } from "sonner";
 // ═══════════════════════════════════════════════
 // 📝 SignUpPage — Kid-UI Çocuk Dostu Tasarım
 // ═══════════════════════════════════════════════
-
-const INITIAL_XP = 50;
 
 export default function SignUpPage() {
   const navigate = useNavigate();
@@ -54,84 +55,22 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      if (formData.password !== formData.confirmPassword) {
-        throw new Error("Şifreler eşleşmiyor");
-      }
-
-      if (formData.password.length < 6) {
-        throw new Error("Şifre en az 6 karakter olmalıdır");
-      }
-
-      let referrerId = null;
-      if (formData.referralCode) {
-        const { data: referrer, error: refError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("referral_code", formData.referralCode)
-          .single();
-
-        if (refError || !referrer) {
-          throw new Error("Geçersiz referans kodu");
-        }
-        referrerId = referrer.id;
-      }
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const result = await registerUser({
         email: formData.email,
+        name: formData.name,
+        school: formData.school,
+        grade: formData.grade,
         password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-            school: formData.school,
-            grade: parseInt(formData.grade),
-          },
-        },
+        confirmPassword: formData.confirmPassword,
+        referralCode: formData.referralCode,
       });
 
-      if (authError) throw authError;
+      const successMessage = result.referralBonusGranted
+        ? `🎉 ${result.startingXP} XP ile başlıyorsun ve arkadaşın da ${result.startingXP} XP kazandı!`
+        : `🎉 Hoş geldin! ${result.startingXP} XP ile başlıyorsun!`;
 
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({
-            name: formData.name,
-            email: formData.email,
-            school: formData.school,
-            grade: parseInt(formData.grade),
-            referred_by: formData.referralCode || null,
-            avatar_url: `https://api.dicebear.com/7.x/pixel-art/svg?seed=${formData.name}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood=happy`,
-            points: 0,
-            experience: INITIAL_XP,
-          })
-          .eq("id", authData.user.id);
-
-        if (profileError) throw profileError;
-
-        if (referrerId) {
-          const { error: referrerError } = await supabase.rpc("increment_xp", {
-            user_id: referrerId,
-            amount: INITIAL_XP,
-          });
-
-          if (referrerError) {
-            console.error("Referans XP hatası:", referrerError);
-          }
-        }
-
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (signInError) throw signInError;
-
-        const successMessage = formData.referralCode
-          ? `🎉 ${INITIAL_XP} XP ile başlıyorsun ve arkadaşın da ${INITIAL_XP} XP kazandı!`
-          : `🎉 Hoş geldin! ${INITIAL_XP} XP ile başlıyorsun!`;
-
-        toast.success(successMessage);
-        navigate("/bilsem");
-      }
+      toast.success(successMessage);
+      navigate("/bilsem");
     } catch (err: unknown) {
       console.error("Signup error:", err);
       setError(err instanceof Error ? err.message : "Kayıt yapılamadı");
@@ -347,7 +286,7 @@ export default function SignUpPage() {
                     strokeWidth={2.5}
                   />
                   <p className="text-xs font-nunito font-bold text-cyber-gold">
-                    Sen ve arkadaşın {INITIAL_XP} XP kazanacaksınız!
+                    Sen ve arkadaşın {SIGNUP_STARTING_XP} XP kazanacaksınız!
                   </p>
                 </div>
               )}
@@ -418,7 +357,7 @@ export default function SignUpPage() {
         >
           <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 font-nunito font-extrabold text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">
             <Sparkles className="w-3 h-3 text-cyber-gold" strokeWidth={2.5} />
-            {INITIAL_XP} XP Başlangıç
+            {SIGNUP_STARTING_XP} XP Başlangıç
           </div>
           <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 font-nunito font-extrabold text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">
             <Brain className="w-3 h-3 text-cyber-emerald" strokeWidth={2.5} />

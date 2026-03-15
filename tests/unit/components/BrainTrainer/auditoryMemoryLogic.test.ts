@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildAuditoryMemoryFeedbackMessage,
   calculateAuditoryMemoryScore,
   generateSequence,
   getSequenceLength,
@@ -45,4 +46,34 @@ test("isSequenceComplete only succeeds on the final input", () => {
 
 test("calculateAuditoryMemoryScore preserves the original formula", () => {
   assert.equal(calculateAuditoryMemoryScore(7), 120);
+});
+
+test("auditory memory feedback helper clarifies the sequence result", () => {
+  assert.equal(
+    buildAuditoryMemoryFeedbackMessage({
+      correct: true,
+      level: 4,
+      maxLevel: 20,
+      sequenceLength: 6,
+    }),
+    "Doğru dizi! 6 notayı doğru tekrar ettin, şimdi 5. seviyeye geçiyorsun.",
+  );
+  assert.equal(
+    buildAuditoryMemoryFeedbackMessage({
+      correct: true,
+      level: 20,
+      maxLevel: 20,
+      sequenceLength: 9,
+    }),
+    "Harika kulak! 9 notalık son diziyi de tamamladın, oyun bitiyor.",
+  );
+  assert.equal(
+    buildAuditoryMemoryFeedbackMessage({
+      correct: false,
+      level: 8,
+      maxLevel: 20,
+      sequenceLength: 7,
+    }),
+    "Yanlış nota! Diziyi baştan dikkatle dinlemelisin.",
+  );
 });

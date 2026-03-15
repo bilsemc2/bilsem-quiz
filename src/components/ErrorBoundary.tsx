@@ -1,6 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Download } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { logRuntimeError } from '@/features/app/model/errorLoggingUseCases';
 
 interface Props {
     children: ReactNode;
@@ -45,16 +45,14 @@ class ErrorBoundary extends Component<Props, State> {
             console.error('ErrorBoundary caught an error:', error, errorInfo);
         }
 
-        // Production: log error to Supabase
+        // Production: log error asynchronously
         if (!import.meta.env.DEV) {
-            Promise.resolve(supabase.from('error_logs').insert({
-                error_message: error.message,
-                error_stack: error.stack?.substring(0, 2000),
-                component_stack: errorInfo.componentStack?.substring(0, 2000),
+            void logRuntimeError({
+                error,
+                componentStack: errorInfo.componentStack,
                 url: window.location.href,
-                user_agent: navigator.userAgent,
-                created_at: new Date().toISOString()
-            })).catch(() => { }); // Fire-and-forget
+                userAgent: navigator.userAgent
+            });
         }
     }
 

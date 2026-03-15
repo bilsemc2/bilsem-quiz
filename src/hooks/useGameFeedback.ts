@@ -51,8 +51,8 @@ export const useGameFeedback = (options: UseGameFeedbackOptions = {}) => {
         if (timerRef.current) clearTimeout(timerRef.current);
 
         const defaultMessage = correct
-            ? ['Harikasın! 👁️', 'Keskin bakış! ⭐', 'Muhteşem! 🌟', 'Çok dikkatli! 🧠', 'Tam isabet! 🎯'][Math.floor(Math.random() * 5)]
-            : ['Daha dikkatli bak! 💪', 'Tekrar dene! 🎯', 'Neredeyse! 🧐'][Math.floor(Math.random() * 3)];
+            ? ['Doğru cevap!', 'Tam isabet!', 'Harika!'][Math.floor(Math.random() * 3)]
+            : ['Yanlış cevap!', 'Tekrar dene!', 'Olmadı!'][Math.floor(Math.random() * 3)];
 
         setFeedbackState({
             correct,

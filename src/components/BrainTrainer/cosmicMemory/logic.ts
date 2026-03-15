@@ -82,3 +82,29 @@ export const calculateCosmicMemoryScore = (level: number) => {
 export const isMaxLevel = (level: number) => {
   return level >= MAX_LEVEL;
 };
+
+export const buildCosmicMemoryFeedbackMessage = ({
+  correct,
+  level,
+  maxLevel,
+  mode,
+}: {
+  correct: boolean;
+  level: number;
+  maxLevel: number;
+  mode: GameMode;
+}) => {
+  if (correct) {
+    if (level >= maxLevel) {
+      return "Harika hafıza! Son diziyi de doğru tamamladın, oyun bitiyor.";
+    }
+
+    return `Doğru sıra! Şimdi ${level + 1}. seviyeye geçiyorsun.`;
+  }
+
+  if (mode === "REVERSE") {
+    return "Yanlış hücre! Bu turda diziyi tersten hatırlamalıydın.";
+  }
+
+  return "Yanlış hücre! Diziyi aynı sırayla hatırlamalıydın.";
+};

@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import GameFeedbackBanner from "./GameFeedbackBanner";
 import { useGameFeedback } from "../../../hooks/useGameFeedback";
+import { useGameViewportFocus } from "../../../hooks/useGameViewportFocus";
 import { useGameEngine, GamePhase } from "./useGameEngine";
 
 export interface GameShellConfig {
@@ -94,14 +95,25 @@ const BrainTrainerShell: React.FC<BrainTrainerShellProps> = ({ config, engine, f
     const backLabel = examMode ? "Sınavı Bitir" : (config.backLabel || "Geri Dön");
 
     const getAccentBgClass = () => `bg-${accentColor}`;
+    const { playAreaRef } = useGameViewportFocus();
+
+    useEffect(() => {
+        if (phase === "playing") {
+            // Focus the play area without scrolling (preventScroll avoids scrollIntoView)
+            if (playAreaRef.current) {
+                playAreaRef.current.focus({ preventScroll: true });
+            }
+            window.scrollTo(0, 0);
+        }
+    }, [phase]);
 
     if (phase === "welcome") {
         if (customWelcome) {
-            return <>{customWelcome}</>;
+            return customWelcome as React.ReactElement;
         }
         return (
-            <div className="min-h-[100dvh] bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 flex flex-col items-center justify-center p-4 sm:p-6 overflow-x-hidden overflow-y-auto overscroll-none relative">
-                <div className="relative z-10 w-full max-w-xl">
+            <div className="min-h-[100dvh] bg-[#FAF9F6] dark:bg-slate-900 transition-colors duration-300 flex flex-col items-start sm:items-center p-4 py-6 pb-12 sm:p-6 sm:pb-12 overflow-x-hidden overflow-y-auto overscroll-none relative">
+                <div className="relative z-10 w-full max-w-xl my-auto">
                     <div className="w-full flex items-center justify-start mb-6 -ml-2">
                         <Link
                             to={backLink}
@@ -115,10 +127,10 @@ const BrainTrainerShell: React.FC<BrainTrainerShellProps> = ({ config, engine, f
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-center bg-white dark:bg-slate-800 p-8 rounded-[3rem] border-2 border-black/10 shadow-neo-lg"
+                        className="text-center bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-[2.5rem] sm:rounded-[3rem] border-2 border-black/10 shadow-neo-lg"
                     >
                         <motion.div
-                            className={`w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 ${getAccentBgClass()} border-2 border-black/10 shadow-neo-md rounded-[2.5rem] flex items-center justify-center`}
+                            className={`w-20 h-20 sm:w-28 sm:h-28 mx-auto mb-4 sm:mb-5 ${getAccentBgClass()} border-2 border-black/10 shadow-neo-md rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center`}
                             animate={{ y: [0, -8, 0], rotate: [-3, 2, -3] }}
                             transition={{
                                 duration: 2.5,
@@ -126,27 +138,27 @@ const BrainTrainerShell: React.FC<BrainTrainerShellProps> = ({ config, engine, f
                                 ease: "easeInOut",
                             }}
                         >
-                            <Icon size={56} className="text-white" strokeWidth={2.5} />
+                            <Icon size={44} className="text-white sm:[&]:w-14 sm:[&]:h-14" strokeWidth={2.5} />
                         </motion.div>
 
-                        <h1 className="text-4xl sm:text-5xl font-nunito font-black mb-4 uppercase text-black dark:text-white tracking-tight drop-shadow-sm">
+                        <h1 className="text-3xl sm:text-4xl font-nunito font-black mb-2 sm:mb-3 uppercase text-black dark:text-white tracking-tight drop-shadow-sm">
                             {title}
                         </h1>
 
-                        <p className="text-slate-600 dark:text-slate-300 font-nunito font-medium mb-8 text-base sm:text-lg">
+                        <p className="text-slate-600 dark:text-slate-300 font-nunito font-medium mb-5 sm:mb-6 text-sm sm:text-base">
                             {description}
                         </p>
 
-                        <div className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-5 mb-8 border-2 border-black/10 shadow-neo-sm text-left">
-                            <h3 className="text-xl font-nunito font-black text-cyber-blue mb-4 flex items-center gap-2 uppercase">
-                                <Sparkles size={24} className="stroke-[3]" /> Nasıl Oynanır?
+                        <div className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-4 sm:p-5 mb-5 sm:mb-6 border-2 border-black/10 shadow-neo-sm text-left">
+                            <h3 className="text-lg sm:text-xl font-nunito font-black text-cyber-blue mb-3 flex items-center gap-2 uppercase">
+                                <Sparkles size={20} className="stroke-[3] sm:[&]:w-6 sm:[&]:h-6" /> Nasıl Oynanır?
                             </h3>
-                            <ul className="space-y-4 text-sm sm:text-base font-nunito font-bold text-slate-700 dark:text-slate-300">
+                            <ul className="space-y-2.5 sm:space-y-3 text-sm font-nunito font-bold text-slate-700 dark:text-slate-300">
                                 {howToPlay.map((step, i) => {
                                     const colorClasses = ["bg-cyber-yellow", "bg-cyber-green", "bg-cyber-pink", "bg-cyber-blue", "bg-cyber-purple"];
                                     return (
-                                        <li key={i} className="flex items-center gap-3">
-                                            <span className={`flex-shrink-0 w-8 h-8 ${colorClasses[i % colorClasses.length]} text-white border-2 border-black/10 rounded-lg flex items-center justify-center font-nunito font-black text-sm shadow-neo-xs`}>
+                                        <li key={i} className="flex items-center gap-2.5">
+                                            <span className={`flex-shrink-0 w-7 h-7 ${colorClasses[i % colorClasses.length]} text-white border-2 border-black/10 rounded-lg flex items-center justify-center font-nunito font-black text-xs shadow-neo-xs`}>
                                                 {i + 1}
                                             </span>
                                             <span>{step}</span>
@@ -157,25 +169,27 @@ const BrainTrainerShell: React.FC<BrainTrainerShellProps> = ({ config, engine, f
                         </div>
 
                         {tuzoCode && (
-                            <div className="mb-8 inline-flex items-center gap-2 px-4 py-2 bg-cyber-blue border-2 border-black/10 text-white rounded-xl shadow-neo-xs">
+                            <div className="mb-5 sm:mb-6 inline-flex items-center gap-2 px-3 py-1.5 bg-cyber-blue border-2 border-black/10 text-white rounded-xl shadow-neo-xs">
                                 <span className="text-xs font-nunito font-black uppercase tracking-widest">
                                     {tuzoCode}
                                 </span>
                             </div>
                         )}
 
-                        <motion.button
-                            whileHover={{ scale: 1.05, y: -4 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={handleStart}
-                            className={`w-full sm:w-auto px-10 py-5 ${getAccentBgClass()} text-white font-nunito font-black text-xl uppercase tracking-widest border-2 border-black/10 shadow-neo-md rounded-2xl hover:-translate-y-1 hover:shadow-neo-lg transition-all flex items-center justify-center gap-3 mx-auto group`}
-                        >
-                            <Play
-                                size={24}
-                                className="fill-black group-hover:scale-110 transition-transform"
-                            />
-                            <span>Başla</span>
-                        </motion.button>
+                        <div className="pt-1">
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleStart}
+                                className={`w-full sm:w-auto px-8 py-4 sm:px-10 sm:py-5 ${getAccentBgClass()} text-white font-nunito font-black text-lg sm:text-xl uppercase tracking-widest border-2 border-black/10 shadow-neo-md rounded-2xl hover:-translate-y-1 hover:shadow-neo-lg transition-all flex items-center justify-center gap-3 mx-auto group`}
+                            >
+                                <Play
+                                    size={22}
+                                    className="fill-black group-hover:scale-110 transition-transform"
+                                />
+                                <span>Başla</span>
+                            </motion.button>
+                        </div>
                     </motion.div>
                 </div>
             </div>
@@ -248,6 +262,7 @@ const BrainTrainerShell: React.FC<BrainTrainerShellProps> = ({ config, engine, f
                     {(phase === "playing" || phase === "feedback") && (
                         <motion.div
                             key="game"
+                            ref={playAreaRef}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -291,7 +306,7 @@ const BrainTrainerShell: React.FC<BrainTrainerShellProps> = ({ config, engine, f
                                 key="finished"
                                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                                className="text-center bg-white dark:bg-slate-800 p-8 sm:p-12 rounded-[3.5rem] border-2 border-black/10 shadow-neo-lg max-w-xl w-full relative"
+                                className="m-auto text-center bg-white dark:bg-slate-800 p-8 sm:p-12 rounded-[3.5rem] border-2 border-black/10 shadow-neo-lg max-w-xl w-full relative"
                             >
                                 <div className="absolute top-6 left-6 text-4xl transform -rotate-12">
                                     {phase === "victory" ? "🏆" : "🎮"}

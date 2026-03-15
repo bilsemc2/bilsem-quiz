@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { createCanvasElement } from "@/utils/createCanvasElement";
 
 import {
   FEEDBACK_DURATION_MS,
@@ -75,7 +76,7 @@ const MazeRunnerBoard: React.FC<MazeRunnerBoardProps> = ({
     }
 
     if (!collisionCanvasRef.current) {
-      collisionCanvasRef.current = document.createElement("canvas");
+      collisionCanvasRef.current = createCanvasElement();
     }
 
     buildCollisionMask(collisionCanvasRef.current, mazeLevel, canvasSize);

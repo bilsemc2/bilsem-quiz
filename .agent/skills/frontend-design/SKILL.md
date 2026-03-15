@@ -17,7 +17,7 @@ All new pages and components **must** follow this established design system. Do 
 - **Style**: `uppercase tracking-widest` for labels, badges, and small tags
 - **Heading sizes**: `text-4xl sm:text-5xl md:text-6xl` for hero headings, `text-xl` for section titles
 - **Body text**: `font-nunito font-bold` in `text-sm` or `text-lg`
-- ❌ **NEVER use**: `font-syne`, `font-chivo`, `font-inter`, `font-poppins`, `font-outfit`, or any other font family
+- NEVER use: `font-syne`, `font-chivo`, `font-inter`, `font-poppins`, `font-outfit`, or any other font family
 
 ### Colors — `cyber-*` Palette
 
@@ -29,6 +29,7 @@ All accent colors come from the `cyber-*` palette defined in `tailwind.config.js
 | `cyber-pink` | `#f43f5e` | Destructive, warnings, recording states |
 | `cyber-emerald` | `#14F195` | Success, completion, progress |
 | `cyber-gold` | `#FFD700` | Rewards, premium, highlights |
+| `cyber-yellow` | `#dcf126` | Highlight, selection, accent |
 | `cyber-purple` | `#B026FF` | Secondary accent, creative |
 | `cyber-orange` | `#FF9500` | Creativity, warmth |
 | `cyber-cyan` | `#06b6d4` | Info, cool accent |
@@ -39,7 +40,7 @@ All accent colors come from the `cyber-*` palette defined in `tailwind.config.js
 bg-cyber-blue/10 border-2 border-cyber-blue/20 text-cyber-blue
 ```
 
-- ❌ **NEVER use**: `neon-*`, `konser-*`, or ad-hoc hex colors for UI accents
+- NEVER use: `neon-*`, `konser-*`, or ad-hoc hex colors for UI accents
 
 ### Dark / Light Mode
 
@@ -66,7 +67,7 @@ Every element must support both modes using Tailwind's `dark:` prefix:
 
 Available shadow tokens: `shadow-neo-xs`, `shadow-neo-sm`, `shadow-neo-md`, `shadow-neo-lg`, `shadow-neo-xl`
 
-- ❌ **NEVER use**: `shadow-glow-*`, hard solid shadows (`shadow-[4px_4px_0_#000]`), or `border-4 border-black`
+- NEVER use: `shadow-glow-*`, hard solid shadows (`shadow-[4px_4px_0_#000]`), or `border-4 border-black`
 
 ### Card Pattern
 
@@ -145,16 +146,89 @@ Page backgrounds use a subtle dot pattern:
 <div className="fixed inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 ```
 
-## Tactile Toy-Box (Arcade & Kids Games)
+---
 
-A softer, more playful variant for the BİLSEM Zeka Arcade:
+## Kid-UI Component Library
+
+For child-facing game interfaces (Arcade games, kid-oriented features), use the **kid-ui** library at `src/components/kid-ui/`. These components follow the Tactile Toy-Box variant of the design system with thick borders, neo-brutalism shadows, and 3D button press effects.
+
+### Available Components
+
+Import from `@/components/kid-ui` or `@/components/kid-ui/index.ts`:
+
+| Component | Import | Description |
+|-----------|--------|-------------|
+| `KidButton` | `@/components/kid-ui` | 3D press-effect button with `variant` and `icon` props |
+| `KidCard` | `@/components/kid-ui` | Thick-bordered card with `tone` color theming |
+| `KidBadge` | `@/components/kid-ui` | Colorful label badge with `variant` and optional `pulse` |
+| `KidProgress` | `@/components/kid-ui` | Animated progress bar |
+| `KidAvatar` | `@/components/kid-ui` | Child avatar display |
+| `KidIconButton` | `@/components/kid-ui` | Icon-only tactile button |
+| `KidGameShell` | `@/components/kid-ui/KidGameShell` | Full game wrapper with HUD, stats, actions, badges |
+| `KidGameFeedbackBanner` | `@/components/kid-ui/KidGameFeedbackBanner` | `fixed bottom-6` feedback banner (success/error/warning) |
+| `KidGameStatusOverlay` | `@/components/kid-ui/KidGameStatusOverlay` | Full-screen status overlay (game over, victory, etc.) |
+
+### Usage Example
+
+```tsx
+import { KidButton, KidCard, KidBadge } from '@/components/kid-ui';
+import KidGameShell from '@/components/kid-ui/KidGameShell';
+import KidGameFeedbackBanner from '@/components/kid-ui/KidGameFeedbackBanner';
+import KidGameStatusOverlay from '@/components/kid-ui/KidGameStatusOverlay';
+
+// KidGameShell wraps entire game with HUD and structure
+<KidGameShell
+    tone="yellow"          // yellow | blue | emerald | pink | orange | purple
+    title="Game Title"
+    icon={GameIcon}
+    badges={[{ label: 'TUZO 5.4.1', variant: 'info' }]}
+    stats={[
+        { label: 'Score', value: 120 },
+        { label: 'Lives', value: 3, emphasis: 'danger' },
+    ]}
+    actions={[{ label: 'Start', onClick: handleStart }]}
+>
+    {/* Game content */}
+</KidGameShell>
+
+// Feedback banner — positioned fixed bottom-6, NOT absolute
+<KidGameFeedbackBanner message="Correct!" type="success" />
+
+// Status overlay — full screen for game over / victory
+<KidGameStatusOverlay
+    tone="emerald"
+    icon={Trophy}
+    title="Victory!"
+    stats={[{ label: 'Score', value: 500 }]}
+    actions={[{ label: 'Play Again', onClick: restart }]}
+/>
+```
+
+### Tactile Toy-Box Style Notes
 
 - Uses the same `cyber-*` palette but with more vibrant saturation
 - Rounded pill-like shapes: `rounded-2xl`, `rounded-[3rem]`
 - Thick borders maintained: `border-3 border-black/10`
-- Child-friendly shared components in `src/components/kid-ui/` (`KidButton`, `KidCard`, `KidBadge`, `KidAvatar`)
 - Typography remains `font-nunito font-extrabold uppercase tracking-widest`
 - Plump, tangible UI elements that feel like physical buttons/blocks
+- Neo-brutalism shadows: `shadow-neo-sm`, `shadow-neo-md` (not hard offset `shadow-[Xpx_Xpx_0_#000]`)
+- 3D button press: `active:translate-y-1 active:shadow-none transition-all`
+- `KidGameFeedbackBanner` uses `fixed bottom-6` positioning (not absolute)
+
+---
+
+## Arcade Game-Specific Components
+
+For Arcade games specifically, these additional shared utilities are available:
+
+| Component | Path | Description |
+|-----------|------|-------------|
+| `useArcadeSoundEffects` | `src/components/Arcade/Shared/useArcadeSoundEffects.ts` | Sound effects hook (playCorrect, playIncorrect, playLevelUp) |
+| `arcadeSoundModel` | `src/components/Arcade/Shared/arcadeSoundModel.ts` | Pure sound model functions |
+| `useGameViewportFocus` | `src/hooks/useGameViewportFocus.ts` | Auto-scroll to game area on mobile |
+| `ArcadeConstants` | `src/components/Arcade/Shared/ArcadeConstants.ts` | Score formula, colors, feedback texts |
+
+---
 
 ## Critical Rules
 
@@ -166,3 +240,5 @@ A softer, more playful variant for the BİLSEM Zeka Arcade:
 6. **Component icons**: Use Lucide React with `strokeWidth={2.5}`
 7. **Turkish text**: All UI strings must be in Turkish
 8. **Responsive**: Always include responsive breakpoints (`sm:`, `md:`, `lg:`)
+9. **Kid-UI for games**: Use `KidGameShell`, `KidGameFeedbackBanner`, `KidGameStatusOverlay` for all child-facing game UIs — NOT the deleted `ArcadeGameShell` or `ArcadeFeedbackBanner`
+10. **Feedback banner position**: `KidGameFeedbackBanner` is `fixed bottom-6`, never `absolute`

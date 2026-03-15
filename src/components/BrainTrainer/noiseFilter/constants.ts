@@ -10,5 +10,5 @@ export const MAX_LEVEL = 10;
 export const NUMBER_OF_OPTIONS = 10;
 
 export const INITIAL_BACKGROUND_VOLUME = 0.4;
-export const FEEDBACK_DURATION_MS = 1500;
+export const FEEDBACK_DURATION_MS = 1200;
 export const TARGET_AUDIO_DELAY_MS = 500;

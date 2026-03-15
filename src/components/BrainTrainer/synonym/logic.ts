@@ -58,3 +58,21 @@ export const calculateSynonymScore = (streak: number) => 100 + streak * 10;
 
 export const getErrorActionLabel = (examMode: boolean) =>
   examMode ? "Devam Et" : "Geri Dön";
+
+export const buildSynonymFeedbackMessage = ({
+  isCorrect,
+  level,
+  maxLevel,
+  synonym,
+}: {
+  isCorrect: boolean;
+  level: number;
+  maxLevel: number;
+  synonym: string;
+}): string => {
+  if (isCorrect) {
+    if (level >= maxLevel) return "Harika! Son soruyu da bildin, tebrikler!";
+    return `Doğru! ${level + 1}. seviyeye geçiyorsun.`;
+  }
+  return `Yanlış! Doğru eş anlam: ${synonym}`;
+};

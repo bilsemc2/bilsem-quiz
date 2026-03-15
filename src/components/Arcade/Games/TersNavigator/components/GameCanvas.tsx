@@ -23,6 +23,24 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
     const startTime = useRef<number>(Date.now());
     const moveIdCounter = useRef(0);
+    const timeoutIdsRef = useRef<number[]>([]);
+    const isTransitioningRef = useRef(false);
+
+    const clearScheduledTimeouts = useCallback(() => {
+        timeoutIdsRef.current.forEach((timeoutId) => {
+            window.clearTimeout(timeoutId);
+        });
+        timeoutIdsRef.current = [];
+    }, []);
+
+    const scheduleTimeout = useCallback((callback: () => void, delay: number) => {
+        const timeoutId = window.setTimeout(() => {
+            timeoutIdsRef.current = timeoutIdsRef.current.filter((id) => id !== timeoutId);
+            callback();
+        }, delay);
+
+        timeoutIdsRef.current.push(timeoutId);
+    }, []);
 
     const generateMove = useCallback((currentP: Position, targetP: Position) => {
         const possibleDirs: Direction[] = [];
@@ -53,6 +71,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
     }, []);
 
     const resetPositions = useCallback(() => {
+        clearScheduledTimeouts();
+        isTransitioningRef.current = false;
+        setFeedback(null);
         const newP = { x: 0, y: GRID_SIZE - 1 };
         const newT = {
             x: Math.floor(Math.random() * (GRID_SIZE - 2)) + 2,
@@ -61,45 +82,54 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
         setPlayerPos(newP);
         setTargetPos(newT);
         generateMove(newP, newT);
-    }, [generateMove]);
+    }, [clearScheduledTimeouts, generateMove]);
 
     useEffect(() => {
         resetPositions();
     }, [resetPositions]);
 
+    useEffect(() => clearScheduledTimeouts, [clearScheduledTimeouts]);
+
     const handleDirectionClick = (clickedIconDir: Direction) => {
-        if (!currentMove) return;
+        if (!currentMove || isTransitioningRef.current) return;
 
         const isCorrect = clickedIconDir === getOpposite(currentMove.targetDirection);
         const reactionTime = (Date.now() - startTime.current) / 1000;
+        isTransitioningRef.current = true;
 
         if (isCorrect) {
             setFeedback('correct');
             const moveDir = currentMove.targetDirection;
+            let newX = playerPos.x;
+            let newY = playerPos.y;
 
-            setPlayerPos(prev => {
-                let newX = prev.x;
-                let newY = prev.y;
-                if (moveDir === 'UP') newY = Math.max(0, prev.y - 1);
-                if (moveDir === 'DOWN') newY = Math.min(GRID_SIZE - 1, prev.y + 1);
-                if (moveDir === 'LEFT') newX = Math.max(0, prev.x - 1);
-                if (moveDir === 'RIGHT') newX = Math.min(GRID_SIZE - 1, prev.x + 1);
+            if (moveDir === 'UP') newY = Math.max(0, playerPos.y - 1);
+            if (moveDir === 'DOWN') newY = Math.min(GRID_SIZE - 1, playerPos.y + 1);
+            if (moveDir === 'LEFT') newX = Math.max(0, playerPos.x - 1);
+            if (moveDir === 'RIGHT') newX = Math.min(GRID_SIZE - 1, playerPos.x + 1);
 
-                if (newX === targetPos.x && newY === targetPos.y) {
-                    setTimeout(() => resetPositions(), 300);
-                } else {
-                    setTimeout(() => generateMove({ x: newX, y: newY }, targetPos), 150);
-                }
-
-                return { x: newX, y: newY };
-            });
+            setPlayerPos({ x: newX, y: newY });
 
             onRoundComplete(true, reactionTime);
-            setTimeout(() => setFeedback(null), 150);
+
+            if (newX === targetPos.x && newY === targetPos.y) {
+                scheduleTimeout(() => {
+                    resetPositions();
+                }, 300);
+            } else {
+                scheduleTimeout(() => {
+                    setFeedback(null);
+                    isTransitioningRef.current = false;
+                    generateMove({ x: newX, y: newY }, targetPos);
+                }, 150);
+            }
         } else {
             setFeedback('wrong');
             onRoundComplete(false, reactionTime);
-            setTimeout(() => setFeedback(null), 400);
+            scheduleTimeout(() => {
+                setFeedback(null);
+                isTransitioningRef.current = false;
+            }, 400);
         }
     };
 
@@ -174,6 +204,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onRoundComplete }) => {
                     {currentMove?.buttons.map((btn, idx) => (
                         <button
                             key={idx}
+                            type="button"
                             onClick={() => handleDirectionClick(btn.iconDirection)}
                             onTouchStart={(e) => {
                                 e.preventDefault();

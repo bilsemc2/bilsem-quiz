@@ -94,3 +94,19 @@ export const isAnswerCorrect = (
 export const isMaxLevel = (level: number) => {
   return level >= MAX_LEVEL;
 };
+
+export const buildPencilStroopFeedbackMessage = (
+  correct: boolean,
+  correctAnswer: string,
+  level: number,
+) => {
+  if (correct) {
+    if (isMaxLevel(level)) {
+      return `Doğru renk: ${correctAnswer}. Son turu da geçtin, oyun tamamlanıyor.`;
+    }
+
+    return `Doğru renk: ${correctAnswer}. Şimdi ${level + 1}. seviyeye geçiyorsun.`;
+  }
+
+  return `Yanlış seçim! Kalemin gerçek rengi ${correctAnswer} olmalıydı.`;
+};

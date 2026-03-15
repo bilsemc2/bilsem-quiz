@@ -1,5 +1,5 @@
-import { ColorType } from './types';
-import { ARCADE_PALETTE } from '../../Shared/ArcadeConstants';
+import type { ColorType } from './types.ts';
+import { ARCADE_PALETTE } from '../../Shared/ArcadeConstants.ts';
 
 export const GAME_CONFIG = {
     INITIAL_LIVES: 3,

@@ -9,7 +9,7 @@ export const TUZO_TEXT = "2.1.2 Görsel Süreli Bellek";
 export const INITIAL_LIVES = 5;
 export const TIME_LIMIT = 180;
 export const MAX_LEVEL = 20;
-export const FEEDBACK_DURATION_MS = 1500;
+export const FEEDBACK_DURATION_MS = 1200;
 export const TRANSITION_DURATION_MS = 600;
 export const NEUTRAL_CELL_COLOR = "#6B7280";
 

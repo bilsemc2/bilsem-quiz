@@ -1,18 +1,21 @@
-import React from 'react';
-import { Brain, Battery } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Battery, Brain, Clock3, Compass, Flashlight, Play, Sparkles, Star, Trophy } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
-import ArcadeGameShell from '../../Shared/ArcadeGameShell';
-import { GAME_ID } from './constants';
 import DarkMazeCanvas from './components/DarkMazeCanvas';
-import DarkMazeHudExtras from './components/DarkMazeHudExtras';
 import VirtualJoystick from './components/VirtualJoystick';
 import { useDarkMazeGame } from './hooks/useDarkMazeGame';
 import { useVirtualJoystick } from './hooks/useVirtualJoystick';
+import { useArcadeSoundEffects } from '../../Shared/useArcadeSoundEffects';
+import { KidGameFeedbackBanner, KidGameShell, KidGameStatusOverlay } from '../../../kid-ui';
+import { useGameViewportFocus } from '../../../../hooks/useGameViewportFocus';
 
 const DarkMaze: React.FC = () => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { playAreaRef, focusPlayArea } = useGameViewportFocus();
+    const { playArcadeSound } = useArcadeSoundEffects();
+    const prevPhaseRef = useRef<string | null>(null);
     const {
         sessionState,
         phase,
@@ -28,51 +31,171 @@ const DarkMaze: React.FC = () => {
         feedback,
         showLevelUp,
         levelScore,
-        startGame,
-        nextLevel,
+        startGame: rawStartGame,
+        nextLevel: rawNextLevel,
         move,
         handleTouchStart,
         handleTouchEnd
-    } = useDarkMazeGame(location.state?.autoStart);
+    } = useDarkMazeGame({
+        autoStart: location.state?.autoStart,
+        onGameStart: focusPlayArea,
+        onNextLevel: focusPlayArea,
+    });
     const joystick = useVirtualJoystick({
         enabled: phase === 'playing',
         onMove: move
     });
 
-    return (
-        <ArcadeGameShell
-            gameState={sessionState}
-            gameMetadata={{
-                id: GAME_ID,
-                title: 'KARANLIK LABIRENT',
-                description: (
-                    <>
-                        <p>Fenerinle cikisi bul! Pilleri topla ve yolu aydinlat.</p>
-                        <p className="mt-2">Karanlikta navigasyon ve uzamsal bellek testi.</p>
-                    </>
-                ),
-                tuzoCode: '5.5.1 Uzamsal Akil Yurutme',
-                icon: <Brain className="w-14 h-14 text-black" strokeWidth={3} />,
-                iconBgColor: 'bg-amber-400',
-                containerBgColor: 'bg-sky-200 dark:bg-slate-900'
-            }}
-            onStart={startGame}
-            onRestart={startGame}
-            showLevel={true}
-            showLives={false}
-            hudExtras={
-                <DarkMazeHudExtras
-                    energy={energy}
-                    timeLeft={timeLeft}
-                    lastCollectionTime={lastCollectionTime}
-                />
-            }
-        >
-            <div className="h-full bg-sky-200 dark:bg-slate-900 text-black dark:text-white pt-4 pb-6 overflow-hidden flex flex-col font-sans touch-none [-webkit-tap-highlight-color:transparent] transition-colors duration-300">
-                <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
+    const startGame = useCallback(() => {
+        playArcadeSound('start');
+        rawStartGame();
+    }, [playArcadeSound, rawStartGame]);
 
-                <div className="container mx-auto max-w-4xl relative z-10 px-4 sm:px-6 flex flex-col flex-1">
-                    <div className="relative flex flex-col xl:flex-row items-center xl:items-start justify-center gap-6 mt-4">
+    const nextLevel = useCallback(() => {
+        playArcadeSound('levelUp');
+        rawNextLevel();
+    }, [playArcadeSound, rawNextLevel]);
+
+    useEffect(() => {
+        const prev = prevPhaseRef.current;
+        prevPhaseRef.current = phase;
+        if (prev === 'playing' && phase === 'level_cleared') {
+            playArcadeSound('success');
+        }
+        if (prev === 'playing' && phase === 'finished') {
+            playArcadeSound('fail');
+        }
+    }, [phase, playArcadeSound]);
+
+    const overlay = sessionState.status === 'START' ? (
+        <KidGameStatusOverlay
+            tone="yellow"
+            icon={Compass}
+            title="Karanlık Labirent"
+            description="Fenerinle çıkışı bul, pil topla ve yolu kısa sürede keşfet."
+            stats={[
+                { label: 'Hedef', value: 'Çıkışa Ulaş', tone: 'blue' },
+                { label: 'Odak', value: 'Uzamsal Bellek', tone: 'emerald' },
+            ]}
+            actions={[
+                { label: 'Başlayalım', variant: 'primary', size: 'lg', icon: Play, onClick: startGame },
+                { label: 'Hemen Keşfet', variant: 'ghost', size: 'lg', icon: Sparkles, onClick: startGame },
+            ]}
+        />
+    ) : sessionState.status === 'GAME_OVER' ? (
+        <KidGameStatusOverlay
+            tone="pink"
+            icon={Trophy}
+            title="Labirent Turu Bitti"
+            description="Güzel bir keşif yaptın. Rotaları biraz daha hızlı okuyarak daha yüksek seviyeye çıkabilirsin."
+            stats={[
+                { label: 'Puan', value: sessionState.score, tone: 'blue' },
+                { label: 'Seviye', value: sessionState.level, tone: 'yellow' },
+                { label: 'Enerji', value: `${Math.round(energy)}%`, tone: 'emerald' },
+            ]}
+            actions={[
+                { label: 'Tekrar Oyna', variant: 'primary', size: 'lg', icon: Play, onClick: startGame },
+                { label: "Arcade'e Dön", variant: 'ghost', size: 'lg', onClick: () => navigate('/bilsem-zeka') },
+            ]}
+            backdropClassName="bg-slate-950/60"
+        />
+    ) : showLevelUp && phase === 'level_cleared' ? (
+        <KidGameStatusOverlay
+            tone="emerald"
+            icon={Flashlight}
+            title="Bölüm Tamam"
+            description="Çıkışı buldun. Sıradaki labirent daha büyük ve biraz daha hareketli olacak."
+            stats={[
+                { label: 'Bonus', value: `+${levelScore}`, tone: 'yellow' },
+                { label: 'Seviye', value: sessionState.level, tone: 'blue' },
+            ]}
+            actions={[
+                { label: 'Sonraki Seviye', variant: 'secondary', size: 'lg', icon: Sparkles, onClick: nextLevel },
+            ]}
+            backdropClassName="bg-black/50"
+            maxWidthClassName="max-w-md"
+        />
+    ) : null;
+
+    return (
+        <KidGameShell
+            title="Karanlık Labirent"
+            subtitle="Fenerini dikkatli kullan, enerji topla ve çıkışı en kısa yoldan bul."
+            instruction="Joystick ile ilerle. Pil kutuları enerji verir, beyin işaretleri yolu bir anlığına aydınlatır."
+            backHref="/bilsem-zeka"
+            backLabel="Arcade'e Dön"
+            badges={[
+                { label: 'Uzamsal Bellek', variant: 'difficulty' },
+                { label: '5.5.1 Uzamsal Akıl Yürütme', variant: 'tuzo' },
+            ]}
+            stats={[
+                { label: 'Seviye', value: sessionState.level, tone: 'blue', icon: Brain },
+                { label: 'Puan', value: sessionState.score, tone: 'yellow', icon: Star },
+                {
+                    label: 'Enerji',
+                    value: `${Math.round(energy)}%`,
+                    tone: energy <= 25 ? 'pink' : 'emerald',
+                    emphasis: energy <= 25 ? 'danger' : 'default',
+                    icon: Battery,
+                    helper: lastCollectionTime > 0 ? 'Pil toplayarak tekrar dolar.' : 'Başlangıçta tam dolu.',
+                },
+                {
+                    label: 'Süre',
+                    value: `${timeLeft}s`,
+                    tone: timeLeft <= 10 ? 'orange' : 'blue',
+                    emphasis: timeLeft <= 10 ? 'danger' : 'default',
+                    icon: Clock3,
+                    helper: 'Süre bitmeden çıkışa ulaş.',
+                },
+            ]}
+            supportTitle="Keşif Rehberi"
+            supportDescription="Labirentte işine yarayacak ipuçları ve kontroller burada."
+            playAreaRef={playAreaRef}
+            supportArea={(
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)]">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-emerald/20 px-4 py-4 shadow-neo-sm">
+                            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                                <Battery size={16} className="stroke-[2.5]" />
+                                Pil Kutusu
+                            </div>
+                            <p className="mt-2 text-sm font-bold leading-relaxed text-slate-700 dark:text-slate-300">
+                                Enerjin azalırken pil kutularını toplayıp fenerini daha uzun açık tutabilirsin.
+                            </p>
+                        </div>
+
+                        <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-yellow/30 px-4 py-4 shadow-neo-sm">
+                            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-black dark:text-white">
+                                <Brain size={16} className="stroke-[2.5]" />
+                                Beyin İşareti
+                            </div>
+                            <p className="mt-2 text-sm font-bold leading-relaxed text-slate-700 dark:text-slate-300">
+                                Beyin hücreleri yolu kısa bir süre aydınlatır. Dönüşleri planlamak için kullan.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="rounded-[1.5rem] border-2 border-black/10 bg-white/80 px-4 py-4 shadow-neo-sm dark:border-white/10 dark:bg-slate-900/70">
+                        <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Kontrol İpuçları
+                        </div>
+                        <div className="mt-3 space-y-2 text-sm font-bold leading-relaxed text-slate-700 dark:text-slate-300">
+                            <p>Joystick sadece oyun başladığında aktif olur.</p>
+                            <p>Köşe dönüşlerinde önce yön seç, sonra hızlı ama düzenli ilerle.</p>
+                            <p className="xl:hidden rounded-2xl border-2 border-black/10 bg-cyber-blue/10 px-3 py-2 text-black dark:text-white">
+                                Mobilde alt taraftaki joystick ile kahramanı yönlendir.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+            overlay={overlay}
+        >
+            <div className="flex flex-col gap-5">
+                <KidGameFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
+
+                <div className="relative flex flex-col items-center justify-center gap-6 xl:flex-row xl:items-start">
+                    <div className="w-full xl:flex xl:justify-center">
                         <DarkMazeCanvas
                             maze={maze}
                             playerPos={playerPos}
@@ -81,41 +204,25 @@ const DarkMaze: React.FC = () => {
                             gridSize={gridSize}
                             canvasSize={canvasSize}
                             energyEffects={energyEffects}
-                            showLevelUp={showLevelUp}
-                            levelScore={levelScore}
-                            onNextLevel={nextLevel}
                             onTouchStart={(x, y) => handleTouchStart({ x, y })}
                             onTouchEnd={(x, y) => handleTouchEnd({ x, y })}
                         />
-
-                        {phase === 'playing' && (
-                            <VirtualJoystick
-                                joystickRef={joystick.joystickRef}
-                                joystickPos={joystick.joystickPos}
-                                isDragging={joystick.isDragging}
-                                activeDirection={joystick.activeDirection}
-                                onStart={joystick.handleJoystickStart}
-                                onMove={joystick.handleJoystickMove}
-                                onEnd={joystick.handleJoystickEnd}
-                            />
-                        )}
                     </div>
 
-                    <div className="mt-8 mb-4 flex gap-4 justify-center items-center text-xs font-black uppercase tracking-widest text-black dark:text-white flex-wrap">
-                        <div className="flex items-center gap-2 bg-emerald-100 border-2 border-black/10 px-4 py-2 rounded-xl shadow-neo-sm -rotate-2">
-                            <Battery size={18} className="text-emerald-500 fill-emerald-500 stroke-black stroke-2" /> PIL: ENERJI VERIR
-                        </div>
-                        <div className="flex items-center gap-2 bg-amber-100 border-2 border-black/10 px-4 py-2 rounded-xl shadow-neo-sm rotate-1">
-                            <Brain size={18} className="text-amber-500 fill-amber-500 stroke-black stroke-2" /> BEYIN: AYDINLATIR
-                        </div>
-                    </div>
-
-                    <p className="xl:hidden text-center bg-white dark:bg-slate-700 border-2 border-black/10 dark:border-slate-600 inline-block mx-auto rounded-xl px-4 py-2 text-xs font-black tracking-widest shadow-neo-sm rotate-1 mt-2 text-black dark:text-white">
-                        Joystick'i kullan
-                    </p>
+                    {phase === 'playing' && (
+                        <VirtualJoystick
+                            joystickRef={joystick.joystickRef}
+                            joystickPos={joystick.joystickPos}
+                            isDragging={joystick.isDragging}
+                            activeDirection={joystick.activeDirection}
+                            onStart={joystick.handleJoystickStart}
+                            onMove={joystick.handleJoystickMove}
+                            onEnd={joystick.handleJoystickEnd}
+                        />
+                    )}
                 </div>
             </div>
-        </ArcadeGameShell>
+        </KidGameShell>
     );
 };
 

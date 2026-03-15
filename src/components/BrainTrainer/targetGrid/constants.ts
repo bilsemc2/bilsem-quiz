@@ -5,7 +5,7 @@ export const MAX_LEVEL = 20;
 
 export const GRID_SIZE = 16;
 export const BASE_PREVIEW_TIME = 4;
-export const FEEDBACK_DURATION_MS = 1000;
+export const FEEDBACK_DURATION_MS = 1200;
 
 export const GAME_TITLE = "Hedef Sayi";
 export const GAME_DESCRIPTION =

@@ -12,6 +12,7 @@ import {
   TIME_LIMIT,
 } from "./constants";
 import {
+  buildTargetGridFeedbackMessage,
   calculateTargetGridScore,
   createRound,
   hideAllCards,
@@ -187,14 +188,22 @@ export const useTargetGridController = () => {
 
     if (nextSum === targetSum) {
       recordAttempt({ isCorrect: true, responseMs: getResponseMs() });
-      showFeedback(true);
-      playSound("correct");
+      showFeedback(
+        true,
+        buildTargetGridFeedbackMessage({
+          correct: true,
+          targetSum,
+          level,
+          maxLevel: MAX_LEVEL,
+        }),
+      );
       addScore(calculateTargetGridScore(level));
 
       scheduleAction(() => {
         dismissFeedback();
 
         if (level >= MAX_LEVEL) {
+          playSound("success");
           setGamePhase("victory");
           return;
         }
@@ -209,8 +218,15 @@ export const useTargetGridController = () => {
     }
 
     recordAttempt({ isCorrect: false, responseMs: getResponseMs() });
-    showFeedback(false);
-    playSound("incorrect");
+    showFeedback(
+      false,
+      buildTargetGridFeedbackMessage({
+        correct: false,
+        targetSum,
+        level,
+        maxLevel: MAX_LEVEL,
+      }),
+    );
     loseLife();
 
     scheduleAction(() => {

@@ -1,53 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, BookOpen, Utensils, Camera, RotateCcw, Send, Palette, User, MessageCircle, ChevronLeft, Lock } from 'lucide-react';
 import { ActivityMode, ActivityState } from './types';
 import { generateActivityPrompt, generateStillLifeImage, analyzeDrawing } from './geminiService';
 import { Timer } from './Timer';
-import { useAuth } from '@/contexts/auth/useAuth';
-import { supabase } from '../../../lib/supabase';
+import { consumeResimAnalysisQuota } from '@/features/content/model/resimWorkshopUseCases';
 
 interface ResimGameProps {
     onBack: () => void;
+    analysisQuota: number;
+    isTeacher: boolean;
+    onAnalysisQuotaChange: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
-const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
+const ResimGame: React.FC<ResimGameProps> = ({
+    onBack,
+    analysisQuota,
+    isTeacher,
+    onAnalysisQuotaChange
+}) => {
     const [state, setState] = useState<ActivityState>({
         mode: ActivityMode.THREE_WORDS,
         status: 'IDLE'
     });
-    const { user } = useAuth();
-    const [analysisQuota, setAnalysisQuota] = useState<number | null>(null);
-    const [isTeacher, setIsTeacher] = useState(false);
-
-    // Kullanıcının analiz hakkını kontrol et
-    useEffect(() => {
-        const fetchQuota = async () => {
-            if (!user) return;
-
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('resim_analiz_hakki, role, is_admin')
-                .eq('id', user.id)
-                .maybeSingle();
-
-            if (error || !profile) {
-                setAnalysisQuota(0);
-                return;
-            }
-
-            // Admin veya öğretmen ise sınırsız hak
-            if (profile.is_admin || profile.role === 'teacher') {
-                setIsTeacher(true);
-                setAnalysisQuota(999);
-                return;
-            }
-
-            setAnalysisQuota(profile.resim_analiz_hakki ?? 3);
-        };
-
-        fetchQuota();
-    }, [user]);
 
     const startTask = async (mode: ActivityMode) => {
         setState({ ...state, mode, status: 'GENERATING', error: undefined });
@@ -92,15 +67,15 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
         try {
             const feedback = await analyzeDrawing(state.mode, state.promptData, state.uploadedImage);
 
-            // Analiz başarılı oldu, hakkı düşür (öğretmen değilse)
-            if (user && !isTeacher) {
-                const { error: updateError } = await supabase
-                    .from('profiles')
-                    .update({ resim_analiz_hakki: Math.max(0, (analysisQuota ?? 1) - 1) })
-                    .eq('id', user.id);
-
-                if (!updateError) {
-                    setAnalysisQuota(prev => Math.max(0, (prev ?? 1) - 1));
+            if (!isTeacher) {
+                try {
+                    const nextQuota = await consumeResimAnalysisQuota({
+                        currentQuota: analysisQuota,
+                        isTeacher
+                    });
+                    onAnalysisQuotaChange(nextQuota);
+                } catch (quotaError) {
+                    console.error('Analiz hakkı güncellenemedi:', quotaError);
                 }
             }
 
@@ -260,13 +235,13 @@ const ResimGame: React.FC<ResimGameProps> = ({ onBack }) => {
                                             </div>
                                         </div>
                                         {/* Kalan hak bilgisi */}
-                                        {!isTeacher && analysisQuota !== null && (
+                                        {!isTeacher && (
                                             <p className="text-center font-nunito font-extrabold uppercase p-3 bg-white dark:bg-slate-800 border-2 border-black/10 dark:border-white/20 rounded-xl shadow-neo-xs transform -rotate-1">
                                                 Kalan analiz hakkı: <span className="font-black text-cyber-pink text-xl">{analysisQuota}</span>
                                             </p>
                                         )}
 
-                                        {analysisQuota !== null && analysisQuota <= 0 && !isTeacher ? (
+                                        {analysisQuota <= 0 && !isTeacher ? (
                                             <div className="space-y-4 text-center">
                                                 <button
                                                     disabled

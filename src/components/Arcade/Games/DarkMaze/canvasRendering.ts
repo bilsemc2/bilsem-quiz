@@ -1,3 +1,4 @@
+import { createCanvasElement } from "@/utils/createCanvasElement";
 import type { Cell, GridPosition } from './types';
 
 interface DrawMazeSceneOptions {
@@ -134,9 +135,10 @@ export const drawMazeScene = ({
     gradient.addColorStop(0, 'rgba(0,0,0,1)');
     gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
-    const darknessLayer = document.createElement('canvas');
-    darknessLayer.width = canvas.width;
-    darknessLayer.height = canvas.height;
+    const darknessLayer = createCanvasElement({
+        width: canvas.width,
+        height: canvas.height,
+    });
     const darknessContext = darknessLayer.getContext('2d');
 
     if (!darknessContext) {

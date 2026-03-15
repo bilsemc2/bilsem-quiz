@@ -15,6 +15,7 @@ import {
 } from "./constants";
 import {
   buildQuestions,
+  buildSynonymFeedbackMessage,
   calculateSynonymScore,
   getErrorActionLabel,
 } from "./logic";
@@ -169,7 +170,15 @@ export const useSynonymController = () => {
       const isCorrect = answerId === currentQuestion.correctOptionId;
       const willGameOver = !isCorrect && lives <= 1;
       recordAttempt({ isCorrect, responseMs: getResponseMs() });
-      showFeedback(isCorrect);
+      showFeedback(
+        isCorrect,
+        buildSynonymFeedbackMessage({
+          isCorrect,
+          level,
+          maxLevel: MAX_LEVEL,
+          synonym: currentQuestion.synonym,
+        }),
+      );
       playSound(isCorrect ? "correct" : "incorrect");
 
       if (isCorrect) {

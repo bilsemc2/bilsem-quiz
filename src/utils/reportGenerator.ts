@@ -41,8 +41,8 @@ export const generateStudentReport = (student: Student, assignments: Assignment[
             doc.addFont('/fonts/Roboto/Roboto-VariableFont_wdth,wght.ttf', 'Roboto', 'normal');
             doc.addFont('/fonts/Roboto/Roboto-Italic-VariableFont_wdth,wght.ttf', 'Roboto', 'italic');
             doc.setFont('Roboto');
-        } catch (fontError) {
-            console.warn('Roboto fontu yüklenemedi, varsayılan font kullanılıyor:', fontError);
+        } catch {
+            // Font yüklenemezse varsayılan font kullanılır
         }
 
         // Başlık
@@ -118,8 +118,7 @@ export const generateStudentReport = (student: Student, assignments: Assignment[
         // Dosyayı indir
         doc.save(`${student.name.replace(/\s+/g, '_')}_Rapor.pdf`);
         toast.success('Rapor başarıyla oluşturuldu!');
-    } catch (error) {
-        console.error('PDF oluşturma hatası:', error);
+    } catch {
         toast.error('Rapor oluşturulurken bir hata oluştu.');
     }
 };

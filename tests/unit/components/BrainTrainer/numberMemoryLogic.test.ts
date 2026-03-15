@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildNumberMemoryFeedbackMessage,
   calculateNumberMemoryScore,
   createMaxQuestion,
   createNumberQuestion,
@@ -64,4 +65,34 @@ test("question factory and score preserve the original rules", () => {
   assert.equal(question.type, "max");
   assert.equal(question.options.length, 4);
   assert.equal(calculateNumberMemoryScore(6), 60);
+});
+
+test("number memory feedback helper makes the expected answer explicit", () => {
+  assert.equal(
+    buildNumberMemoryFeedbackMessage({
+      correct: true,
+      answer: 7,
+      level: 5,
+      maxLevel: 20,
+    }),
+    "Doğru cevap! Şimdi 6. seviyeye geçiyorsun.",
+  );
+  assert.equal(
+    buildNumberMemoryFeedbackMessage({
+      correct: true,
+      answer: 4,
+      level: 20,
+      maxLevel: 20,
+    }),
+    "Doğru cevap! Son sayı sorusunu da tamamladın, oyun bitiyor.",
+  );
+  assert.equal(
+    buildNumberMemoryFeedbackMessage({
+      correct: false,
+      answer: 9,
+      level: 8,
+      maxLevel: 20,
+    }),
+    "Yanlış cevap! Doğru yanıt 9 olmalıydı.",
+  );
 });

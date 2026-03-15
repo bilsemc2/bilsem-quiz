@@ -1,3 +1,13 @@
+import {
+    notificationRepository,
+    type NotificationRepository
+} from '@/server/repositories/notificationRepository';
+import {
+    authRepository,
+    type AuthRepository,
+    type AuthProfileRecord
+} from '@/server/repositories/authRepository';
+
 export interface AdminNotificationLike {
     type: string;
 }
@@ -21,4 +31,18 @@ export const applyNotificationBadges = <T extends AdminMenuItemLike>(
         ...menuItem,
         badge: counts[menuItem.id] || 0
     }));
+};
+
+export const loadUnreadNotifications = async (
+    userId: string,
+    deps: Pick<NotificationRepository, 'listUnreadByUserId'> = notificationRepository
+) => {
+    return deps.listUnreadByUserId(userId);
+};
+
+export const loadAdminProfile = async (
+    userId: string,
+    deps: Pick<AuthRepository, 'getProfileByUserId'> = authRepository
+): Promise<AuthProfileRecord | null> => {
+    return deps.getProfileByUserId(userId);
 };

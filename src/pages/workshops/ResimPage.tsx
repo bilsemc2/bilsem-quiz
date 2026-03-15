@@ -5,11 +5,13 @@ import { Palette, Eye, Layout, PenTool, Rocket, ChevronLeft, X, LogIn } from 'lu
 import { Link, useNavigate } from 'react-router-dom';
 import ResimGame from '../../components/Workshops/Resim/ResimGame';
 import { useAuth } from '@/contexts/auth/useAuth';
-import { supabase } from '../../lib/supabase';
 import AccessDeniedScreen from '../../components/AccessDeniedScreen';
+import { loadResimWorkshopAccess } from '@/features/content/model/resimWorkshopUseCases';
+import { useViewportAnchor } from '../../hooks/useViewportAnchor';
 
 const ResimPage: React.FC = () => {
     const navigate = useNavigate();
+    const { anchorRef: pageTopRef, scrollToAnchor: scrollToPageTop } = useViewportAnchor();
     const [isActive, setIsActive] = useState(false);
     const { user } = useAuth();
     const [hasTalentAccess, setHasTalentAccess] = useState<boolean | null>(null);
@@ -21,29 +23,26 @@ const ResimPage: React.FC = () => {
 
     useEffect(() => {
         const checkTalentAccess = async () => {
-            if (!user) { setHasTalentAccess(false); return; }
+            if (!user) {
+                setHasTalentAccess(false);
+                setUserTalents([]);
+                setAnalysisQuota(0);
+                setIsTeacher(false);
+                return;
+            }
+
             try {
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('yetenek_alani, role, is_admin, resim_analiz_hakki')
-                    .eq('id', user.id)
-                    .maybeSingle();
-
-                if (error || !profile) { setHasTalentAccess(false); return; }
-                if (profile.is_admin || profile.role === 'teacher') {
-                    setHasTalentAccess(true); setIsTeacher(true); setAnalysisQuota(999); return;
-                }
-
-                setAnalysisQuota(profile.resim_analiz_hakki ?? 3);
-                const talentsInput = profile.yetenek_alani;
-                let talents: string[] = [];
-                if (Array.isArray(talentsInput)) { talents = talentsInput; }
-                else if (typeof talentsInput === 'string') { talents = talentsInput.split(/[,,;]/).map(t => t.trim()).filter(Boolean); }
-                setUserTalents(talents);
-                setHasTalentAccess(talents.some(t => t.toLowerCase() === 'resim'));
+                const access = await loadResimWorkshopAccess(user.id);
+                setHasTalentAccess(access.hasTalentAccess);
+                setUserTalents(access.userTalents);
+                setAnalysisQuota(access.analysisQuota);
+                setIsTeacher(access.isTeacher);
             } catch (error) {
                 console.error('Yetenek kontrolü hatası:', error);
                 setHasTalentAccess(false);
+                setUserTalents([]);
+                setAnalysisQuota(0);
+                setIsTeacher(false);
             }
         };
         checkTalentAccess();
@@ -57,21 +56,28 @@ const ResimPage: React.FC = () => {
 
     if (showAccessDenied) {
         return (
-            <AccessDeniedScreen
-                requiredTalent="Resim"
-                backLink="/atolyeler/resim"
-                backLabel="Resim Atölyesine Dön"
-                userTalents={userTalents.length > 0 ? userTalents : undefined}
-                requiredIncludes={['resim']}
-                onBack={() => { setShowAccessDenied(false); window.scrollTo(0, 0); }}
-            />
+            <div ref={pageTopRef}>
+                <AccessDeniedScreen
+                    requiredTalent="Resim"
+                    backLink="/atolyeler/resim"
+                    backLabel="Resim Atölyesine Dön"
+                    userTalents={userTalents.length > 0 ? userTalents : undefined}
+                    requiredIncludes={['resim']}
+                    onBack={() => { setShowAccessDenied(false); scrollToPageTop(); }}
+                />
+            </div>
         );
     }
 
     if (isActive) {
         return (
-            <div className="pt-24 pb-12 px-6 min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
-                <ResimGame onBack={() => setIsActive(false)} />
+            <div ref={pageTopRef} className="pt-24 pb-12 px-6 min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
+                <ResimGame
+                    onBack={() => { setIsActive(false); scrollToPageTop(); }}
+                    analysisQuota={analysisQuota ?? 0}
+                    isTeacher={isTeacher}
+                    onAnalysisQuotaChange={setAnalysisQuota}
+                />
             </div>
         );
     }
@@ -86,7 +92,7 @@ const ResimPage: React.FC = () => {
 
             <div className="fixed inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(0,0,0,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
-            <div className="container mx-auto max-w-6xl relative z-10">
+            <div ref={pageTopRef} className="container mx-auto max-w-6xl relative z-10">
                 {/* Header */}
                 <motion.div initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-8 mb-20">
                     <Link to="/"
@@ -183,8 +189,8 @@ const ResimPage: React.FC = () => {
                                 <button
                                     onClick={() => {
                                         if (!user) { setShowLoginPrompt(true); }
-                                        else if (hasTalentAccess) { setIsActive(true); window.scrollTo(0, 0); }
-                                        else { window.scrollTo(0, 0); setShowAccessDenied(true); }
+                                        else if (hasTalentAccess) { setIsActive(true); scrollToPageTop(); }
+                                        else { setShowAccessDenied(true); scrollToPageTop(); }
                                     }}
                                     className="group inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-black font-nunito font-extrabold text-xl uppercase tracking-wider border-2 border-black/10 rounded-xl shadow-neo-md hover:-translate-y-1 hover:shadow-neo-lg transition-all">
                                     Atölyeye Gir <Rocket strokeWidth={2.5} className="group-hover:translate-x-1 transition-transform" size={22} />

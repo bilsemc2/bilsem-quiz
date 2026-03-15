@@ -1,30 +1,22 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useGamePersistence } from '../../../../hooks/useGamePersistence';
-import ArcadeGameShell from '../../Shared/ArcadeGameShell';
-import ArcadeFeedbackBanner from '../../Shared/ArcadeFeedbackBanner';
-import { ARCADE_SCORE_FORMULA, ARCADE_SCORE_BASE } from '../../Shared/ArcadeConstants';
-import { FoldDirection, PaperState, PunchShape } from './types';
-import { calculateUnfoldedPunches, getFoldedDimensions } from './utils';
+import React from 'react';
 import {
-    Scissors,
-    RotateCcw,
-    ChevronUp,
     ChevronDown,
     ChevronLeft,
     ChevronRight,
+    ChevronUp,
     Eye,
     EyeOff,
+    Play,
+    RotateCcw,
+    Scissors,
+    Sparkles,
+    Trophy,
 } from 'lucide-react';
+import { KidCard, KidGameFeedbackBanner, KidGameShell, KidGameStatusOverlay } from '../../../kid-ui/index.ts';
+import { FoldDirection, PunchShape } from './types.ts';
+import { useKraftOrigamiController, PAPER_COLORS } from './useKraftOrigamiController.ts';
 
-const PAPER_COLORS = [
-    { name: 'Kraft', value: '#d4b483' },
-    { name: 'Sky Blue', value: '#bae6fd' },
-    { name: 'Peach', value: '#ffedd5' },
-    { name: 'Lavender', value: '#f3e8ff' },
-];
-
-const ShapeIcon = ({ shape, className }: { shape: PunchShape, className?: string }) => {
+const ShapeIcon = ({ shape, className }: { shape: PunchShape; className?: string }) => {
     switch (shape) {
         case PunchShape.HEART:
             return (
@@ -39,365 +31,250 @@ const ShapeIcon = ({ shape, className }: { shape: PunchShape, className?: string
                 </svg>
             );
         case PunchShape.SQUARE:
-            return <div className={`aspect-square bg-current rounded-sm ${className}`} />;
+            return <div className={`aspect-square rounded-sm bg-current ${className}`} />;
         default:
-            return <div className={`aspect-square bg-current rounded-full ${className}`} />;
+            return <div className={`aspect-square rounded-full bg-current ${className}`} />;
     }
 };
 
-type GamePhase = 'idle' | 'playing' | 'finished';
-
-const KraftOrigami: React.FC = () => {
-    const location = useLocation();
-    const { saveGamePlay } = useGamePersistence();
-    const gameStartTimeRef = useRef<number>(0);
-    const isResolvingRef = useRef(false);
-    const hasSavedRef = useRef(false);
-
-    const [gamePhase, setGamePhase] = useState<GamePhase>('idle');
-    const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-    const [state, setState] = useState<PaperState>({
-        folds: [],
-        punches: [],
-        isUnfolded: false,
-        paperColor: PAPER_COLORS[0].value
-    });
-    const [currentShape, setCurrentShape] = useState<PunchShape>(PunchShape.CIRCLE);
-
-    const foldedDim = useMemo(() => getFoldedDimensions(state.folds), [state.folds]);
-
-    const finalPunches = useMemo(() => {
-        return state.isUnfolded
-            ? calculateUnfoldedPunches(state.folds, state.punches)
-            : state.punches;
-    }, [state.isUnfolded, state.folds, state.punches]);
-
-    const score = useMemo(() => {
-        const foldBonus = state.folds.length * ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, 1);
-        const punchBonus = finalPunches.length * Math.round(ARCADE_SCORE_BASE * 0.5);
-        return foldBonus + punchBonus;
-    }, [state.folds.length, finalPunches.length]);
-
-    const startGame = () => {
-        window.scrollTo(0, 0);
-        setGamePhase('playing');
-        setState({
-            folds: [],
-            punches: [],
-            isUnfolded: false,
-            paperColor: PAPER_COLORS[0].value
-        });
-        setFeedback(null);
-        hasSavedRef.current = false;
-        isResolvingRef.current = false;
-        gameStartTimeRef.current = Date.now();
-    };
-
-    // Auto-start from Arcade Hub
-    useEffect(() => {
-        if (location.state?.autoStart && gamePhase === 'idle') {
-            startGame();
-        }
-    }, [gamePhase, location.state]);
-
-    const handleFold = (direction: FoldDirection) => {
-        if (state.isUnfolded) return;
-        if (state.folds.length >= 6) return;
-        setState(prev => ({
-            ...prev,
-            folds: [...prev.folds, direction],
-        }));
-        setFeedback({ message: `Katlama ${state.folds.length + 1} yapıldı! 📐`, type: 'success' });
-        setTimeout(() => setFeedback(null), 1500);
-    };
-
-    const handlePunch = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (state.isUnfolded) return;
-        if (state.folds.length === 0) return;
-
-        const rect = e.currentTarget.getBoundingClientRect();
-        const relX = (e.clientX - rect.left) / rect.width;
-        const relY = (e.clientY - rect.top) / rect.height;
-
-        const absX = foldedDim.offsetX + relX * foldedDim.width;
-        const absY = foldedDim.offsetY + relY * foldedDim.height;
-
-        setState(prev => ({
-            ...prev,
-            punches: [...prev.punches, { x: absX, y: absY, shape: currentShape }]
-        }));
-    };
-
-    const toggleUnfold = () => {
-        setState(prev => ({ ...prev, isUnfolded: !prev.isUnfolded }));
-        if (!state.isUnfolded) {
-            setFeedback({ message: 'Simetri açıldı! ✨', type: 'success' });
-            setTimeout(() => setFeedback(null), 1500);
-        }
-    };
-
-    const handleReset = () => {
-        setState(prev => ({ ...prev, folds: [], punches: [], isUnfolded: false }));
-    };
-
-    const finishGame = () => {
-        if (isResolvingRef.current) return;
-        isResolvingRef.current = true;
-        setGamePhase('finished');
-        if (!hasSavedRef.current) {
-            hasSavedRef.current = true;
-            const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-            saveGamePlay({
-                game_id: 'arcade-kraft-origami',
-                score_achieved: score,
-                duration_seconds: duration,
-                metadata: {
-                    game_name: 'Kraft Origami',
-                    total_folds: state.folds.length,
-                    total_punches: state.punches.length,
-                    unfolded_holes: finalPunches.length
-                }
-            });
-        }
-    };
-
-    const isPunchable = !state.isUnfolded && state.folds.length > 0;
-
-    // ─── Shell status mapping ────────────────────────────────────────────
-    const shellStatus: 'START' | 'PLAYING' | 'GAME_OVER' =
-        gamePhase === 'idle' ? 'START' :
-            gamePhase === 'finished' ? 'GAME_OVER' : 'PLAYING';
-
-    // ─── HUD Extras (katman + delik) ─────────────────────────────────────
-    const statsHud = (
-        <div className="flex items-center gap-2">
-            <span className="bg-sky-200 dark:bg-sky-800 px-2 py-0.5 rounded-lg border-2 border-black/10 text-[10px] font-black uppercase">
-                Katman: <span className="text-sm">{Math.pow(2, state.folds.length)}</span>
-            </span>
-            <span className="bg-rose-200 dark:bg-rose-800 px-2 py-0.5 rounded-lg border-2 border-black/10 text-[10px] font-black uppercase">
-                Delik: <span className="text-sm">{finalPunches.length}</span>
-            </span>
-        </div>
-    );
+const KraftOrigamiPreview: React.FC = () => {
+    const previewShapes: PunchShape[] = [PunchShape.CIRCLE, PunchShape.HEART, PunchShape.STAR, PunchShape.SQUARE];
 
     return (
-        <ArcadeGameShell
-            gameState={{ score, level: state.folds.length || 1, lives: 1, status: shellStatus }}
-            gameMetadata={{
-                id: 'arcade-kraft-origami',
-                title: 'KRAFT ORİGAMİ',
-                description: (
-                    <>
-                        <p>✂️ Kağıdı katla, del ve açtığında simetrik desenleri keşfet!</p>
-                        <p className="mt-2">🧠 Simetri keşfi ve görsel-uzamsal algı testi!</p>
-                    </>
-                ),
-                tuzoCode: '5.5.1 Simetri Keşfi',
-                icon: <Scissors className="w-14 h-14 text-black" strokeWidth={3} />,
-                iconBgColor: 'bg-orange-400',
-                containerBgColor: 'bg-amber-100 dark:bg-slate-900'
-            }}
-            onStart={startGame}
-            onRestart={startGame}
-            showLevel={true}
-            showLives={false}
-            hudExtras={statsHud}
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+            <div className="rounded-[2rem] border-2 border-black/10 bg-white/85 p-5 shadow-neo-md dark:border-white/10 dark:bg-slate-900/80">
+                <div className="rounded-[1.5rem] border-2 border-black/10 bg-[linear-gradient(180deg,#fef3c7_0%,#ffffff_45%,#dcfce7_100%)] p-6 shadow-inner dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(30,41,59,0.96)_0%,rgba(15,23,42,0.96)_100%)]">
+                    <div className="mx-auto flex max-w-sm items-center justify-between gap-3 rounded-[1.5rem] border-2 border-black/10 bg-white/85 px-4 py-4 shadow-neo-sm dark:border-white/10 dark:bg-slate-800/80">
+                        <div className="grid gap-2">
+                            <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Katla</div>
+                            <div className="flex gap-2">
+                                {[ChevronLeft, ChevronUp, ChevronRight].map((Icon, index) => (
+                                    <div key={index} className="grid h-10 w-10 place-items-center rounded-2xl border-2 border-black/10 bg-cyber-pink/85 text-white shadow-neo-sm">
+                                        <Icon size={18} className="stroke-[2.5]" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="h-24 w-24 rounded-[1.75rem] border-2 border-black/10 bg-[#d4b483] shadow-neo-sm" />
+                        <div className="grid gap-2">
+                            <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Del</div>
+                            <div className="grid grid-cols-2 gap-2">
+                                {previewShapes.map((shape) => (
+                                    <div key={shape} className="grid h-10 w-10 place-items-center rounded-2xl border-2 border-black/10 bg-cyber-blue text-white shadow-neo-sm">
+                                        <ShapeIcon shape={shape} className="h-4 w-4" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 rounded-[1.5rem] border-2 border-black/10 bg-cyber-emerald/20 px-4 py-4 text-center shadow-neo-sm">
+                        <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Son Adım</div>
+                        <div className="mt-2 text-lg font-black text-black dark:text-white">Kağıdı aç ve simetrik deseni keşfet</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid gap-4">
+                {[
+                    { title: 'Önce Katla', desc: 'Ok düğmeleri görünür parçayı küçültür. Her katlama yeni bir simetri katmanı kurar.', color: 'yellow' },
+                    { title: 'Sonra Del', desc: 'Seçtiğin şekli görünür katmana uygula. Her delik açıldığında kopyalanacak bir iz bırakır.', color: 'blue' },
+                    { title: 'Simetriyi Aç', desc: 'Kağıdı açınca küçük bir delik bile büyük bir desene dönüşür. Farklı katlarla yeni sürprizler dene.', color: 'emerald' },
+                ].map((step) => (
+                    <KidCard key={step.title} accentColor={step.color} animate={false}>
+                        <div className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Origami Görevi</div>
+                        <div className="mt-2 text-2xl font-black tracking-tight text-black dark:text-white">{step.title}</div>
+                        <p className="mt-2 text-sm font-bold leading-relaxed text-slate-600 dark:text-slate-300">{step.desc}</p>
+                    </KidCard>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const KraftOrigami: React.FC = () => {
+    const ctrl = useKraftOrigamiController();
+
+    const overlay = ctrl.gamePhase === 'idle' ? (
+        <KidGameStatusOverlay
+            tone="orange" icon={Scissors} title="Kraft Origami"
+            description="Kağıdı katla, del ve açıldığında simetrik deseni keşfet. Her kat yeni bir sürpriz oluşturur."
+            actions={[
+                { label: 'Oyuna Başla', variant: 'primary', size: 'lg', icon: Play, onClick: ctrl.startGame },
+                { label: "Arcade'e Dön", variant: 'ghost', size: 'lg', onClick: () => ctrl.navigate('/bilsem-zeka') },
+            ]}
+        />
+    ) : ctrl.gamePhase === 'finished' ? (
+        <KidGameStatusOverlay
+            tone="emerald" icon={Trophy} title="Desen Hazır"
+            description="Kendi simetrik origami desenini oluşturdun. Yeni denemede farklı kat yönleriyle bambasşka sonuçlar çıkarabilirsin."
+            stats={[
+                { label: 'Puan', value: ctrl.score, tone: 'yellow' },
+                { label: 'Katlama', value: ctrl.state.folds.length, tone: 'orange' },
+                { label: 'Açılan Delik', value: ctrl.finalPunches.length, tone: 'blue' },
+            ]}
+            actions={[
+                { label: 'Yeniden Başla', variant: 'primary', size: 'lg', icon: RotateCcw, onClick: ctrl.startGame },
+                { label: "Arcade'e Dön", variant: 'ghost', size: 'lg', onClick: () => ctrl.navigate('/bilsem-zeka') },
+            ]}
+            backdropClassName="bg-slate-950/60"
+        />
+    ) : null;
+
+    return (
+        <KidGameShell
+            title="Kraft Origami"
+            subtitle="Kağıdı katla, şekli del ve açıldığında oluşan simetriyi keşfet."
+            instruction={ctrl.instruction}
+            backHref="/bilsem-zeka" backLabel="Arcade'e Dön"
+            badges={[
+                { label: 'Simetri Keşfi', variant: 'difficulty' },
+                { label: 'TUZÖ 5.5.1', variant: 'tuzo' },
+            ]}
+            stats={[
+                { label: 'Katlama', value: `${ctrl.state.folds.length}/6`, tone: 'orange', icon: Scissors, helper: 'Her kat yeni bir yansıma ekseni kurar' },
+                { label: 'Delik', value: ctrl.finalPunches.length, tone: 'blue', icon: Sparkles, helper: ctrl.state.punches.length === 0 ? 'Önce görünür parçayı del' : 'Açıldığında çoğalır' },
+                { label: 'Görünüm', value: ctrl.state.isUnfolded ? 'Açık' : 'Katlı', tone: ctrl.state.isUnfolded ? 'emerald' : 'yellow', icon: ctrl.state.isUnfolded ? Eye : EyeOff, helper: ctrl.state.isUnfolded ? 'Simetriyi inceliyorsun' : 'Delmeye hazırsın' },
+                { label: 'Puan', value: ctrl.score, tone: 'purple', icon: Trophy, helper: `${ctrl.currentPaperColorName} kağıdı ile çalışıyorsun` },
+            ]}
+            actions={ctrl.gamePhase === 'playing' ? [
+                { label: 'Sıfırla', variant: 'ghost', icon: RotateCcw, onClick: ctrl.handleReset },
+                { label: ctrl.state.isUnfolded ? 'Kapat' : 'Aç', variant: 'secondary', icon: ctrl.state.isUnfolded ? EyeOff : Eye, disabled: ctrl.state.punches.length === 0, onClick: ctrl.toggleUnfold },
+                { label: 'Bitir', variant: 'success', icon: Sparkles, disabled: ctrl.state.punches.length === 0, onClick: ctrl.finishGame },
+            ] : []}
+            supportTitle="Origami Rehberi"
+            supportDescription="Daha zengin desenler kurmak için katlama ve delme adımlarını küçük ipuçlarıyla takip et."
+            playAreaRef={ctrl.playAreaRef} playAreaClassName="min-h-[900px]"
+            supportArea={(
+                <div className="grid gap-5">
+                    <KraftOrigamiPreview />
+                    <div className="grid gap-4 lg:grid-cols-3">
+                        <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-yellow/30 px-4 py-4 shadow-neo-sm">
+                            <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">Farklı Yönleri Karıştır</div>
+                            <p className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">Aynı yönü art arda kullanmak yerine sağ, sol, yukarı ve aşağı katlamaları birleştirirsen desen daha şaşırtıcı olur.</p>
+                        </div>
+                        <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-blue/15 px-4 py-4 shadow-neo-sm">
+                            <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">Merkez ve Kenar</div>
+                            <p className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">Deliği merkeze yaklaştırırsan düzenli motifler, kenara yaklaştırırsan daha hareketli boşluklar elde edersin.</p>
+                        </div>
+                        <div className="rounded-[1.5rem] border-2 border-black/10 bg-cyber-emerald/20 px-4 py-4 shadow-neo-sm">
+                            <div className="text-sm font-black uppercase tracking-[0.2em] text-black dark:text-white">Şekli Değiştir</div>
+                            <p className="mt-2 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-300">Aynı kat planını kare, kalp ve yıldızla tekrar dene. Hangi şeklin en dengeli sonucu verdiğini karşılaştır.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+            overlay={overlay}
         >
-            <div className="h-full overflow-hidden overscroll-none flex flex-col bg-amber-100 dark:bg-slate-900 text-black font-black transition-colors duration-300" style={{ WebkitTapHighlightColor: 'transparent' }}>
+            <div className="relative flex flex-col gap-6">
+                <KidGameFeedbackBanner message={ctrl.feedback?.message ?? null} type={ctrl.feedback?.type} />
 
-                {/* Feedback Banner */}
-                <ArcadeFeedbackBanner message={feedback?.message ?? null} type={feedback?.type} />
-
-                <div className="flex-1 flex flex-col sm:flex-row min-h-0">
-
-                    {/* LEFT SIDEBAR PANEL */}
-                    <aside className="w-full sm:w-64 bg-white dark:bg-slate-800 border-b-8 sm:border-b-0 sm:border-r-8 border-black/10 dark:border-slate-700 p-4 sm:p-6 flex flex-row sm:flex-col gap-4 sm:gap-8 overflow-x-auto overflow-y-hidden sm:overflow-x-hidden sm:overflow-y-auto touch-pan-x sm:touch-pan-y z-10 shrink-0 snap-x transition-colors duration-300">
-
-                        {/* DELGEÇ ŞEKLİ */}
-                        <section className="bg-sky-100 dark:bg-sky-900/30 p-3 sm:p-4 rounded-3xl border-2 border-black/10 dark:border-slate-600 shadow-neo-sm rotate-1 min-w-[200px] sm:min-w-0 snap-center transition-colors duration-300">
-                            <h2 className="text-[10px] sm:text-sm font-black text-black dark:text-white tracking-widest uppercase mb-3 sm:mb-4 text-center bg-white dark:bg-slate-700 py-1 rounded-xl border-2 border-black/10 dark:border-slate-600 -rotate-2 transition-colors duration-300">Delgeç Şekli</h2>
-                            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                                {Object.values(PunchShape).map(shape => (
+                <div className="grid gap-6 xl:grid-cols-[minmax(250px,300px)_minmax(0,1fr)]">
+                    <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
+                        <section className="rounded-[1.8rem] border-2 border-black/10 bg-cyber-blue/10 p-4 shadow-neo-sm dark:border-white/10 dark:bg-cyber-blue/10">
+                            <h2 className="rounded-2xl border-2 border-black/10 bg-white/80 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-neo-sm dark:border-white/10 dark:bg-slate-800/80 dark:text-white">Delgeç Şekli</h2>
+                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                {Object.values(PunchShape).map((shape) => (
                                     <button
-                                        key={shape}
-                                        onClick={() => setCurrentShape(shape)}
-                                        className={`aspect-square rounded-2xl flex items-center justify-center transition-all border-2 border-black/10 ${currentShape === shape
-                                            ? 'bg-amber-400 text-black shadow-none translate-y-1 rotate-3'
-                                            : 'bg-white dark:bg-slate-700 text-black dark:text-white shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm hover:bg-slate-100'
-                                            }`}
+                                        key={shape} type="button"
+                                        onClick={() => ctrl.setCurrentShape(shape)}
+                                        className={['aspect-square rounded-[1.5rem] border-2 border-black/10 transition-all', 'flex items-center justify-center shadow-neo-sm', ctrl.currentShape === shape ? 'translate-y-1 bg-cyber-yellow text-black shadow-none' : 'bg-white text-black hover:-translate-y-1 dark:border-white/10 dark:bg-slate-800 dark:text-white'].join(' ')}
                                     >
-                                        <ShapeIcon shape={shape} className="w-5 h-5 sm:w-8 sm:h-8" />
+                                        <ShapeIcon shape={shape} className="h-7 w-7" />
                                     </button>
                                 ))}
                             </div>
                         </section>
 
-                        {/* KATLAMA */}
-                        <section className="bg-emerald-100 dark:bg-emerald-900/30 p-3 sm:p-4 rounded-3xl border-2 border-black/10 dark:border-slate-600 shadow-neo-sm -rotate-1 min-w-[200px] sm:min-w-0 snap-center transition-colors duration-300">
-                            <h2 className="text-[10px] sm:text-sm font-black text-black dark:text-white tracking-widest uppercase mb-4 sm:mb-6 text-center bg-white dark:bg-slate-700 py-1 rounded-xl border-2 border-black/10 dark:border-slate-600 rotate-2 transition-colors duration-300">Katlama</h2>
-                            <div className="relative w-28 h-28 sm:w-32 sm:h-32 mx-auto bg-white dark:bg-slate-700 rounded-full flex items-center justify-center border-2 border-black/10 shadow-[inset_4px_4px_0_rgba(0,0,0,0.1)] transition-colors duration-300">
-
-                                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-amber-400 rounded-full flex items-center justify-center z-10 border-2 border-black/10 shadow-neo-sm">
-                                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-black rounded-full" />
-                                </div>
-
-                                <button
-                                    onClick={() => handleFold(FoldDirection.UP)}
-                                    disabled={state.isUnfolded || state.folds.length >= 6}
-                                    className="absolute -top-3 w-8 h-8 sm:w-10 sm:h-10 bg-rose-400 text-black border-2 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none rounded-xl flex items-center justify-center disabled:opacity-50 disabled:bg-slate-300 transition-all z-20"
-                                >
-                                    <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={3} />
-                                </button>
-
-                                <button
-                                    onClick={() => handleFold(FoldDirection.LEFT)}
-                                    disabled={state.isUnfolded || state.folds.length >= 6}
-                                    className="absolute -left-3 w-8 h-8 sm:w-10 sm:h-10 bg-rose-400 text-black border-2 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none rounded-xl flex items-center justify-center disabled:opacity-50 disabled:bg-slate-300 transition-all z-20"
-                                >
-                                    <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={3} />
-                                </button>
-
-                                <button
-                                    onClick={() => handleFold(FoldDirection.RIGHT)}
-                                    disabled={state.isUnfolded || state.folds.length >= 6}
-                                    className="absolute -right-3 w-8 h-8 sm:w-10 sm:h-10 bg-rose-400 text-black border-2 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none rounded-xl flex items-center justify-center disabled:opacity-50 disabled:bg-slate-300 transition-all z-20"
-                                >
-                                    <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={3} />
-                                </button>
-
-                                <button
-                                    onClick={() => handleFold(FoldDirection.DOWN)}
-                                    disabled={state.isUnfolded || state.folds.length >= 6}
-                                    className="absolute -bottom-3 w-8 h-8 sm:w-10 sm:h-10 bg-rose-400 text-black border-2 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none rounded-xl flex items-center justify-center disabled:opacity-50 disabled:bg-slate-300 transition-all z-20"
-                                >
-                                    <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={3} />
-                                </button>
-                            </div>
-                        </section>
-
-                        {/* RENK SEÇİMİ */}
-                        <section className="bg-rose-100 dark:bg-rose-900/30 p-3 sm:p-4 rounded-3xl border-2 border-black/10 dark:border-slate-600 shadow-neo-sm rotate-2 min-w-[200px] sm:min-w-0 snap-center transition-colors duration-300">
-                            <h2 className="text-[10px] sm:text-sm font-black text-black dark:text-white tracking-widest uppercase mb-3 sm:mb-4 text-center bg-white dark:bg-slate-700 py-1 rounded-xl border-2 border-black/10 dark:border-slate-600 -rotate-1 transition-colors duration-300">Kağıt Rengi</h2>
-                            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-                                {PAPER_COLORS.map(c => (
+                        <section className="rounded-[1.8rem] border-2 border-black/10 bg-cyber-emerald/15 p-4 shadow-neo-sm dark:border-white/10 dark:bg-cyber-emerald/10">
+                            <h2 className="rounded-2xl border-2 border-black/10 bg-white/80 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-neo-sm dark:border-white/10 dark:bg-slate-800/80 dark:text-white">Katlama</h2>
+                            <div className="relative mx-auto mt-5 h-32 w-32 rounded-full border-2 border-black/10 bg-white/85 shadow-inner dark:border-white/10 dark:bg-slate-800/80">
+                                <div className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-black/10 bg-cyber-orange shadow-neo-sm" />
+                                {([
+                                    { dir: FoldDirection.UP, cls: 'absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 hover:-translate-y-[55%]', Icon: ChevronUp },
+                                    { dir: FoldDirection.RIGHT, cls: 'absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 hover:translate-x-[55%]', Icon: ChevronRight },
+                                    { dir: FoldDirection.DOWN, cls: 'absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 hover:translate-y-[55%]', Icon: ChevronDown },
+                                    { dir: FoldDirection.LEFT, cls: 'absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 hover:-translate-x-[55%]', Icon: ChevronLeft },
+                                ] as const).map(({ dir, cls, Icon }) => (
                                     <button
-                                        key={c.value}
-                                        onClick={() => setState(s => ({ ...s, paperColor: c.value }))}
-                                        className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-black/10 transition-all ${state.paperColor === c.value ? 'scale-125 shadow-none translate-y-1' : 'shadow-neo-sm hover:-translate-y-1'
-                                            }`}
-                                        style={{ backgroundColor: c.value }}
-                                    />
+                                        key={dir} type="button"
+                                        onClick={() => ctrl.handleFold(dir)}
+                                        disabled={ctrl.state.isUnfolded || ctrl.state.folds.length >= 6}
+                                        className={`${cls} grid h-10 w-10 place-items-center rounded-2xl border-2 border-black/10 bg-cyber-pink text-white shadow-neo-sm transition-all disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10`}
+                                    >
+                                        <Icon size={20} className="stroke-[2.5]" />
+                                    </button>
                                 ))}
                             </div>
                         </section>
 
-                    </aside>
+                        <section className="rounded-[1.8rem] border-2 border-black/10 bg-cyber-pink/10 p-4 shadow-neo-sm dark:border-white/10 dark:bg-cyber-pink/10">
+                            <h2 className="rounded-2xl border-2 border-black/10 bg-white/80 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-neo-sm dark:border-white/10 dark:bg-slate-800/80 dark:text-white">Kağıt Rengi</h2>
+                            <div className="mt-4 flex flex-wrap justify-center gap-3">
+                                {PAPER_COLORS.map((paperColor) => (
+                                    <button
+                                        key={paperColor.value} type="button" aria-label={paperColor.name}
+                                        onClick={() => ctrl.setState((prev) => ({ ...prev, paperColor: paperColor.value }))}
+                                        className={['h-10 w-10 rounded-full border-2 border-black/10 transition-all shadow-neo-sm', ctrl.state.paperColor === paperColor.value ? 'scale-110 translate-y-1 shadow-none' : 'hover:-translate-y-1'].join(' ')}
+                                        style={{ backgroundColor: paperColor.value }}
+                                    />
+                                ))}
+                            </div>
+                            <div className="mt-4 text-center text-xs font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-300">
+                                Aktif renk: {ctrl.currentPaperColorName}
+                            </div>
+                        </section>
+                    </div>
 
-                    {/* MAIN WORK AREA */}
-                    <main className="flex-1 p-4 sm:p-8 bg-amber-100 dark:bg-slate-900 relative overflow-hidden touch-none flex flex-col items-center justify-center shrink transition-colors duration-300">
+                    <div className="rounded-[2rem] border-2 border-black/10 bg-[linear-gradient(180deg,rgba(236,253,245,0.92)_0%,rgba(254,249,195,0.9)_100%)] p-4 shadow-neo-md dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98)_0%,rgba(22,101,52,0.28)_100%)] sm:p-6">
+                        <div className="relative flex min-h-[520px] items-center justify-center overflow-hidden rounded-[2rem] border-2 border-black/10 bg-emerald-100/90 p-6 dark:border-white/10 dark:bg-emerald-950/30">
+                            <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#000 2px, transparent 2px)', backgroundSize: '30px 30px' }} />
 
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-3 mb-4 w-full max-w-3xl justify-end">
-                            <button
-                                onClick={handleReset}
-                                className="p-2 sm:p-2.5 bg-rose-200 dark:bg-rose-700 rounded-xl border-2 border-black/10 shadow-neo-sm rotate-2 hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none transition-all"
-                                title="Sıfırla"
-                            >
-                                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 text-black dark:text-white" strokeWidth={3} />
-                            </button>
-
-                            <button
-                                onClick={toggleUnfold}
-                                disabled={state.punches.length === 0}
-                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all uppercase border-2 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none -rotate-1 ${state.isUnfolded
-                                    ? 'bg-amber-400 text-black'
-                                    : state.punches.length === 0
-                                        ? 'bg-slate-300 text-slate-500 opacity-50 cursor-not-allowed shadow-none hover:translate-y-0 active:translate-y-0'
-                                        : 'bg-emerald-400 text-black'
-                                    }`}
-                            >
-                                {state.isUnfolded ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={3} /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={3} />}
-                                <span className="hidden sm:inline">{state.isUnfolded ? 'KAPAT' : 'AÇ'}</span>
-                            </button>
-
-                            <button
-                                onClick={finishGame}
-                                disabled={state.punches.length === 0}
-                                className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all uppercase border-2 border-black/10 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-1 active:shadow-none rotate-1 bg-sky-300 text-black disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0"
-                            >
-                                Bitir
-                            </button>
-                        </div>
-
-                        {/* Desk Container */}
-                        <div className="relative w-full h-full max-w-3xl max-h-[70vh] bg-emerald-100 dark:bg-emerald-900/20 rounded-[3rem] p-6 sm:p-10 border-2 border-black/10 dark:border-slate-700 shadow-neo-sm dark:shadow-[16px_16px_0_#0f172a] flex items-center justify-center overflow-hidden rotate-1 transition-colors duration-300">
-
-                            {/* Playful Grid Background */}
-                            <div
-                                className="absolute inset-0 z-0 opacity-20"
-                                style={{
-                                    backgroundImage: 'radial-gradient(#000 2px, transparent 2px)',
-                                    backgroundSize: '30px 30px'
-                                }}
-                            />
-
-                            {/* PAPER MOUNTING POINT */}
-                            <div className="relative w-full max-w-[350px] aspect-square z-20 flex items-center justify-center -rotate-2">
-
-                                {/* THE PAPER */}
+                            <div className="relative z-10 aspect-square w-full max-w-[360px]">
                                 <div
-                                    className={`absolute transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-hidden ${state.isUnfolded ? 'rounded-none shadow-[12px_12px_0_rgba(0,0,0,0.5)]' : 'rounded-sm'
-                                        } ${isPunchable ? 'cursor-crosshair' : 'cursor-default'} border-2 border-black/10`}
-                                    onClick={handlePunch}
+                                    className={['absolute overflow-hidden border-2 border-black/10 transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]', ctrl.state.isUnfolded ? 'rounded-[0.75rem]' : 'rounded-sm', ctrl.isPunchable ? 'cursor-crosshair' : 'cursor-default'].join(' ')}
+                                    onClick={ctrl.handlePunch}
                                     style={{
-                                        backgroundColor: state.paperColor,
-                                        width: `${(state.isUnfolded ? 1 : foldedDim.width) * 100}%`,
-                                        height: `${(state.isUnfolded ? 1 : foldedDim.height) * 100}%`,
-                                        left: `${(state.isUnfolded ? 0 : foldedDim.offsetX) * 100}%`,
-                                        top: `${(state.isUnfolded ? 0 : foldedDim.offsetY) * 100}%`,
-                                        boxShadow: state.isUnfolded
-                                            ? '8px 8px 0 rgba(0,0,0,0.8)'
-                                            : '4px 4px 0 rgba(0,0,0,0.8)'
+                                        backgroundColor: ctrl.state.paperColor,
+                                        width: `${(ctrl.state.isUnfolded ? 1 : ctrl.foldedDim.width) * 100}%`,
+                                        height: `${(ctrl.state.isUnfolded ? 1 : ctrl.foldedDim.height) * 100}%`,
+                                        left: `${(ctrl.state.isUnfolded ? 0 : ctrl.foldedDim.offsetX) * 100}%`,
+                                        top: `${(ctrl.state.isUnfolded ? 0 : ctrl.foldedDim.offsetY) * 100}%`,
+                                        boxShadow: ctrl.state.isUnfolded ? '10px 10px 0 rgba(15, 23, 42, 0.45)' : '6px 6px 0 rgba(15, 23, 42, 0.35)',
+                                        aspectRatio: '1 / 1',
                                     }}
                                 >
-                                    {/* Crease Effects */}
-                                    {!state.isUnfolded && state.folds.length > 0 && (
-                                        <div className="absolute inset-0 shadow-[inset_4px_4px_0_rgba(0,0,0,0.1)] pointer-events-none"></div>
+                                    {!ctrl.state.isUnfolded && ctrl.state.folds.length > 0 && (
+                                        <div className="pointer-events-none absolute inset-0 shadow-[inset_4px_4px_0_rgba(0,0,0,0.1)]" />
                                     )}
 
-                                    {/* Holes */}
-                                    {finalPunches.map((punch, idx) => (
+                                    {ctrl.finalPunches.map((punch, index) => (
                                         <div
-                                            key={idx}
-                                            className="absolute -translate-x-1/2 -translate-y-1/2"
+                                            key={`${punch.shape}-${index}`}
+                                            className="absolute -translate-x-1/2 -translate-y-1/2 text-emerald-100"
                                             style={{
-                                                left: `${(state.isUnfolded ? punch.x : ((punch.x - foldedDim.offsetX) / foldedDim.width)) * 100}%`,
-                                                top: `${(state.isUnfolded ? punch.y : ((punch.y - foldedDim.offsetY) / foldedDim.height)) * 100}%`,
-                                                transform: 'translate(-50%, -50%)'
+                                                left: `${(ctrl.state.isUnfolded ? punch.x : (punch.x - ctrl.foldedDim.offsetX) / ctrl.foldedDim.width) * 100}%`,
+                                                top: `${(ctrl.state.isUnfolded ? punch.y : (punch.y - ctrl.foldedDim.offsetY) / ctrl.foldedDim.height) * 100}%`,
                                             }}
                                         >
-                                            <div className="relative group text-emerald-100">
-                                                <ShapeIcon shape={punch.shape} className="w-5 h-5 sm:w-6 sm:h-6" />
-                                                <div className="absolute inset-0 pointer-events-none scale-105 border-[3px] border-black/10 rounded-full opacity-50 hidden" />
-                                            </div>
+                                            <ShapeIcon shape={punch.shape} className="h-6 w-6 sm:h-7 sm:w-7" />
                                         </div>
                                     ))}
 
-                                    {/* Initial Instruction Hint */}
-                                    {!state.isUnfolded && state.folds.length === 0 && (
-                                        <div className="absolute inset-0 flex items-center justify-center p-6 text-center pointer-events-none">
-                                            <div className="bg-white px-4 py-2 rounded-xl border-2 border-black/10 shadow-neo-sm rotate-2 text-black font-black text-xs uppercase tracking-widest leading-relaxed">
-                                                KATLA + DEL
+                                    {!ctrl.state.isUnfolded && ctrl.state.folds.length === 0 && (
+                                        <div className="absolute inset-0 grid place-items-center p-6 text-center">
+                                            <div className="rotate-2 rounded-2xl border-2 border-black/10 bg-white/85 px-4 py-3 text-xs font-black uppercase tracking-[0.24em] text-black shadow-neo-sm">
+                                                Önce Katla, Sonra Del
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
-                    </main>
+                    </div>
                 </div>
             </div>
-        </ArcadeGameShell>
+        </KidGameShell>
     );
 };
 

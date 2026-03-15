@@ -2,11 +2,12 @@ import React from 'react';
 import { Play, Info, Navigation2, ArrowDownUp } from 'lucide-react';
 
 interface MenuProps {
-    onStart: () => void;
+    onStart?: () => void;
     highScore: number;
+    showStartButton?: boolean;
 }
 
-const Menu: React.FC<MenuProps> = ({ onStart, highScore }) => {
+const Menu: React.FC<MenuProps> = ({ onStart, highScore, showStartButton = true }) => {
     return (
         <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-[3rem] p-8 sm:p-10 text-center border-2 border-black/10 dark:border-slate-700 shadow-neo-sm dark:shadow-[16px_16px_0_#0f172a] rotate-1 transition-colors duration-300">
             <div className="text-center mb-8">
@@ -25,13 +26,20 @@ const Menu: React.FC<MenuProps> = ({ onStart, highScore }) => {
             </div>
 
             <div className="space-y-4">
-                <button
-                    onClick={onStart}
-                    className="w-full py-5 px-6 bg-yellow-400 text-black border-2 border-black/10 dark:border-slate-800 rounded-2xl font-black text-2xl uppercase tracking-widest flex items-center justify-center gap-3 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-2 active:shadow-none transition-all"
-                >
-                    <Play className="fill-black stroke-black stroke-[3px]" size={28} />
-                    MEYDAN OKU
-                </button>
+                {showStartButton && onStart ? (
+                    <button
+                        type="button"
+                        onClick={onStart}
+                        className="w-full py-5 px-6 bg-yellow-400 text-black border-2 border-black/10 dark:border-slate-800 rounded-2xl font-black text-2xl uppercase tracking-widest flex items-center justify-center gap-3 shadow-neo-sm hover:-translate-y-1 hover:shadow-neo-sm active:translate-y-2 active:shadow-none transition-all"
+                    >
+                        <Play className="fill-black stroke-black stroke-[3px]" size={28} />
+                        MEYDAN OKU
+                    </button>
+                ) : (
+                    <div className="w-full rounded-2xl border-2 border-dashed border-black/15 bg-yellow-100/70 px-5 py-4 text-sm font-black uppercase tracking-[0.2em] text-slate-700 shadow-neo-sm dark:border-white/10 dark:bg-slate-700/70 dark:text-slate-200">
+                        Hazır olduğunda yukarıdaki düğmeden başla
+                    </div>
+                )}
 
                 <div className="bg-sky-100 dark:bg-slate-700 p-4 rounded-2xl border-2 border-black/10 dark:border-slate-800 text-center shadow-neo-sm rotate-1 transition-colors duration-300">
                     <p className="text-xs text-black dark:text-white font-black uppercase tracking-widest mb-1 transition-colors duration-300">En İyi Skor</p>

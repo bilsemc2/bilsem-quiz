@@ -1,87 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  loadDailyQuestion,
+  type DailyQuestion
+} from '@/features/content/model/dailyQuestionUseCases';
 import { toast } from 'sonner';
 import { encryptImageUrl, loadImageAsBase64, getImageProtectionStyles } from '../utils/imageProtection';
 
-interface Question {
-  id: string;
-  text: string;
-  question_number: number;
-  correct_option_id: string;
-  image_url?: string;
-  solution_video?: string | null;
-  is_active: boolean;
-}
-
 const GununSorusu: React.FC = () => {
-  const [question, setQuestion] = useState<Question | null>(null);
+  const [question, setQuestion] = useState<DailyQuestion | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageBase64, setImageBase64] = useState<string>('');
   const [imageLoading, setImageLoading] = useState(false);
-  const watermarkRef = useRef<HTMLDivElement>(null);
-  // Günün tarihine göre sabit bir soru seçmek için
-  const getTodaysSeed = () => {
-    const today = new Date();
-    return today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-  };
-
-  // Filigran ekle
-  const addWatermark = useCallback(() => {
-    if (!watermarkRef.current) return;
-
-    const container = watermarkRef.current;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) return;
-
-    // Canvas boyutunu ayarla
-    canvas.width = container.offsetWidth;
-    canvas.height = container.offsetHeight;
-
-    // Yarı saydam filigran metni
-    ctx.globalAlpha = 0.2;
-    ctx.font = '14px Arial';
-    ctx.fillStyle = '#000';
-
-    // Filigran metnini eğimli olarak yerleştir
-    ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(-Math.PI / 6); // -30 derece eğim
-
-    // Filigran metnini tekrarla
-    const text = '';
-    const textWidth = ctx.measureText(text).width;
-
-    for (let y = -canvas.height; y < canvas.height; y += 40) {
-      for (let x = -canvas.width; x < canvas.width; x += textWidth + 40) {
-        ctx.fillText(text, x, y);
-      }
-    }
-
-    ctx.restore();
-
-    // Canvas'ı arka plan olarak ayarla
-    container.style.position = 'relative';
-    const watermarkElement = document.createElement('div');
-    watermarkElement.style.position = 'absolute';
-    watermarkElement.style.top = '0';
-    watermarkElement.style.left = '0';
-    watermarkElement.style.width = '100%';
-    watermarkElement.style.height = '100%';
-    watermarkElement.style.backgroundImage = `url(${canvas.toDataURL('image/png')})`;
-    watermarkElement.style.pointerEvents = 'none';
-    watermarkElement.style.zIndex = '2';
-
-    // Önceki filigranı temizle ve yenisini ekle
-    const oldWatermark = container.querySelector('.watermark');
-    if (oldWatermark) {
-      container.removeChild(oldWatermark);
-    }
-
-    watermarkElement.className = 'watermark';
-    container.appendChild(watermarkElement);
-  }, []);
 
   // Resmi Base64 formatında yükle
   const loadQuestionImage = useCallback(async (imageUrl: string) => {
@@ -92,37 +21,23 @@ const GununSorusu: React.FC = () => {
       const secureUrl = encryptImageUrl(imageUrl);
       const base64Data = await loadImageAsBase64(secureUrl);
       setImageBase64(base64Data);
-      setTimeout(addWatermark, 500);
     } catch (error) {
       console.error('Resim yüklenirken hata:', error);
     } finally {
       setImageLoading(false);
     }
-  }, [addWatermark]);
+  }, []);
 
   // Günün sorusunu yükle
   useEffect(() => {
     const fetchDailyQuestion = async () => {
       setLoading(true);
       try {
-        const todaySeed = getTodaysSeed();
-        const { data, error } = await supabase
-          .from('questions')
-          .select('*')
-          .eq('is_active', true)
-          .order('question_number', { ascending: true });
+        const dailyQuestion = await loadDailyQuestion();
+        setQuestion(dailyQuestion);
 
-        if (error) {
-          throw error;
-        }
-
-        if (data && data.length > 0) {
-          const index = todaySeed % data.length;
-          setQuestion(data[index]);
-
-          if (data[index].image_url) {
-            loadQuestionImage(data[index].image_url);
-          }
+        if (dailyQuestion?.image_url) {
+          loadQuestionImage(dailyQuestion.image_url);
         }
       } catch (error) {
         console.error('Günün sorusu yüklenirken hata:', error);
@@ -135,14 +50,6 @@ const GununSorusu: React.FC = () => {
     };
 
     fetchDailyQuestion();
-
-    const style = document.createElement('style');
-    style.textContent = getImageProtectionStyles();
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
   }, [loadQuestionImage]);
 
   if (loading) {
@@ -163,6 +70,7 @@ const GununSorusu: React.FC = () => {
 
   return (
     <div className="bg-white rounded-lg overflow-hidden">
+      <style>{getImageProtectionStyles()}</style>
       {/* Soru içeriği */}
       <div className="mb-4">
         {question.text && (
@@ -170,7 +78,17 @@ const GununSorusu: React.FC = () => {
         )}
 
         {question.image_url && (
-          <div className="mb-4 flex justify-center relative" ref={watermarkRef}>
+          <div className="mb-4 flex justify-center relative overflow-hidden rounded-lg">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-[2] grid grid-cols-3 grid-rows-3 place-items-center select-none"
+            >
+              {Array.from({ length: 9 }, (_, index) => (
+                <span key={index} className="-rotate-[20deg] text-sm font-black tracking-[0.2em] text-black/10">
+                  BILSEMC2
+                </span>
+              ))}
+            </div>
             {imageLoading ? (
               <div className="animate-pulse bg-gray-200 rounded-lg" style={{ width: '300px', height: '200px' }} />
             ) : imageBase64 ? (

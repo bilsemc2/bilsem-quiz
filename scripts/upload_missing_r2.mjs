@@ -94,7 +94,7 @@ function normalizeStr(str) {
         .normalize('NFC')
         .replace(/[`'''""]/g, '')           // apostrof temizle
         .replace(/\s*\([^)]*\)/g, '')       // parantez içeriği kaldır
-        .replace(/[_\-.,\/\\!?;:]/g, ' ')  // özel char → boşluk
+        .replace(/[_\-.,/\\!?;:]/g, ' ')  // özel char → boşluk
         .replace(/\s+/g, ' ')
         .trim();
 }

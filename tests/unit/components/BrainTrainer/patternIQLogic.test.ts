@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   areWagonStatesEqual,
+  buildPatternIQFeedbackMessage,
   calculateWagonState,
   generateOptions,
 } from "../../../../src/components/BrainTrainer/patternIQ/logic.ts";
@@ -79,4 +80,19 @@ test("generateOptions includes the correct wagon state exactly once", () => {
 
   assert.equal(options.length, 4);
   assert.equal(matches.length, 1);
+});
+
+test("pattern iq feedback helper explains success and mistakes", () => {
+  assert.equal(
+    buildPatternIQFeedbackMessage(true, 6, 20),
+    "Doğru vagon! Şimdi 7. seviyeye geçiyorsun.",
+  );
+  assert.equal(
+    buildPatternIQFeedbackMessage(true, 20, 20),
+    "Doğru vagon! Son örüntüyü de çözdün, oyun tamamlanıyor.",
+  );
+  assert.equal(
+    buildPatternIQFeedbackMessage(false, 6, 20),
+    "Yanlış seçim! Örüntünün sonraki vagonuna tekrar bak.",
+  );
 });

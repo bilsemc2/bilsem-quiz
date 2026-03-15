@@ -8,7 +8,7 @@ export const TUZO_TEXT = "TUZÖ 4.2.1 Görsel Çalışma Belleği";
 export const MAX_LEVEL = 20;
 export const INITIAL_LIVES = 5;
 export const TIME_LIMIT = 180;
-export const FEEDBACK_DURATION_MS = 2000;
+export const FEEDBACK_DURATION_MS = 1200;
 export const ROUND_TRANSITION_MS = 1500;
 
 export const SHAPE_DEFINITIONS = [

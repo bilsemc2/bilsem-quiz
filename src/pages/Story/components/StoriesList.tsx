@@ -1,10 +1,11 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStories } from '../services/stories';
 import { Story, Question, themeTranslations, StoryTheme } from './types';
 import { ChevronRight, Download, GamepadIcon, Check, X, Trophy, ArrowLeft, BookOpen, Filter, Star, Sparkles } from 'lucide-react';
 import { WordGames } from './WordGames';
 import { OnDemandPdfDownloadButton } from './OnDemandPdfDownloadButton';
+import { scrollElementIntoView } from '../../../hooks/useViewportAnchor';
 
 const PDFPreview = lazy(() =>
   import('./PDFPreview').then((module) => ({ default: module.PDFPreview }))
@@ -36,6 +37,7 @@ export function StoriesList() {
   const [finalScore, setFinalScore] = useState<{ correct: number, total: number } | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<StoryTheme | 'all'>('all');
+  const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     loadStories();
@@ -61,6 +63,30 @@ export function StoriesList() {
     const themes = new Set(stories.map(s => s.theme));
     return Array.from(themes) as StoryTheme[];
   }, [stories]);
+
+  const focusFirstUnansweredQuestion = useCallback(() => {
+    if (!selectedStory) {
+      return;
+    }
+
+    const firstUnansweredQuestionId = (selectedStory.questions || []).reduce<string | null>((result, _, index) => {
+      if (result) {
+        return result;
+      }
+
+      const questionId = `${selectedStory.id}-${index}`;
+      return userAnswers[questionId] === undefined ? questionId : null;
+    }, null);
+
+    scrollElementIntoView(
+      firstUnansweredQuestionId ? questionRefs.current[firstUnansweredQuestionId] : null,
+      { block: 'center' },
+    );
+  }, [selectedStory, userAnswers]);
+
+  useEffect(() => {
+    questionRefs.current = {};
+  }, [selectedStory?.id]);
 
   if (loading) {
     return (
@@ -201,6 +227,9 @@ export function StoriesList() {
                 return (
                   <div
                     key={`question-${questionId}`}
+                    ref={(element) => {
+                      questionRefs.current[questionId] = element;
+                    }}
                     data-question-id={questionId}
                     className={`question-item rounded-2xl border-2 overflow-hidden transition-all ${userAnswers[questionId] === undefined && validationError
                         ? 'border-red-400 bg-red-50 dark:bg-red-900/10'
@@ -298,13 +327,7 @@ export function StoriesList() {
                       if (unansweredCount > 0) {
                         setValidationError(`Lütfen tüm soruları cevaplayın. ${totalAnswered}/${questions.length} soru cevaplandı.`);
                         setTimeout(() => {
-                          document.querySelectorAll('.question-item').forEach((el) => {
-                            const questionId = el.getAttribute('data-question-id');
-                            if (questionId && userAnswers[questionId] === undefined) {
-                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              return;
-                            }
-                          });
+                          focusFirstUnansweredQuestion();
                         }, 300);
                         return;
                       }

@@ -5,7 +5,6 @@ import { Battery } from 'lucide-react';
 import { drawMazeScene, getScaledCellSize } from '../canvasRendering';
 import type { Cell, EnergyEffect, GridPosition } from '../types';
 import IlluminationEffect from './IlluminationEffect';
-import { LevelClearedOverlay } from './Overlays';
 
 interface DarkMazeCanvasProps {
     maze: Cell[][];
@@ -15,9 +14,6 @@ interface DarkMazeCanvasProps {
     gridSize: number;
     canvasSize: number;
     energyEffects: EnergyEffect[];
-    showLevelUp: boolean;
-    levelScore: number;
-    onNextLevel: () => void;
     onTouchStart: (x: number, y: number) => void;
     onTouchEnd: (x: number, y: number) => void;
 }
@@ -30,9 +26,6 @@ const DarkMazeCanvas: React.FC<DarkMazeCanvasProps> = ({
     gridSize,
     canvasSize,
     energyEffects,
-    showLevelUp,
-    levelScore,
-    onNextLevel,
     onTouchStart,
     onTouchEnd
 }) => {
@@ -105,15 +98,6 @@ const DarkMazeCanvas: React.FC<DarkMazeCanvasProps> = ({
                         />
                     </motion.div>
                 ))}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {showLevelUp && (
-                    <LevelClearedOverlay
-                        onNextLevel={onNextLevel}
-                        scoreGain={levelScore}
-                    />
-                )}
             </AnimatePresence>
         </div>
     );

@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/useAuth';
-import { supabase } from '../lib/supabase';
 import CircularProgress from '../components/CircularProgress';
 import { Feedback } from '../components/Feedback';
 import YouTube from 'react-youtube';
 import { playSound } from '../utils/soundPlayer';
+import {
+  loadHomeworkQuizResults,
+  loadHomeworkQuizzes,
+  persistHomeworkQuizResult,
+} from '@/features/content/model/homeworkUseCases';
 
 interface Quiz {
   id: string;
@@ -76,32 +80,8 @@ export default function HomeworkPage() {
 
       try {
         setLoading(true);
-
-        // Load user profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Profile error:', profileError);
-          throw profileError;
-        }
-
-        // setIsAdmin(profileData.is_admin);
-
-        // Load quizzes for user's grade
-        const { data: quizData, error: quizError } = await supabase
-          .from('assignments')
-          .select('*');
-
-        if (quizError) {
-          console.error('Quiz error:', quizError);
-          throw quizError;
-        }
-
-        setQuizzes(quizData || []);
+        const quizData = await loadHomeworkQuizzes();
+        setQuizzes(quizData);
       } catch (error) {
         console.error('Error fetching data:', error);
         showFeedback('Veri yüklenirken bir hata oluştu', 'error');
@@ -117,43 +97,16 @@ export default function HomeworkPage() {
   useEffect(() => {
     if (user) {
       const loadQuizResults = async () => {
-        // First get the quiz results
-        const { data: resultsData, error: resultsError } = await supabase
-          .from('quiz_results')
-          .select('*')
-          .eq('user_id', user.id);
-
-        if (resultsError) {
-          console.error('Error loading quiz results:', resultsError);
-          return;
-        }
-
-        // Then fetch the associated quizzes
-        if (resultsData && resultsData.length > 0) {
-          const quizIds = resultsData.map(result => result.quiz_id);
-          const { data: quizzesData, error: quizzesError } = await supabase
-            .from('assignments')
-            .select('id, title, description, questions')
-            .in('id', quizIds);
-
-          if (quizzesError) {
-            console.error('Error loading quizzes:', quizzesError);
-            return;
-          }
-
-          // Combine the results with quiz data
-          const combinedData = resultsData.map(result => ({
-            ...result,
-            quiz: quizzesData?.find(quiz => quiz.id === result.quiz_id)
-          }));
-
-          setQuizResults(combinedData);
-        } else {
+        try {
+          const results = await loadHomeworkQuizResults(user.id);
+          setQuizResults(results);
+        } catch (error) {
+          console.error('Error loading quiz results:', error);
           setQuizResults([]);
         }
       };
 
-      loadQuizResults();
+      void loadQuizResults();
     }
   }, [user]);
 
@@ -276,10 +229,14 @@ export default function HomeworkPage() {
     } else {
       // Quiz completed
       try {
+        if (!user?.id) {
+          throw new Error('Kullanıcı oturumu bulunamadı');
+        }
+
         const finalScore = Math.round((score / activeQuiz.questions.length) * 100);
 
-        const { error } = await supabase.from('quiz_results').insert({
-          user_id: user?.id,
+        await persistHomeworkQuizResult({
+          user_id: user.id,
           quiz_id: activeQuiz.id,
           score: finalScore,
           questions_answered: activeQuiz.questions.length,
@@ -287,8 +244,6 @@ export default function HomeworkPage() {
           completed_at: new Date().toISOString(),
           user_answers: userAnswers
         });
-
-        if (error) throw error;
 
         // Navigate to result page with quiz results
         navigate('/result', {

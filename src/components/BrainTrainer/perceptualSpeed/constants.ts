@@ -10,7 +10,7 @@ export const MAX_LEVEL = 20;
 export const BASE_DIGIT_LENGTH = 5;
 export const MAX_DIGIT_LENGTH = 9;
 export const CORRECT_TO_ADVANCE = 3;
-export const FEEDBACK_DURATION_MS = 800;
+export const FEEDBACK_DURATION_MS = 1200;
 
 export const CONFUSION_PAIRS: Record<string, string[]> = {
   "1": ["7"],

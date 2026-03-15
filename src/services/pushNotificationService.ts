@@ -1,4 +1,7 @@
-import { supabase } from '../lib/supabase';
+import {
+    persistCurrentUserPushSubscription,
+    removePushSubscriptionByEndpoint
+} from '@/features/app/model/pushNotificationUseCases';
 
 
 
@@ -69,8 +72,8 @@ export async function subscribeToPush(): Promise<boolean> {
         const existingSubscription = await registration.pushManager.getSubscription();
         if (existingSubscription) {
 
-            // Zaten abone, Supabase'de olduğundan emin ol
-            await saveSubscriptionToSupabase(existingSubscription);
+            // Zaten abone, veri kaydının güncel olduğundan emin ol
+            await persistSubscription(existingSubscription);
             return true;
         }
 
@@ -87,8 +90,8 @@ export async function subscribeToPush(): Promise<boolean> {
             applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer
         });
 
-        // Supabase'e kaydet
-        await saveSubscriptionToSupabase(subscription);
+        // Kaydı kullanıcı hesabıyla ilişkilendir
+        await persistSubscription(subscription);
 
         return true;
     } catch (error) {
@@ -98,36 +101,12 @@ export async function subscribeToPush(): Promise<boolean> {
 }
 
 /**
- * Push subscription'ı Supabase'e kaydeder
+ * Push subscription'ı aktif kullanıcı için kalıcı hale getirir
  */
-async function saveSubscriptionToSupabase(subscription: PushSubscription): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+async function persistSubscription(subscription: PushSubscription): Promise<void> {
+    const saved = await persistCurrentUserPushSubscription(subscription);
+    if (!saved) {
         console.warn('Kullanıcı giriş yapmamış, subscription kaydedilemedi');
-        return;
-    }
-
-    const subscriptionJSON = subscription.toJSON();
-    const keys = subscriptionJSON.keys as { p256dh: string; auth: string } | undefined;
-
-    if (!keys?.p256dh || !keys?.auth) {
-        console.error('Subscription keys eksik');
-        return;
-    }
-
-    const { error } = await supabase
-        .from('push_subscriptions')
-        .upsert({
-            user_id: user.id,
-            endpoint: subscriptionJSON.endpoint,
-            p256dh: keys.p256dh,
-            auth: keys.auth
-        }, {
-            onConflict: 'endpoint'
-        });
-
-    if (error) {
-        console.error('Subscription kayıt hatası:', error);
     }
 }
 
@@ -140,11 +119,8 @@ export async function unsubscribeFromPush(): Promise<boolean> {
         const subscription = await registration.pushManager.getSubscription();
 
         if (subscription) {
-            // Supabase'den sil
-            await supabase
-                .from('push_subscriptions')
-                .delete()
-                .eq('endpoint', subscription.endpoint);
+            // Kalıcı kaydı sil
+            await removePushSubscriptionByEndpoint(subscription.endpoint);
 
             // Tarayıcıdan aboneliği kaldır
             await subscription.unsubscribe();

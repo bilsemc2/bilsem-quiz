@@ -1,55 +1,71 @@
+import { COLORS, GRID_SIZE } from './constants.ts';
+import type { SequenceItem, Question, GridPos } from './types.ts';
 
-import { COLORS, GRID_SIZE } from './constants';
-import { SequenceItem, Question, GridPos } from './types';
+type RandomFn = () => number;
 
-export const generateSequence = (level: number): SequenceItem[] => {
+const shuffleArray = <T>(items: T[], random: RandomFn): T[] => {
+  const nextItems = [...items];
+
+  for (let index = nextItems.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [nextItems[index], nextItems[swapIndex]] = [nextItems[swapIndex], nextItems[index]];
+  }
+
+  return nextItems;
+};
+
+export const generateSequence = (level: number, random: RandomFn = Math.random): SequenceItem[] => {
   const length = Math.min(3 + Math.floor(level / 2), 8);
   const items: SequenceItem[] = [];
 
   for (let i = 0; i < length; i++) {
-    if (Math.random() > 0.5) {
-      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    if (random() > 0.5) {
+      const color = COLORS[Math.floor(random() * COLORS.length)];
       items.push({ type: 'color', value: color.name });
     } else {
-      items.push({ type: 'number', value: Math.floor(Math.random() * 20) + 1 });
+      items.push({ type: 'number', value: Math.floor(random() * 20) + 1 });
     }
   }
   return items;
 };
 
-export const generateQuestion = (sequence: SequenceItem[], level: number): Question => {
+export const generateQuestion = (
+  sequence: SequenceItem[],
+  level: number,
+  random: RandomFn = Math.random
+): Question => {
   // Question types: position (forward), reversePosition (backward), logic (sum)
   const questionTypes = ['position', 'reversePosition'];
   if (level >= 3) {
     questionTypes.push('logic');
   }
 
-  const type = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+  const type = questionTypes[Math.floor(random() * questionTypes.length)];
   const optionsCount = 4;
 
   if (type === 'position') {
     // Forward ordering: "X. sıradaki..."
-    const idx = Math.floor(Math.random() * sequence.length);
+    const idx = Math.floor(random() * sequence.length);
     const item = sequence[idx];
     const text = `${idx + 1}. sıradaki ${item.type === 'color' ? 'renk' : 'rakam'} nedir?`;
 
     const optionsSet = new Set<string | number>([item.value]);
     while (optionsSet.size < optionsCount) {
       if (item.type === 'color') {
-        optionsSet.add(COLORS[Math.floor(Math.random() * COLORS.length)].name);
+        optionsSet.add(COLORS[Math.floor(random() * COLORS.length)].name);
       } else {
-        optionsSet.add(Math.floor(Math.random() * 30));
+        optionsSet.add(Math.floor(random() * 30));
       }
     }
 
     return {
       text,
       answer: item.value,
-      options: Array.from(optionsSet).sort(() => Math.random() - 0.5)
+      options: shuffleArray(Array.from(optionsSet), random)
     };
   } else if (type === 'reversePosition') {
     // Reverse ordering: "Sondan X. sıradaki..."
-    const reverseIdx = Math.floor(Math.random() * sequence.length);
+    const reverseIdx = Math.floor(random() * sequence.length);
     const actualIdx = sequence.length - 1 - reverseIdx;
     const item = sequence[actualIdx];
 
@@ -66,16 +82,16 @@ export const generateQuestion = (sequence: SequenceItem[], level: number): Quest
     const optionsSet = new Set<string | number>([item.value]);
     while (optionsSet.size < optionsCount) {
       if (item.type === 'color') {
-        optionsSet.add(COLORS[Math.floor(Math.random() * COLORS.length)].name);
+        optionsSet.add(COLORS[Math.floor(random() * COLORS.length)].name);
       } else {
-        optionsSet.add(Math.floor(Math.random() * 30));
+        optionsSet.add(Math.floor(random() * 30));
       }
     }
 
     return {
       text,
       answer: item.value,
-      options: Array.from(optionsSet).sort(() => Math.random() - 0.5)
+      options: shuffleArray(Array.from(optionsSet), random)
     };
   } else {
     // Logic questions: various math operations
@@ -96,7 +112,7 @@ export const generateQuestion = (sequence: SequenceItem[], level: number): Quest
         logicTypes.push('multiply');
       }
 
-      const logicType = logicTypes[Math.floor(Math.random() * logicTypes.length)];
+      const logicType = logicTypes[Math.floor(random() * logicTypes.length)];
 
       let answer: number;
       let text: string;
@@ -133,7 +149,7 @@ export const generateQuestion = (sequence: SequenceItem[], level: number): Quest
       const optionsSet = new Set<number>([answer]);
       while (optionsSet.size < optionsCount) {
         // Generate distractors close to the answer
-        const offset = Math.floor(Math.random() * 15) - 7;
+        const offset = Math.floor(random() * 15) - 7;
         const distractor = answer + offset;
         if (distractor >= 0) {
           optionsSet.add(distractor);
@@ -143,22 +159,22 @@ export const generateQuestion = (sequence: SequenceItem[], level: number): Quest
       return {
         text,
         answer,
-        options: Array.from(optionsSet).sort(() => Math.random() - 0.5)
+        options: shuffleArray(Array.from(optionsSet), random)
       };
     } else {
       // Fallback to position question
-      return generateQuestion(sequence, 1);
+      return generateQuestion(sequence, 1, random);
     }
   }
 };
 
 
-export const getRandomGridPos = (exclude: GridPos[] = []): GridPos => {
+export const getRandomGridPos = (exclude: GridPos[] = [], random: RandomFn = Math.random): GridPos => {
   let pos: GridPos;
   do {
     pos = {
-      row: Math.floor(Math.random() * GRID_SIZE),
-      col: Math.floor(Math.random() * GRID_SIZE)
+      row: Math.floor(random() * GRID_SIZE),
+      col: Math.floor(random() * GRID_SIZE)
     };
   } while (exclude.some(p => p.row === pos.row && p.col === pos.col));
   return pos;
@@ -173,7 +189,8 @@ export const getRandomGridPos = (exclude: GridPos[] = []): GridPos => {
  */
 export const generateSmartPositions = (
   correctAnswerIndex: number,
-  optionCount: number
+  optionCount: number,
+  random: RandomFn = Math.random
 ): { start: GridPos; goal: GridPos; optionPositions: GridPos[] } => {
   // Place start and goal in opposite corners/areas
   const corners = [
@@ -191,7 +208,7 @@ export const generateSmartPositions = (
     [2, 1]  // bottom-left to top-right
   ];
 
-  const pairIndex = Math.floor(Math.random() * cornerPairs.length);
+  const pairIndex = Math.floor(random() * cornerPairs.length);
   const [startIdx, goalIdx] = cornerPairs[pairIndex];
 
   const start = corners[startIdx];
@@ -237,9 +254,8 @@ export const generateSmartPositions = (
   }
 
   // Shuffle arrays
-  const shuffleArray = <T>(arr: T[]): T[] => arr.sort(() => Math.random() - 0.5);
-  shuffleArray(pathCells);
-  shuffleArray(nonPathCells);
+  const shuffledPathCells = shuffleArray(pathCells, random);
+  const shuffledNonPathCells = shuffleArray(nonPathCells, random);
 
   // Place options
   const optionPositions: GridPos[] = [];
@@ -247,22 +263,22 @@ export const generateSmartPositions = (
   for (let i = 0; i < optionCount; i++) {
     if (i === correctAnswerIndex) {
       // Correct answer goes on the path
-      if (pathCells.length > 0) {
-        optionPositions.push(pathCells.shift()!);
+      if (shuffledPathCells.length > 0) {
+        optionPositions.push(shuffledPathCells.shift()!);
       } else {
         // Fallback: place near middle
         optionPositions.push({ row: midRow, col: midCol });
       }
     } else {
       // Wrong answers go away from the path
-      if (nonPathCells.length > 0) {
-        optionPositions.push(nonPathCells.shift()!);
-      } else if (pathCells.length > 0) {
+      if (shuffledNonPathCells.length > 0) {
+        optionPositions.push(shuffledNonPathCells.shift()!);
+      } else if (shuffledPathCells.length > 0) {
         // Fallback: use path cells but not blocking
-        optionPositions.push(pathCells.shift()!);
+        optionPositions.push(shuffledPathCells.shift()!);
       } else {
         // Last resort: random
-        optionPositions.push(getRandomGridPos([start, goal, ...optionPositions]));
+        optionPositions.push(getRandomGridPos([start, goal, ...optionPositions], random));
       }
     }
   }

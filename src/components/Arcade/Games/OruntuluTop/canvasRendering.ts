@@ -1,5 +1,5 @@
-import { COLOR_CONFIG, GAME_CONFIG } from './constants.ts';
-import type { BubbleColor, Particle, Point } from './types.ts';
+import { COLOR_CONFIG, GAME_CONFIG, POWER_UP_CONFIG } from './constants.ts';
+import type { BubbleColor, BubblePowerUp, Particle, Point } from './types.ts';
 
 export interface CanvasLayout {
     bubbleRadius: number;
@@ -44,8 +44,15 @@ export const drawBubble = (
     x: number,
     y: number,
     radius: number,
-    color: BubbleColor
+    color: BubbleColor,
+    powerUp?: BubblePowerUp
 ) => {
+    if (powerUp) {
+        context.save();
+        context.shadowBlur = radius * 0.9;
+        context.shadowColor = POWER_UP_CONFIG[powerUp].badgeColor;
+    }
+
     context.beginPath();
     context.arc(x, y, radius, 0, Math.PI * 2);
     context.fillStyle = COLOR_CONFIG[color].hex;
@@ -57,6 +64,31 @@ export const drawBubble = (
     context.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.2, 0, Math.PI * 2);
     context.fillStyle = 'rgba(255, 255, 255, 0.6)';
     context.fill();
+
+    if (!powerUp) {
+        return;
+    }
+
+    context.restore();
+    const badgeRadius = Math.max(8, radius * 0.42);
+    const badgeX = x + radius * 0.58;
+    const badgeY = y - radius * 0.58;
+
+    context.save();
+    context.beginPath();
+    context.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+    context.fillStyle = POWER_UP_CONFIG[powerUp].badgeColor;
+    context.fill();
+    context.strokeStyle = '#111827';
+    context.lineWidth = 2;
+    context.stroke();
+
+    context.fillStyle = POWER_UP_CONFIG[powerUp].textColor;
+    context.font = `900 ${Math.max(12, radius * 0.95)}px sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(powerUp === 'star' ? '★' : '♥', badgeX, badgeY + 1);
+    context.restore();
 };
 
 export const drawWhiteBall = (

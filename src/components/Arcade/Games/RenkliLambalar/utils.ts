@@ -1,9 +1,9 @@
-import { ColorType, Cell } from './types';
-import { COLORS } from './constants';
+import type { ColorType, Cell } from './types.ts';
+import { COLORS } from './constants.ts';
 
 const COLOR_TYPES: ColorType[] = ['red', 'blue', 'yellow', 'green'];
 
-export const generateGrid = (gridSize: number): Cell[] => {
+export const generateGrid = (gridSize: number, random: () => number = Math.random): Cell[] => {
     const size = gridSize;
     const totalCells = size * size;
     const grid: (Cell | null)[] = new Array(totalCells).fill(null);
@@ -11,7 +11,7 @@ export const generateGrid = (gridSize: number): Cell[] => {
     // Seed count based on grid size
     const seedsCount = Math.max(2, Math.floor(size * 1.5));
     for (let i = 0; i < seedsCount; i++) {
-        const randomPos = Math.floor(Math.random() * totalCells);
+        const randomPos = Math.floor(random() * totalCells);
         const randomColor = COLOR_TYPES[i % COLOR_TYPES.length];
         if (!grid[randomPos]) {
             grid[randomPos] = {
@@ -28,12 +28,12 @@ export const generateGrid = (gridSize: number): Cell[] => {
     let emptyIndices = grid.map((val, idx) => (val === null ? idx : -1)).filter(idx => idx !== -1);
 
     while (emptyIndices.length > 0) {
-        const targetIdx = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+        const targetIdx = emptyIndices[Math.floor(random() * emptyIndices.length)];
         const neighbors = getNeighbors(targetIdx, size);
         const coloredNeighbors = neighbors.filter(n => grid[n] !== null);
 
         if (coloredNeighbors.length > 0) {
-            const sourceNeighborIdx = coloredNeighbors[Math.floor(Math.random() * coloredNeighbors.length)];
+            const sourceNeighborIdx = coloredNeighbors[Math.floor(random() * coloredNeighbors.length)];
             const sourceColor = grid[sourceNeighborIdx]!.color;
 
             grid[targetIdx] = {
@@ -44,7 +44,7 @@ export const generateGrid = (gridSize: number): Cell[] => {
                 isError: false,
             };
         } else {
-            const randomColor = COLOR_TYPES[Math.floor(Math.random() * COLOR_TYPES.length)];
+            const randomColor = COLOR_TYPES[Math.floor(random() * COLOR_TYPES.length)];
             grid[targetIdx] = {
                 id: targetIdx,
                 color: randomColor,

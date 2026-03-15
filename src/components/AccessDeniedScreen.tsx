@@ -3,7 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Lock, ShieldX, ChevronLeft, Sparkles, Check, ExternalLink, Zap } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import {
+    filterPackagesByIncludes,
+    loadActivePackages
+} from '@/features/content/model/packageUseCases';
 import type { Package } from '../types/package';
 
 interface AccessDeniedScreenProps {
@@ -45,26 +48,8 @@ const AccessDeniedScreen: React.FC<AccessDeniedScreenProps> = ({
         const fetchRelevantPackages = async () => {
             setLoadingPkgs(true);
             try {
-                const { data, error } = await supabase
-                    .from('packages')
-                    .select('*')
-                    .eq('is_active', true)
-                    .order('sort_order', { ascending: true });
-
-                if (error) throw error;
-
-                const parsed: Package[] = (data || []).map(pkg => ({
-                    ...pkg,
-                    features: typeof pkg.features === 'string' ? JSON.parse(pkg.features) : pkg.features || [],
-                    includes: pkg.includes || [],
-                }));
-
-                // requiredIncludes'de belirtilen alanlardan herhangi birini içeren paketleri filtrele
-                const filtered = parsed.filter(pkg =>
-                    pkg.includes.some(inc => requiredIncludes.includes(inc))
-                );
-
-                setPackages(filtered);
+                const packages = await loadActivePackages();
+                setPackages(filterPackagesByIncludes(packages, requiredIncludes));
             } catch (err) {
                 console.error('Paketler yüklenirken hata:', err);
             } finally {

@@ -142,3 +142,21 @@ export const calculateKnowledgeCardScore = (
 export const getBackLink = (isArcadeMode: boolean) => {
   return isArcadeMode ? "/bilsem-zeka" : "/atolyeler/bireysel-degerlendirme";
 };
+
+export const buildKnowledgeCardFeedbackMessage = ({
+  isCorrect,
+  level,
+  maxLevel,
+  correctAnswer,
+}: {
+  isCorrect: boolean;
+  level: number;
+  maxLevel: number;
+  correctAnswer: string;
+}): string => {
+  if (isCorrect) {
+    if (level >= maxLevel) return "Harika! Son soruyu da bildin, tebrikler!";
+    return `Doğru! ${level + 1}. seviyeye geçiyorsun.`;
+  }
+  return `Yanlış! Doğru cevap: ${correctAnswer}`;
+};

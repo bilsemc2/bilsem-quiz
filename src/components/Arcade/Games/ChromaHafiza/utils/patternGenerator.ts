@@ -1,5 +1,5 @@
-import { Point, PuzzlePiece } from '../types';
-import { COLORS } from '../constants';
+import type { Point, PuzzlePiece } from '../types.ts';
+import { COLORS } from '../constants.ts';
 import { Delaunay } from 'd3-delaunay';
 
 export function generatePuzzlePieces(count: number, colorCount: number): PuzzlePiece[] {

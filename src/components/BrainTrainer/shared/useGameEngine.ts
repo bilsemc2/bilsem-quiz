@@ -38,6 +38,8 @@ export const useGameEngine = ({
     const [timeLeft, setTimeLeft] = useState(timeLimit);
 
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const phaseTransitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const examRedirectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const startTimeRef = useRef(0);
     const hasSavedRef = useRef(false);
 
@@ -52,8 +54,23 @@ export const useGameEngine = ({
         }
     }, []);
 
+    const clearPhaseTransitionTimeout = useCallback(() => {
+        if (phaseTransitionTimeoutRef.current) {
+            clearTimeout(phaseTransitionTimeoutRef.current);
+            phaseTransitionTimeoutRef.current = null;
+        }
+    }, []);
+
+    const clearExamRedirectTimeout = useCallback(() => {
+        if (examRedirectTimeoutRef.current) {
+            clearTimeout(examRedirectTimeoutRef.current);
+            examRedirectTimeoutRef.current = null;
+        }
+    }, []);
+
     const handleStart = useCallback(() => {
-        window.scrollTo(0, 0);
+        clearPhaseTransitionTimeout();
+        clearExamRedirectTimeout();
         // First go to welcome to trigger cleanup in all game components
         setPhase("welcome");
         setScore(0);
@@ -64,11 +81,21 @@ export const useGameEngine = ({
         startTimeRef.current = Date.now();
         clearTimer();
         // Then transition to playing on next tick so games see welcome→playing
-        setTimeout(() => {
+        phaseTransitionTimeoutRef.current = setTimeout(() => {
+            phaseTransitionTimeoutRef.current = null;
             setPhase("playing");
             playSound("pop");
         }, 0);
-    }, [playSound, examMode, examTimeLimit, initialLives, timeLimit, clearTimer]);
+    }, [
+        playSound,
+        examMode,
+        examTimeLimit,
+        initialLives,
+        timeLimit,
+        clearExamRedirectTimeout,
+        clearPhaseTransitionTimeout,
+        clearTimer,
+    ]);
 
     const addScore = useCallback((points: number) => {
         setScore((s) => s + points);
@@ -156,7 +183,11 @@ export const useGameEngine = ({
             } catch (err) {
                 console.error('[useGameEngine] submitResult hatası:', err);
             }
-            setTimeout(() => navigate("/atolyeler/sinav-simulasyonu/devam"), 3000);
+            clearExamRedirectTimeout();
+            examRedirectTimeoutRef.current = setTimeout(() => {
+                examRedirectTimeoutRef.current = null;
+                navigate("/atolyeler/sinav-simulasyonu/devam");
+            }, 3000);
             return;
         }
 
@@ -181,6 +212,7 @@ export const useGameEngine = ({
         gameId,
         maxLevel,
         getPerformanceSnapshot,
+        clearExamRedirectTimeout,
     ]);
 
     useEffect(() => {
@@ -188,6 +220,14 @@ export const useGameEngine = ({
             handleFinish();
         }
     }, [phase, handleFinish]);
+
+    useEffect(() => {
+        return () => {
+            clearTimer();
+            clearPhaseTransitionTimeout();
+            clearExamRedirectTimeout();
+        };
+    }, [clearExamRedirectTimeout, clearPhaseTransitionTimeout, clearTimer]);
 
     const addTime = useCallback(
         (seconds: number) => {

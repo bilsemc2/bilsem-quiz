@@ -40,7 +40,7 @@ const MathMagicGame: React.FC = () => {
   };
 
   return (
-    <BrainTrainerShell config={gameConfig} engine={engine} feedback={feedback}>
+    <BrainTrainerShell config={{...gameConfig, wideLayout: true}} engine={engine} feedback={feedback}>
       {({ phase, feedbackState }) => (
         <div className="relative z-10 flex flex-col items-center justify-center flex-1 p-2 w-full">
           {phase === "playing" ? (

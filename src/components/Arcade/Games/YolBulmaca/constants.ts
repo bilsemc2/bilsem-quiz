@@ -1,5 +1,4 @@
-
-import { ARCADE_PALETTE } from '../../Shared/ArcadeConstants';
+import { ARCADE_PALETTE } from '../../Shared/ArcadeConstants.ts';
 
 // Renkler artık ARCADE_PALETTE'den türetiliyor (Candy-Pastel standart)
 export const COLORS = Object.values(ARCADE_PALETTE).map(c => ({

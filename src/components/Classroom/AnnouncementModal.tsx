@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, Megaphone } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { createClassAnnouncement } from '@/features/content/model/classroomUseCases';
 import { toast } from 'sonner';
 
 interface AnnouncementModalProps {
@@ -34,26 +34,25 @@ const AnnouncementModal = ({
         }
 
         setLoading(true);
-        const { error } = await supabase
-            .from('announcements')
-            .insert([{
-                class_id: classId,
+        try {
+            await createClassAnnouncement({
+                classId,
+                userId,
                 title,
                 content,
                 priority,
-                expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
-                created_by: userId
-            }]);
-
-        setLoading(false);
-
-        if (error) {
+                expiresAt
+            });
+        } catch (error) {
+            setLoading(false);
             console.error('Duyuru eklenirken hata:', error);
             toast.error('Duyuru eklenirken bir hata oluştu', {
                 description: 'Lütfen daha sonra tekrar deneyiniz.'
             });
             return;
         }
+
+        setLoading(false);
 
         toast.success('Duyuru başarıyla eklendi', {
             description: 'Yeni duyuru tüm öğrenciler için görünür olacak.'

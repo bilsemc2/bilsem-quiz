@@ -1,3 +1,4 @@
+import { createCanvasElement } from "@/utils/createCanvasElement";
 import {
   PUZZLE_SIZE,
   SELECTION_SIZE,
@@ -6,9 +7,10 @@ import { getRandomTargetBox } from "./logic";
 import type { PuzzleLevelData } from "./types";
 
 const createPuzzleImage = (seed: string) => {
-  const canvas = document.createElement("canvas");
-  canvas.width = PUZZLE_SIZE;
-  canvas.height = PUZZLE_SIZE;
+  const canvas = createCanvasElement({
+    width: PUZZLE_SIZE,
+    height: PUZZLE_SIZE,
+  });
   const context = canvas.getContext("2d");
 
   if (!context) {
@@ -114,9 +116,10 @@ export const generatePuzzleLevel = async (
 ): Promise<PuzzleLevelData> => {
   const imageUrl = createPuzzleImage(`puzzle-${level}-${Date.now()}`);
   const image = await loadImage(imageUrl);
-  const canvas = document.createElement("canvas");
-  canvas.width = PUZZLE_SIZE;
-  canvas.height = PUZZLE_SIZE;
+  const canvas = createCanvasElement({
+    width: PUZZLE_SIZE,
+    height: PUZZLE_SIZE,
+  });
   const context = canvas.getContext("2d");
 
   if (!context) {
@@ -126,9 +129,10 @@ export const generatePuzzleLevel = async (
   context.drawImage(image, 0, 0, PUZZLE_SIZE, PUZZLE_SIZE);
 
   const targetBox = getRandomTargetBox();
-  const thumbnailCanvas = document.createElement("canvas");
-  thumbnailCanvas.width = SELECTION_SIZE;
-  thumbnailCanvas.height = SELECTION_SIZE;
+  const thumbnailCanvas = createCanvasElement({
+    width: SELECTION_SIZE,
+    height: SELECTION_SIZE,
+  });
   const thumbnailContext = thumbnailCanvas.getContext("2d");
 
   if (!thumbnailContext) {

@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -7,22 +6,13 @@ import {
     Loader2, ChevronLeft, Filter, X, Map
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-
-interface BilsemKurum {
-    id: string;
-    il_adi: string;
-    ilce_adi: string;
-    kurum_adi: string;
-    kurum_tur_adi: string;
-    adres: string;
-    telefon_no: string;
-    fax_no: string;
-    web_adres: string;
-    slug: string;
-}
+import {
+    loadBilsemInstitutions,
+    type BilsemInstitution
+} from '@/features/content/model/bilsemUseCases';
 
 const BilsemRehberiPage: React.FC = () => {
-    const [kurumlar, setKurumlar] = useState<BilsemKurum[]>([]);
+    const [kurumlar, setKurumlar] = useState<BilsemInstitution[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIl, setSelectedIl] = useState('');
@@ -54,9 +44,8 @@ const BilsemRehberiPage: React.FC = () => {
 
     const fetchKurumlar = async () => {
         try {
-            const { data, error } = await supabase.from('bilsem_kurumlari').select('*').order('il_adi', { ascending: true });
-            if (error) throw error;
-            setKurumlar(data || []);
+            const data = await loadBilsemInstitutions();
+            setKurumlar(data);
         } catch (error) { console.error('BİLSEM kurumları yüklenirken hata:', error); }
         finally { setLoading(false); }
     };

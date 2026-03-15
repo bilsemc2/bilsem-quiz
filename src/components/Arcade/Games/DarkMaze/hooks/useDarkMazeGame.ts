@@ -16,7 +16,13 @@ import { useResponsiveCanvasSize } from './useResponsiveCanvasSize';
 
 type FeedbackState = { message: string; type: 'success' | 'error' } | null;
 
-export const useDarkMazeGame = (autoStart?: boolean) => {
+interface UseDarkMazeGameOptions {
+    autoStart?: boolean;
+    onGameStart?: () => void;
+    onNextLevel?: () => void;
+}
+
+export const useDarkMazeGame = ({ autoStart, onGameStart, onNextLevel }: UseDarkMazeGameOptions = {}) => {
     const {
         sessionState,
         startSession,
@@ -69,7 +75,6 @@ export const useDarkMazeGame = (autoStart?: boolean) => {
     }, [generateMaze]);
 
     const startGame = useCallback(() => {
-        window.scrollTo(0, 0);
         clearScheduledTimeouts();
         startSession();
         setEnergy(INITIAL_ENERGY);
@@ -80,7 +85,8 @@ export const useDarkMazeGame = (autoStart?: boolean) => {
         isResolvingRef.current = false;
         isEndingRef.current = false;
         initializeLevel(1, INITIAL_GRID_SIZE);
-    }, [clearScheduledTimeouts, initializeLevel, startSession]);
+        onGameStart?.();
+    }, [clearScheduledTimeouts, initializeLevel, onGameStart, startSession]);
 
     useEffect(() => {
         if (autoStart && sessionState.status === 'START' && phase === 'idle') {
@@ -105,7 +111,7 @@ export const useDarkMazeGame = (autoStart?: boolean) => {
             status: 'GAME_OVER',
             livesRemaining: 0,
             metadata: {
-                game_name: 'Karanlik Labirent',
+                game_name: 'Karanlık Labirent',
                 remaining_energy: Math.round(energy),
                 remaining_time: timeLeft
             }
@@ -186,11 +192,13 @@ export const useDarkMazeGame = (autoStart?: boolean) => {
         setEnergyEffects([]);
         setLastCollectionTime(0);
         initializeLevel(nextLevelNumber, nextGridSize);
+        onNextLevel?.();
     }, [
         advanceLevel,
         clearScheduledTimeouts,
         getNextLevelSize,
         initializeLevel,
+        onNextLevel,
         sessionState.level
     ]);
 

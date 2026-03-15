@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSound } from "../../../hooks/useSound";
 
 import {
   AUDIO_BASE_PATH,
@@ -9,11 +10,20 @@ import {
   INITIAL_BACKGROUND_VOLUME,
   TARGET_AUDIO_DELAY_MS,
 } from "./constants.ts";
+import {
+  canPlayNoiseFilterAudio,
+  getNoiseFilterBackgroundVolume,
+  getNoiseFilterTargetVolume,
+} from "./audioModel.ts";
 
 export const useNoiseFilterAudio = () => {
+  const { isMuted, volume } = useSound();
   const targetAudioDelayRef = useRef<number | null>(null);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const targetAudioRef = useRef<HTMLAudioElement | null>(null);
+  const globalVolumeRef = useRef(volume);
+  const mutedRef = useRef(isMuted);
+  const backgroundVolumeRef = useRef(INITIAL_BACKGROUND_VOLUME);
   const [backgroundVolume, setBackgroundVolume] = useState(
     INITIAL_BACKGROUND_VOLUME,
   );
@@ -36,16 +46,23 @@ export const useNoiseFilterAudio = () => {
   }, []);
 
   const stopTargetAudio = useCallback(() => {
+    clearTargetAudioDelay();
     targetAudioRef.current?.pause();
+    if (targetAudioRef.current) {
+      targetAudioRef.current.currentTime = 0;
+    }
     targetAudioRef.current = null;
-  }, []);
+  }, [clearTargetAudioDelay]);
 
   const pauseBackgroundAudio = useCallback(() => {
     bgAudioRef.current?.pause();
   }, []);
 
   const resumeBackgroundAudio = useCallback(() => {
-    if (bgAudioRef.current?.paused) {
+    if (
+      bgAudioRef.current?.paused &&
+      canPlayNoiseFilterAudio(globalVolumeRef.current, mutedRef.current)
+    ) {
       safelyPlay(bgAudioRef.current);
     }
   }, [safelyPlay]);
@@ -56,6 +73,14 @@ export const useNoiseFilterAudio = () => {
     }
 
     bgAudioRef.current.currentTime = 0;
+    bgAudioRef.current.volume = getNoiseFilterBackgroundVolume(
+      backgroundVolumeRef.current,
+      globalVolumeRef.current,
+      mutedRef.current,
+    );
+    if (!canPlayNoiseFilterAudio(globalVolumeRef.current, mutedRef.current)) {
+      return;
+    }
     safelyPlay(bgAudioRef.current);
   }, [safelyPlay]);
 
@@ -65,7 +90,15 @@ export const useNoiseFilterAudio = () => {
       stopTargetAudio();
 
       const startPlayback = () => {
+        if (!canPlayNoiseFilterAudio(globalVolumeRef.current, mutedRef.current)) {
+          return;
+        }
+
         targetAudioRef.current = new Audio(AUDIO_BASE_PATH + sound.file);
+        targetAudioRef.current.volume = getNoiseFilterTargetVolume(
+          globalVolumeRef.current,
+          mutedRef.current,
+        );
         safelyPlay(targetAudioRef.current);
       };
 
@@ -91,7 +124,11 @@ export const useNoiseFilterAudio = () => {
   useEffect(() => {
     const backgroundAudio = new Audio(BACKGROUND_AUDIO);
     backgroundAudio.loop = true;
-    backgroundAudio.volume = INITIAL_BACKGROUND_VOLUME;
+    backgroundAudio.volume = getNoiseFilterBackgroundVolume(
+      INITIAL_BACKGROUND_VOLUME,
+      globalVolumeRef.current,
+      mutedRef.current,
+    );
     bgAudioRef.current = backgroundAudio;
 
     return () => {
@@ -103,10 +140,30 @@ export const useNoiseFilterAudio = () => {
   }, [clearTargetAudioDelay, stopTargetAudio]);
 
   useEffect(() => {
-    if (bgAudioRef.current) {
-      bgAudioRef.current.volume = backgroundVolume;
-    }
+    globalVolumeRef.current = volume;
+  }, [volume]);
+
+  useEffect(() => {
+    mutedRef.current = isMuted;
+  }, [isMuted]);
+
+  useEffect(() => {
+    backgroundVolumeRef.current = backgroundVolume;
   }, [backgroundVolume]);
+
+  useEffect(() => {
+    if (bgAudioRef.current) {
+      bgAudioRef.current.volume = getNoiseFilterBackgroundVolume(
+        backgroundVolume,
+        volume,
+        isMuted,
+      );
+
+      if (isMuted || volume <= 0) {
+        bgAudioRef.current.pause();
+      }
+    }
+  }, [backgroundVolume, isMuted, volume]);
 
   return {
     backgroundVolume,

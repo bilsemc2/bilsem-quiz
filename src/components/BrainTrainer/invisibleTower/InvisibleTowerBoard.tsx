@@ -76,11 +76,6 @@ const InvisibleTowerBoard: React.FC<InvisibleTowerBoardProps> = ({
                             {segment.isNegative ? "-" : ""}
                             {segment.value}
                           </span>
-                          {segment.multiplier ? (
-                            <span className="absolute -right-2.5 -top-2.5 rounded-lg border-2 border-black/10 bg-cyber-pink px-1.5 py-0.5 text-[9px] font-nunito font-black uppercase tracking-tighter text-black shadow-neo-sm animate-bounce sm:text-[10px]">
-                              x{segment.multiplier}
-                            </span>
-                          ) : null}
                         </motion.div>
                       ) : null}
 

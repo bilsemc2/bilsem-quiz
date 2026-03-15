@@ -1,7 +1,8 @@
-import { COLOR_KEYS } from './constants.ts';
-import type { Bubble, BubbleColor, Point } from './types.ts';
+import { ARCADE_SCORE_BASE, ARCADE_SCORE_FORMULA } from '../../Shared/ArcadeConstants.ts';
+import { COLOR_KEYS, POWER_UP_CONFIG } from './constants.ts';
+import type { Bubble, BubbleColor, BubblePowerUp, Point } from './types.ts';
 
-type PatternType = 'abab' | 'abcabc' | 'aabb' | 'abccab';
+type PatternType = 'abab' | 'abcabc' | 'aabb' | 'abccab' | 'abcabca' | 'abcaabc';
 
 interface BubbleGridLayout {
     width: number;
@@ -16,6 +17,7 @@ interface PatternDefinition {
 }
 
 const PATTERN_TYPES: PatternType[] = ['abab', 'abcabc', 'aabb', 'abccab'];
+const ADVANCED_PATTERN_TYPES: PatternType[] = ['abcabca', 'abcaabc'];
 
 const shuffleColors = (
     colors: BubbleColor[],
@@ -56,16 +58,44 @@ export const buildPatternDefinition = (
         };
     }
 
+    if (type === 'abcabca') {
+        return {
+            pattern: [colors[0], colors[1], colors[2], colors[0], colors[1], colors[2]],
+            correct: colors[0]
+        };
+    }
+
+    if (type === 'abcaabc') {
+        return {
+            pattern: [colors[0], colors[1], colors[2], colors[0], colors[0], colors[1]],
+            correct: colors[2]
+        };
+    }
+
     return {
         pattern: [colors[0], colors[1], colors[2], colors[2], colors[0]],
         correct: colors[1]
     };
 };
 
+export const getPatternTypesForLevel = (level: number): PatternType[] => {
+    if (level >= 7) {
+        return [...PATTERN_TYPES, ...ADVANCED_PATTERN_TYPES];
+    }
+
+    if (level >= 4) {
+        return PATTERN_TYPES;
+    }
+
+    return ['abab', 'aabb', 'abcabc'];
+};
+
 export const generatePatternDefinition = (
+    level: number = 1,
     randomFn: () => number = Math.random
 ): PatternDefinition => {
-    const type = PATTERN_TYPES[Math.floor(randomFn() * PATTERN_TYPES.length)];
+    const availableTypes = getPatternTypesForLevel(level);
+    const type = availableTypes[Math.floor(randomFn() * availableTypes.length)];
     const shuffledColors = shuffleColors(COLOR_KEYS, randomFn);
     return buildPatternDefinition(type, shuffledColors);
 };
@@ -104,7 +134,7 @@ export const createInitialBubbles = (
                 x: position.x,
                 y: position.y,
                 color: COLOR_KEYS[Math.floor(randomFn() * COLOR_KEYS.length)],
-                active: true
+                active: true,
             });
         }
     }
@@ -173,6 +203,96 @@ export const ensureTargetAccessible = (
     }
 
     return nextBubbles;
+};
+
+const shuffleBubbles = (
+    bubbles: Bubble[],
+    randomFn: () => number = Math.random
+) => {
+    const next = [...bubbles];
+
+    for (let index = next.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(randomFn() * (index + 1));
+        [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+    }
+
+    return next;
+};
+
+export const decorateBubblesWithPowerUps = (
+    bubbles: Bubble[],
+    targetColor: BubbleColor,
+    level: number,
+    randomFn: () => number = Math.random
+) => {
+    const nextBubbles = bubbles.map((bubble) => ({ ...bubble, powerUp: undefined }));
+    const targetCandidates = shuffleBubbles(
+        nextBubbles.filter((bubble) => bubble.active && bubble.color === targetColor && bubble.row >= 2),
+        randomFn
+    );
+
+    if (level >= 2 && targetCandidates.length > 0 && randomFn() >= 0.35) {
+        targetCandidates[0].powerUp = 'star';
+    }
+
+    if (level >= 4 && targetCandidates.length > 1 && randomFn() >= 0.6) {
+        targetCandidates[1].powerUp = 'heart';
+    }
+
+    return nextBubbles;
+};
+
+export const getPowerUpSummary = (bubbles: Bubble[]) => {
+    return bubbles.reduce(
+        (summary, bubble) => {
+            if (!bubble.active || !bubble.powerUp) {
+                return summary;
+            }
+
+            summary[bubble.powerUp] += 1;
+            return summary;
+        },
+        { star: 0, heart: 0 }
+    );
+};
+
+export const getComboMultiplier = (comboStreak: number) => {
+    const safeCombo = Math.max(1, comboStreak);
+    return 1 + Math.min(safeCombo - 1, 4) * 0.2;
+};
+
+export const calculateMatchReward = ({
+    level,
+    clusterSize,
+    comboStreak,
+    powerUps,
+    currentLives,
+    maxLives = 3
+}: {
+    level: number;
+    clusterSize: number;
+    comboStreak: number;
+    powerUps: BubblePowerUp[];
+    currentLives: number;
+    maxLives?: number;
+}) => {
+    const comboMultiplier = getComboMultiplier(comboStreak);
+    const basePoints = ARCADE_SCORE_FORMULA(ARCADE_SCORE_BASE, level) + (clusterSize * 100);
+    const comboBonus = Math.round(basePoints * (comboMultiplier - 1));
+    const starBonus = powerUps.filter((powerUp) => powerUp === 'star').length * POWER_UP_CONFIG.star.bonusPoints;
+    const heartCount = powerUps.filter((powerUp) => powerUp === 'heart').length;
+    const lifeGain = Math.min(Math.max(maxLives - currentLives, 0), heartCount);
+    const overflowHeartBonus = Math.max(heartCount - lifeGain, 0) * POWER_UP_CONFIG.heart.bonusPoints;
+
+    return {
+        comboMultiplier,
+        basePoints,
+        comboBonus,
+        starBonus,
+        lifeGain,
+        overflowHeartBonus,
+        totalPoints: basePoints + comboBonus + starBonus + overflowHeartBonus
+    };
 };
 
 export const isNeighbor = (first: Bubble, second: Bubble) => {

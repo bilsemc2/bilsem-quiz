@@ -1,154 +1,26 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { RefreshCw, Shapes } from "lucide-react";
-import { useSound } from "../../hooks/useSound";
-import { useSafeTimeout } from "../../hooks/useSafeTimeout";
-import { useGameFeedback } from "../../hooks/useGameFeedback";
-import { useGamePerformanceTracker } from "../../hooks/useGamePerformanceTracker";
 import BrainTrainerShell from "./shared/BrainTrainerShell";
-import { useGameEngine } from "./shared/useGameEngine";
-import {
-  areWagonStatesEqual,
-  calculateWagonState,
-  generateOptions,
-  generatePattern,
-} from "./patternIQ/logic";
 import { PatternIQBoard } from "./patternIQ/PatternIQBoard";
-import type { PatternData, WagonState } from "./patternIQ/types";
-
-const GAME_ID = "patterniq-express";
-const INITIAL_LIVES = 5;
-const TIME_LIMIT = 180;
-const MAX_LEVEL = 20;
-const WAGON_COUNT = 5;
+import {
+  MAX_LEVEL,
+  WAGON_COUNT,
+  usePatternIQController,
+} from "./patternIQ/usePatternIQController";
 
 const PatternIQGame: React.FC = () => {
-  const questionStartedAtRef = useRef(0);
-  const { performanceRef, recordAttempt, resetPerformance } =
-    useGamePerformanceTracker();
-  const engine = useGameEngine({
-    gameId: GAME_ID,
-    maxLevel: MAX_LEVEL,
-    initialLives: INITIAL_LIVES,
-    timeLimit: TIME_LIMIT,
-    getPerformanceSnapshot: () => performanceRef.current,
-  });
-
-  const { playSound } = useSound();
-  const safeTimeout = useSafeTimeout();
-  const feedback = useGameFeedback({ duration: 1500 });
-  const { feedbackState, showFeedback, dismissFeedback } = feedback;
-
-  const [currentPattern, setCurrentPattern] = useState<PatternData | null>(null);
-  const [options, setOptions] = useState<WagonState[]>([]);
-  const [revealed, setRevealed] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
-  const setupRound = useCallback((level: number) => {
-    const pattern = generatePattern(level);
-    setCurrentPattern(pattern);
-    setOptions(generateOptions(pattern, WAGON_COUNT - 1));
-    setRevealed(false);
-    setSelectedIndex(null);
-    questionStartedAtRef.current = Date.now();
-  }, []);
-
-  useEffect(() => {
-    if (engine.phase === "playing" && !currentPattern) {
-      playSound("slide");
-      setupRound(engine.level);
-    } else if (
-      engine.phase === "welcome" ||
-      engine.phase === "game_over" ||
-      engine.phase === "victory"
-    ) {
-      setCurrentPattern(null);
-      setOptions([]);
-      setSelectedIndex(null);
-      setRevealed(false);
-      questionStartedAtRef.current = 0;
-      resetPerformance();
-    }
-  }, [
-    engine.phase,
-    engine.level,
+  const {
+    engine,
+    feedback,
     currentPattern,
-    playSound,
-    resetPerformance,
-    setupRound,
-  ]);
-
-  const handleAnswer = useCallback(
-    (index: number) => {
-      if (
-        engine.phase !== "playing" ||
-        revealed ||
-        !currentPattern ||
-        !!feedbackState
-      ) {
-        return;
-      }
-
-      setSelectedIndex(index);
-      setRevealed(true);
-
-      const targetState = calculateWagonState(currentPattern, WAGON_COUNT - 1);
-      const isCorrect = areWagonStatesEqual(options[index], targetState);
-
-      recordAttempt({
-        isCorrect,
-        responseMs:
-          questionStartedAtRef.current > 0
-            ? Date.now() - questionStartedAtRef.current
-            : null,
-      });
-
-      showFeedback(isCorrect);
-      playSound(isCorrect ? "correct" : "incorrect");
-
-      safeTimeout(() => {
-        dismissFeedback();
-        if (isCorrect) {
-          engine.addScore(10 * engine.level);
-          if (engine.level >= MAX_LEVEL) {
-            engine.setGamePhase("victory");
-            playSound("success");
-          } else {
-            engine.nextLevel();
-            setupRound(engine.level + 1);
-          }
-        } else {
-          engine.loseLife();
-          if (engine.lives > 1) {
-            setupRound(engine.level);
-          }
-        }
-      }, 1500);
-    },
-    [
-      currentPattern,
-      dismissFeedback,
-      engine,
-      feedbackState,
-      options,
-      playSound,
-      recordAttempt,
-      revealed,
-      safeTimeout,
-      setupRound,
-      showFeedback,
-    ],
-  );
-
-  const skipQuestion = useCallback(() => {
-    if (engine.phase !== "playing" || revealed || !!feedbackState) {
-      return;
-    }
-
-    engine.addScore(-10);
-    playSound("click");
-    setupRound(engine.level);
-  }, [engine, feedbackState, playSound, revealed, setupRound]);
+    options,
+    revealed,
+    selectedIndex,
+    handleAnswer,
+    skipQuestion,
+  } = usePatternIQController();
+  const { feedbackState } = feedback;
 
   const extraHudItems = (
     <motion.button

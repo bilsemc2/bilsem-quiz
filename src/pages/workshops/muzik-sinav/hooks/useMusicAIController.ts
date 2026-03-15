@@ -30,8 +30,7 @@ export const useMusicAIController = (): MusicAIContextValue => {
             await engine.init();
             pianoRef.current = engine;
             setIsPianoReady(true);
-        } catch (err) {
-            console.error('[MusicAI] Piano init failed:', err);
+        } catch {
             setError('Piyano yüklenemedi');
         } finally {
             setIsPianoLoading(false);

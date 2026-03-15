@@ -94,3 +94,29 @@ export const areCardsMatch = (first: Card | null, second: Card | null) =>
 
 export const areAllCardsMatched = (cards: readonly Card[]) =>
   cards.every((card) => card.isMatched);
+
+export const buildCrossMatchFeedbackMessage = ({
+  correct,
+  allMatched,
+  level,
+  maxLevel,
+}: {
+  correct: boolean;
+  allMatched: boolean;
+  level: number;
+  maxLevel: number;
+}) => {
+  if (correct) {
+    if (allMatched) {
+      if (level >= maxLevel) {
+        return "Harika! Son çifti de buldun, oyun tamamlanıyor.";
+      }
+
+      return `Tüm çiftler tamamlandı, şimdi ${level + 1}. seviyeye geçiyorsun.`;
+    }
+
+    return "Doğru eşleşme! Bir çift daha buldun.";
+  }
+
+  return "Yanlış eşleşme! Renk ve şekil aynı olmalıydı.";
+};

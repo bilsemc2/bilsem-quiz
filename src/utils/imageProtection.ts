@@ -2,7 +2,7 @@
  * Resim URL'lerini korumak için yardımcı fonksiyonlar
  */
 
-import { supabase } from '../lib/supabase';
+import { loadSessionUser } from '@/features/auth/model/authUseCases';
 
 // Resim URL'lerini dönüştürme fonksiyonu
 export const encryptImageUrl = (url: string): string => {
@@ -46,9 +46,8 @@ export const loadImageAsBase64 = async (imageUrl: string): Promise<string> => {
 // Kullanıcı erişimini kontrol et
 export const checkUserAccess = async (): Promise<boolean> => {
   try {
-    // Kullanıcının oturum bilgisini al
-    const { data } = await supabase.auth.getSession();
-    return !!data.session; // Oturum varsa true, yoksa false döndür
+    const user = await loadSessionUser();
+    return Boolean(user);
   } catch (error) {
     console.error('Kullanıcı erişim kontrolü hatası:', error);
     return false;

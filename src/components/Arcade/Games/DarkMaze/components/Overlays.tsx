@@ -63,7 +63,7 @@ export const LevelClearedOverlay: React.FC<LevelClearedOverlayProps> = ({
                 </p>
             ) : (
                 <p className="text-black bg-sky-200 border-2 border-black/10 shadow-neo-sm rounded-xl p-2 mb-4 uppercase tracking-widest text-xs font-black rotate-2">
-                    Yeni Labirent Hazirlaniyor...
+                    Yeni Labirent Hazırlanıyor...
                 </p>
             )}
             <button

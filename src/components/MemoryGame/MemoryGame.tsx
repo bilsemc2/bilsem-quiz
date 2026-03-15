@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import './MemoryGame.css';
 import { soundManager } from './sounds';
+import { useGameViewportFocus } from '../../hooks/useGameViewportFocus';
 
 // Kart arayüzü
 interface Card {
@@ -21,6 +22,7 @@ type CardPair = {
 const MemoryGame: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { playAreaRef, focusPlayArea } = useGameViewportFocus();
   const previousState = location.state?.previousState;
 
   // Durum değişkenleri
@@ -98,7 +100,6 @@ const MemoryGame: React.FC = () => {
 
   // Oyunu başlat
   const startGame = useCallback(() => {
-      window.scrollTo(0, 0);
     if (availableImages.length === 0) {
       toast.error('Oyun başlatılamıyor, resimler yüklenemedi!', {
         duration: 3000,
@@ -146,7 +147,8 @@ const MemoryGame: React.FC = () => {
     setMatchedPairs(0);
     setGameOver(false);
     setGameStarted(true);
-  }, [availableImages]);
+    focusPlayArea();
+  }, [availableImages, focusPlayArea]);
 
   // Kart çevirme işlemi
   const flipCard = (selectedCard: Card) => {
@@ -357,7 +359,7 @@ const MemoryGame: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div ref={playAreaRef} className="max-w-4xl mx-auto">
         {/* Oyun bilgileri */}
         <div className="bg-white p-4 rounded-lg shadow-md mb-4 flex flex-wrap justify-between items-center">
           <div>

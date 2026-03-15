@@ -13,6 +13,7 @@ import {
 } from "./constants.ts";
 import {
   applyCellSelection,
+  buildVisualScanningFeedbackMessage,
   calculateVisualScanningScore,
   createRound,
   getRemainingTargetCount,
@@ -123,8 +124,15 @@ export const useVisualScanningController = () => {
 
         if (remaining === 0) {
           isTransitioningRef.current = true;
-          showFeedback(true);
-          playSound("correct");
+          showFeedback(
+            true,
+            buildVisualScanningFeedbackMessage({
+              correct: true,
+              remainingTargets: remaining,
+              level,
+              maxLevel: MAX_LEVEL,
+            }),
+          );
           clearActionTimeout();
 
           actionTimeoutRef.current = window.setTimeout(() => {
@@ -141,9 +149,16 @@ export const useVisualScanningController = () => {
 
       setStreak(0);
       addScore(-10);
-      playSound("incorrect");
       loseLife();
-      showFeedback(false);
+      showFeedback(
+        false,
+        buildVisualScanningFeedbackMessage({
+          correct: false,
+          remainingTargets: getRemainingTargetCount(result.nextCells),
+          level,
+          maxLevel: MAX_LEVEL,
+        }),
+      );
       clearActionTimeout();
 
       actionTimeoutRef.current = window.setTimeout(() => {
@@ -168,6 +183,7 @@ export const useVisualScanningController = () => {
       recordAttempt,
       round,
       showFeedback,
+      level,
       streak,
     ],
   );

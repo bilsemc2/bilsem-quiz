@@ -1,7 +1,11 @@
 import React, { useState } from "react";
-import { supabase } from "../lib/supabase";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  requestPasswordResetEmail,
+  signInUser,
+} from "@/features/auth/model/authUseCases";
+import { resolvePostLoginPath } from "@/features/auth/model/loginRedirect";
 import {
   LogIn,
   Mail,
@@ -20,6 +24,7 @@ import {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -35,19 +40,13 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      await signInUser({
         email,
         password,
       });
 
-      if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          throw new Error("Email veya şifre hatalı");
-        }
-        throw new Error("Giriş yapılamadı: " + error.message);
-      }
-
-      navigate("/bilsem");
+      const redirectPath = resolvePostLoginPath(location.state);
+      navigate(redirectPath, { replace: true });
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Giriş yapılamadı");
     } finally {
@@ -62,11 +61,10 @@ export default function LoginPage() {
 
     try {
       const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${siteUrl}/reset-password?type=recovery`,
+      await requestPasswordResetEmail({
+        email: resetEmail,
+        siteUrl,
       });
-
-      if (error) throw error;
 
       setResetSuccess(true);
     } catch (error) {

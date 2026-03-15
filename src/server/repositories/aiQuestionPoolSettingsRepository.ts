@@ -126,14 +126,6 @@ const readLocalSettings = (): AIQuestionPoolSettings[] => {
     }
 };
 
-const writeLocalSettings = (settings: AIQuestionPoolSettings[]): void => {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
-    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
-};
-
 const resolveFromRows = (
     rows: AIQuestionPoolSettings[],
     topic: string,
@@ -260,25 +252,7 @@ const upsertSetting = async (input: AIQuestionPoolSettingsWriteInput): Promise<A
         .single();
 
     if (error || !data) {
-        if (error) {
-            console.error('ai question pool setting upsert failed (db), using local fallback:', error);
-        }
-
-        const local = readLocalSettings();
-        const key = `${topic}::${locale}`;
-        const withoutSame = local.filter((item) => `${item.topic}::${item.locale}` !== key);
-        const next: AIQuestionPoolSettings = {
-            id: input.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            topic,
-            locale,
-            maxServedCount: payload.max_served_count,
-            targetPoolSize: payload.target_pool_size,
-            refillBatchSize: payload.refill_batch_size,
-            isActive: payload.is_active
-        };
-        const merged = [...withoutSame, next];
-        writeLocalSettings(merged);
-        return next;
+        throw error ?? new Error('ai question pool setting upsert failed');
     }
 
     return mapRow(data as unknown as AIQuestionPoolSettingsDbRow);
@@ -291,10 +265,7 @@ const deleteSetting = async (id: string): Promise<void> => {
         .eq('id', id);
 
     if (error) {
-        console.error('ai question pool setting delete failed (db), using local fallback:', error);
-        const local = readLocalSettings();
-        const next = local.filter((item) => item.id !== id);
-        writeLocalSettings(next);
+        throw error;
     }
 };
 

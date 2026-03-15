@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, Settings } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { updateClassroomSettings } from '@/features/content/model/classroomUseCases';
 import { toast } from 'sonner';
 
 interface SettingsModalProps {
@@ -39,20 +39,22 @@ const SettingsModal = ({
         }
 
         setLoading(true);
-        const { error } = await supabase
-            .from('classes')
-            .update({ name, grade })
-            .eq('id', classId);
-
-        setLoading(false);
-
-        if (error) {
+        try {
+            await updateClassroomSettings({
+                classId,
+                name,
+                grade
+            });
+        } catch (error) {
+            setLoading(false);
             console.error('Sınıf güncellenirken hata:', error);
             toast.error('Sınıf güncellenirken bir hata oluştu', {
                 description: 'Ayarlar kaydedilemedi. Lütfen tekrar deneyin.'
             });
             return;
         }
+
+        setLoading(false);
 
         toast.success('Sınıf başarıyla güncellendi', {
             description: 'Yeni ayarlar kaydedildi.'

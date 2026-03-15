@@ -14,6 +14,8 @@ jobs:
   vite-app:
     name: Vite App Checks
     runs-on: ubuntu-latest
+    env:
+      HAS_REAL_E2E_AUTH: ${{ secrets.E2E_AUTH_EMAIL != '' && secrets.E2E_AUTH_PASSWORD != '' }}
 
     steps:
       - name: Checkout repository
@@ -29,11 +31,56 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate Playwright CI Auth Secrets
+        env:
+          E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
+          E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
+          E2E_EXPECT_GENERAL_TALENT: ${{ secrets.E2E_EXPECT_GENERAL_TALENT }}
+          E2E_EXPECT_MUSIC_TALENT: ${{ secrets.E2E_EXPECT_MUSIC_TALENT }}
+          E2E_EXPECT_PROFILE_NAME: ${{ secrets.E2E_EXPECT_PROFILE_NAME }}
+          E2E_EXPECT_PROFILE_REFERRAL_CODE: ${{ secrets.E2E_EXPECT_PROFILE_REFERRAL_CODE }}
+        run: npm run test:e2e:ci:validate
+
       - name: Typecheck
         run: npm run typecheck
 
       - name: Lint
         run: npm run lint
+
+      - name: Critical Flow Smoke
+        run: npm run test:critical
+
+      - name: Install Playwright Browsers
+        run: npm run test:e2e:install -- --with-deps
+
+      - name: Browser E2E Smoke (Anon)
+        run: npm run test:e2e:anon
+
+      - name: Browser E2E Smoke (Auth Mock Baseline)
+        env:
+          E2E_USE_MOCK_AUTH: '1'
+        run: npm run test:e2e:auth:mock
+
+      - name: Browser E2E Smoke (Auth Real Backend)
+        if: env.HAS_REAL_E2E_AUTH == 'true'
+        env:
+          E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
+          E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
+          E2E_EXPECT_GENERAL_TALENT: ${{ secrets.E2E_EXPECT_GENERAL_TALENT }}
+          E2E_EXPECT_MUSIC_TALENT: ${{ secrets.E2E_EXPECT_MUSIC_TALENT }}
+          E2E_EXPECT_PROFILE_NAME: ${{ secrets.E2E_EXPECT_PROFILE_NAME }}
+          E2E_EXPECT_PROFILE_REFERRAL_CODE: ${{ secrets.E2E_EXPECT_PROFILE_REFERRAL_CODE }}
+        run: npm run test:e2e:auth:real
+
+      - name: Upload Playwright Artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
 
       - name: Test
         run: npm run test

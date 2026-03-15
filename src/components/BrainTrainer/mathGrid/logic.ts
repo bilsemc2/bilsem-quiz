@@ -237,3 +237,25 @@ export const validatePuzzle = (grid: GridMatrix): PuzzleValidation => {
 };
 
 export const calculateMathGridScore = (level: number) => 10 * level;
+
+export const buildMathGridFeedbackMessage = ({
+  correct,
+  ruleDescription,
+  level,
+  maxLevel,
+}: {
+  correct: boolean;
+  ruleDescription: string;
+  level: number;
+  maxLevel: number;
+}) => {
+  if (correct) {
+    if (level >= maxLevel) {
+      return "Doğru çözüm! Son matematik kuralını da tamamladın, oyun bitiyor.";
+    }
+
+    return `Doğru çözüm! ${ruleDescription} kuralını çözdün, şimdi ${level + 1}. seviyeye geçiyorsun.`;
+  }
+
+  return `Yanlış çözüm! Satırlardaki ${ruleDescription} kuralını yeniden kontrol et.`;
+};

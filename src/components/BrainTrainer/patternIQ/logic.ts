@@ -217,5 +217,26 @@ export const generateOptions = (
     }
   }
 
-  return options.sort(() => Math.random() - 0.5);
+  const shuffled = [...options];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+};
+
+export const buildPatternIQFeedbackMessage = (
+  correct: boolean,
+  level: number,
+  maxLevel: number,
+) => {
+  if (correct) {
+    if (level >= maxLevel) {
+      return "Doğru vagon! Son örüntüyü de çözdün, oyun tamamlanıyor.";
+    }
+
+    return `Doğru vagon! Şimdi ${level + 1}. seviyeye geçiyorsun.`;
+  }
+
+  return "Yanlış seçim! Örüntünün sonraki vagonuna tekrar bak.";
 };

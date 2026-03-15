@@ -102,3 +102,29 @@ export const applyCellSelection = (
 
 export const calculateVisualScanningScore = (currentStreak: number) =>
   25 + Math.min(currentStreak * 2, 20);
+
+export const buildVisualScanningFeedbackMessage = ({
+  correct,
+  remainingTargets,
+  level,
+  maxLevel,
+}: {
+  correct: boolean;
+  remainingTargets: number;
+  level: number;
+  maxLevel: number;
+}) => {
+  if (correct) {
+    if (remainingTargets === 0) {
+      if (level >= maxLevel) {
+        return "Harika tarama! Son hedefi de buldun, oyun tamamlanıyor.";
+      }
+
+      return `Harika tarama! Tüm hedefleri buldun, şimdi ${level + 1}. seviyeye geçiyorsun.`;
+    }
+
+    return `Doğru seçim! ${remainingTargets} hedef daha kaldı.`;
+  }
+
+  return "Yanlış seçim! Yalnızca hedef sembollere dokunmalısın.";
+};

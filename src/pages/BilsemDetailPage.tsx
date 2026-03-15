@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
@@ -8,31 +7,21 @@ import {
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
-
-interface BilsemKurum {
-    id: string;
-    il_adi: string;
-    ilce_adi: string;
-    kurum_adi: string;
-    kurum_tur_adi: string;
-    adres: string;
-    telefon_no: string;
-    fax_no: string;
-    web_adres: string;
-    slug: string;
-}
+import {
+    loadBilsemInstitutionBySlug,
+    type BilsemInstitution
+} from '@/features/content/model/bilsemUseCases';
 
 const BilsemDetailPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
-    const [kurum, setKurum] = useState<BilsemKurum | null>(null);
+    const [kurum, setKurum] = useState<BilsemInstitution | null>(null);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
 
     const fetchKurum = useCallback(async (nextSlug: string) => {
         try {
-            const { data, error } = await supabase.from('bilsem_kurumlari').select('*').eq('slug', nextSlug).maybeSingle();
-            if (error) throw error;
+            const data = await loadBilsemInstitutionBySlug(nextSlug);
             if (!data) { toast.error('BİLSEM bulunamadı'); navigate('/bilsem-rehberi'); return; }
             setKurum(data);
         } catch (error) {

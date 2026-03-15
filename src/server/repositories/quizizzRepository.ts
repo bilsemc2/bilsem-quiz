@@ -74,7 +74,7 @@ const listCompletedCodeIds = async (userId: string): Promise<string[]> => {
         }
 
         if (error && !isMissingSchemaError(error)) {
-            throw error;
+            console.error('quizizz completed codes fetch failed:', error);
         }
     }
 

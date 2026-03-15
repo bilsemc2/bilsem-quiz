@@ -8,9 +8,15 @@ import BrainTrainerShell from '../../components/BrainTrainer/shared/BrainTrainer
 import { useGameEngine } from '../../components/BrainTrainer/shared/useGameEngine';
 import { useGameFeedback } from '../../hooks/useGameFeedback';
 import { useSound } from '../../hooks/useSound';
-import { supabase } from '../../lib/supabase';
-import { aiQuestionPoolRepository } from '@/server/repositories/aiQuestionPoolRepository';
-import { aiLearningRepository } from '@/server/repositories/aiLearningRepository';
+import {
+    loadAbilitySnapshot,
+    loadLatestSessionPerformance,
+    startLearningSessionRecord,
+    finalizeLearningSessionRecord,
+    saveAbilitySnapshot,
+    recordQuestionAttempt,
+    markStoryQuestionSolved
+} from '@/features/content/model/storyQuizSessionUseCases';
 import {
     createDefaultAbilitySnapshot,
     updateAbilitySnapshotFromSession
@@ -19,6 +25,7 @@ import type { AbilitySnapshot, SessionPerformance } from '@/features/ai/model/ty
 import { getAdaptiveDifficultySettings } from '@/features/ai/adaptive-difficulty/model/adaptiveDifficultySettings';
 import { calculateTargetDifficultyDecision } from '@/features/ai/adaptive-difficulty/model/difficultyEngine';
 import { resolveStoryQuestionAttemptSource } from '@/shared/story/model/questionSource';
+import { loadSessionUserId } from '@/features/auth/model/authUseCases';
 
 const GAME_ID = 'hikaye-quiz';
 const MAX_LEVEL = 10;
@@ -147,8 +154,7 @@ export default function StoryQuizGame() {
 
     const getSessionUserId = useCallback(async (): Promise<string | null> => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            return user?.id ?? null;
+            return await loadSessionUserId();
         } catch {
             return null;
         }
@@ -224,13 +230,13 @@ export default function StoryQuizGame() {
                 return;
             }
 
-            const latestSessionPerformance = await aiLearningRepository.getLatestSessionPerformance(userId);
-            const currentSnapshot = await aiLearningRepository.getAbilitySnapshot(userId);
+            const latestSessionPerformance = await loadLatestSessionPerformance(userId);
+            const currentSnapshot = await loadAbilitySnapshot(userId);
             const baselineSnapshot = currentSnapshot ?? createDefaultAbilitySnapshot(userId);
             setBaselineAbilitySnapshot(baselineSnapshot);
             setPreviousSessionPerformance(latestSessionPerformance);
 
-            const sessionId = await aiLearningRepository.createSessionPerformance({
+            const sessionId = await startLearningSessionRecord({
                 userId,
                 topic: resolveTopicFromTheme(story.theme),
                 locale: 'tr',
@@ -272,7 +278,7 @@ export default function StoryQuizGame() {
             const answered = Math.max(0, tracking.answered);
             const topic = resolveTopicFromTheme(story.theme);
             const sessionMetrics = buildSessionMetrics(tracking);
-            const currentSnapshot = await aiLearningRepository.getAbilitySnapshot(userId);
+            const currentSnapshot = await loadAbilitySnapshot(userId);
             const baselineSnapshot =
                 baselineAbilitySnapshot ??
                 currentSnapshot ??
@@ -284,7 +290,7 @@ export default function StoryQuizGame() {
                 topic
             });
 
-            await aiLearningRepository.updateSessionPerformance({
+            await finalizeLearningSessionRecord({
                 userId,
                 sessionPerformanceId,
                 totalQuestions: story.questions.length,
@@ -308,7 +314,7 @@ export default function StoryQuizGame() {
                 correctAnswers: tracking.correct
             });
 
-            await aiLearningRepository.upsertAbilitySnapshot(nextSnapshot, {
+            await saveAbilitySnapshot(nextSnapshot, {
                 source: 'hybrid',
                 modelVersion: 'rule.v1',
                 lastSessionId: sessionPerformanceId,
@@ -363,7 +369,7 @@ export default function StoryQuizGame() {
         try {
             const userId = await getSessionUserId();
             if (!userId) return;
-            await aiQuestionPoolRepository.markQuestionSolved(userId, questionId);
+            await markStoryQuestionSolved(userId, questionId);
         } catch (error) {
             console.error('Soru solved durumuna geçirilemedi:', error);
         }
@@ -407,7 +413,7 @@ export default function StoryQuizGame() {
                         topic
                     });
 
-                    await aiLearningRepository.recordQuestionAttempt({
+                    await recordQuestionAttempt({
                         userId,
                         sessionPerformanceId,
                         questionId,

@@ -1,133 +1,31 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Target, Palette } from "lucide-react";
-import { useSound } from "../../hooks/useSound";
-import { useGameFeedback } from "../../hooks/useGameFeedback";
-import { useGameEngine } from "./shared/useGameEngine";
 import BrainTrainerShell from "./shared/BrainTrainerShell";
-import { GAME_COLORS } from './shared/gameColors';
-import { useSafeTimeout } from '../../hooks/useSafeTimeout';
-
-const GAME_ID = "renk-algilama";
-const GAME_TITLE = "Renk Algılama";
-const GAME_DESCRIPTION = "Ekranda beliren renkleri hızla ezberle ve doğru seç! Görsel işlem hızını ve belleğini geliştir.";
-const TUZO_TEXT = "TUZÖ 5.4.1 Görsel Kısa Süreli Bellek";
-
-const COLORS: Record<string, string> = {
-  kırmızı: "#FF5252",
-  mavi: "#4285F4",
-  sarı: "#FFC107",
-  yeşil: "#0F9D58",
-  pembe: GAME_COLORS.pink,
-  turuncu: "#FF9800",
-  mor: "#9C27B0",
-  turkuaz: "#00BCD4",
-};
-
-type LocalPhase = "showing" | "guessing" | "idle";
+import {
+  COLORS,
+  MAX_LEVEL,
+  useColorPerceptionController,
+} from "./colorPerception/useColorPerceptionController";
 
 const ColorPerception: React.FC = () => {
-  const engine = useGameEngine({
-    gameId: GAME_ID,
-    maxLevel: 20,
-    initialLives: 5,
-    timeLimit: 180,
-  });
-
-  const { playSound } = useSound();
-  const safeTimeout = useSafeTimeout();
-  const feedback = useGameFeedback({ duration: 1000 });
-  const { feedbackState, showFeedback, dismissFeedback } = feedback;
-
   const {
-    phase,
-    level,
-    addScore,
-    loseLife,
-    nextLevel,
-  } = engine;
-
-  const [localPhase, setLocalPhase] = useState<LocalPhase>("idle");
-  const [currentColors, setCurrentColors] = useState<string[]>([]);
-  const [userSelections, setUserSelections] = useState<string[]>([]);
-
-  const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
-
-  useEffect(() => {
-    const timeouts = timeoutsRef.current;
-    return () => timeouts.forEach(clearTimeout);
-  }, []);
-
-  const generateColors = useCallback((lvl: number) => {
-    const colorNames = Object.keys(COLORS);
-    const shuffled = [...colorNames].sort(() => 0.5 - Math.random());
-    const colorCount = lvl <= 5 ? 2 : lvl <= 10 ? 3 : lvl <= 15 ? 4 : 5;
-    const selectedColors = shuffled.slice(0, colorCount);
-
-    setCurrentColors(selectedColors);
-    setUserSelections([]);
-    setLocalPhase("showing");
-
-    const displayDuration = Math.max(800, 4000 - lvl * 150);
-
-    const t = safeTimeout(() => {
-      setLocalPhase("guessing");
-    }, displayDuration);
-    timeoutsRef.current.push(t);
-  }, [safeTimeout]);
-
-  useEffect(() => {
-    if (phase === "playing" && localPhase === "idle") {
-      generateColors(level);
-    } else if (phase === "welcome") {
-      setLocalPhase("idle");
-      setCurrentColors([]);
-      setUserSelections([]);
-    }
-  }, [phase, level, localPhase, generateColors]);
-
-  const handleColorSelect = (colorName: string) => {
-    if (localPhase !== "guessing" || phase !== "playing" || !!feedbackState) return;
-
-    // Prevent selecting the same color twice
-    if (userSelections.includes(colorName)) return;
-
-    const newUserSelections = [...userSelections, colorName];
-    setUserSelections(newUserSelections);
-    playSound("select");
-
-    if (newUserSelections.length === currentColors.length) {
-      const correctSet = new Set(currentColors);
-      const isCorrect = newUserSelections.every((color) => correctSet.has(color));
-
-      showFeedback(isCorrect);
-      playSound(isCorrect ? "correct" : "incorrect");
-
-      const t = safeTimeout(() => {
-        dismissFeedback();
-
-        if (isCorrect) {
-          addScore(level * 100);
-          nextLevel();
-          setLocalPhase("idle");
-        } else {
-          loseLife();
-          if (engine.lives > 1) { // It has not updated locally immediately
-            setLocalPhase("idle");
-          }
-        }
-      }, 1000);
-      timeoutsRef.current.push(t);
-    }
-  };
+    engine,
+    feedback,
+    localPhase,
+    currentColors,
+    userSelections,
+    handleColorSelect,
+  } = useColorPerceptionController();
+  const { phase, level } = engine;
 
   const gameConfig = {
-    title: GAME_TITLE,
-    description: GAME_DESCRIPTION,
-    tuzoCode: TUZO_TEXT,
+    title: "Renk Algılama",
+    description: "Ekranda beliren renkleri hızla ezberle ve doğru seç! Görsel işlem hızını ve belleğini geliştir.",
+    tuzoCode: "TUZÖ 5.4.1 Görsel Kısa Süreli Bellek",
     icon: Palette,
     accentColor: "cyber-pink",
-    maxLevel: 20,
+    maxLevel: MAX_LEVEL,
     howToPlay: [
       "Ekranda bir grup rengi göreceksin, onları aklında tut",
       "Renkler kaybolunca, gördüğün tüm renkleri butonlardan seç",

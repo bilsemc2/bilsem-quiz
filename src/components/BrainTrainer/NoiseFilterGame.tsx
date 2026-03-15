@@ -40,6 +40,7 @@ const NoiseFilterGame: React.FC = () => {
         onChange={(event) =>
           setBackgroundVolume(Number.parseFloat(event.target.value))
         }
+        aria-label="Arka plan gürültü seviyesi"
         className="w-16 sm:w-20 accent-cyber-purple"
       />
     </div>

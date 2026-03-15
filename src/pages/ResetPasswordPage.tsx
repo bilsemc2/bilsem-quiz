@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { resetUserPassword } from '@/features/auth/model/authUseCases';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -28,22 +28,12 @@ export default function ResetPasswordPage() {
     setError(null);
 
     try {
-      if (newPassword !== confirmPassword) {
-        throw new Error('Şifreler eşleşmiyor');
-      }
-
-      if (newPassword.length < 6) {
-        throw new Error('Şifre en az 6 karakter olmalıdır');
-      }
-
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
+      await resetUserPassword({
+        newPassword,
+        confirmPassword
       });
 
-      if (error) throw error;
-
       setSuccess(true);
-      await supabase.auth.signOut();
 
       setTimeout(() => {
         navigate('/login');

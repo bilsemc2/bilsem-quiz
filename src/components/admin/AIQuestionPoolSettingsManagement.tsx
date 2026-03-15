@@ -35,6 +35,8 @@ const DEFAULT_FORM: SettingsForm = {
 export default function AIQuestionPoolSettingsManagement() {
     const { user } = useAuth();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const downloadLinkRef = useRef<HTMLAnchorElement | null>(null);
+    const activeDownloadUrlRef = useRef<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [importing, setImporting] = useState(false);
     const [settings, setSettings] = useState<AIQuestionPoolSettings[]>([]);
@@ -89,6 +91,14 @@ export default function AIQuestionPoolSettingsManagement() {
 
         void init();
     }, [checkIsAdmin, fetchSettings]);
+
+    useEffect(() => {
+        return () => {
+            if (activeDownloadUrlRef.current) {
+                window.URL.revokeObjectURL(activeDownloadUrlRef.current);
+            }
+        };
+    }, []);
 
     const normalizeForm = (form: SettingsForm): SettingsForm => ({
         topic: form.topic.trim() || '*',
@@ -188,13 +198,25 @@ export default function AIQuestionPoolSettingsManagement() {
             const fileNameDate = new Date().toISOString().slice(0, 10);
             const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
             const url = window.URL.createObjectURL(blob);
-            const anchor = document.createElement('a');
-            anchor.href = url;
-            anchor.download = `ai-question-pool-settings-${fileNameDate}.json`;
-            document.body.appendChild(anchor);
-            anchor.click();
-            document.body.removeChild(anchor);
-            window.URL.revokeObjectURL(url);
+
+            if (activeDownloadUrlRef.current) {
+                window.URL.revokeObjectURL(activeDownloadUrlRef.current);
+            }
+
+            activeDownloadUrlRef.current = url;
+
+            if (downloadLinkRef.current) {
+                downloadLinkRef.current.href = url;
+                downloadLinkRef.current.download = `ai-question-pool-settings-${fileNameDate}.json`;
+                downloadLinkRef.current.click();
+            }
+
+            window.setTimeout(() => {
+                if (activeDownloadUrlRef.current === url) {
+                    window.URL.revokeObjectURL(url);
+                    activeDownloadUrlRef.current = null;
+                }
+            }, 0);
             toast.success('Ayarlar JSON olarak indirildi');
         } catch (error) {
             console.error('Ayar export hatası:', error);
@@ -329,6 +351,9 @@ export default function AIQuestionPoolSettingsManagement() {
                 className="hidden"
                 onChange={(event) => void handleImportFileChange(event)}
             />
+            <a ref={downloadLinkRef} className="hidden" aria-hidden="true" tabIndex={-1}>
+                export
+            </a>
 
             <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
                 <h2 className="font-bold text-slate-900 uppercase tracking-tight text-sm">Yeni Kural Ekle / Üzerine Yaz</h2>

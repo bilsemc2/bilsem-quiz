@@ -1,11 +1,11 @@
-import { supabase } from '../../../lib/supabase';
+import { loadSessionAccessToken } from '@/features/auth/model/authUseCases';
 
 export async function fetchImageAsBase64(url: string): Promise<string> {
   try {
     // Get auth session for Edge Function call
-    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = await loadSessionAccessToken();
 
-    if (session?.access_token) {
+    if (accessToken) {
       // Use secure Edge Function proxy
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -17,7 +17,7 @@ export async function fetchImageAsBase64(url: string): Promise<string> {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
+              'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify({ url }),
             signal: controller.signal,
