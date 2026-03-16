@@ -323,12 +323,24 @@ export default function PackageManagement() {
                             sx={{ gridColumn: 'span 2' }}
                         />
                         <TextField
-                            label="QR Kod URL"
+                            label="QR Kod URL veya HTML (img tag)"
                             value={formData.qr_code_url}
                             onChange={(e) => setFormData({ ...formData, qr_code_url: e.target.value })}
                             size="small"
-                            placeholder="/images/qr_paytr.png"
+                            multiline
+                            rows={4}
+                            placeholder={'URL: /images/qr_paytr.png\nveya HTML: <img src="data:image/png;base64,..." />'}
+                            sx={{ gridColumn: 'span 2' }}
+                            helperText="Doğrudan bir URL veya base64 içeren <img> etiketi yapıştırabilirsiniz"
                         />
+                        {formData.qr_code_url && formData.qr_code_url.includes('<img') && (
+                            <Box sx={{ gridColumn: 'span 2', p: 2, border: '1px dashed', borderColor: 'divider', borderRadius: 1, textAlign: 'center' }}>
+                                <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                                    QR Kod Önizleme
+                                </Typography>
+                                <div dangerouslySetInnerHTML={{ __html: formData.qr_code_url }} />
+                            </Box>
+                        )}
 
                         <Box sx={{ gridColumn: 'span 2' }}>
                             <Typography variant="caption" color="text.secondary" gutterBottom>

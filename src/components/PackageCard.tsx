@@ -185,6 +185,22 @@ export default function PackageCard({ pkg, index, onContact, xpInput, onXpChange
                             </motion.a>
                         </div>
 
+                        {/* QR Code */}
+                        {pkg.qr_code_url && (
+                            <div className="mt-4 flex flex-col items-center">
+                                <span className="font-nunito font-extrabold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 mb-2">
+                                    📱 QR ile Öde
+                                </span>
+                                <div className="bg-white p-2 rounded-xl border-2 border-black/10 dark:border-white/10 shadow-neo-sm">
+                                    {pkg.qr_code_url.includes('<img') ? (
+                                        <div dangerouslySetInnerHTML={{ __html: pkg.qr_code_url }} style={{ maxWidth: '160px' }} />
+                                    ) : (
+                                        <img src={pkg.qr_code_url} alt={`${pkg.name} QR Kod`} className="w-40 h-auto" />
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Includes badges */}
                         {pkg.includes.length > 0 && (
                             <div className="mt-4 flex flex-wrap gap-2 justify-center">

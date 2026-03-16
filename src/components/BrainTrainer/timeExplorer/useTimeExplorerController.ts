@@ -92,10 +92,12 @@ export const useTimeExplorerController = () => {
         return;
       }
 
-      setDisplayHour((currentHour) =>
-        getNextDisplayHour(currentHour, previousMinutesRef.current, newMinutes),
-      );
+      const prevMinutes = previousMinutesRef.current;
       previousMinutesRef.current = newMinutes;
+
+      setDisplayHour((currentHour) =>
+        getNextDisplayHour(currentHour, prevMinutes, newMinutes),
+      );
       setUserMinutes(newMinutes);
     },
     [feedbackState, phase],
