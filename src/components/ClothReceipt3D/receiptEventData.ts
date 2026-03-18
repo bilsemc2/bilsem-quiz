@@ -71,6 +71,18 @@ export function getTodayEvent(): ReceiptEvent {
         };
     }
 
+    if (month === 3 && day === 18) {
+        return {
+            title: '18 MART',
+            emoji: '🇹🇷',
+            subtitle: 'Çanakkale Zaferi Kutlu Olsun!',
+            accentColor: '#dc2626',
+            items: [],
+            footer: 'Çanakkale geçilmez! 🏴‍☠️⚓',
+            decorations: ['🇹🇷', '⚓', '⚔️', '🌊', '🏴', '⭐', '🔥', '✨'],
+        };
+    }
+
     if (month === 4 && day === 23) {
         return {
             title: '23 NİSAN',
